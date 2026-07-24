@@ -3,26 +3,19 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { normalizeFeatureKey } from "@/lib/platform/gating/catalog-utils";
 import {
   getManagedUserFeatureAccessEntries,
   setManagedUserFeatureOverride,
 } from "@/lib/platform/user-entitlements";
 
-import {
-  appendUserManagementEvent,
-  canMutateUserManagement,
-  isManagedRole,
-} from "../_helpers";
+import { appendUserManagementEvent, canMutateUserManagement } from "../_helpers";
 
 const setFeatureAccessSchema = z.object({
   userId: z.string().uuid(),
   featureKey: z.string().trim().min(1).max(200),
   isEnabled: z.boolean(),
 });
-
-function normalizeFeatureKey(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 async function getManagedUserForCompany(userId: string, companyId: string) {
   const user = await prisma.user.findUnique({
@@ -64,9 +57,6 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return errorResponse("User not found for this organization.", 404);
     }
-    if (!isManagedRole(session, user.role)) {
-      return errorResponse("Only SUPERADMIN, MANAGER, and OPERATOR accounts can be managed here.", 403);
-    }
 
     const features = await getManagedUserFeatureAccessEntries({
       companyId: session.user.companyId,
@@ -107,9 +97,6 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return errorResponse("User not found for this organization.", 404);
     }
-    if (!isManagedRole(session, user.role)) {
-      return errorResponse("Only SUPERADMIN, MANAGER, and OPERATOR accounts can be managed here.", 403);
-    }
 
     try {
       await setManagedUserFeatureOverride({
@@ -123,9 +110,6 @@ export async function POST(request: NextRequest) {
       const message = error instanceof Error ? error.message : "";
       if (message === "FEATURE_NOT_ENABLED_FOR_COMPANY") {
         return errorResponse("Feature is not enabled for this company.", 400);
-      }
-      if (message === "FEATURE_BLOCKED_BY_TEMPLATE") {
-        return errorResponse("Feature is blocked by the selected role template.", 400);
       }
       throw error;
     }
