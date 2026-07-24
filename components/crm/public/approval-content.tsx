@@ -75,6 +75,8 @@ export function ApprovalContent({ token }: { token: string }) {
           {doc.number}
         </h1>
 
+        {doc.expired ? null : (
+          <>
         <table className="mt-5 w-full text-sm">
           <thead>
             <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -98,6 +100,8 @@ export function ApprovalContent({ token }: { token: string }) {
         <div className="mt-3 flex justify-end text-lg font-semibold text-neutral-900">
           {money(doc.currency, doc.total)}
         </div>
+          </>
+        )}
 
         {alreadyResolved ? (
           <div className="mt-6 rounded-lg bg-neutral-50 p-4 text-center text-neutral-700">

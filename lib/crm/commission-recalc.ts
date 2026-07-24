@@ -139,19 +139,26 @@ export async function recalculatePeriod(params: {
           repId,
           status: { in: ["APPROVED", "PAID"] },
         },
-        select: { baseAmount: true, leadDocumentId: true },
+        select: { baseAmount: true, leadDocumentId: true, currency: true },
       });
       const frozenDocIds = new Set(frozen.map((f) => f.leadDocumentId));
-      let cumulative = frozen.reduce((s, f) => s + f.baseAmount, 0);
+      // Cumulative revenue (and therefore tier placement) is tracked PER
+      // CURRENCY — summing USD and ZWL into one tier ladder would place
+      // documents in meaningless brackets.
+      const cumulativeByCurrency = new Map<string, number>();
+      for (const f of frozen) {
+        cumulativeByCurrency.set(f.currency, (cumulativeByCurrency.get(f.currency) ?? 0) + f.baseAmount);
+      }
 
       for (const doc of docs) {
         if (frozenDocIds.has(doc.leadDocumentId)) continue;
+        const cumulative = cumulativeByCurrency.get(doc.currency) ?? 0;
         const { commission, effectiveRatePercent } = computeTieredCommission(
           doc.rule.tiers,
           cumulative,
           doc.amount,
         );
-        cumulative += doc.amount;
+        cumulativeByCurrency.set(doc.currency, cumulative + doc.amount);
         if (commission <= 0) continue;
 
         await tx.crmCommissionEntry.create({

@@ -405,9 +405,30 @@ export async function recordReceiptForLead(input: RecordReceiptInput) {
 
     const invoice = await tx.salesInvoice.findFirst({
       where: { id: invoiceDoc.invoiceId, companyId: input.companyId },
-      select: { id: true, currency: true },
+      select: { id: true, currency: true, total: true, creditTotal: true, writeOffTotal: true, status: true },
     });
     if (!invoice) throw new Error("Invoice not found");
+    if (invoice.status === "VOIDED") throw new Error("Invoice is voided");
+
+    // Guard against overpayment: sum receipts from the source of truth (not
+    // the cached amountPaid) so repeated/inflated receipts can't overshoot the
+    // outstanding balance — which would post bogus journals and inflate
+    // PAID-basis commissions.
+    const receiptAgg = await tx.salesReceipt.aggregate({
+      where: { invoiceId: invoice.id },
+      _sum: { amount: true },
+    });
+    const alreadyReceived = Number(receiptAgg._sum.amount ?? 0);
+    const outstanding =
+      invoice.total - alreadyReceived - (invoice.creditTotal ?? 0) - (invoice.writeOffTotal ?? 0);
+    if (outstanding <= 0.009) {
+      throw new Error("Invoice is already fully settled");
+    }
+    if (input.amount > outstanding + 0.009) {
+      throw new Error(
+        `Payment of ${input.amount.toFixed(2)} exceeds the outstanding balance of ${outstanding.toFixed(2)}`,
+      );
+    }
 
     const receiptNumber = await generateDocNumber(tx, "REC", async (candidate) =>
       Boolean(await tx.salesReceipt.findFirst({ where: { receiptNumber: candidate }, select: { id: true } })),

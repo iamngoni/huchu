@@ -36,15 +36,14 @@ export async function GET(request: NextRequest) {
       take: 1000,
     });
 
-    const totals = entries.reduce(
-      (acc, e) => {
-        acc.amount += e.amount;
-        return acc;
-      },
-      { amount: 0 },
-    );
+    // Totals are reported per currency — a single cross-currency sum would be
+    // meaningless.
+    const totalsByCurrency: Record<string, number> = {};
+    for (const e of entries) {
+      totalsByCurrency[e.currency] = Math.round(((totalsByCurrency[e.currency] ?? 0) + e.amount) * 100) / 100;
+    }
 
-    return successResponse({ data: entries, totalAmount: Math.round(totals.amount * 100) / 100 });
+    return successResponse({ data: entries, totalsByCurrency });
   } catch (error) {
     console.error("[API] GET /api/v2/crm/commissions/entries error:", error);
     return errorResponse("Failed to fetch commission entries");

@@ -37,8 +37,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         data: {
           stage,
           probability: defaultProbabilityForStage(stage),
-          ...(stage === "WON" ? { wonAt: now } : {}),
-          ...(stage === "LOST" ? { lostAt: now, lostReason: lostReason ?? undefined } : {}),
+          // Terminal timestamps always reflect the current stage: entering a
+          // terminal stage stamps it and clears the opposing one; reopening to
+          // a non-terminal stage clears both (no contradictory wonAt+lostAt).
+          wonAt: stage === "WON" ? now : null,
+          lostAt: stage === "LOST" ? now : null,
+          lostReason: stage === "LOST" ? lostReason ?? null : null,
         },
       });
       await tx.crmActivity.create({

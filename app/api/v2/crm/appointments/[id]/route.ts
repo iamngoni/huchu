@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { canEditAssignedRecord } from "@/lib/crm/scope";
 
 const updateSchema = z.object({
   status: z.enum(["SCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"]).optional(),
@@ -20,9 +21,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const existing = await prisma.crmAppointment.findFirst({
       where: { id, companyId: session.user.companyId },
-      select: { id: true },
+      select: { id: true, assignedToId: true },
     });
     if (!existing) return errorResponse("Appointment not found", 404);
+    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+      return errorResponse("You can only edit site visits assigned to you", 403);
+    }
 
     const data = updateSchema.parse(await request.json());
     const updated = await prisma.crmAppointment.update({

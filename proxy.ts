@@ -392,14 +392,20 @@ export default withAuth(
       return redirectToAccessBlocked(request);
     }
 
-    // SALES_REP is pinned to the CRM. For page requests outside its allowlist
-    // we redirect to /crm (nicer than a hard block); API requests fall through
-    // to the central role-route guard in resolveAccessContext (403).
-    if (token && isRoleRouteRestricted(token.role)) {
-      if (!isApiRequest && !isRouteAllowedForRole(token.role, pathname)) {
-        const landing = landingPathForRole(token.role) ?? "/";
-        return redirectToPath(request, landing);
+    // SALES_REP is pinned to the CRM. Pages outside the allowlist redirect to
+    // /crm; API requests get a hard 403 here as well — resolveAccessContext
+    // covers validateSession routes, but matcher-covered legacy APIs (cctv,
+    // gold, payroll, compliance) authenticate with bare getServerSession and
+    // would otherwise never see the allowlist.
+    if (token && isRoleRouteRestricted(token.role) && !isRouteAllowedForRole(token.role, pathname)) {
+      if (isApiRequest) {
+        return NextResponse.json(
+          { error: "This area is not available for your role.", code: "ROLE_ROUTE_RESTRICTED", path: pathname },
+          { status: 403 },
+        );
       }
+      const landing = landingPathForRole(token.role) ?? "/";
+      return redirectToPath(request, landing);
     }
 
     if (token && isPathWithinRoute(pathname, "/human-resources")) {

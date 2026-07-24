@@ -101,12 +101,18 @@ export async function getApprovalByToken(token: string): Promise<PublicApprovalV
   const doc = approval.leadDocument;
   const source = doc.quotation ?? doc.invoice;
   const number = doc.quotation?.quotationNumber ?? doc.invoice?.invoiceNumber ?? "";
-  const lines = (source?.lines ?? []).map((l) => ({
-    description: l.description,
-    quantity: l.quantity,
-    unitPrice: l.unitPrice,
-    lineTotal: l.lineTotal,
-  }));
+  const expired = approval.status === "PENDING" && isExpired(approval.expiresAt);
+
+  // An expired, never-actioned link no longer discloses pricing — the client
+  // must request a fresh link from the rep.
+  const lines = expired
+    ? []
+    : (source?.lines ?? []).map((l) => ({
+        description: l.description,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        lineTotal: l.lineTotal,
+      }));
 
   return {
     companyName: company?.name ?? "",
@@ -114,9 +120,9 @@ export async function getApprovalByToken(token: string): Promise<PublicApprovalV
     status: approval.status,
     number,
     currency: doc.currency,
-    total: doc.amount,
+    total: expired ? 0 : doc.amount,
     lines,
-    expired: isExpired(approval.expiresAt),
+    expired,
   };
 }
 
