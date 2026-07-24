@@ -349,6 +349,7 @@ export function normalizeWorkspaceProfileInput(
   if (normalized === "SCRAP" || normalized === "SCRAP-METAL" || normalized === "SCRAPMETAL") return "SCRAP_METAL";
   if (normalized === "GOLD" || normalized === "GOLD-MINE" || normalized === "GOLDMINE") return "GOLD_MINE";
   if (normalized === "SCHOOL" || normalized === "SCHOOLS") return "SCHOOLS";
+  if (normalized === "THRIFT") return "RETAIL";
   if (
     normalized === "AUTO" ||
     normalized === "CAR_SALES" ||

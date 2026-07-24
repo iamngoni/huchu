@@ -2,8 +2,13 @@ import type { NavItem } from "@/lib/navigation";
 import { hasRole } from "@/lib/roles";
 import { filterHrefItemsByEnabledFeatures } from "@/lib/platform/gating/nav-filter";
 import {
+  resolveWorkspaceVerticalProductBundle,
+  type VerticalProductId,
+} from "@/lib/workspace-products";
+import {
   BarChart3,
   ArrowDownward,
+  ArrowUpward,
   Building2,
   Calendar,
   ClipboardList,
@@ -14,8 +19,11 @@ import {
   Package,
   Payments,
   ReceiptLong,
+  ReportProblem,
   Users,
+  Video,
   Wallet,
+  Wrench,
 } from "@/lib/icons";
 
 type PrimaryActionsArgs = {
@@ -24,54 +32,12 @@ type PrimaryActionsArgs = {
   enabledFeatures: string[] | undefined;
 };
 
-type WorkspaceProfileKey =
-  | "GOLD_MINE"
-  | "SCRAP_METAL"
-  | "SCHOOLS"
-  | "AUTOS"
-  | "RETAIL"
-  | "GENERAL";
-
-function normalizeWorkspaceProfile(value: string | null | undefined): WorkspaceProfileKey {
-  const normalized = String(value || "").trim().toUpperCase();
-
-  if (normalized === "SCRAP" || normalized === "SCRAP-METAL" || normalized === "SCRAPMETAL" || normalized === "SCRAP_METAL") {
-    return "SCRAP_METAL";
-  }
-  if (normalized === "GOLD" || normalized === "GOLD-MINE" || normalized === "GOLDMINE" || normalized === "GOLD_MINE") {
-    return "GOLD_MINE";
-  }
-  if (normalized === "SCHOOL" || normalized === "SCHOOLS") {
-    return "SCHOOLS";
-  }
-  if (
-    normalized === "AUTO" ||
-    normalized === "CAR_SALES" ||
-    normalized === "CAR-SALES" ||
-    normalized === "CARSALES" ||
-    normalized === "AUTOS"
-  ) {
-    return "AUTOS";
-  }
-  if (normalized === "RETAIL" || normalized === "THRIFT") {
-    return "RETAIL";
-  }
-
-  return "GENERAL";
-}
-
-const GENERAL_PRIMARY_ACTIONS: NavItem[] = [
-  { href: "/shift-report", icon: Dataset, label: "Shift Report" },
-  { href: "/attendance", icon: Calendar, label: "Attendance" },
-  { href: "/plant-report", icon: Factory, label: "Plant Report" },
-  { href: "/stores/receive", icon: LocalShipping, label: "Receive Stock" },
-  { href: "/stores/issue", icon: Package, label: "Issue Stock" },
-  { href: "/gold/intake/pours/new", icon: Coins, label: "Log Gold Output" },
-  { href: "/gold/intake/purchases/new", icon: Payments, label: "Record Purchase" },
-];
-
-const PROFILE_PRIMARY_ACTIONS: Record<Exclude<WorkspaceProfileKey, "GENERAL">, NavItem[]> = {
-  GOLD_MINE: [
+// Quick-create actions are keyed by the resolved vertical product so every
+// workspace only ever offers actions native to its own modules. Items are
+// additionally filtered by role and by the tenant's enabled features (via the
+// route registry), so an action never renders for a feature the tenant lacks.
+const PRODUCT_PRIMARY_ACTIONS: Record<VerticalProductId, NavItem[]> = {
+  "gold-operations": [
     { href: "/shift-report", icon: Dataset, label: "Shift Report" },
     { href: "/attendance", icon: Calendar, label: "Attendance" },
     { href: "/plant-report", icon: Factory, label: "Plant Report" },
@@ -80,24 +46,24 @@ const PROFILE_PRIMARY_ACTIONS: Record<Exclude<WorkspaceProfileKey, "GENERAL">, N
     { href: "/gold/transit/dispatches/new", icon: LocalShipping, label: "Record Dispatch" },
     { href: "/gold/settlement/receipts/new", icon: ReceiptLong, label: "Record Receipt" },
   ],
-  SCRAP_METAL: [
+  "scrap-recycling": [
     { href: "/scrap-metal/tickets", icon: Payments, label: "New Inbound Ticket" },
     { href: "/scrap-metal/batches", icon: Package, label: "Open Lot", roles: ["SUPERADMIN", "MANAGER"] },
     { href: "/scrap-metal/sales", icon: ReceiptLong, label: "New Outbound Ticket", roles: ["SUPERADMIN", "MANAGER"] },
     { href: "/scrap-metal/tickets/held", icon: Wallet, label: "Held Tickets" },
     { href: "/stores/receive", icon: ArrowDownward, label: "Receive Stock" },
   ],
-  SCHOOLS: [
+  "school-operations": [
     { href: "/schools/admissions", icon: Building2, label: "Admissions" },
     { href: "/schools/attendance", icon: Calendar, label: "Attendance" },
     { href: "/schools/finance", icon: ReceiptLong, label: "Finance" },
   ],
-  AUTOS: [
+  "auto-sales": [
     { href: "/car-sales/leads", icon: Users, label: "Leads" },
     { href: "/car-sales/inventory", icon: Package, label: "Inventory" },
     { href: "/car-sales/deals", icon: Wallet, label: "Deals" },
   ],
-  RETAIL: [
+  "retail-operations": [
     { href: "/portal/pos", icon: Payments, label: "Open POS", roles: ["CASHIER"] },
     { href: "/retail/sales", icon: ClipboardList, label: "Sales" },
     { href: "/retail/stock", icon: Package, label: "Stock" },
@@ -113,6 +79,27 @@ const PROFILE_PRIMARY_ACTIONS: Record<Exclude<WorkspaceProfileKey, "GENERAL">, N
     { href: "/retail/reports", icon: BarChart3, label: "Insights" },
     { href: "/retail/setup", icon: Building2, label: "Setup" },
   ],
+  "service-workshop": [
+    { href: "/maintenance/breakdown", icon: ReportProblem, label: "Log Breakdown" },
+    { href: "/maintenance/work-orders", icon: Wrench, label: "Work Orders" },
+    { href: "/stores/receive", icon: ArrowDownward, label: "Receive Stock" },
+    { href: "/stores/issue", icon: ArrowUpward, label: "Issue Stock" },
+    { href: "/human-resources", icon: Users, label: "Employees" },
+  ],
+  "multi-site-operations": [
+    { href: "/stores/receive", icon: ArrowDownward, label: "Receive Stock" },
+    { href: "/stores/issue", icon: ArrowUpward, label: "Issue Stock" },
+    { href: "/stores/inventory", icon: Package, label: "Stock on Hand" },
+    { href: "/cctv/live", icon: Video, label: "Live Monitor", roles: ["SUPERADMIN", "MANAGER"] },
+    { href: "/human-resources", icon: Users, label: "Employees" },
+  ],
+  "general-business": [
+    { href: "/stores/receive", icon: ArrowDownward, label: "Receive Stock" },
+    { href: "/stores/issue", icon: ArrowUpward, label: "Issue Stock" },
+    { href: "/stores/inventory", icon: Package, label: "Stock on Hand" },
+    { href: "/human-resources", icon: Users, label: "Employees" },
+    { href: "/reports", icon: BarChart3, label: "Reports" },
+  ],
 };
 
 export function getPrimaryQuickActions({
@@ -120,11 +107,11 @@ export function getPrimaryQuickActions({
   role,
   enabledFeatures,
 }: PrimaryActionsArgs): NavItem[] {
-  const profile = normalizeWorkspaceProfile(workspaceProfile);
-  const actions =
-    profile === "GENERAL"
-      ? GENERAL_PRIMARY_ACTIONS
-      : PROFILE_PRIMARY_ACTIONS[profile];
+  const verticalProduct = resolveWorkspaceVerticalProductBundle({
+    workspaceProfile,
+    enabledFeatures,
+  });
+  const actions = PRODUCT_PRIMARY_ACTIONS[verticalProduct.id] ?? [];
 
   return filterHrefItemsByEnabledFeatures(
     actions.filter((item) => (item.roles ? hasRole(role, item.roles) : true)),

@@ -60,14 +60,6 @@ export type NavSection = {
   items: NavItem[];
 };
 
-export type QuickAction = {
-  href: string;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-  roles?: UserRole[];
-};
-
 export const navSections: NavSection[] = [
   {
     id: "overview",
@@ -79,8 +71,8 @@ export const navSections: NavSection[] = [
   },
   {
     id: "daily",
-    title: "Quick Actions",
-    description: "Daily forms and stock tasks",
+    title: "Daily Operations",
+    description: "Mining shift, attendance, and plant capture",
     items: [
       {
         href: "/shift-report",
@@ -96,18 +88,6 @@ export const navSections: NavSection[] = [
         href: "/plant-report",
         icon: Factory,
         label: "Submit Plant Report",
-      },
-      { href: "/stores/receive", icon: ArrowDownward, label: "Receive Stock" },
-      { href: "/stores/issue", icon: ArrowUpward, label: "Issue Stock" },
-      {
-        href: "/gold/intake/pours/new",
-        icon: Dataset,
-        label: "Log Gold Output",
-      },
-      {
-        href: "/gold/intake/purchases/new",
-        icon: Payments,
-        label: "Record Gold Purchase",
       },
     ],
   },
@@ -418,47 +398,6 @@ export const navSections: NavSection[] = [
   },
 ];
 
-const quickActions: QuickAction[] = [
-  {
-    href: "/shift-report",
-    label: "Shift Report",
-    description: "Submit today's shift output",
-    icon: NoteAdd,
-  },
-  {
-    href: "/attendance",
-    label: "Attendance",
-    description: "Mark today's crew attendance",
-    icon: UserCheck,
-  },
-  {
-    href: "/stores/receive",
-    label: "Receive Stock",
-    description: "Log incoming stock",
-    icon: ArrowDownward,
-  },
-  {
-    href: "/stores/issue",
-    label: "Issue Stock",
-    description: "Record stock issue",
-    icon: ArrowUpward,
-  },
-  {
-    href: "/gold/intake/pours/new",
-    label: "Log Gold Output",
-    description: "Record gold produced for the shift",
-    icon: Dataset,
-    roles: ["SUPERADMIN", "MANAGER"],
-  },
-  {
-    href: "/gold/intake/purchases/new",
-    label: "Record Purchase",
-    description: "Capture gold bought from walk-in sellers",
-    icon: Payments,
-    roles: ["SUPERADMIN", "MANAGER"],
-  },
-];
-
 export function getNavSectionsForRole(role: string | null | undefined) {
   return navSections
     .map((section) => ({
@@ -468,10 +407,4 @@ export function getNavSectionsForRole(role: string | null | undefined) {
       ),
     }))
     .filter((section) => section.items.length > 0);
-}
-
-export function getQuickActionsForRole(role: string | null | undefined) {
-  return quickActions.filter((action) =>
-    action.roles ? hasRole(role, action.roles) : true,
-  );
 }

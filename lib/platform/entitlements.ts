@@ -155,12 +155,14 @@ export async function syncEntitlementCatalog(): Promise<{
         select: { id: true },
       });
 
+      const bundleFeatureIds: string[] = [];
       for (const featureKey of bundle.features) {
         const feature = await tx.platformFeature.findUnique({
           where: { key: featureKey },
           select: { id: true },
         });
         if (!feature) continue;
+        bundleFeatureIds.push(feature.id);
         await tx.featureBundleItem.upsert({
           where: {
             bundleId_featureId: {
@@ -175,6 +177,16 @@ export async function syncEntitlementCatalog(): Promise<{
           },
         });
       }
+
+      // Prune items removed from the in-code bundle definition so DB-backed
+      // entitlement resolution can never re-grant features a bundle no longer
+      // includes (e.g. mining ops capture removed from ADDON_OPERATIONS_CORE).
+      await tx.featureBundleItem.deleteMany({
+        where: {
+          bundleId: saved.id,
+          featureId: { notIn: bundleFeatureIds },
+        },
+      });
     }
 
     for (const tier of TIERS) {
