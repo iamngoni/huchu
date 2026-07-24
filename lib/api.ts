@@ -1400,6 +1400,19 @@ export async function fetchUsers(
   return fetchJson<Pagination<UserSummary>>(`/api/users${query}`);
 }
 
+export type LinkableUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+};
+
+export async function fetchLinkableUsers(params: { search?: string } = {}) {
+  const query = buildQuery(params);
+  return fetchJson<{ data: LinkableUser[] }>(`/api/employees/linkable-users${query}`);
+}
+
 export async function createManagedUser(input: CreateManagedUserInput) {
   return fetchJson<UserSummary>("/api/users/create", {
     method: "POST",
