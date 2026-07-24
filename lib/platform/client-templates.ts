@@ -20,6 +20,19 @@ export interface ClientBundleTemplateDefinition {
 
 const allBundleCodes = FEATURE_BUNDLES.map((bundle) => bundle.code);
 
+// Mining-only daily capture surfaces. These began life as the original
+// mine-focused build and must never reach non-mining verticals, so every
+// non-mining template disables them explicitly even though none of their
+// bundles grant them anymore.
+const MINE_DAILY_OPS_FEATURE_KEYS = [
+  "ops.shift-report.submit",
+  "ops.attendance.mark",
+  "ops.plant-report.submit",
+  "reports.shift",
+  "reports.attendance",
+  "reports.plant",
+] as const;
+
 export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
   {
     code: "TEMPLATE_CORE_STARTER",
@@ -30,6 +43,7 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
     bundleCodes: ["ADDON_OPERATIONS_CORE", "ADDON_STORES_CORE", "ADDON_WORKFORCE_CORE"],
     featureKeys: [],
     verticalProductId: "general-business",
+    disabledFeatureKeys: [...MINE_DAILY_OPS_FEATURE_KEYS],
   },
   {
     code: "TEMPLATE_GOLD_MINE",
@@ -39,6 +53,7 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
     recommendedTierCode: "ENTERPRISE",
     bundleCodes: [
       "ADDON_OPERATIONS_CORE",
+      "ADDON_MINE_DAILY_OPS",
       "ADDON_STORES_CORE",
       "ADDON_WORKFORCE_CORE",
       "ADDON_GOLD_CORE",
@@ -65,6 +80,7 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
     ],
     featureKeys: [],
     verticalProductId: "multi-site-operations",
+    disabledFeatureKeys: [...MINE_DAILY_OPS_FEATURE_KEYS],
   },
   {
     code: "TEMPLATE_TECH_WORKSHOP",
@@ -81,6 +97,7 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
     ],
     featureKeys: [],
     verticalProductId: "service-workshop",
+    disabledFeatureKeys: [...MINE_DAILY_OPS_FEATURE_KEYS],
   },
   {
     code: "TEMPLATE_SCRAP_METAL",
@@ -92,6 +109,7 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
     featureKeys: [],
     verticalProductId: "scrap-recycling",
     disabledFeatureKeys: [
+      ...MINE_DAILY_OPS_FEATURE_KEYS,
       "stores.fuel-ledger",
       "maintenance.dashboard",
       "maintenance.equipment",
@@ -211,7 +229,13 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
     bundleCodes: ["ADDON_AUTOS_SUITE", "ADDON_PORTAL_SUITE"],
     featureKeys: [],
     verticalProductId: "auto-sales",
-    disabledFeatureKeys: ["schools.core", "retail.core", "portal.schools", "portal.pos"],
+    disabledFeatureKeys: [
+      ...MINE_DAILY_OPS_FEATURE_KEYS,
+      "schools.core",
+      "retail.core",
+      "portal.schools",
+      "portal.pos",
+    ],
   },
   {
     code: "TEMPLATE_RETAIL",
@@ -230,6 +254,7 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
     featureKeys: [],
     verticalProductId: "retail-operations",
     disabledFeatureKeys: [
+      ...MINE_DAILY_OPS_FEATURE_KEYS,
       "stores.fuel-ledger",
       "schools.core",
       "autos.core",
@@ -387,6 +412,8 @@ export function getClientTemplateWorkspaceProfile(code: string | null | undefine
     case "TEMPLATE_RETAIL":
       return "RETAIL";
     case "TEMPLATE_CORE_STARTER":
+    case "TEMPLATE_SMALL_BUSINESS_SECURITY_STOCK":
+    case "TEMPLATE_TECH_WORKSHOP":
     case "TEMPLATE_ALL_FEATURES":
       return "GENERAL";
     default:

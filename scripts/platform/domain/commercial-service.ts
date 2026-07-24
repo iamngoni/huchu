@@ -166,10 +166,20 @@ export async function syncCommercialCatalog(): Promise<CatalogSyncResult> {
           bundleId,
           featureId: feature.id,
         }));
-      if (itemRows.length === 0) continue;
-      await tx.featureBundleItem.createMany({
-        data: itemRows,
-        skipDuplicates: true,
+      if (itemRows.length > 0) {
+        await tx.featureBundleItem.createMany({
+          data: itemRows,
+          skipDuplicates: true,
+        });
+      }
+      // Prune items removed from the in-code bundle definition so DB-backed
+      // entitlement resolution can never re-grant features a bundle no longer
+      // includes (e.g. mining ops capture removed from ADDON_OPERATIONS_CORE).
+      await tx.featureBundleItem.deleteMany({
+        where: {
+          bundleId,
+          featureId: { notIn: itemRows.map((row) => row.featureId) },
+        },
       });
     }
 

@@ -6,9 +6,9 @@ import { normalizeFeatureKey } from "@/lib/platform/gating/catalog-utils";
 import { filterNavSectionsByEnabledFeatures } from "@/lib/platform/gating/nav-filter";
 import { getPrimaryQuickActions } from "@/lib/primary-actions";
 import { canAccessPosPortal } from "@/lib/retail/pos-host";
-import type { UserRole } from "@/lib/roles";
 import {
   inferWorkspaceProfileFromEnabledFeatures,
+  normalizeWorkspaceProfileInput,
   resolveWorkspaceVerticalProductBundle,
   type VerticalProductBundleDefinition,
   WORKSPACE_PROFILES,
@@ -21,7 +21,6 @@ import {
   Dashboard,
   Gem,
   Building2,
-  Calendar,
   BarChart3,
   Coins,
   FileText,
@@ -91,7 +90,6 @@ type WorkspaceProfileSectionSpec = {
 type WorkspaceProfileRecipe = {
   label: string;
   preferredHomeHref: string | null;
-  quickActions: NavItem[];
   nativeModules: WorkspaceModuleId[];
   sections: WorkspaceProfileSectionSpec[];
 };
@@ -134,15 +132,6 @@ const WORKSPACE_MODULE_ORDER: readonly WorkspaceModuleId[] = [
 const SUPPORT_ITEMS: NavItem[] = [
   { href: "/help", icon: FileText, label: "Quick Tips" },
 ];
-
-function roleItem(
-  href: string,
-  label: string,
-  icon: LucideIcon,
-  roles?: UserRole[],
-): NavItem {
-  return { href, label, icon, roles };
-}
 
 function createSectionModule(args: {
   id: WorkspaceModuleId;
@@ -329,12 +318,6 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
   GOLD_MINE: {
     label: "Gold Operations",
     preferredHomeHref: "/gold",
-    quickActions: [
-      roleItem("/gold/intake/pours/new", "Log Gold Output", Payments, ["SUPERADMIN", "MANAGER"]),
-      roleItem("/gold/intake/purchases/new", "Record Purchase", Coins, ["SUPERADMIN", "MANAGER"]),
-      roleItem("/gold/transit/dispatches/new", "Record Dispatch", LocalShipping, ["SUPERADMIN", "MANAGER"]),
-      roleItem("/gold/settlement/receipts/new", "Record Receipt", ReceiptLong, ["SUPERADMIN", "MANAGER"]),
-    ],
     nativeModules: ["gold", "reporting"],
     sections: [
       {
@@ -368,13 +351,6 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
   SCRAP_METAL: {
     label: "Scrap & Recycling",
     preferredHomeHref: "/scrap-metal",
-    quickActions: [
-      roleItem("/scrap-metal/tickets", "New Inbound Ticket", Payments),
-      roleItem("/scrap-metal/batches", "Open Lot", Package),
-      roleItem("/scrap-metal/sales", "New Outbound Ticket", ReceiptLong),
-      roleItem("/scrap-metal/tickets/held", "Held Tickets", Wallet),
-      roleItem("/stores/receive", "Receive Stock", ArrowDownward),
-    ],
     nativeModules: ["scrap-metal", "reporting"],
     sections: [
       {
@@ -410,11 +386,6 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
   SCHOOLS: {
     label: "School Operations",
     preferredHomeHref: "/schools",
-    quickActions: [
-      roleItem("/schools/admissions", "Admissions", Building2),
-      roleItem("/schools/attendance", "Attendance", Calendar),
-      roleItem("/schools/finance", "Finance", ReceiptLong),
-    ],
     nativeModules: ["schools"],
     sections: [
       {
@@ -452,11 +423,6 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
   AUTOS: {
     label: "Auto Sales",
     preferredHomeHref: "/car-sales",
-    quickActions: [
-      roleItem("/car-sales/leads", "Leads", Users),
-      roleItem("/car-sales/inventory", "Inventory", Package),
-      roleItem("/car-sales/deals", "Deals", Wallet),
-    ],
     nativeModules: ["car-sales"],
     sections: [
       {
@@ -481,14 +447,6 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
   RETAIL: {
     label: "Retail",
     preferredHomeHref: "/retail",
-    quickActions: [
-      roleItem("/portal/pos", "Open POS", Payments, ["CASHIER"]),
-      roleItem("/retail/sales", "Sales", ReceiptLong),
-      roleItem("/retail/stock/count", "Stock Count", Package),
-      roleItem("/retail/purchasing/receipts", "Receive Stock", LocalShipping),
-      roleItem("/retail/customers", "Customers", Users),
-      roleItem("/retail/setup", "Setup", Building2),
-    ],
     nativeModules: ["retail", "reporting"],
     sections: [
       {
@@ -539,35 +497,13 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
   GENERAL: {
     label: "General Business",
     preferredHomeHref: null,
-    quickActions: [],
     nativeModules: [...WORKSPACE_MODULE_ORDER],
     sections: [],
   },
 };
 
 export function normalizeWorkspaceProfile(value: string | null | undefined): WorkspaceProfile {
-  const normalized = String(value || "").trim().toUpperCase();
-
-  if (normalized === "SCRAP" || normalized === "SCRAP-METAL" || normalized === "SCRAPMETAL") {
-    return "SCRAP_METAL";
-  }
-  if (normalized === "GOLD" || normalized === "GOLD-MINE" || normalized === "GOLDMINE") {
-    return "GOLD_MINE";
-  }
-  if (normalized === "SCHOOL" || normalized === "SCHOOLS") {
-    return "SCHOOLS";
-  }
-  if (
-    normalized === "AUTO" ||
-    normalized === "CAR_SALES" ||
-    normalized === "CAR-SALES" ||
-    normalized === "CARSALES" ||
-    normalized === "AUTOS"
-  ) {
-    return "AUTOS";
-  }
-
-  return WORKSPACE_PROFILES.find((profile) => profile === normalized) ?? DEFAULT_WORKSPACE_PROFILE;
+  return normalizeWorkspaceProfileInput(value) ?? DEFAULT_WORKSPACE_PROFILE;
 }
 
 export function getWorkspaceProfileForTemplate(code: string | null | undefined): WorkspaceProfile | null {

@@ -1949,6 +1949,31 @@ async function applyClientTemplate(input: ApplySubscriptionTemplateInput): Promi
     }
   }
 
+  if (applyMode === "REPLACE") {
+    // Feature-level sync: REPLACE means the company ends up with exactly the
+    // template's feature set. Without this, stale explicit flags (e.g. mining
+    // ops capture granted by an older bundle definition) survive re-apply.
+    const templateFeatureSet = new Set(featureKeys.map((key) => key.trim().toLowerCase()));
+    const staleFlags = await prisma.companyFeatureFlag.findMany({
+      where: { companyId: input.companyId, isEnabled: true },
+      select: { feature: { select: { key: true } } },
+    });
+    for (const flag of staleFlags) {
+      const flagKey = flag.feature.key.trim().toLowerCase();
+      if (templateFeatureSet.has(flagKey)) continue;
+      const result = await setFeature({
+        companyId: input.companyId,
+        featureKey: flag.feature.key,
+        enabled: false,
+        actor: input.actor,
+        reason: input.reason ?? `Template ${template.code} replace mode`,
+      });
+      if (!result.enabled) {
+        disabledFeatures.push(result.feature);
+      }
+    }
+  }
+
   if (workspaceProfile) {
     await prisma.company.update({
       where: { id: input.companyId },

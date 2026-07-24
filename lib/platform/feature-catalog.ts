@@ -200,18 +200,27 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
   {
     code: "ADDON_OPERATIONS_CORE",
     name: "Operations Core",
-    description: "Daily operations capture and operational reporting.",
+    description: "Operational reporting home and site/section administration.",
+    monthlyPrice: 0,
+    additionalSiteMonthlyPrice: 0,
+    features: [
+      "reports.dashboard",
+      "admin.sites-sections",
+    ],
+  },
+  {
+    code: "ADDON_MINE_DAILY_OPS",
+    name: "Mine Daily Operations",
+    description: "Mining shift, crew attendance, and plant capture with matching reports.",
     monthlyPrice: 0,
     additionalSiteMonthlyPrice: 0,
     features: [
       "ops.shift-report.submit",
       "ops.attendance.mark",
       "ops.plant-report.submit",
-      "reports.dashboard",
       "reports.shift",
       "reports.attendance",
       "reports.plant",
-      "admin.sites-sections",
     ],
   },
   {

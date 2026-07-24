@@ -15,11 +15,14 @@ export type EnrichedClient = CompanyWorkspace & {
 };
 
 const STATUS_ORDER: ClientStatus[] = ["ACTIVE", "EXPIRING_SOON", "IN_GRACE", "PAST_DUE", "CANCELED"];
+// Placeholder enrichment rotation for the demo client list. Only
+// cross-vertical bundles belong here: rotating vertical suites (gold,
+// schools, autos, retail, scrap) onto arbitrary companies implies a
+// workspace vertical the company does not have.
 const ADDON_ROTATION: FeatureBundleDefinition["code"][] = [
   "ADDON_CUSTOM_BRANDING",
   "ADDON_CCTV_SUITE",
   "ADDON_ADVANCED_PAYROLL",
-  "ADDON_GOLD_ADVANCED",
   "ADDON_COMPLIANCE_PRO",
   "ADDON_MAINTENANCE_PRO",
   "ADDON_USER_MANAGEMENT_PRO",
@@ -27,11 +30,7 @@ const ADDON_ROTATION: FeatureBundleDefinition["code"][] = [
   "ADDON_ACCOUNTING_CORE",
   "ADDON_ACCOUNTING_ADVANCED",
   "ADDON_ZIMRA_FISCAL",
-  "ADDON_SCHOOLS_SUITE",
-  "ADDON_AUTOS_SUITE",
-  "ADDON_RETAIL_SUITE",
   "ADDON_PORTAL_SUITE",
-  "ADDON_SCRAP_METAL_SUITE",
 ];
 
 export function computeMonthlyTotal(tier: TierDefinition, addonCodes: string[], activeSites: number) {

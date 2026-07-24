@@ -169,6 +169,10 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/attendance", featureKey: "ops.attendance.mark" },
   { scope: "page", prefix: "/shift-report", featureKey: "ops.shift-report.submit" },
   { scope: "page", prefix: "/plant-report", featureKey: "ops.plant-report.submit" },
+  // The production dashboard is built entirely on plant reports; gate it with
+  // the same mining reporting feature so it never fail-opens into non-mining
+  // workspaces.
+  { scope: "page", prefix: "/dashboard", featureKey: "reports.plant" },
 
   { scope: "page", prefix: "/reports/cctv-events", featureKey: "reports.cctv-events" },
   { scope: "page", prefix: "/reports/compliance-incidents", featureKey: "reports.compliance-incidents" },
