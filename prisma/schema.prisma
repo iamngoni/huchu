@@ -155,19 +155,31 @@ model Company {
   goldInventoryEvents           GoldInventoryEvent[]
   goldExceptions                GoldException[]
   goldLedgerImports             GoldLedgerImport[]
-  goldPours                     GoldPour[]           @relation("GoldPourCompany")
-  goldShiftAllocations          GoldShiftAllocation[] @relation("GoldShiftAllocationCompany")
-  goldDispatches                GoldDispatch[]        @relation("GoldDispatchCompany")
-  buyerReceipts                 BuyerReceipt[]          @relation("BuyerReceiptCompany")
-  goldLedgerEntries             GoldLedgerEntry[]       @relation("GoldLedgerEntryCompany")
-  goldDispatchBatches           GoldDispatchBatch[]     @relation("GoldDispatchBatchCompany")
-  buyerReceiptBatches           BuyerReceiptBatch[]     @relation("BuyerReceiptBatchCompany")
-  goldLedgerCorrections         GoldLedgerCorrection[]  @relation("GoldLedgerCorrectionCompany")
-  buyerReceiptCorrections       BuyerReceiptCorrection[] @relation("BuyerReceiptCorrectionCompany")
+  goldPours                     GoldPour[]                     @relation("GoldPourCompany")
+  goldShiftAllocations          GoldShiftAllocation[]          @relation("GoldShiftAllocationCompany")
+  goldDispatches                GoldDispatch[]                 @relation("GoldDispatchCompany")
+  buyerReceipts                 BuyerReceipt[]                 @relation("BuyerReceiptCompany")
+  goldLedgerEntries             GoldLedgerEntry[]              @relation("GoldLedgerEntryCompany")
+  goldDispatchBatches           GoldDispatchBatch[]            @relation("GoldDispatchBatchCompany")
+  buyerReceiptBatches           BuyerReceiptBatch[]            @relation("BuyerReceiptBatchCompany")
+  goldLedgerCorrections         GoldLedgerCorrection[]         @relation("GoldLedgerCorrectionCompany")
+  buyerReceiptCorrections       BuyerReceiptCorrection[]       @relation("BuyerReceiptCorrectionCompany")
   goldLedgerImportPresets       GoldLedgerImportPreset[]
   goldImportSavedViews          GoldImportSavedView[]
   goldPeriodCloses              GoldPeriodClose[]
   goldConfig                    GoldCompanyConfig?
+  crmClients                    CrmClient[]
+  crmLeads                      CrmLead[]
+  crmLeadDocuments              CrmLeadDocument[]
+  crmDocumentApprovals          CrmDocumentApproval[]
+  crmActivities                 CrmActivity[]
+  crmFollowUps                  CrmFollowUp[]
+  crmAppointments               CrmAppointment[]
+  crmIntakeForms                CrmIntakeForm[]
+  crmIntakeSubmissions          CrmIntakeSubmission[]
+  crmApiKeys                    CrmApiKey[]
+  crmCommissionRules            CrmCommissionRule[]
+  crmCommissionEntries          CrmCommissionEntry[]
 
   @@index([tenantStatus])
   @@index([isProvisioned])
@@ -767,6 +779,7 @@ enum UserRole {
   SHOP_MANAGER
   CASHIER
   STOCK_CLERK
+  SALES_REP
 }
 
 model User {
@@ -892,6 +905,21 @@ model User {
   goldImportSavedViews              GoldImportSavedView[]          @relation("GoldImportSavedViewUser")
   closedGoldPeriodCloses            GoldPeriodClose[]              @relation("GoldPeriodCloseClosedBy")
   overrideGoldPeriodCloses          GoldPeriodClose[]              @relation("GoldPeriodCloseOverrideBy")
+  crmClientsAssigned                CrmClient[]                    @relation("CrmClientAssignedTo")
+  crmLeadsAssigned                  CrmLead[]                      @relation("CrmLeadAssignedTo")
+  crmLeadsCreated                   CrmLead[]                      @relation("CrmLeadCreatedBy")
+  crmLeadDocumentsCreated           CrmLeadDocument[]              @relation("CrmLeadDocCreatedBy")
+  crmActivitiesCreated              CrmActivity[]                  @relation("CrmActivityCreatedBy")
+  crmFollowUpsAssigned              CrmFollowUp[]                  @relation("CrmFollowUpAssignedTo")
+  crmFollowUpsCreated               CrmFollowUp[]                  @relation("CrmFollowUpCreatedBy")
+  crmAppointmentsAssigned           CrmAppointment[]               @relation("CrmAppointmentAssignedTo")
+  crmAppointmentsCreated            CrmAppointment[]               @relation("CrmAppointmentCreatedBy")
+  crmIntakeFormsCreated             CrmIntakeForm[]                @relation("CrmIntakeFormCreatedBy")
+  crmIntakeFormsDefaultAssignee     CrmIntakeForm[]                @relation("CrmIntakeFormDefaultAssignee")
+  crmApiKeysCreated                 CrmApiKey[]                    @relation("CrmApiKeyCreatedBy")
+  crmCommissionRulesFor             CrmCommissionRule[]            @relation("CrmCommissionRuleUser")
+  crmCommissionEntries              CrmCommissionEntry[]           @relation("CrmCommissionEntryRep")
+  crmCommissionEntriesApproved      CrmCommissionEntry[]           @relation("CrmCommissionEntryApprovedBy")
 
   @@index([companyId])
   @@index([email])
@@ -1481,17 +1509,17 @@ model AdjustmentEntry {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
-  company                  Company                  @relation(fields: [companyId], references: [id])
-  payrollRun               PayrollRun?              @relation(fields: [payrollRunId], references: [id])
-  disbursementBatch        DisbursementBatch?       @relation(fields: [disbursementBatchId], references: [id])
-  lineItem                 PayrollLineItem?         @relation(fields: [lineItemId], references: [id])
-  disbursementItem         DisbursementItem?        @relation(fields: [disbursementItemId], references: [id])
-  employee                 Employee?                @relation(fields: [employeeId], references: [id])
-  createdBy                User                     @relation("AdjustmentCreatedBy", fields: [createdById], references: [id])
-  submittedBy              User?                    @relation("AdjustmentSubmittedBy", fields: [submittedById], references: [id])
-  approvedBy               User?                    @relation("AdjustmentApprovedBy", fields: [approvedById], references: [id])
-  goldLedgerCorrections    GoldLedgerCorrection[]   @relation("GoldLedgerCorrectionAdjustment")
-  buyerReceiptCorrections  BuyerReceiptCorrection[] @relation("BuyerReceiptCorrectionAdjustment")
+  company                 Company                  @relation(fields: [companyId], references: [id])
+  payrollRun              PayrollRun?              @relation(fields: [payrollRunId], references: [id])
+  disbursementBatch       DisbursementBatch?       @relation(fields: [disbursementBatchId], references: [id])
+  lineItem                PayrollLineItem?         @relation(fields: [lineItemId], references: [id])
+  disbursementItem        DisbursementItem?        @relation(fields: [disbursementItemId], references: [id])
+  employee                Employee?                @relation(fields: [employeeId], references: [id])
+  createdBy               User                     @relation("AdjustmentCreatedBy", fields: [createdById], references: [id])
+  submittedBy             User?                    @relation("AdjustmentSubmittedBy", fields: [submittedById], references: [id])
+  approvedBy              User?                    @relation("AdjustmentApprovedBy", fields: [approvedById], references: [id])
+  goldLedgerCorrections   GoldLedgerCorrection[]   @relation("GoldLedgerCorrectionAdjustment")
+  buyerReceiptCorrections BuyerReceiptCorrection[] @relation("BuyerReceiptCorrectionAdjustment")
 
   @@index([companyId, targetType, status])
   @@index([employeeId])
@@ -1917,19 +1945,19 @@ model DowntimeEvent {
 }
 
 model Attendance {
-  id                  String   @id @default(uuid())
-  date                DateTime
-  siteId              String
-  shift               String
-  shiftGroupId        String?
-  shiftLeaderId       String?
-  shiftLeaderName     String?
-  employeeId          String
-  status              String // PRESENT, ABSENT, LATE
-  overtime            Float? // hours
-  notes               String?
-  goldLedgerEntryId   String?
-  createdAt           DateTime @default(now())
+  id                String   @id @default(uuid())
+  date              DateTime
+  siteId            String
+  shift             String
+  shiftGroupId      String?
+  shiftLeaderId     String?
+  shiftLeaderName   String?
+  employeeId        String
+  status            String // PRESENT, ABSENT, LATE
+  overtime          Float? // hours
+  notes             String?
+  goldLedgerEntryId String?
+  createdAt         DateTime @default(now())
 
   site            Site             @relation(fields: [siteId], references: [id])
   shiftGroup      ShiftGroup?      @relation(fields: [shiftGroupId], references: [id])
@@ -1953,15 +1981,15 @@ model ShiftGroup {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  company           Company              @relation(fields: [companyId], references: [id])
-  site              Site                 @relation(fields: [siteId], references: [id])
-  leader            Employee             @relation("ShiftGroupLeader", fields: [leaderEmployeeId], references: [id])
-  members           ShiftGroupMember[]
-  schedules         ShiftGroupSchedule[]
-  attendance        Attendance[]
-  reports           ShiftReport[]
-  goldLedgerEntries    GoldLedgerEntry[]       @relation("GoldLedgerEntryShiftGroup")
-  goldShiftAllocations GoldShiftAllocation[]   @relation("GoldShiftAllocationsByGroup")
+  company              Company               @relation(fields: [companyId], references: [id])
+  site                 Site                  @relation(fields: [siteId], references: [id])
+  leader               Employee              @relation("ShiftGroupLeader", fields: [leaderEmployeeId], references: [id])
+  members              ShiftGroupMember[]
+  schedules            ShiftGroupSchedule[]
+  attendance           Attendance[]
+  reports              ShiftReport[]
+  goldLedgerEntries    GoldLedgerEntry[]     @relation("GoldLedgerEntryShiftGroup")
+  goldShiftAllocations GoldShiftAllocation[] @relation("GoldShiftAllocationsByGroup")
 
   @@unique([companyId, name])
   @@index([companyId, siteId, isActive])
@@ -2048,16 +2076,16 @@ model PlantReport {
 
 enum GoldPriceSource {
   CONFIGURED // a GoldPrice row matched the business date
-  LIVE       // resolved via live API (within 24h cache)
-  FALLBACK   // fell back to default $80/g
+  LIVE // resolved via live API (within 24h cache)
+  FALLBACK // fell back to default $80/g
 }
 
 model GoldSpotPriceCache {
   id              String   @id @default(uuid())
   fetchedAt       DateTime @default(now())
-  source          String   // e.g. "metals-api", "lbma-am-fix"
+  source          String // e.g. "metals-api", "lbma-am-fix"
   priceUsdPerGram Decimal  @db.Decimal(12, 4)
-  rawResponse     String?  // JSON string
+  rawResponse     String? // JSON string
 
   @@index([fetchedAt])
 }
@@ -2211,7 +2239,7 @@ model GoldPurchase {
 }
 
 model GoldDispatch {
-  id                  String    @id @default(uuid())
+  id                  String           @id @default(uuid())
   goldPourId          String
   companyId           String?
   dispatchDate        DateTime
@@ -2260,7 +2288,7 @@ model GoldDispatchBatch {
 }
 
 model BuyerReceipt {
-  id                  String    @id @default(uuid())
+  id                  String           @id @default(uuid())
   // legacy single-FK, prefer the join tables (batches / dispatches)
   goldDispatchId      String?
   // legacy single-FK, prefer the join tables (batches / dispatches)
@@ -2268,8 +2296,8 @@ model BuyerReceipt {
   companyId           String?
   receiptNumber       String
   receiptDate         DateTime
-  assayResult         Decimal? @db.Decimal(5, 2) // actual purity
-  paidAmount          Decimal  @db.Decimal(14, 2)
+  assayResult         Decimal?         @db.Decimal(5, 2) // actual purity
+  paidAmount          Decimal          @db.Decimal(14, 2)
   paymentMethod       String
   paymentChannel      String?
   paymentReference    String?
@@ -2290,9 +2318,9 @@ model BuyerReceipt {
   // The legacy single FKs above remain populated for backward compatibility
   // (UI fallbacks, prior reports, accounting hooks) but new code should
   // prefer iterating these.
-  batches      BuyerReceiptBatch[]
-  dispatches   BuyerReceiptDispatch[]
-  corrections  BuyerReceiptCorrection[]
+  batches     BuyerReceiptBatch[]
+  dispatches  BuyerReceiptDispatch[]
+  corrections BuyerReceiptCorrection[]
 
   @@unique([companyId, receiptNumber])
   @@index([goldPourId])
@@ -2305,7 +2333,7 @@ model BuyerReceipt {
 /// receipt allow a single sale to span many batches (FIFO ledger imports,
 /// multi-batch dispatches paid in one go, etc.).
 model BuyerReceiptBatch {
-  id                  String   @id @default(uuid())
+  id                  String           @id @default(uuid())
   buyerReceiptId      String
   goldPourId          String
   companyId           String?
@@ -2314,7 +2342,7 @@ model BuyerReceiptBatch {
   goldPriceUsdPerGram Decimal?         @db.Decimal(12, 4)
   goldPriceSource     GoldPriceSource?
   notes               String?
-  createdAt           DateTime @default(now())
+  createdAt           DateTime         @default(now())
 
   buyerReceipt BuyerReceipt @relation(fields: [buyerReceiptId], references: [id], onDelete: Cascade)
   goldPour     GoldPour     @relation(fields: [goldPourId], references: [id])
@@ -2395,7 +2423,7 @@ model GoldShiftAllocation {
 }
 
 model GoldShiftExpense {
-  id           String @id @default(uuid())
+  id           String  @id @default(uuid())
   allocationId String
   type         String
   weight       Decimal @db.Decimal(12, 4)
@@ -2406,7 +2434,7 @@ model GoldShiftExpense {
 }
 
 model GoldShiftWorkerShare {
-  id            String @id @default(uuid())
+  id            String   @id @default(uuid())
   allocationId  String
   employeeId    String
   shareWeight   Decimal  @db.Decimal(12, 4)
@@ -2630,11 +2658,11 @@ model GoldLedgerImport {
   presetId         String?
   sampleHeaderHash String? // SHA of the original CSV header row, used to match an import to a saved mapping preset (Epic 14)
 
-  company    Company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  site       Site?                      @relation(fields: [siteId], references: [id])
-  uploadedBy User                       @relation("GoldLedgerImportUploadedBy", fields: [uploadedById], references: [id])
-  assignedTo User?                      @relation("GoldLedgerImportAssignedTo", fields: [assignedToId], references: [id])
-  preset     GoldLedgerImportPreset?    @relation(fields: [presetId], references: [id])
+  company    Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  site       Site?                     @relation(fields: [siteId], references: [id])
+  uploadedBy User                      @relation("GoldLedgerImportUploadedBy", fields: [uploadedById], references: [id])
+  assignedTo User?                     @relation("GoldLedgerImportAssignedTo", fields: [assignedToId], references: [id])
+  preset     GoldLedgerImportPreset?   @relation(fields: [presetId], references: [id])
   entries    GoldLedgerEntry[]
   tags       GoldLedgerImportTag[]
   comments   GoldLedgerImportComment[]
@@ -2656,11 +2684,11 @@ model GoldLedgerEntry {
   parsedDate            DateTime?
   parsedName            String?
   mappedShiftGroupId    String?
-  gramsTotal            Decimal? @db.Decimal(12, 4)
+  gramsTotal            Decimal?              @db.Decimal(12, 4)
   expensesJson          String? // JSON: [{type, weight}, ...]
-  boysGrams             Decimal? @db.Decimal(12, 4)
-  mdaraGrams            Decimal? @db.Decimal(12, 4)
-  balGrams              Decimal? @db.Decimal(12, 4) // negative => sale
+  boysGrams             Decimal?              @db.Decimal(12, 4)
+  mdaraGrams            Decimal?              @db.Decimal(12, 4)
+  balGrams              Decimal?              @db.Decimal(12, 4) // negative => sale
   status                GoldLedgerEntryStatus @default(PENDING)
   goldShiftAllocationId String?
   goldPourId            String? // bare-pour fallback OR set after auto-pour for cleanup tracking
@@ -2672,11 +2700,11 @@ model GoldLedgerEntry {
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
-  import      GoldLedgerImport          @relation(fields: [importId], references: [id], onDelete: Cascade)
-  company     Company?                   @relation("GoldLedgerEntryCompany", fields: [companyId], references: [id])
-  shiftGroup  ShiftGroup?                @relation("GoldLedgerEntryShiftGroup", fields: [mappedShiftGroupId], references: [id])
-  attendance  Attendance[]               @relation("AttendanceGoldLedgerEntry")
-  comments    GoldLedgerImportComment[]
+  import     GoldLedgerImport          @relation(fields: [importId], references: [id], onDelete: Cascade)
+  company    Company?                  @relation("GoldLedgerEntryCompany", fields: [companyId], references: [id])
+  shiftGroup ShiftGroup?               @relation("GoldLedgerEntryShiftGroup", fields: [mappedShiftGroupId], references: [id])
+  attendance Attendance[]              @relation("AttendanceGoldLedgerEntry")
+  comments   GoldLedgerImportComment[]
 
   @@unique([importId, lineNo])
   @@index([importId, status])
@@ -2707,8 +2735,8 @@ model GoldLedgerImportPreset {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy User             @relation("GoldLedgerImportPresetCreatedBy", fields: [createdById], references: [id])
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User               @relation("GoldLedgerImportPresetCreatedBy", fields: [createdById], references: [id])
   imports   GoldLedgerImport[]
 
   @@unique([companyId, name])
@@ -2716,10 +2744,10 @@ model GoldLedgerImportPreset {
 }
 
 model GoldLedgerImportTag {
-  id        String           @id @default(uuid())
+  id        String   @id @default(uuid())
   importId  String
   label     String
-  createdAt DateTime         @default(now())
+  createdAt DateTime @default(now())
 
   import GoldLedgerImport @relation(fields: [importId], references: [id], onDelete: Cascade)
 
@@ -2728,13 +2756,13 @@ model GoldLedgerImportTag {
 }
 
 model GoldLedgerImportComment {
-  id            String           @id @default(uuid())
+  id            String   @id @default(uuid())
   importId      String
   ledgerEntryId String?
   body          String
   createdById   String
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   import      GoldLedgerImport @relation(fields: [importId], references: [id], onDelete: Cascade)
   ledgerEntry GoldLedgerEntry? @relation(fields: [ledgerEntryId], references: [id], onDelete: Cascade)
@@ -2745,9 +2773,9 @@ model GoldLedgerImportComment {
 }
 
 model GoldImportSnapshot {
-  id          String           @id @default(uuid())
+  id          String   @id @default(uuid())
   importId    String
-  takenAt     DateTime         @default(now())
+  takenAt     DateTime @default(now())
   reason      String
   payloadJson String
   takenById   String
@@ -4127,6 +4155,7 @@ model Customer {
   invoices        SalesInvoice[]
   quotations      SalesQuotation[]
   scrapMetalSales ScrapMetalSale[]
+  crmClients      CrmClient[]
 
   @@index([companyId, isActive])
 }
@@ -4178,16 +4207,17 @@ model SalesInvoice {
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
 
-  company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customer        Customer           @relation(fields: [customerId], references: [id])
-  lines           SalesInvoiceLine[]
-  receipts        SalesReceipt[]
-  scrapMetalSales ScrapMetalSale[]   @relation("ScrapMetalSaleInvoice")
-  fiscalReceipt   FiscalReceipt?     @relation("SalesInvoiceFiscalReceipt")
-  creditNotes     CreditNote[]
-  writeOffs       SalesWriteOff[]
-  createdBy       User?              @relation("SalesInvoiceCreatedBy", fields: [createdById], references: [id])
-  issuedBy        User?              @relation("SalesInvoiceIssuedBy", fields: [issuedById], references: [id])
+  company          Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer         Customer           @relation(fields: [customerId], references: [id])
+  lines            SalesInvoiceLine[]
+  receipts         SalesReceipt[]
+  scrapMetalSales  ScrapMetalSale[]   @relation("ScrapMetalSaleInvoice")
+  fiscalReceipt    FiscalReceipt?     @relation("SalesInvoiceFiscalReceipt")
+  creditNotes      CreditNote[]
+  writeOffs        SalesWriteOff[]
+  crmLeadDocuments CrmLeadDocument[]  @relation("CrmLeadDocInvoice")
+  createdBy        User?              @relation("SalesInvoiceCreatedBy", fields: [createdById], references: [id])
+  issuedBy         User?              @relation("SalesInvoiceIssuedBy", fields: [issuedById], references: [id])
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, status])
@@ -4232,11 +4262,12 @@ model SalesQuotation {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  company   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customer  Customer             @relation(fields: [customerId], references: [id])
-  lines     SalesQuotationLine[]
-  createdBy User?                @relation("SalesQuotationCreatedBy", fields: [createdById], references: [id])
-  issuedBy  User?                @relation("SalesQuotationIssuedBy", fields: [issuedById], references: [id])
+  company          Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer         Customer             @relation(fields: [customerId], references: [id])
+  lines            SalesQuotationLine[]
+  createdBy        User?                @relation("SalesQuotationCreatedBy", fields: [createdById], references: [id])
+  issuedBy         User?                @relation("SalesQuotationIssuedBy", fields: [issuedById], references: [id])
+  crmLeadDocuments CrmLeadDocument[]    @relation("CrmLeadDocQuotation")
 
   @@unique([companyId, quotationNumber])
   @@index([companyId, status])
@@ -4273,11 +4304,12 @@ model SalesReceipt {
   createdById   String?
   createdAt     DateTime @default(now())
 
-  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  invoice         SalesInvoice?    @relation(fields: [invoiceId], references: [id])
-  scrapMetalSales ScrapMetalSale[] @relation("ScrapMetalSaleReceipt")
-  bankAccount     BankAccount?     @relation(fields: [bankAccountId], references: [id])
-  createdBy       User?            @relation("SalesReceiptCreatedBy", fields: [createdById], references: [id])
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoice          SalesInvoice?     @relation(fields: [invoiceId], references: [id])
+  scrapMetalSales  ScrapMetalSale[]  @relation("ScrapMetalSaleReceipt")
+  bankAccount      BankAccount?      @relation(fields: [bankAccountId], references: [id])
+  createdBy        User?             @relation("SalesReceiptCreatedBy", fields: [createdById], references: [id])
+  crmLeadDocuments CrmLeadDocument[] @relation("CrmLeadDocReceipt")
 
   @@unique([companyId, receiptNumber])
 }
@@ -6155,6 +6187,444 @@ model CarSalesPayment {
 }
 
 // ============================================
+// CRM MODULE
+
+enum CrmLeadStage {
+  NEW
+  CONTACTED
+  QUALIFIED
+  SITE_VISIT
+  QUOTED
+  INVOICED
+  WON
+  LOST
+}
+
+enum CrmActivityType {
+  NOTE
+  CALL
+  EMAIL
+  WHATSAPP
+  MEETING
+  STAGE_CHANGE
+  INTAKE_SUBMISSION
+  DOCUMENT_CREATED
+  DOCUMENT_SENT
+  DOCUMENT_APPROVED
+  DOCUMENT_DECLINED
+  PAYMENT_RECORDED
+  SYSTEM
+}
+
+enum CrmFollowUpStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum CrmAppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum CrmDocumentType {
+  QUOTATION
+  INVOICE
+  RECEIPT
+}
+
+enum CrmApprovalStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+enum CrmIntakeSubmissionStatus {
+  NEW
+  CONVERTED
+  ARCHIVED
+  SPAM
+}
+
+enum CrmCommissionBasis {
+  INVOICED
+  PAID
+}
+
+enum CrmCommissionEntryStatus {
+  PENDING
+  APPROVED
+  PAID
+  VOIDED
+}
+
+model CrmClient {
+  id              String    @id @default(uuid())
+  companyId       String
+  clientNo        String
+  name            String
+  contactName     String?
+  email           String?
+  emailNormalized String?
+  phone           String?
+  phoneE164       String?
+  addressLine     String?
+  city            String?
+  country         String?
+  notes           String?
+  tags            String[]  @default([])
+  customerId      String?
+  assignedToId    String?
+  archivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  company           Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer          Customer?             @relation(fields: [customerId], references: [id])
+  assignedTo        User?                 @relation("CrmClientAssignedTo", fields: [assignedToId], references: [id])
+  leads             CrmLead[]
+  activities        CrmActivity[]
+  followUps         CrmFollowUp[]
+  appointments      CrmAppointment[]
+  intakeSubmissions CrmIntakeSubmission[]
+
+  @@unique([companyId, clientNo])
+  @@index([companyId, emailNormalized])
+  @@index([companyId, phoneE164])
+  @@index([companyId, name])
+}
+
+model CrmLead {
+  id             String       @id @default(uuid())
+  companyId      String
+  leadNo         String
+  title          String?
+  clientId       String?
+  contactName    String?
+  contactEmail   String?
+  contactPhone   String?
+  stage          CrmLeadStage @default(NEW)
+  probability    Int?
+  estimatedValue Float?
+  currency       String       @default("USD")
+  services       String[]     @default([])
+  details        Json?
+  source         String?
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmTerm        String?
+  utmContent     String?
+  referrer       String?
+  landingPage    String?
+  assignedToId   String?
+  createdById    String?
+  lostReason     String?
+  firstContactAt DateTime?
+  wonAt          DateTime?
+  lostAt         DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  company           Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client            CrmClient?            @relation(fields: [clientId], references: [id])
+  assignedTo        User?                 @relation("CrmLeadAssignedTo", fields: [assignedToId], references: [id])
+  createdBy         User?                 @relation("CrmLeadCreatedBy", fields: [createdById], references: [id])
+  activities        CrmActivity[]
+  followUps         CrmFollowUp[]
+  appointments      CrmAppointment[]
+  documents         CrmLeadDocument[]
+  intakeSubmissions CrmIntakeSubmission[]
+  commissionEntries CrmCommissionEntry[]
+
+  @@unique([companyId, leadNo])
+  @@index([companyId, stage, updatedAt])
+  @@index([companyId, assignedToId, stage])
+  @@index([companyId, clientId])
+  @@index([companyId, createdAt])
+  @@index([companyId, source])
+  @@index([companyId, utmSource, utmCampaign])
+}
+
+model CrmLeadDocument {
+  id          String          @id @default(uuid())
+  companyId   String
+  leadId      String
+  type        CrmDocumentType
+  quotationId String?
+  invoiceId   String?
+  receiptId   String?
+  amount      Float
+  currency    String          @default("USD")
+  createdById String?
+  createdAt   DateTime        @default(now())
+
+  company           Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead              CrmLead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  quotation         SalesQuotation?      @relation("CrmLeadDocQuotation", fields: [quotationId], references: [id])
+  invoice           SalesInvoice?        @relation("CrmLeadDocInvoice", fields: [invoiceId], references: [id])
+  receipt           SalesReceipt?        @relation("CrmLeadDocReceipt", fields: [receiptId], references: [id])
+  createdBy         User?                @relation("CrmLeadDocCreatedBy", fields: [createdById], references: [id])
+  approval          CrmDocumentApproval?
+  commissionEntries CrmCommissionEntry[]
+
+  @@unique([companyId, quotationId])
+  @@unique([companyId, invoiceId])
+  @@unique([companyId, receiptId])
+  @@index([companyId, leadId, type])
+}
+
+model CrmDocumentApproval {
+  id             String            @id @default(uuid())
+  companyId      String
+  leadDocumentId String            @unique
+  token          String            @unique
+  status         CrmApprovalStatus @default(PENDING)
+  expiresAt      DateTime?
+  firstViewedAt  DateTime?
+  respondedAt    DateTime?
+  responseNote   String?
+  responderName  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leadDocument CrmLeadDocument @relation(fields: [leadDocumentId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status])
+}
+
+model CrmActivity {
+  id          String          @id @default(uuid())
+  companyId   String
+  type        CrmActivityType
+  leadId      String?
+  clientId    String?
+  subject     String
+  body        String?
+  metadata    Json?
+  createdById String?
+  occurredAt  DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead      CrmLead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client    CrmClient? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy User?      @relation("CrmActivityCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId, leadId, occurredAt])
+  @@index([companyId, clientId, occurredAt])
+}
+
+model CrmFollowUp {
+  id            String            @id @default(uuid())
+  companyId     String
+  title         String
+  notes         String?
+  dueAt         DateTime
+  status        CrmFollowUpStatus @default(PENDING)
+  leadId        String?
+  clientId      String?
+  appointmentId String?
+  assignedToId  String
+  createdById   String?
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead        CrmLead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client      CrmClient?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointment CrmAppointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  assignedTo  User            @relation("CrmFollowUpAssignedTo", fields: [assignedToId], references: [id])
+  createdBy   User?           @relation("CrmFollowUpCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId, assignedToId, status, dueAt])
+  @@index([companyId, status, dueAt])
+  @@index([companyId, leadId])
+}
+
+model CrmAppointment {
+  id             String               @id @default(uuid())
+  companyId      String
+  appointmentNo  String
+  title          String               @default("Site visit")
+  leadId         String?
+  clientId       String?
+  assignedToId   String
+  scheduledStart DateTime
+  scheduledEnd   DateTime?
+  location       String?
+  status         CrmAppointmentStatus @default(SCHEDULED)
+  outcomeNotes   String?
+  completedAt    DateTime?
+  createdById    String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead       CrmLead?      @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client     CrmClient?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  assignedTo User          @relation("CrmAppointmentAssignedTo", fields: [assignedToId], references: [id])
+  createdBy  User?         @relation("CrmAppointmentCreatedBy", fields: [createdById], references: [id])
+  followUps  CrmFollowUp[]
+
+  @@unique([companyId, appointmentNo])
+  @@index([companyId, assignedToId, scheduledStart])
+  @@index([companyId, status, scheduledStart])
+}
+
+model CrmIntakeForm {
+  id                String   @id @default(uuid())
+  companyId         String
+  name              String
+  publicToken       String   @unique
+  isActive          Boolean  @default(true)
+  headline          String?
+  description       String?
+  fields            Json
+  services          Json
+  allowPhotos       Boolean  @default(true)
+  maxPhotos         Int      @default(5)
+  successMessage    String?
+  defaultAssigneeId String?
+  createdById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  company         Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  defaultAssignee User?                 @relation("CrmIntakeFormDefaultAssignee", fields: [defaultAssigneeId], references: [id])
+  createdBy       User?                 @relation("CrmIntakeFormCreatedBy", fields: [createdById], references: [id])
+  submissions     CrmIntakeSubmission[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+}
+
+model CrmIntakeSubmission {
+  id               String                    @id @default(uuid())
+  companyId        String
+  formId           String?
+  apiKeyId         String?
+  status           CrmIntakeSubmissionStatus @default(NEW)
+  contactName      String
+  email            String?
+  emailNormalized  String?
+  phone            String?
+  phoneE164        String?
+  selectedServices String[]                  @default([])
+  answers          Json?
+  photoUrls        String[]                  @default([])
+  message          String?
+  source           String?
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  utmTerm          String?
+  utmContent       String?
+  referrer         String?
+  landingPage      String?
+  leadId           String?
+  clientId         String?
+  createdAt        DateTime                  @default(now())
+
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  form    CrmIntakeForm? @relation(fields: [formId], references: [id], onDelete: SetNull)
+  apiKey  CrmApiKey?     @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  lead    CrmLead?       @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client  CrmClient?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status, createdAt])
+  @@index([companyId, formId, createdAt])
+}
+
+model CrmApiKey {
+  id          String    @id @default(uuid())
+  companyId   String
+  name        String
+  keyPrefix   String
+  keyHash     String    @unique
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  company     Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy   User?                 @relation("CrmApiKeyCreatedBy", fields: [createdById], references: [id])
+  submissions CrmIntakeSubmission[]
+
+  @@index([companyId, revokedAt])
+}
+
+model CrmCommissionRule {
+  id              String             @id @default(uuid())
+  companyId       String
+  name            String
+  basis           CrmCommissionBasis @default(INVOICED)
+  appliesToUserId String?
+  isActive        Boolean            @default(true)
+  effectiveFrom   DateTime?
+  effectiveTo     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  company       Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  appliesToUser User?                @relation("CrmCommissionRuleUser", fields: [appliesToUserId], references: [id])
+  tiers         CrmCommissionTier[]
+  entries       CrmCommissionEntry[]
+
+  @@index([companyId, isActive, appliesToUserId])
+}
+
+model CrmCommissionTier {
+  id            String @id @default(uuid())
+  ruleId        String
+  thresholdFrom Float
+  ratePercent   Float
+  sortOrder     Int    @default(0)
+
+  rule CrmCommissionRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, sortOrder])
+}
+
+model CrmCommissionEntry {
+  id             String                   @id @default(uuid())
+  companyId      String
+  repId          String
+  leadId         String?
+  leadDocumentId String?
+  ruleId         String?
+  basis          CrmCommissionBasis
+  periodKey      String
+  baseAmount     Float
+  ratePercent    Float
+  amount         Float
+  currency       String                   @default("USD")
+  status         CrmCommissionEntryStatus @default(PENDING)
+  approvedById   String?
+  paidAt         DateTime?
+  notes          String?
+  calculatedAt   DateTime                 @default(now())
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  rep          User               @relation("CrmCommissionEntryRep", fields: [repId], references: [id])
+  lead         CrmLead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  leadDocument CrmLeadDocument?   @relation(fields: [leadDocumentId], references: [id], onDelete: SetNull)
+  rule         CrmCommissionRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  approvedBy   User?              @relation("CrmCommissionEntryApprovedBy", fields: [approvedById], references: [id])
+
+  @@unique([companyId, leadDocumentId, repId, basis])
+  @@index([companyId, repId, periodKey])
+  @@index([companyId, status, periodKey])
+}
+
 // NEXTAUTH MODELS
 // ============================================
 
