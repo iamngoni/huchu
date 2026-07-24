@@ -22,6 +22,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import {
   fetchManagedUserFeatureAccess,
+  fetchManagedUsers,
   resetManagedUserFeatureAccess,
   setManagedUserFeatureAccess,
   type ManagedUserFeatureAccessEntry,
@@ -58,6 +59,7 @@ export function FeatureAccessDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const targetUserId = target?.userId || "";
+  const [userSearch, setUserSearch] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [pendingKeys, setPendingKeys] = React.useState<Set<string>>(new Set());
 
@@ -65,6 +67,23 @@ export function FeatureAccessDialog({
     setSearch("");
     setPendingKeys(new Set());
   }, [targetUserId]);
+
+  React.useEffect(() => {
+    if (!target) setUserSearch("");
+  }, [target]);
+
+  const normalizedUserSearch = userSearch.trim();
+  const pickerUsersQuery = useQuery({
+    queryKey: ["managed-user-picker", normalizedUserSearch],
+    queryFn: () =>
+      fetchManagedUsers({
+        search: normalizedUserSearch || undefined,
+        page: 1,
+        limit: 50,
+      }),
+    enabled: Boolean(target),
+    staleTime: 30_000,
+  });
 
   const featureAccessQuery = useQuery({
     queryKey: featureAccessQueryKey(targetUserId),
@@ -77,6 +96,29 @@ export function FeatureAccessDialog({
     () => featureAccessQuery.data?.features ?? [],
     [featureAccessQuery.data?.features],
   );
+  const targetUserSummary = React.useMemo<ManagedUserSummary | null>(
+    () =>
+      targetUser
+        ? {
+            id: targetUser.id,
+            name: targetUser.name,
+            email: targetUser.email,
+            role: targetUser.role,
+            isActive: targetUser.isActive,
+          }
+        : null,
+    [targetUser],
+  );
+  const pickerUsers = React.useMemo(() => {
+    const merged = new Map<string, ManagedUserSummary>();
+    for (const user of users) merged.set(user.id, user);
+    for (const user of pickerUsersQuery.data?.data ?? []) merged.set(user.id, user);
+    if (targetUserSummary) merged.set(targetUserSummary.id, targetUserSummary);
+    return [...merged.values()].sort((a, b) => {
+      const nameOrder = a.name.localeCompare(b.name);
+      return nameOrder === 0 ? a.email.localeCompare(b.email) : nameOrder;
+    });
+  }, [pickerUsersQuery.data?.data, targetUserSummary, users]);
 
   const normalizedSearch = search.trim().toLowerCase();
   const groupedFeatures = React.useMemo(() => {
@@ -192,12 +234,19 @@ export function FeatureAccessDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-3">
+            <Input
+              value={userSearch}
+              onChange={(event) => setUserSearch(event.target.value)}
+              placeholder="Search users by name or email"
+              disabled={!target}
+            />
+
             <Select
               value={targetUserId || "__none"}
               onValueChange={(value) => {
-                if (value === "__none") return;
-                const selected = users.find((user) => user.id === value);
+                if (value.startsWith("__")) return;
+                const selected = pickerUsers.find((user) => user.id === value);
                 if (!selected) return;
                 onTargetChange({ userId: selected.id, userEmail: selected.email });
               }}
@@ -207,7 +256,17 @@ export function FeatureAccessDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">Select user</SelectItem>
-                {users.map((user) => (
+                {pickerUsersQuery.isLoading ? (
+                  <SelectItem value="__loading" disabled>
+                    Loading users...
+                  </SelectItem>
+                ) : null}
+                {!pickerUsersQuery.isLoading && pickerUsers.length === 0 ? (
+                  <SelectItem value="__empty" disabled>
+                    No users found
+                  </SelectItem>
+                ) : null}
+                {pickerUsers.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {`${user.name} (${user.email})`}
                   </SelectItem>
