@@ -23,6 +23,10 @@ import { getPosHostForCompany, isCashierRole, isPublicPosPath } from "@/lib/reta
 const ACCESS_BLOCKED_PATH = "/access-blocked";
 const LOGIN_PATH = "/login";
 const MARKETING_BASE_PATH = "/home";
+// Public, unauthenticated CRM pages: intake form (/f/[token]) and document
+// approval (/a/[token]). Shared over WhatsApp etc., so they bypass tenant/host
+// and auth gating entirely — the token is the capability.
+const CRM_PUBLIC_BASE_PATHS = ["/f", "/a"];
 const ADMIN_BASE_PATH = "/admin";
 const ADMIN_LOGIN_PATH = `${ADMIN_BASE_PATH}/login`;
 const ADMIN_INTERNAL_BASE_PATH = "/portal/admin";
@@ -215,6 +219,10 @@ export default withAuth(
     }
 
     if (isPathWithinRoute(pathname, MARKETING_BASE_PATH)) {
+      return NextResponse.next();
+    }
+
+    if (CRM_PUBLIC_BASE_PATHS.some((base) => isPathWithinRoute(pathname, base))) {
       return NextResponse.next();
     }
 
@@ -479,6 +487,10 @@ export default withAuth(
         }
 
         if (isPathWithinRoute(pathname, MARKETING_BASE_PATH)) {
+          return true;
+        }
+
+        if (CRM_PUBLIC_BASE_PATHS.some((base) => isPathWithinRoute(pathname, base))) {
           return true;
         }
 
