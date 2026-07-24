@@ -1770,6 +1770,11 @@ enum NotificationType {
   OPS_PERMIT_EXPIRED
   OPS_WORK_ORDER_OPENED
   OPS_WORK_ORDER_IN_PROGRESS
+  CRM_LEAD_ASSIGNED
+  CRM_LEAD_CREATED
+  CRM_DOCUMENT_APPROVED
+  CRM_DOCUMENT_DECLINED
+  CRM_FOLLOW_UP_DUE
 }
 
 enum NotificationSeverity {
@@ -1791,6 +1796,8 @@ enum NotificationEntityType {
   INCIDENT
   PERMIT
   WORK_ORDER
+  CRM_LEAD
+  CRM_DOCUMENT
 }
 
 enum HrIncidentCategory {
