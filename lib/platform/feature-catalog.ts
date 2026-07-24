@@ -14,6 +14,7 @@ export type FeatureDomain =
   | "schools"
   | "autos"
   | "retail"
+  | "crm"
   | "portal"
   | "reports"
   | "admin";
@@ -162,6 +163,16 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
   f({ key: "retail.promotions", name: "Retail Promotions", description: "Price lists, markdowns, and promotion rules.", domain: "retail", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "retail.shifts", name: "Retail Shifts", description: "Shift control, cash-up, and register reconciliation.", domain: "retail", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "retail.reports", name: "Retail Reports", description: "Retail dashboards and reporting surfaces.", domain: "retail", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+
+  f({ key: "crm.core", name: "CRM Core", description: "CRM module landing, dashboard, and shared setup.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+  f({ key: "crm.leads", name: "CRM Leads & Pipeline", description: "Lead pipeline, stages, and activity timeline.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+  f({ key: "crm.clients", name: "CRM Clients", description: "Client profiles, contacts, and dedupe.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+  f({ key: "crm.appointments", name: "CRM Site Visits", description: "Appointment and site-visit scheduling with follow-ups.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+  f({ key: "crm.intake", name: "CRM Intake Forms", description: "Public intake-form builder, shareable links, and webhook lead capture.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+  f({ key: "crm.documents", name: "CRM Quoting & Invoicing", description: "Create quotations, invoices, and receipts from the CRM (records live in accounting).", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+  f({ key: "crm.insights", name: "CRM Insights", description: "Pipeline funnel, per-rep performance, and source/UTM attribution.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+  f({ key: "crm.commissions", name: "CRM Commissions", description: "Tiered commission rules and per-rep commission tracking.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+  f({ key: "crm.settings", name: "CRM Settings", description: "API keys, commission rules, and pipeline configuration.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
 
   f({ key: "portal.core", name: "Portal Core", description: "External/customer portal shell and shared navigation.", domain: "portal", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "portal.schools", name: "School Portal", description: "School-facing portal experiences and APIs.", domain: "portal", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
@@ -454,6 +465,24 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
     ],
   },
   {
+    code: "ADDON_CRM_SUITE",
+    name: "CRM Suite",
+    description: "Lead-to-cash CRM: pipeline, clients, site visits, intake forms, quoting/invoicing, commissions, and insights.",
+    monthlyPrice: 49,
+    additionalSiteMonthlyPrice: 10,
+    features: [
+      "crm.core",
+      "crm.leads",
+      "crm.clients",
+      "crm.appointments",
+      "crm.intake",
+      "crm.documents",
+      "crm.insights",
+      "crm.commissions",
+      "crm.settings",
+    ],
+  },
+  {
     code: "ADDON_PORTAL_SUITE",
     name: "Client Portal Suite",
     description: "Shared external portal shell and cross-vertical portal delivery surfaces.",
@@ -491,6 +520,8 @@ export const BUNDLE_DEPENDENCIES: Record<string, string[]> = {
   ADDON_ACCOUNTING_ADVANCED: ["ADDON_ACCOUNTING_CORE"],
   ADDON_ZIMRA_FISCAL: ["ADDON_ACCOUNTING_CORE"],
   ADDON_GOLD_ADVANCED: ["ADDON_GOLD_CORE"],
+  // CRM quoting/invoicing writes real accounting AR documents.
+  ADDON_CRM_SUITE: ["ADDON_ACCOUNTING_CORE", "ADDON_ACCOUNTING_ADVANCED"],
 };
 
 export const TIERS: TierDefinition[] = [

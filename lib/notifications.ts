@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma"
 
 type DbClient = Prisma.TransactionClient | PrismaClient
 
-type NotificationCategory = "HR" | "OPS"
+type NotificationCategory = "HR" | "OPS" | "CRM"
 
 export type NotificationActionDescriptor = {
   key: string
