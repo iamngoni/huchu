@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,9 @@ import type {
   DepartmentRecord,
   EmployeeSummary,
   JobGradeRecord,
+  LinkableUser,
 } from "@/lib/api"
+import { fetchLinkableUsers } from "@/lib/api"
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client"
 import {
   getDefaultEmployeePosition,
@@ -112,6 +114,8 @@ const MODULE_WORKSPACE_PROFILE_MAP: Partial<Record<EmployeeModule, ManagedWorksp
   RETAIL: "RETAIL",
 }
 
+type AccessMode = "none" | "create" | "link"
+
 type StepId =
   | "employment"
   | "modules"
@@ -146,10 +150,14 @@ type EmployeeWizardForm = {
   terminationDate: string
   defaultCurrency: string
   isActive: boolean
-  createUserAccount: boolean
+  accessMode: AccessMode
   userEmail: string
   userPassword: string
   userRole: UserRole
+  linkUserId: string
+  linkUserName: string
+  linkUserEmail: string
+  linkUserRole: string
 }
 
 const stepMeta: Array<{ id: StepId; label: string; description: string }> = [
@@ -187,10 +195,14 @@ const emptyForm: EmployeeWizardForm = {
   terminationDate: "",
   defaultCurrency: "USD",
   isActive: true,
-  createUserAccount: false,
+  accessMode: "none",
   userEmail: "",
   userPassword: "",
   userRole: "OPERATOR",
+  linkUserId: "",
+  linkUserName: "",
+  linkUserEmail: "",
+  linkUserRole: "",
 }
 
 function inferPayoutPath(employmentType: EmploymentType): PayoutPath {
@@ -311,7 +323,11 @@ function validateStep(stepId: StepId, form: EmployeeWizardForm, canProvisionUser
     case "compensation":
       return null
     case "access":
-      if (!canProvisionUser || !form.createUserAccount) return null
+      if (!canProvisionUser || form.accessMode === "none") return null
+      if (form.accessMode === "link") {
+        if (!form.linkUserId) return "Select the existing user to link."
+        return null
+      }
       if (!form.userEmail.trim()) return "Linked user email is required."
       if (!form.userPassword.trim()) return "Linked user password is required."
       if (!form.userRole) return "Linked user role is required."
@@ -926,6 +942,24 @@ function CompensationStep({
   )
 }
 
+const accessModeOptions: Array<{ value: AccessMode; label: string; description: string }> = [
+  {
+    value: "none",
+    label: "No linked user",
+    description: "Create the employee record only. Access can be provisioned later if needed.",
+  },
+  {
+    value: "create",
+    label: "Create a new user account",
+    description: "Provision a fresh login so the employee can sign in and access company modules.",
+  },
+  {
+    value: "link",
+    label: "Link an existing user",
+    description: "Attach a user that was already created through user management and has no employee record yet.",
+  },
+]
+
 function AccessStep({
   form,
   canProvisionUser,
@@ -937,6 +971,33 @@ function AccessStep({
   availableUserRoles: readonly { value: UserRole; label: string }[]
   onChange: (updates: Partial<EmployeeWizardForm>) => void
 }) {
+  const [userSearch, setUserSearch] = useState("")
+  const linkableUsersQuery = useQuery({
+    queryKey: ["employees", "linkable-users"],
+    queryFn: () => fetchLinkableUsers(),
+    enabled: canProvisionUser && form.accessMode === "link",
+    staleTime: 30_000,
+  })
+
+  const linkableUsers = linkableUsersQuery.data?.data ?? []
+  const normalizedSearch = userSearch.trim().toLowerCase()
+  const filteredUsers = normalizedSearch
+    ? linkableUsers.filter(
+        (user) =>
+          user.name.toLowerCase().includes(normalizedSearch) ||
+          user.email.toLowerCase().includes(normalizedSearch),
+      )
+    : linkableUsers
+
+  const handleSelectUser = (user: LinkableUser) => {
+    onChange({
+      linkUserId: user.id,
+      linkUserName: user.name,
+      linkUserEmail: user.email,
+      linkUserRole: user.role,
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -952,21 +1013,30 @@ function AccessStep({
         </div>
       ) : (
         <>
-          <label className="flex items-start gap-3 rounded-xl border border-[var(--edge-subtle)] p-4">
-            <Checkbox
-              checked={form.createUserAccount}
-              onCheckedChange={(value) => onChange({ createUserAccount: value === true })}
-              className="mt-0.5"
-            />
-            <div className="space-y-1">
-              <div className="font-medium">Create a linked user account</div>
-              <p className="text-sm text-muted-foreground">
-                Use this when the employee should sign in and access company modules directly.
-              </p>
-            </div>
-          </label>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {accessModeOptions.map((option) => {
+              const selected = form.accessMode === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onChange({ accessMode: option.value })}
+                  aria-pressed={selected}
+                  className={cn(
+                    "rounded-xl border p-4 text-left transition-colors",
+                    selected
+                      ? "border-[var(--action-primary-bg)] bg-[var(--surface-soft)]"
+                      : "border-[var(--edge-subtle)] hover:bg-[var(--surface-subtle)]",
+                  )}
+                >
+                  <div className="font-medium">{option.label}</div>
+                  <p className="mt-1 text-sm text-muted-foreground">{option.description}</p>
+                </button>
+              )
+            })}
+          </div>
 
-          {form.createUserAccount ? (
+          {form.accessMode === "create" ? (
             <div className="grid gap-4 lg:grid-cols-2">
               <div>
                 <FieldLabel required>User email</FieldLabel>
@@ -1005,11 +1075,80 @@ function AccessStep({
                 <FieldHint>This password is stored as a hashed user credential when the employee is created.</FieldHint>
               </div>
             </div>
-          ) : (
+          ) : null}
+
+          {form.accessMode === "link" ? (
+            <div className="space-y-3">
+              <div className="max-w-xl">
+                <FieldLabel required>Existing user</FieldLabel>
+                <Input
+                  value={userSearch}
+                  onChange={(event) => setUserSearch(event.target.value)}
+                  placeholder="Search by name or email"
+                />
+                <FieldHint>Only users in this company without an employee record are listed.</FieldHint>
+              </div>
+
+              {linkableUsersQuery.isLoading ? (
+                <p className="text-sm text-muted-foreground">Loading users...</p>
+              ) : linkableUsersQuery.isError ? (
+                <p className="text-sm text-destructive">
+                  {getApiErrorMessage(linkableUsersQuery.error, "Failed to load users")}
+                </p>
+              ) : filteredUsers.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[var(--edge-subtle)] p-4 text-sm text-muted-foreground">
+                  {linkableUsers.length === 0
+                    ? "Every existing user is already linked to an employee. Create a new user account instead."
+                    : "No users match this search."}
+                </div>
+              ) : (
+                <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                  {filteredUsers.map((user) => {
+                    const selected = form.linkUserId === user.id
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => handleSelectUser(user)}
+                        aria-pressed={selected}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors",
+                          selected
+                            ? "border-[var(--action-primary-bg)] bg-[var(--surface-soft)]"
+                            : "border-[var(--edge-subtle)] hover:bg-[var(--surface-subtle)]",
+                        )}
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{user.name}</div>
+                          <div className="truncate text-sm text-muted-foreground">{user.email}</div>
+                        </div>
+                        <div className="shrink-0 text-right text-xs text-muted-foreground">
+                          <div>{user.role}</div>
+                          {!user.isActive ? <div className="text-destructive">Inactive</div> : null}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {form.linkUserId ? (
+                <div className="rounded-xl border border-[var(--edge-subtle)] bg-[var(--surface-subtle)] p-4 text-sm">
+                  <p className="font-semibold text-foreground">Selected user</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {form.linkUserName} ({form.linkUserEmail}) will keep their existing role and password. The employee
+                    record will be linked to this login.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {form.accessMode === "none" ? (
             <div className="rounded-xl border border-dashed border-[var(--edge-subtle)] p-4 text-sm text-muted-foreground">
               This employee will be created without a linked user. You can provision access later if the company needs it.
             </div>
-          )}
+          ) : null}
         </>
       )}
     </div>
@@ -1084,9 +1223,11 @@ function ReviewStep({
           label="Linked account"
           value={
             canProvisionUser
-              ? form.createUserAccount
-                ? `${form.userEmail} (${form.userRole})`
-                : "No linked user"
+              ? form.accessMode === "create"
+                ? `New account: ${form.userEmail} (${form.userRole})`
+                : form.accessMode === "link"
+                  ? `Existing user: ${form.linkUserName} - ${form.linkUserEmail} (${form.linkUserRole})`
+                  : "No linked user"
               : "Not provisioned in this session"
           }
         />
@@ -1291,12 +1432,19 @@ export function EmployeeWizard({
         next.position = nextDefaultPosition
       }
 
-      if (!next.createUserAccount) {
+      if (next.accessMode !== "create") {
         next.userEmail = ""
         next.userPassword = ""
       }
 
-      if (next.createUserAccount && !nextUserRoles.some((role) => role.value === next.userRole)) {
+      if (next.accessMode !== "link") {
+        next.linkUserId = ""
+        next.linkUserName = ""
+        next.linkUserEmail = ""
+        next.linkUserRole = ""
+      }
+
+      if (next.accessMode === "create" && !nextUserRoles.some((role) => role.value === next.userRole)) {
         next.userRole = nextUserRoles[0]?.value ?? "OPERATOR"
       }
 
@@ -1351,12 +1499,19 @@ export function EmployeeWizard({
 
   const createMutation = useMutation({
     mutationFn: async (payload: EmployeeWizardForm) => {
+      const createsAccount = canProvisionUser && payload.accessMode === "create"
+      const linksExistingUser = canProvisionUser && payload.accessMode === "link" && Boolean(payload.linkUserId)
+      const linkedAccessRole =
+        linksExistingUser && availableUserRoles.some((role) => role.value === payload.linkUserRole)
+          ? (payload.linkUserRole as UserRole)
+          : undefined
+
       const moduleAssignments = payload.moduleAssignments.map((module) => ({
         module,
         isPrimary: module === payload.primaryModule,
         isActive: true,
-        requiresUserAccess: canProvisionUser ? payload.createUserAccount : false,
-        accessRole: canProvisionUser && payload.createUserAccount ? payload.userRole : undefined,
+        requiresUserAccess: createsAccount || linksExistingUser,
+        accessRole: createsAccount ? payload.userRole : linkedAccessRole,
       }))
 
       return fetchJson("/api/employees", {
@@ -1383,11 +1538,11 @@ export function EmployeeWizard({
           defaultCurrency: payload.defaultCurrency || "USD",
           isActive: payload.isActive,
           moduleAssignments,
-          createUserAccount: canProvisionUser ? payload.createUserAccount : false,
-          userEmail:
-            canProvisionUser && payload.createUserAccount ? payload.userEmail.trim().toLowerCase() : undefined,
-          userPassword: canProvisionUser && payload.createUserAccount ? payload.userPassword : undefined,
-          userRole: canProvisionUser && payload.createUserAccount ? payload.userRole : undefined,
+          createUserAccount: createsAccount,
+          userEmail: createsAccount ? payload.userEmail.trim().toLowerCase() : undefined,
+          userPassword: createsAccount ? payload.userPassword : undefined,
+          userRole: createsAccount ? payload.userRole : undefined,
+          linkUserId: linksExistingUser ? payload.linkUserId : undefined,
         }),
       })
     },

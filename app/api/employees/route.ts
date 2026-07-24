@@ -89,6 +89,7 @@ const employeeSchema = z.object({
     .trim()
     .min(1)
     .optional(),
+  linkUserId: z.string().uuid().optional(),
 })
 
 const EMPLOYEE_ID_PREFIX = "EMP-"
@@ -390,7 +391,9 @@ export async function POST(request: NextRequest) {
             module: normalizeEmployeeModule(assignment.module),
             isPrimary: assignment.isPrimary ?? (index === 0 || assignment.module === "HR"),
             isActive: assignment.isActive ?? true,
-            requiresUserAccess: assignment.requiresUserAccess ?? validated.createUserAccount ?? false,
+            requiresUserAccess:
+              assignment.requiresUserAccess ??
+              ((validated.createUserAccount ?? false) || Boolean(validated.linkUserId)),
             accessRole: toUserRoleOrNull(assignment.accessRole) ?? undefined,
           },
         ]),
@@ -402,7 +405,8 @@ export async function POST(request: NextRequest) {
         module: "HR",
         isPrimary: true,
         isActive: true,
-        requiresUserAccess: validated.createUserAccount ?? false,
+        requiresUserAccess:
+          (validated.createUserAccount ?? false) || Boolean(validated.linkUserId),
         accessRole: undefined,
       })
     }
@@ -442,6 +446,33 @@ export async function POST(request: NextRequest) {
       return errorResponse("Selected position is not available for the chosen primary module", 400)
     }
 
+    if (validated.createUserAccount && validated.linkUserId) {
+      return errorResponse(
+        "Choose either creating a new user account or linking an existing user, not both",
+        400,
+      )
+    }
+
+    if (validated.linkUserId) {
+      if (session.user.role !== "SUPERADMIN") {
+        return errorResponse("Only superadmins can link user accounts during onboarding", 403)
+      }
+      const linkTarget = await prisma.user.findUnique({
+        where: { id: validated.linkUserId },
+        select: {
+          id: true,
+          companyId: true,
+          employeeProfile: { select: { id: true } },
+        },
+      })
+      if (!linkTarget || linkTarget.companyId !== session.user.companyId) {
+        return errorResponse("Selected user was not found in this company", 404)
+      }
+      if (linkTarget.employeeProfile) {
+        return errorResponse("Selected user is already linked to another employee", 409)
+      }
+    }
+
     const requestedUserRole = toUserRoleOrNull(validated.userRole)
     if (validated.createUserAccount) {
       if (session.user.role !== "SUPERADMIN") {
@@ -475,7 +506,7 @@ export async function POST(request: NextRequest) {
       : undefined
 
     const result = await prisma.$transaction(async (tx) => {
-      let linkedUserId: string | undefined
+      let linkedUserId: string | undefined = validated.linkUserId
       if (validated.createUserAccount && validated.userEmail && validated.userPassword && requestedUserRole) {
         const passwordHash = await bcrypt.hash(validated.userPassword, 12)
         const user = await tx.user.create({
@@ -610,6 +641,12 @@ export async function POST(request: NextRequest) {
       if (target.includes("nationalIdNumber")) {
         return errorResponse(
           "National ID number already exists for this company",
+          409,
+        )
+      }
+      if (target.includes("userId")) {
+        return errorResponse(
+          "Selected user is already linked to another employee",
           409,
         )
       }
