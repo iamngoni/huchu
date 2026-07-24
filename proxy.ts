@@ -18,6 +18,11 @@ import { canAccessCapabilityWithToken, canAccessRouteWithToken } from "@/lib/pla
 import { getAdminRootDomain, isAdminPortalHost, isSuperuserRole } from "@/lib/admin-portal";
 import { buildCallbackLoginPath } from "@/lib/auth-core/redirects";
 import { isAuthExpired } from "@/lib/auth-core/session-policy";
+import {
+  isRoleRouteRestricted,
+  isRouteAllowedForRole,
+  landingPathForRole,
+} from "@/lib/auth-core/role-routes";
 import { getPosHostForCompany, isCashierRole, isPublicPosPath } from "@/lib/retail/pos-host";
 
 const ACCESS_BLOCKED_PATH = "/access-blocked";
@@ -385,6 +390,16 @@ export default withAuth(
         return redirectToTenantHost(request, normalizedCompanySlug);
       }
       return redirectToAccessBlocked(request);
+    }
+
+    // SALES_REP is pinned to the CRM. For page requests outside its allowlist
+    // we redirect to /crm (nicer than a hard block); API requests fall through
+    // to the central role-route guard in resolveAccessContext (403).
+    if (token && isRoleRouteRestricted(token.role)) {
+      if (!isApiRequest && !isRouteAllowedForRole(token.role, pathname)) {
+        const landing = landingPathForRole(token.role) ?? "/";
+        return redirectToPath(request, landing);
+      }
     }
 
     if (token && isPathWithinRoute(pathname, "/human-resources")) {

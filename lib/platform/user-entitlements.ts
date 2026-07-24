@@ -202,7 +202,8 @@ export type ManagedUserRole =
   | "FINANCE_OFFICER"
   | "SHOP_MANAGER"
   | "CASHIER"
-  | "STOCK_CLERK";
+  | "STOCK_CLERK"
+  | "SALES_REP";
 export type ManagedUserFeatureBlockedReason =
   | "COMPANY_DISABLED"
   | "TEMPLATE_BLOCKED";
