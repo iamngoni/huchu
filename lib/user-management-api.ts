@@ -54,21 +54,14 @@ export type ChangeManagedUserRoleInput = {
   role: ManagedUserRole;
 };
 
-export type ManagedUserFeatureBlockedReason =
-  | "COMPANY_DISABLED"
-  | "TEMPLATE_BLOCKED";
-
 export type ManagedUserFeatureAccessEntry = {
   featureKey: string;
   name: string;
   description: string;
   domain: string;
-  companyEnabled: boolean;
-  templateAllowed: boolean;
-  available: boolean;
+  roleDefault: boolean;
   isEnabled: boolean;
   hasOverride: boolean;
-  blockedReason: ManagedUserFeatureBlockedReason | null;
 };
 
 export type ManagedUserFeatureAccessResponse = {
@@ -76,7 +69,7 @@ export type ManagedUserFeatureAccessResponse = {
     id: string;
     name: string;
     email: string;
-    role: ManagedUserRole;
+    role: string;
     isActive: boolean;
   };
   features: ManagedUserFeatureAccessEntry[];
