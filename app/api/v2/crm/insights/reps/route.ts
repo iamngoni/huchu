@@ -14,9 +14,14 @@ export async function GET(request: NextRequest) {
     const to = searchParams.get("to");
     const repId = insightsRepFilter(session);
 
+    const parse = (v: string | null) => {
+      if (!v) return undefined;
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? undefined : d;
+    };
     const rows = await getRepPerformance(session.user.companyId, {
-      from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
+      from: parse(from),
+      to: parse(to),
       repId,
     });
     return successResponse({ data: rows });

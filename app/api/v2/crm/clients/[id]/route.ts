@@ -4,6 +4,7 @@ import { errorResponse, successResponse, validateSession } from "@/lib/api-utils
 import { prisma } from "@/lib/prisma";
 import { canEditAssignedRecord } from "@/lib/crm/scope";
 import { normalizeEmail, normalizePhoneE164 } from "@/lib/crm/phone";
+import { isCompanyUser } from "../../_helpers";
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
@@ -60,6 +61,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     const data = updateSchema.parse(await request.json());
+    if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
+      return errorResponse("Invalid assignee", 400);
+    }
     const updated = await prisma.crmClient.update({
       where: { id },
       data: {
@@ -75,7 +79,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         country: data.country ?? undefined,
         notes: data.notes ?? undefined,
         tags: data.tags ?? undefined,
-        assignedToId: data.assignedToId ?? undefined,
+        // null explicitly unassigns; undefined leaves unchanged.
+        assignedToId: data.assignedToId === undefined ? undefined : data.assignedToId,
       },
     });
     return successResponse(updated);

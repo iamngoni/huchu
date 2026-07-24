@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { requireCrmManager } from "../../../_helpers";
+import { isCompanyUser, requireCrmManager } from "../../../_helpers";
 
 const tierSchema = z.object({
   thresholdFrom: z.number().finite().nonnegative(),
@@ -34,6 +34,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!existing) return errorResponse("Commission rule not found", 404);
 
     const data = updateSchema.parse(await request.json());
+    if (!(await isCompanyUser(session.user.companyId, data.appliesToUserId))) {
+      return errorResponse("Invalid rule target user", 400);
+    }
     const updated = await prisma.$transaction(async (tx) => {
       if (data.tiers) {
         const sorted = [...data.tiers].sort((a, b) => a.thresholdFrom - b.thresholdFrom);

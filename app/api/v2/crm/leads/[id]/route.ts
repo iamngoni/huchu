@@ -3,6 +3,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { isCompanyUser } from "../../_helpers";
 
 const updateSchema = z.object({
   title: z.string().trim().max(200).nullable().optional(),
@@ -34,6 +35,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         activities: { orderBy: { occurredAt: "desc" }, take: 100 },
         followUps: { orderBy: { dueAt: "asc" } },
         appointments: { orderBy: { scheduledStart: "desc" } },
+        intakeSubmissions: {
+          select: { id: true, photoUrls: true, message: true, selectedServices: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
       },
     });
     if (!lead) return errorResponse("Lead not found", 404);
@@ -68,6 +74,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       });
       if (!client) return errorResponse("Invalid client", 400);
     }
+    if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
+      return errorResponse("Invalid assignee", 400);
+    }
 
     const updated = await prisma.crmLead.update({
       where: { id },
@@ -79,7 +88,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         currency: data.currency ?? undefined,
         services: data.services ?? undefined,
         source: data.source ?? undefined,
-        assignedToId: data.assignedToId ?? undefined,
+        // null explicitly unassigns; undefined leaves unchanged.
+        assignedToId: data.assignedToId === undefined ? undefined : data.assignedToId,
       },
     });
     return successResponse(updated);

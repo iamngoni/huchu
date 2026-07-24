@@ -31,6 +31,13 @@ type Document = {
 
 type Activity = { id: string; type: string; subject: string; body: string | null; occurredAt: string };
 type FollowUp = { id: string; title: string; dueAt: string; status: string };
+type IntakeSubmission = {
+  id: string;
+  photoUrls: string[];
+  message: string | null;
+  selectedServices: string[];
+  createdAt: string;
+};
 
 type LeadDetail = {
   id: string;
@@ -47,6 +54,7 @@ type LeadDetail = {
   activities: Activity[];
   followUps: FollowUp[];
   appointments: Array<{ id: string; appointmentNo: string; scheduledStart: string; status: string }>;
+  intakeSubmissions: IntakeSubmission[];
 };
 
 type LineDraft = { description: string; quantity: string; unitPrice: string };
@@ -114,7 +122,26 @@ export function CrmLeadDetailContent({ leadId }: { leadId: string }) {
         </TabsList>
 
         <TabsContent value="timeline">
-          <TimelineTab leadId={leadId} activities={data.activities} onChange={invalidate} />
+          <div className="space-y-4">
+            {data.intakeSubmissions.some((s) => s.photoUrls.length > 0) ? (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Photos from intake</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-2">
+                  {data.intakeSubmissions.flatMap((s) =>
+                    s.photoUrls.map((url) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="Intake photo" className="h-24 w-24 rounded-lg object-cover" />
+                      </a>
+                    )),
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
+            <TimelineTab leadId={leadId} activities={data.activities} onChange={invalidate} />
+          </div>
         </TabsContent>
 
         <TabsContent value="documents">

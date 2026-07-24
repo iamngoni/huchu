@@ -64,10 +64,40 @@ export const crmIntakeServiceSchema = z.object({
 
 export type CrmIntakeService = z.infer<typeof crmIntakeServiceSchema>;
 
-export const crmIntakeFormConfigSchema = z.object({
-  fields: z.array(crmIntakeFieldDefSchema).max(40),
-  services: z.array(crmIntakeServiceSchema).max(60),
-});
+export const crmIntakeFieldsSchema = z.array(crmIntakeFieldDefSchema).max(40);
+export const crmIntakeServicesSchema = z.array(crmIntakeServiceSchema).max(60);
+
+export const crmIntakeFormConfigSchema = z
+  .object({
+    fields: crmIntakeFieldsSchema,
+    services: crmIntakeServicesSchema,
+  })
+  .superRefine((config, ctx) => {
+    // Duplicate keys would collide in the compiled submission schema (and in
+    // stored answers), so reject them at save time.
+    const fieldKeys = new Set<string>();
+    for (const field of config.fields) {
+      if (fieldKeys.has(field.key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate field key "${field.key}"`,
+          path: ["fields"],
+        });
+      }
+      fieldKeys.add(field.key);
+    }
+    const serviceIds = new Set<string>();
+    for (const service of config.services) {
+      if (serviceIds.has(service.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate service id "${service.id}"`,
+          path: ["services"],
+        });
+      }
+      serviceIds.add(service.id);
+    }
+  });
 
 export type CrmIntakeFormConfig = z.infer<typeof crmIntakeFormConfigSchema>;
 

@@ -3,8 +3,12 @@ import { randomBytes } from "crypto";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { crmIntakeFormConfigSchema } from "@/lib/crm/intake-schema";
-import { requireCrmManager } from "../_helpers";
+import {
+  crmIntakeFieldsSchema,
+  crmIntakeFormConfigSchema,
+  crmIntakeServicesSchema,
+} from "@/lib/crm/intake-schema";
+import { isCompanyUser, requireCrmManager } from "../_helpers";
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -14,8 +18,8 @@ const createSchema = z.object({
   allowPhotos: z.boolean().optional(),
   maxPhotos: z.number().int().min(0).max(20).optional(),
   defaultAssigneeId: z.string().uuid().nullable().optional(),
-  fields: crmIntakeFormConfigSchema.shape.fields,
-  services: crmIntakeFormConfigSchema.shape.services,
+  fields: crmIntakeFieldsSchema,
+  services: crmIntakeServicesSchema,
 });
 
 function generatePublicToken(): string {
@@ -47,6 +51,11 @@ export async function POST(request: NextRequest) {
     if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
 
     const data = createSchema.parse(await request.json());
+    // Cross-field rules (duplicate field keys / service ids).
+    crmIntakeFormConfigSchema.parse({ fields: data.fields, services: data.services });
+    if (!(await isCompanyUser(session.user.companyId, data.defaultAssigneeId))) {
+      return errorResponse("Invalid default assignee", 400);
+    }
     const form = await prisma.crmIntakeForm.create({
       data: {
         companyId: session.user.companyId,

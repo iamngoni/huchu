@@ -137,6 +137,9 @@ async function requireLeadWithClient(
     select: { id: true, clientId: true, stage: true, assignedToId: true },
   });
   if (!lead) throw new Error("Lead not found");
+  if (lead.stage === "LOST") {
+    throw new Error("This lead is marked LOST — reopen it before creating documents");
+  }
   if (!lead.clientId) {
     throw new Error("Lead has no client; attach or create a client before quoting/invoicing");
   }
@@ -258,6 +261,18 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
 
     let lines = input.lines ?? [];
     if (input.fromQuotationId) {
+      // The quotation must have been issued from THIS lead — a bare company
+      // check would let any quotation id in the tenant be converted here.
+      const linkedDoc = await tx.crmLeadDocument.findFirst({
+        where: {
+          companyId: input.companyId,
+          leadId: lead.id,
+          type: "QUOTATION",
+          quotationId: input.fromQuotationId,
+        },
+        select: { id: true },
+      });
+      if (!linkedDoc) throw new Error("Source quotation does not belong to this lead");
       const quotation = await tx.salesQuotation.findFirst({
         where: { id: input.fromQuotationId, companyId: input.companyId },
         include: { lines: true },
@@ -332,8 +347,10 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
       await tx.crmLead.update({ where: { id: lead.id }, data: { stage: "INVOICED" } });
     }
 
-    // Post the AR journal inside the same transaction (idempotent).
-    await createJournalEntryFromSource(
+    // Post the AR journal inside the same transaction (idempotent). Posting
+    // failures don't abort the invoice — the integration-event outbox records
+    // them for replay — but they must not pass silently.
+    const posting = await createJournalEntryFromSource(
       {
         companyId: input.companyId,
         sourceType: "SALES_INVOICE",
@@ -349,6 +366,11 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
       },
       tx,
     );
+    if (posting.error) {
+      console.error(
+        `[CRM] Journal posting failed for invoice ${invoice.invoiceNumber}: ${posting.error} (${posting.code ?? "UNKNOWN"})`,
+      );
+    }
 
     return {
       leadDocumentId: doc.id,
@@ -430,7 +452,7 @@ export async function recordReceiptForLead(input: RecordReceiptInput) {
       },
     });
 
-    await createJournalEntryFromSource(
+    const posting = await createJournalEntryFromSource(
       {
         companyId: input.companyId,
         sourceType: "SALES_RECEIPT",
@@ -446,6 +468,11 @@ export async function recordReceiptForLead(input: RecordReceiptInput) {
       },
       tx,
     );
+    if (posting.error) {
+      console.error(
+        `[CRM] Journal posting failed for receipt ${receipt.receiptNumber}: ${posting.error} (${posting.code ?? "UNKNOWN"})`,
+      );
+    }
 
     return { leadDocumentId: doc.id, receiptId: receipt.id, invoiceId: invoice.id, leadId: lead.id, clientId: lead.clientId };
   });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { isCompanyUser } from "../../_helpers";
 
 const updateSchema = z.object({
   status: z.enum(["PENDING", "COMPLETED", "CANCELLED"]).optional(),
@@ -25,6 +26,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!existing) return errorResponse("Follow-up not found", 404);
 
     const data = updateSchema.parse(await request.json());
+    if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
+      return errorResponse("Invalid assignee", 400);
+    }
     const updated = await prisma.crmFollowUp.update({
       where: { id },
       data: {

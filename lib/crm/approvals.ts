@@ -84,6 +84,8 @@ export async function getApprovalByToken(token: string): Promise<PublicApprovalV
     },
   });
   if (!approval) return null;
+  // A revoked link must not leak the document's content — treat as not found.
+  if (approval.status === "REVOKED") return null;
 
   if (!approval.firstViewedAt) {
     void prisma.crmDocumentApproval
@@ -130,34 +132,40 @@ export type RespondInput = {
  * approval can be actioned. Returns the resulting status or throws.
  */
 export async function respondToApproval(input: RespondInput): Promise<{ status: "APPROVED" | "DECLINED" }> {
-  const result = await prisma.$transaction(async (tx) => {
-    const approval = await tx.crmDocumentApproval.findUnique({
-      where: { token: input.token },
-      select: {
-        id: true,
-        companyId: true,
-        status: true,
-        expiresAt: true,
-        leadDocument: {
-          select: {
-            id: true,
-            type: true,
-            quotationId: true,
-            lead: { select: { id: true, clientId: true, assignedToId: true } },
-          },
+  const approval = await prisma.crmDocumentApproval.findUnique({
+    where: { token: input.token },
+    select: {
+      id: true,
+      companyId: true,
+      status: true,
+      expiresAt: true,
+      leadDocument: {
+        select: {
+          id: true,
+          type: true,
+          quotationId: true,
+          lead: { select: { id: true, clientId: true, assignedToId: true } },
         },
       },
+    },
+  });
+  if (!approval) throw new Error("Approval not found");
+  if (approval.status !== "PENDING") throw new Error("This document has already been responded to");
+  if (isExpired(approval.expiresAt)) {
+    // Persist the expiry outside any transaction that later throws — a throw
+    // inside a $transaction would roll this write back.
+    await prisma.crmDocumentApproval.updateMany({
+      where: { id: approval.id, status: "PENDING" },
+      data: { status: "EXPIRED" },
     });
-    if (!approval) throw new Error("Approval not found");
-    if (approval.status !== "PENDING") throw new Error("This document has already been responded to");
-    if (isExpired(approval.expiresAt)) {
-      await tx.crmDocumentApproval.update({ where: { id: approval.id }, data: { status: "EXPIRED" } });
-      throw new Error("This approval link has expired");
-    }
+    throw new Error("This approval link has expired");
+  }
 
+  const result = await prisma.$transaction(async (tx) => {
     const nextStatus = input.action === "APPROVE" ? ("APPROVED" as const) : ("DECLINED" as const);
-    await tx.crmDocumentApproval.update({
-      where: { id: approval.id },
+    // Atomic claim: only one concurrent responder can move PENDING → final.
+    const claimed = await tx.crmDocumentApproval.updateMany({
+      where: { id: approval.id, status: "PENDING" },
       data: {
         status: nextStatus,
         respondedAt: new Date(),
@@ -165,6 +173,9 @@ export async function respondToApproval(input: RespondInput): Promise<{ status: 
         responderName: input.name ?? undefined,
       },
     });
+    if (claimed.count === 0) {
+      throw new Error("This document has already been responded to");
+    }
 
     if (input.action === "APPROVE" && approval.leadDocument.type === "QUOTATION" && approval.leadDocument.quotationId) {
       await tx.salesQuotation.update({

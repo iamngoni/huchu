@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
 import { normalizeEmail, normalizePhoneE164 } from "@/lib/crm/phone";
+import { isCompanyUser } from "../_helpers";
 
 const createClientSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -71,6 +72,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const data = createClientSchema.parse(body);
+    if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
+      return errorResponse("Invalid assignee", 400);
+    }
 
     const clientNo = await reserveIdentifier(prisma, {
       companyId: session.user.companyId,

@@ -4,13 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { insightsRepFilter } from "@/lib/crm/scope";
 import { getFunnel, getPipelineValue } from "@/lib/crm/insights";
 
+function parseDateParam(value: string | null): Date | undefined {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 function parseRange(request: NextRequest): { from?: Date; to?: Date } {
   const { searchParams } = new URL(request.url);
-  const from = searchParams.get("from");
-  const to = searchParams.get("to");
   return {
-    from: from ? new Date(from) : undefined,
-    to: to ? new Date(to) : undefined,
+    from: parseDateParam(searchParams.get("from")),
+    to: parseDateParam(searchParams.get("to")),
   };
 }
 

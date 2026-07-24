@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { requireCrmManager } from "../../_helpers";
+import { isCompanyUser, requireCrmManager } from "../../_helpers";
 
 const tierSchema = z.object({
   thresholdFrom: z.number().finite().nonnegative(),
@@ -46,6 +46,9 @@ export async function POST(request: NextRequest) {
     if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
 
     const data = createSchema.parse(await request.json());
+    if (!(await isCompanyUser(session.user.companyId, data.appliesToUserId))) {
+      return errorResponse("Invalid rule target user", 400);
+    }
     const sortedTiers = [...data.tiers].sort((a, b) => a.thresholdFrom - b.thresholdFrom);
 
     const rule = await prisma.crmCommissionRule.create({

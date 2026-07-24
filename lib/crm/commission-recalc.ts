@@ -90,25 +90,28 @@ export async function recalculatePeriod(params: {
     orderBy: { createdAt: "asc" },
   });
 
-  // Group documents by rep, keeping the rep's rule basis to pick INVOICE vs
-  // RECEIPT rows.
-  const byRep = new Map<string, { rule: (CommissionRule & { basis: Basis }) | null; docs: DocRow[] }>();
+  // Group documents by rep. The rule is resolved per document (at the
+  // document's date) so a mid-period rule change taxes each document under the
+  // rule that was actually in effect; cumulative revenue still accrues across
+  // the whole period per rep.
+  type ScopedDoc = DocRow & { rule: CommissionRule & { basis: Basis } };
+  const byRep = new Map<string, ScopedDoc[]>();
   for (const doc of documents) {
     const repId = doc.lead?.assignedToId;
     if (!repId) continue;
     const rule = resolveRuleForRep(rules, repId, doc.createdAt) as (CommissionRule & { basis: Basis }) | null;
-    const basis: Basis = rule?.basis ?? "INVOICED";
-    const wantType = basis === "PAID" ? "RECEIPT" : "INVOICE";
+    if (!rule || rule.tiers.length === 0) continue;
+    const wantType = rule.basis === "PAID" ? "RECEIPT" : "INVOICE";
     if (doc.type !== wantType) continue;
-    const bucket = byRep.get(repId) ?? { rule, docs: [] };
-    bucket.rule = rule;
-    bucket.docs.push({
+    const bucket = byRep.get(repId) ?? [];
+    bucket.push({
       leadDocumentId: doc.id,
       leadId: doc.lead?.id ?? null,
       repId,
       amount: doc.amount,
       currency: doc.currency,
       at: doc.createdAt,
+      rule,
     });
     byRep.set(repId, bucket);
   }
@@ -126,9 +129,7 @@ export async function recalculatePeriod(params: {
       },
     });
 
-    for (const [repId, bucket] of byRep) {
-      if (!bucket.rule || bucket.rule.tiers.length === 0) continue;
-
+    for (const [repId, docs] of byRep) {
       // Frozen entries already consumed part of the period revenue; count them
       // toward the cumulative base so PENDING tiers continue from the right point.
       const frozen = await tx.crmCommissionEntry.findMany({
@@ -143,10 +144,10 @@ export async function recalculatePeriod(params: {
       const frozenDocIds = new Set(frozen.map((f) => f.leadDocumentId));
       let cumulative = frozen.reduce((s, f) => s + f.baseAmount, 0);
 
-      for (const doc of bucket.docs) {
+      for (const doc of docs) {
         if (frozenDocIds.has(doc.leadDocumentId)) continue;
         const { commission, effectiveRatePercent } = computeTieredCommission(
-          bucket.rule.tiers,
+          doc.rule.tiers,
           cumulative,
           doc.amount,
         );
@@ -159,8 +160,8 @@ export async function recalculatePeriod(params: {
             repId,
             leadId: doc.leadId ?? undefined,
             leadDocumentId: doc.leadDocumentId,
-            ruleId: bucket.rule.id,
-            basis: bucket.rule.basis,
+            ruleId: doc.rule.id,
+            basis: doc.rule.basis,
             periodKey: params.periodKey,
             baseAmount: doc.amount,
             ratePercent: effectiveRatePercent,

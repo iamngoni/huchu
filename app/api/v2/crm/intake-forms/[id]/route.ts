@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { crmIntakeFormConfigSchema } from "@/lib/crm/intake-schema";
-import { requireCrmManager } from "../../_helpers";
+import {
+  crmIntakeFieldsSchema,
+  crmIntakeFormConfigSchema,
+  crmIntakeServicesSchema,
+} from "@/lib/crm/intake-schema";
+import { isCompanyUser, requireCrmManager } from "../../_helpers";
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
@@ -14,8 +18,8 @@ const updateSchema = z.object({
   allowPhotos: z.boolean().optional(),
   maxPhotos: z.number().int().min(0).max(20).optional(),
   defaultAssigneeId: z.string().uuid().nullable().optional(),
-  fields: crmIntakeFormConfigSchema.shape.fields.optional(),
-  services: crmIntakeFormConfigSchema.shape.services.optional(),
+  fields: crmIntakeFieldsSchema.optional(),
+  services: crmIntakeServicesSchema.optional(),
 });
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -46,11 +50,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const existing = await prisma.crmIntakeForm.findFirst({
       where: { id, companyId: session.user.companyId },
-      select: { id: true },
+      select: { id: true, fields: true, services: true },
     });
     if (!existing) return errorResponse("Intake form not found", 404);
 
     const data = updateSchema.parse(await request.json());
+    // Cross-field rules over the effective (merged) config.
+    crmIntakeFormConfigSchema.parse({
+      fields: data.fields ?? existing.fields ?? [],
+      services: data.services ?? existing.services ?? [],
+    });
+    if (!(await isCompanyUser(session.user.companyId, data.defaultAssigneeId))) {
+      return errorResponse("Invalid default assignee", 400);
+    }
     const updated = await prisma.crmIntakeForm.update({
       where: { id },
       data: {

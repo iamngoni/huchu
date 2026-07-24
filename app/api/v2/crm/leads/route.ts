@@ -11,7 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
 import { defaultProbabilityForStage } from "@/lib/crm/pipeline";
-import { crmLeadStageSchema } from "../_helpers";
+import { crmLeadStageSchema, isCompanyUser } from "../_helpers";
 
 const createLeadSchema = z.object({
   title: z.string().trim().max(200).nullable().optional(),
@@ -93,6 +93,9 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
       if (!client) return errorResponse("Invalid client", 400);
+    }
+    if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
+      return errorResponse("Invalid assignee", 400);
     }
 
     const leadNo = await reserveIdentifier(prisma, {

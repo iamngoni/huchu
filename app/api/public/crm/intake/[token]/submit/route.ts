@@ -5,6 +5,17 @@ import { checkRateLimit } from "@/lib/auth-core/rate-limit";
 import { buildSubmissionSchema, parseIntakeFormConfig } from "@/lib/crm/intake-schema";
 import { ingestLead } from "@/lib/crm/intake-ingest";
 
+// Only accept photo URLs that came from our own blob store — arbitrary
+// external URLs would otherwise be rendered as <img> inside the CRM.
+function isOwnBlobUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname.endsWith(".blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}
+
 function clientIp(request: NextRequest): string {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -64,7 +75,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ ok: true, message: form.successMessage ?? "Thank you." });
   }
 
-  const photoUrls = form.allowPhotos ? (data.photoUrls ?? []).slice(0, form.maxPhotos) : [];
+  const photoUrls = form.allowPhotos
+    ? (data.photoUrls ?? []).filter(isOwnBlobUrl).slice(0, form.maxPhotos)
+    : [];
 
   try {
     const result = await ingestLead({

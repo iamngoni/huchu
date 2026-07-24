@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { AuthenticatedSession } from "@/lib/api-utils";
 import { hasCrmFullAccess } from "@/lib/crm/scope";
+import { prisma } from "@/lib/prisma";
 
 export const crmLeadStageSchema = z.enum([
   "NEW",
@@ -27,4 +28,21 @@ export const crmDocumentLineSchema = z.object({
  */
 export function requireCrmManager(session: AuthenticatedSession): boolean {
   return hasCrmFullAccess(session.user.role);
+}
+
+/**
+ * Guard against cross-tenant user references: any user id accepted from a
+ * request body (assignee, default assignee, commission target) must belong to
+ * the caller's company. Returns true when the id is null/undefined or valid.
+ */
+export async function isCompanyUser(
+  companyId: string,
+  userId: string | null | undefined,
+): Promise<boolean> {
+  if (!userId) return true;
+  const user = await prisma.user.findFirst({
+    where: { id: userId, companyId },
+    select: { id: true },
+  });
+  return Boolean(user);
 }

@@ -50,6 +50,28 @@ describe("crmIntakeFormConfigSchema", () => {
   it("parseIntakeFormConfig tolerates null json", () => {
     expect(parseIntakeFormConfig(null, null)).toEqual({ fields: [], services: [] });
   });
+
+  it("rejects duplicate field keys", () => {
+    const bad = {
+      fields: [
+        { key: "area", label: "Area A", type: "text" },
+        { key: "area", label: "Area B", type: "text" },
+      ],
+      services: [],
+    };
+    expect(() => crmIntakeFormConfigSchema.parse(bad)).toThrow(/Duplicate field key/);
+  });
+
+  it("rejects duplicate service ids", () => {
+    const bad = {
+      fields: [],
+      services: [
+        { id: "mat", label: "Mat A" },
+        { id: "mat", label: "Mat B" },
+      ],
+    };
+    expect(() => crmIntakeFormConfigSchema.parse(bad)).toThrow(/Duplicate service id/);
+  });
 });
 
 describe("buildSubmissionSchema", () => {

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
+import { isCompanyUser } from "../_helpers";
 
 const createSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
@@ -65,6 +66,9 @@ export async function POST(request: NextRequest) {
     const { session } = sessionResult;
 
     const data = createSchema.parse(await request.json());
+    if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
+      return errorResponse("Invalid assignee", 400);
+    }
     const appointmentNo = await reserveIdentifier(prisma, {
       companyId: session.user.companyId,
       entity: "CRM_APPOINTMENT",

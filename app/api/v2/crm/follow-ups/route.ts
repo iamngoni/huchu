@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { isCompanyUser } from "../_helpers";
 
 const createSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -56,6 +57,9 @@ export async function POST(request: NextRequest) {
     const { session } = sessionResult;
 
     const data = createSchema.parse(await request.json());
+    if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
+      return errorResponse("Invalid assignee", 400);
+    }
     const followUp = await prisma.crmFollowUp.create({
       data: {
         companyId: session.user.companyId,
