@@ -18,8 +18,10 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const isAuthRoute = pathname === "/login";
+  // "/" is the marketing home on the marketing domain. On a tenant host the
+  // root redirects before rendering, so it never reaches the shell.
   const isMarketingRoute =
-    pathname === "/home" || pathname.startsWith("/home/");
+    pathname === "/" || pathname === "/home" || pathname.startsWith("/home/");
   const isPortalRoute =
     pathname.startsWith("/portal/") ||
     hostPortalPath === "/portal/student" ||

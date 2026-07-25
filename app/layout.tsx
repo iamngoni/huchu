@@ -16,6 +16,7 @@ import {
   getBrandingCssVariables,
   getEffectiveBrandingForHost,
 } from "@/lib/platform/branding";
+import { getSiteUrl } from "@/lib/marketing/seo";
 import { getHostHeaderFromRequestHeaders, getPlatformHostContext } from "@/lib/platform/tenant";
 import {
   buildWorkspaceIconHref,
@@ -44,6 +45,8 @@ export async function generateMetadata(): Promise<Metadata> {
     : PLATFORM_APP_DESCRIPTION;
 
   return {
+    // Lets every page emit absolute canonical and Open Graph URLs.
+    metadataBase: new URL(getSiteUrl()),
     title: {
       default: defaultTitle,
       template: isProvisionedWorkspace

@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import type { MarketingSiteConfig } from "@/lib/marketing-site";
 import { PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
-import { featuredAddOns, rolloutPaths } from "@/components/marketing/marketing-data";
+import { rolloutPaths } from "@/components/marketing/marketing-data";
+import { MARKETING_ADD_ONS, TRIAL_DAYS, formatUsd } from "@/lib/marketing/pricing";
 import { DemoBookingForm } from "@/components/marketing/demo-booking-form";
 import { Reveal, StaggerChildren, StaggerItem } from "@/components/marketing/motion";
 import styles from "@/components/marketing/marketing-site.module.css";
@@ -10,6 +11,16 @@ import styles from "@/components/marketing/marketing-site.module.css";
 type MarketingCommercialSectionsProps = {
   config: MarketingSiteConfig;
 };
+
+/** A representative spread across categories, cheapest first. */
+const FEATURED_ADD_ONS = [
+  "ADDON_RETAIL_SUITE",
+  "ADDON_ACCOUNTING_CORE",
+  "ADDON_ADVANCED_PAYROLL",
+  "ADDON_CUSTOM_BRANDING",
+]
+  .map((code) => MARKETING_ADD_ONS.find((addOn) => addOn.code === code))
+  .filter((addOn): addOn is NonNullable<typeof addOn> => Boolean(addOn));
 
 export function MarketingCommercialSections({ config }: MarketingCommercialSectionsProps) {
   return (
@@ -62,21 +73,23 @@ export function MarketingCommercialSections({ config }: MarketingCommercialSecti
           </div>
           <div className="space-y-4">
             <StaggerChildren staggerDelay={0.08} className="grid gap-3 sm:grid-cols-2">
-              {featuredAddOns.map((item) => (
-                <StaggerItem key={item.name}>
+              {FEATURED_ADD_ONS.map((item) => (
+                <StaggerItem key={item.code}>
                   <div className={styles.addonCard}>
                     <div>
                       <p className="text-base font-semibold tracking-[-0.03em] text-[#0f1f55]">{item.name}</p>
-                      <p className="mt-1 text-sm leading-7 text-[#31436f]/84">{item.note}</p>
+                      <p className="mt-1 text-sm leading-7 text-[#31436f]/84">{item.description}</p>
                     </div>
-                    <span className="font-mono text-sm font-semibold text-[#0b1945]">{item.price}</span>
+                    <span className="font-mono text-sm font-semibold text-[#0b1945]">
+                      {formatUsd(item.monthlyPrice)}/mo
+                    </span>
                   </div>
                 </StaggerItem>
               ))}
             </StaggerChildren>
             <div className={styles.addonCloud}>
-              {["Extra Users", "Extra Sites", "White-label", "Priority Support"].map((item) => (
-                <span key={item}>{item}</span>
+              {MARKETING_ADD_ONS.slice(0, 8).map((item) => (
+                <span key={item.code}>{item.name}</span>
               ))}
             </div>
           </div>
@@ -90,11 +103,11 @@ export function MarketingCommercialSections({ config }: MarketingCommercialSecti
               <div className="space-y-5 text-white">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/62">Free Trial</p>
                 <h2 className="max-w-3xl text-[clamp(2rem,3.5vw,3.2rem)] font-semibold leading-[1.02] tracking-[-0.04em] text-balance">
-                  Try it for 14 days. No credit card. No risk.
+                  Try it for {TRIAL_DAYS} days. No credit card. No risk.
                 </h2>
                 <p className="max-w-2xl text-sm leading-7 text-white/74">
                   See exactly how {PLATFORM_BRAND_NAME} works for your business. Log a few sales, check your stock, run a report.
-                  If it doesn't save you time, walk away with zero cost.
+                  If it doesn&apos;t save you time, walk away with zero cost.
                 </p>
                 <ul className={`${styles.simpleListInverse} mt-6`}>
                   {[
@@ -125,7 +138,7 @@ export function MarketingCommercialSections({ config }: MarketingCommercialSecti
             </p>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm lg:justify-end">
-            <Link href="/home" className="hover:text-white">Home</Link>
+            <Link href="/" className="hover:text-white">Home</Link>
             <Link href="/home/product" className="hover:text-white">Product</Link>
             <Link href="/home/solutions" className="hover:text-white">Solutions</Link>
             <Link href="/home/pricing" className="hover:text-white">Pricing</Link>

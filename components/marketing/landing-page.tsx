@@ -9,6 +9,7 @@ import {
   marketingSiteHighlights,
 } from "@/components/marketing/marketing-data";
 import { MarketingHeaderHero } from "@/components/marketing/marketing-header-hero";
+import { MarketingProductsPricing } from "@/components/marketing/marketing-products-pricing";
 import { Reveal, StaggerChildren, StaggerItem } from "@/components/marketing/motion";
 import styles from "@/components/marketing/marketing-site.module.css";
 
@@ -93,6 +94,7 @@ export function LandingPage({ config }: LandingPageProps) {
           </div>
         </section>
         <MarketingCoreSections />
+        <MarketingProductsPricing />
         <MarketingCommercialSections config={config} />
       </main>
     </div>

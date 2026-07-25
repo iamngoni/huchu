@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ArrowRight, Gem, ReceiptLong, Users, Wrench } from "@/lib/icons";
 import { getMarketingSiteConfig } from "@/lib/marketing-site";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
 import { PLATFORM_BRAND_INITIAL, PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
 import {
   demoConfidencePoints,
@@ -14,10 +14,11 @@ import { DemoBookingForm } from "@/components/marketing/demo-booking-form";
 import { Button } from "@/components/ui/button";
 import styles from "@/components/marketing/marketing-site.module.css";
 
-export const metadata: Metadata = {
+export const metadata = buildMarketingMetadata({
   title: "Book a demo",
   description: `Book a tailored ${PLATFORM_BRAND_NAME} demo focused on the workflows, sites, and reporting your business needs most.`,
-};
+  path: "/home/book-demo",
+});
 
 const walkthroughTracks = [
   {
@@ -49,7 +50,7 @@ export default function BookDemoPage() {
     <div className="min-h-screen overflow-x-clip bg-[linear-gradient(180deg,#0d1738_0_24rem,#f7f9ff_24rem_100%)]">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(9,14,32,0.84)] backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <Link href="/home" className="flex items-center gap-3 text-sm font-semibold text-white">
+          <Link href="/" className="flex items-center gap-3 text-sm font-semibold text-white">
             <span className="flex size-10 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-[11px] uppercase tracking-[0.22em]">
               {PLATFORM_BRAND_INITIAL}
             </span>

@@ -3,40 +3,36 @@
 import { useMemo, useState } from "react";
 
 import { Minus, Plus } from "@/lib/icons";
+import { BUNDLE_DEPENDENCIES } from "@/lib/platform/feature-catalog";
 import {
-  BUNDLE_DEPENDENCIES,
-  TIERS,
-} from "@/lib/platform/feature-catalog";
-import {
-  calculatorAddOns,
-  calculatorVerticals,
-  tierComparisonRows,
-} from "@/components/marketing/marketing-data";
+  MARKETING_ADD_ONS,
+  MARKETING_TIERS,
+  TIER_COMPARISON_ROWS,
+  buildQuote,
+  formatUsd,
+} from "@/lib/marketing/pricing";
+import { calculatorVerticals } from "@/components/marketing/marketing-data";
 import { CountUp, Reveal, StaggerChildren, StaggerItem } from "@/components/marketing/motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import styles from "@/components/marketing/marketing-site.module.css";
 
-const tierRank: Record<string, number> = {
-  Basic: 1,
-  Standard: 2,
-  Enterprise: 3,
-};
+/** Tier codes ordered cheapest-first, so "highest recommendation wins". */
+const TIER_RANK = new Map(MARKETING_TIERS.map((tier, index) => [tier.name, index]));
 
 export function PricingCalculator() {
   const [siteCount, setSiteCount] = useState(1);
   const [selectedVerticals, setSelectedVerticals] = useState<string[]>([]);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
 
-  const recommendedTierName = useMemo(() => {
-    if (selectedVerticals.length === 0) return "Basic";
+  const tier = useMemo(() => {
     const matched = calculatorVerticals.filter((v) => selectedVerticals.includes(v.slug));
-    const maxRank = Math.max(...matched.map((v) => tierRank[v.recommendedTier]));
-    const entry = Object.entries(tierRank).find(([, r]) => r === maxRank);
-    return (entry?.[0] ?? "Basic") as "Basic" | "Standard" | "Enterprise";
-  }, [selectedVerticals]);
+    if (matched.length === 0) return MARKETING_TIERS[0];
 
-  const tier = TIERS.find((t) => t.name === recommendedTierName)!;
+    // Recommend the highest tier any selected vertical calls for.
+    const rank = Math.max(...matched.map((v) => TIER_RANK.get(v.recommendedTierName) ?? 0));
+    return MARKETING_TIERS[rank] ?? MARKETING_TIERS[0];
+  }, [selectedVerticals]);
 
   // Auto-select default add-ons from chosen verticals
   const defaultAddOns = useMemo(() => {
@@ -78,17 +74,25 @@ export function PricingCalculator() {
     );
   };
 
-  const siteOverage = Math.max(0, siteCount - tier.includedSites) * tier.additionalSiteMonthlyPrice;
-  const addOnTotal = effectiveAddOns.reduce((sum, code) => {
-    const addOn = calculatorAddOns.find((a) => a.code === code);
-    if (!addOn) return sum;
-    return sum + addOn.base + addOn.perSite * siteCount;
-  }, 0);
-  const grandTotal = tier.monthlyPrice + siteOverage + addOnTotal;
+  // Single quote engine, shared with the billing catalog, so the estimate here
+  // matches what the customer is actually invoiced.
+  const quote = useMemo(
+    () =>
+      buildQuote({
+        tierCode: tier.code,
+        addOnCodes: effectiveAddOns,
+        sites: siteCount,
+        users: 1,
+        period: "monthly",
+      }),
+    [tier.code, effectiveAddOns, siteCount],
+  );
+
+  const grandTotal = quote.monthlyTotal;
 
   const groupedAddOns = useMemo(() => {
-    const map: Record<string, typeof calculatorAddOns> = {};
-    for (const addOn of calculatorAddOns) {
+    const map: Record<string, typeof MARKETING_ADD_ONS> = {};
+    for (const addOn of MARKETING_ADD_ONS) {
       map[addOn.category] = map[addOn.category] || [];
       map[addOn.category].push(addOn);
     }
@@ -143,7 +147,9 @@ export function PricingCalculator() {
                         </div>
                         <span className="text-sm font-semibold text-[#0f1f55]">{v.title}</span>
                       </div>
-                      <span className="text-xs text-[#7383a9]">Recommended: {v.recommendedTier}</span>
+                      <span className="text-xs text-[#7383a9]">
+                        {v.isBespoke ? "Priced per term" : `Recommended: ${v.recommendedTierName}`}
+                      </span>
                     </button>
                   </StaggerItem>
                 );
@@ -176,7 +182,9 @@ export function PricingCalculator() {
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-[#0f1f55]">{addOn.name}</p>
                             <p className="text-xs text-[#7383a9]">
-                              ${addOn.base}/mo + ${addOn.perSite}/site
+                              {addOn.includedInTiers.includes(tier.code)
+                                ? `Included in ${tier.name}`
+                                : `${formatUsd(addOn.monthlyPrice)}/mo + ${formatUsd(addOn.additionalSiteMonthlyPrice)}/site`}
                             </p>
                           </div>
                         </label>
@@ -192,29 +200,24 @@ export function PricingCalculator() {
         <Reveal className="lg:sticky lg:top-28 lg:self-start">
           <div className={styles.summaryPanel}>
             <p className={styles.stripeEyebrow}>Estimate</p>
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-[#31436f]/80">Tier</span>
+                <span className="text-sm text-[#31436f]/80">Recommended plan</span>
                 <span className="rounded-full bg-[#eef2ff] px-2.5 py-0.5 text-xs font-semibold text-[#0f1f55]">
                   {tier.name}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[#31436f]/80">Base</span>
-                <span className="font-mono text-sm text-[#0b1945]">${tier.monthlyPrice.toLocaleString()}/mo</span>
-              </div>
-              {siteOverage > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#31436f]/80">Site overage</span>
-                  <span className="font-mono text-sm text-[#0b1945]">${siteOverage.toLocaleString()}/mo</span>
+              {quote.lines.map((line) => (
+                <div key={line.label} className="flex items-start justify-between gap-3">
+                  <span className="text-sm text-[#31436f]/80">
+                    {line.label}
+                    <span className="block text-xs text-[#7383a9]">{line.detail}</span>
+                  </span>
+                  <span className="shrink-0 font-mono text-sm text-[#0b1945]">
+                    {line.monthly === 0 ? "Included" : `${formatUsd(line.monthly)}/mo`}
+                  </span>
                 </div>
-              )}
-              {effectiveAddOns.length > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#31436f]/80">Add-ons</span>
-                  <span className="font-mono text-sm text-[#0b1945]">${addOnTotal.toLocaleString()}/mo</span>
-                </div>
-              )}
+              ))}
             </div>
             <div className="mt-5 border-t border-[#e2e8f6] pt-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#7383a9]">Estimated monthly</p>
@@ -237,18 +240,18 @@ export function PricingCalculator() {
             <thead>
               <tr>
                 <th>Feature</th>
-                <th>Basic</th>
-                <th>Standard</th>
-                <th>Enterprise</th>
+                {MARKETING_TIERS.map((entry) => (
+                  <th key={entry.code}>{entry.name}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {tierComparisonRows.map((row) => (
+              {TIER_COMPARISON_ROWS.map((row) => (
                 <tr key={row.label}>
                   <td className="font-medium text-[#0f1f55]">{row.label}</td>
-                  <td>{row.basic}</td>
-                  <td>{row.standard}</td>
-                  <td>{row.enterprise}</td>
+                  {row.values.map((value, index) => (
+                    <td key={`${row.label}-${MARKETING_TIERS[index].code}`}>{value}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>

@@ -137,6 +137,7 @@ function isPublicPathname(pathname: string) {
     pathname === "/login" ||
     pathname === "/offline" ||
     pathname === "/access-blocked" ||
+    pathname === "/" ||
     pathname === "/home" ||
     pathname.startsWith("/home/") ||
     pathname.endsWith("/login")

@@ -1,294 +1,429 @@
-/**
- * NEW PRICING PAGE
- * Drop this into: /tmp/huchu/app/home/pricing/page.tsx
- * 
- * This replaces the complex pricing calculator with a simple 3-tier
- * pricing page designed for Zimbabwe SMBs.
- */
-
 import Link from "next/link";
-import type { Metadata } from "next";
 
-import { ArrowRight, Building2 as Building, CheckIcon as Check, Shield, Zap } from "@/lib/icons";
+import { ArrowRight, Check, X } from "@/lib/icons";
 import { PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
-import { pricingTiers, tierComparisonRows } from "@/components/marketing/marketing-data";
+import {
+  COMPETITIVE_EDGE,
+  MARKETING_TIERS,
+  MONEY_BACK_DAYS,
+  SCHOOL_STARTING_TERM_PRICE,
+  STARTING_MONTHLY_PRICE,
+  TCO_ROWS,
+  TCO_SITE_COUNT,
+  TCO_TEAM_SIZE,
+  TIER_COMPARISON_ROWS,
+  TRIAL_DAYS,
+  addOnsByCategory,
+  formatUsd,
+} from "@/lib/marketing/pricing";
+import {
+  breadcrumbJsonLd,
+  buildMarketingMetadata,
+  faqJsonLd,
+  softwareApplicationJsonLd,
+} from "@/lib/marketing/seo";
+import { JsonLd } from "@/components/marketing/json-ld";
 import { MarketingSubpageShell } from "@/components/marketing/marketing-subpage-shell";
 import { Reveal, StaggerChildren, StaggerItem } from "@/components/marketing/motion";
+import { PricingCalculator } from "@/components/marketing/pricing-calculator";
+import { PricingPlans } from "@/components/marketing/pricing-plans";
 import { Button } from "@/components/ui/button";
 import styles from "@/components/marketing/marketing-site.module.css";
 
-export const metadata: Metadata = {
+const PRICING_FAQS = [
+  {
+    q: "Do you charge per user?",
+    a: `No. ${PLATFORM_BRAND_NAME} is priced per site, not per seat. Every plan includes a generous number of people, and adding another cashier or clerk does not change your bill until you pass that ceiling. Suites that charge per user would bill you every month for the same person.`,
+  },
+  {
+    q: "What counts as a site?",
+    a: "A site is a physical location you operate: a shop, a branch, a yard, a mine, or a campus. Plans include several sites, and extra sites are charged at a flat monthly rate shown on each plan.",
+  },
+  {
+    q: "Is there a contract?",
+    a: "No. Billing is monthly and you can cancel at any time with no cancellation fee. Yearly billing is optional and gives you two months free.",
+  },
+  {
+    q: `What happens after the ${TRIAL_DAYS}-day trial?`,
+    a: `You pick a plan and add payment details. If you decide not to subscribe, your data stays available for ${MONEY_BACK_DAYS} days so you can export it, then it is deleted.`,
+  },
+  {
+    q: "Can I change plans later?",
+    a: "Yes. Upgrade or downgrade at any time. Changes take effect on your next billing date, and any add-ons you have bought move with you.",
+  },
+  {
+    q: "How do add-ons work?",
+    a: "Add-ons sit on top of your plan price. Each one has a base monthly price plus a smaller rate for each site beyond your first. Higher plans already include several add-ons at no extra cost, which is shown on the plan card.",
+  },
+  {
+    q: "What if the internet goes down?",
+    a: `${PLATFORM_BRAND_NAME} works offline. Sales, stock, and attendance are captured on the device and sync automatically when the connection returns. This is built for Zimbabwean connectivity, not bolted on.`,
+  },
+  {
+    q: "Do you handle ZIMRA fiscalisation?",
+    a: "Yes. Tax codes, VAT configuration, and the ZIMRA FDMS fiscalisation connector are available as an add-on and are included on the Enterprise plan.",
+  },
+  {
+    q: "How are schools priced?",
+    a: `Schools are priced per term against enrolment bands rather than monthly, because that is how schools budget. Bands start at ${formatUsd(SCHOOL_STARTING_TERM_PRICE)} per term. See the schools pricing page for the full ladder.`,
+  },
+  {
+    q: "Can I get a refund?",
+    a: `If ${PLATFORM_BRAND_NAME} is not working for you in your first month, contact us for a full refund. No questions asked.`,
+  },
+];
+
+export const metadata = buildMarketingMetadata({
   title: "Pricing",
-  description: `Simple pricing for Zimbabwe businesses. Start at $39/month. 14-day free trial. No credit card required.`,
-};
-
-const planIcons = {
-  Starter: Building,
-  Growth: Zap,
-  Business: Shield,
-};
-
-const planContexts = {
-  Starter: "Less than $1.30 per day",
-  Growth: "$3.30 per day — less than one tank of fuel",
-  Business: "$6.60 per day — less than one employee's daily wage",
-};
+  description: `${PLATFORM_BRAND_NAME} pricing for Zimbabwean businesses. Plans from ${formatUsd(STARTING_MONTHLY_PRICE)}/month, priced per site and never per user. ${TRIAL_DAYS}-day free trial, no credit card.`,
+  path: "/home/pricing",
+  keywords: [
+    "business software pricing Zimbabwe",
+    "ERP pricing Zimbabwe",
+    "POS software price Zimbabwe",
+    "stock management software cost",
+    "no per user pricing",
+  ],
+});
 
 export default function PricingPage() {
+  const addOnGroups = addOnsByCategory();
+
   return (
-    <MarketingSubpageShell
-      eyebrow="Pricing"
-      title="Simple pricing. No surprises."
-      description={`${PLATFORM_BRAND_NAME} is priced so Zimbabwe businesses can start small and grow. No complex calculators. No hidden fees. Just pick a plan and start tracking.`}
-      pills={["3 simple tiers", "Start at $39/month", "14-day free trial"]}
-      panelTitle="What's included"
-      panelBody="Every plan includes core operations, offline mode, mobile access, and role-based views. You pay for sites, users, and modules — not seat warmers."
-      panelLinks={[
-        { label: "Start free trial", href: "/home/book-demo" },
-        { label: "Compare features", href: "#comparison" },
-      ]}
-    >
-      {/* PRICING CARDS */}
-      <StaggerChildren staggerDelay={0.12} className="grid gap-5 md:grid-cols-3">
-        {pricingTiers.map((plan) => {
-          const Icon = planIcons[plan.tier as keyof typeof planIcons];
-          const isGrowth = plan.tier === "Growth";
+    <>
+      <JsonLd
+        data={[
+          softwareApplicationJsonLd(),
+          faqJsonLd(PRICING_FAQS),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Pricing", path: "/home/pricing" },
+          ]),
+        ]}
+      />
 
-          return (
-            <StaggerItem key={plan.tier}>
-              <article
-                className={`relative flex flex-col rounded-[22px] border transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_56px_rgba(29,39,79,0.1)] ${
-                  isGrowth
-                    ? "border-[#0f1f55] bg-[#0f1f55] text-white"
-                    : "border-[#d6def5] bg-white"
-                }`}
-              >
-                {isGrowth && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#ff6b35] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
-                    Most Popular
-                  </div>
-                )}
+      <MarketingSubpageShell
+        eyebrow="Pricing"
+        title="Priced per site. Never per user."
+        description={`Add every cashier, clerk, supervisor, and driver you need — your bill does not move. Plans start at ${formatUsd(STARTING_MONTHLY_PRICE)} a month with a ${TRIAL_DAYS}-day free trial and no credit card.`}
+        pills={[
+          "No per-user fees",
+          `From ${formatUsd(STARTING_MONTHLY_PRICE)}/month`,
+          `${TRIAL_DAYS}-day free trial`,
+        ]}
+        panelTitle="How pricing works"
+        panelBody="Pick a plan for the number of sites you run, then add only the industry modules you need. Higher plans bundle add-ons at no extra cost."
+        panelLinks={[
+          { label: "Compare plans", href: "#comparison" },
+          { label: "Schools pricing", href: "/home/pricing/schools" },
+          { label: "Book a demo", href: "/home/book-demo" },
+        ]}
+      >
+        <PricingPlans />
 
-                <div className="flex flex-1 flex-col p-6 lg:p-7">
-                  <div className="mb-4 flex size-10 items-center justify-center rounded-full bg-[#f0f4ff]">
-                    <Icon className={`size-4 ${isGrowth ? "text-[#0f1f55]" : "text-[#0f1f55]"}`} />
-                  </div>
+        {/* ADD-ONS */}
+        <section id="add-ons" className="mt-20 scroll-mt-24">
+          <Reveal>
+            <p className={styles.stripeEyebrow}>Add-ons</p>
+            <h2 className="mt-3 max-w-3xl text-[clamp(1.7rem,3vw,2.5rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-[#0b1945]">
+              Add your industry. Pay for nothing else.
+            </h2>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-[#31436f]/82">
+              Each add-on has a base price plus a smaller rate for every site beyond your first. Add-ons
+              marked as included cost nothing on that plan.
+            </p>
+          </Reveal>
 
-                  <p className={`text-sm font-semibold uppercase tracking-[0.12em] ${isGrowth ? "text-white/72" : "text-[#7383a9]"}`}>
-                    {plan.tier}
-                  </p>
-
-                  <div className="mt-2 flex items-baseline gap-1">
-                    <span className={`text-[clamp(2.2rem,3.5vw,2.8rem)] font-bold tracking-[-0.04em] ${isGrowth ? "text-white" : "text-[#0b1945]"}`}>
-                      {plan.price}
-                    </span>
-                    <span className={`text-sm ${isGrowth ? "text-white/72" : "text-[#7383a9]"}`}>/month</span>
-                  </div>
-
-                  <p className={`mt-1 text-sm ${isGrowth ? "text-white/72" : "text-[#7383a9]"}`}>
-                    {planContexts[plan.tier as keyof typeof planContexts]}
-                  </p>
-
-                  <p className={`mt-4 text-sm leading-6 ${isGrowth ? "text-white/82" : "text-[#31436f]/82"}`}>
-                    {plan.summary}
-                  </p>
-
-                  <div className={`my-5 h-px ${isGrowth ? "bg-white/12" : "bg-[#d6def5]"}`} />
-
-                  <ul className="space-y-2.5">
-                    {[
-                      plan.sites,
-                      plan.tier === "Starter" ? "2 users" : plan.tier === "Growth" ? "10 users" : "25 users",
-                      plan.tier === "Starter" ? "1 vertical module" : plan.tier === "Growth" ? "3 vertical modules" : "All modules",
-                      "Core operations included",
-                      "Offline mode",
-                      "Mobile & web access",
-                      plan.tier === "Starter" ? "WhatsApp support" : plan.tier === "Growth" ? "Email + WhatsApp support" : "Phone + WhatsApp support",
-                      plan.tier === "Business" ? "Priority support" : null,
-                      plan.tier === "Business" ? "Custom branding" : null,
-                    ].filter(Boolean).map((feature) => (
-                      <li key={feature as string} className="flex items-start gap-2 text-sm">
-                        <Check className={`mt-0.5 size-4 shrink-0 ${isGrowth ? "text-[#4ade80]" : "text-[#0f1f55]"}`} />
-                        <span className={isGrowth ? "text-white/82" : "text-[#31436f]/84"}>{feature as string}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-auto pt-6">
-                    <Button
-                      asChild
-                      size="lg"
-                      className={`w-full rounded-full ${
-                        isGrowth
-                          ? "bg-white text-[#091127] hover:bg-white/92"
-                          : "bg-[#0f1f55] text-white hover:bg-[#0f1f55]/90"
-                      }`}
-                    >
-                      <Link href="/home/book-demo">
-                        Start Free Trial
-                        <ArrowRight className="size-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </article>
-            </StaggerItem>
-          );
-        })}
-      </StaggerChildren>
-
-      {/* ADD-ONS SECTION */}
-      <section className="mt-16">
-        <Reveal>
-          <div className="text-center">
-            <p className={styles.stripeEyebrow}>Need more?</p>
-            <h3 className="mt-3 text-[clamp(1.6rem,2.8vw,2.4rem)] font-semibold leading-[1.05] tracking-[-0.04em] text-[#0b1945]">
-              Add what you need. Nothing you don't.
-            </h3>
-          </div>
-        </Reveal>
-
-        <StaggerChildren staggerDelay={0.1} className="mt-8 grid gap-4 md:grid-cols-3">
-          {[
-            { name: "Extra User Pack", price: "$19/mo", desc: "5 additional users" },
-            { name: "Extra Site", price: "$25/mo", desc: "1 additional location" },
-            { name: "White-label", price: "$39/mo", desc: "Your logo, colors, domain" },
-          ].map((addon) => (
-            <StaggerItem key={addon.name}>
-              <div className="flex items-center justify-between rounded-[16px] border border-[#d6def5] bg-white p-5">
-                <div>
-                  <p className="text-base font-semibold text-[#0f1f55]">{addon.name}</p>
-                  <p className="mt-1 text-sm text-[#31436f]/72">{addon.desc}</p>
-                </div>
-                <span className="font-mono text-lg font-semibold text-[#0b1945]">{addon.price}</span>
-              </div>
-            </StaggerItem>
-          ))}
-        </StaggerChildren>
-      </section>
-
-      {/* COMPARISON TABLE */}
-      <section id="comparison" className="mt-18">
-        <Reveal>
-          <p className={styles.stripeEyebrow}>Compare plans</p>
-          <h3 className="mt-3 text-[clamp(1.6rem,2.8vw,2.4rem)] font-semibold leading-[1.05] tracking-[-0.04em] text-[#0b1945]">
-            What's included in each plan
-          </h3>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <div className="mt-8 overflow-hidden rounded-[18px] border border-[#d6def5] bg-white">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#d6def5] bg-[#f7f9ff]">
-                    <th className="px-5 py-4 text-left font-semibold text-[#0b1945]">Feature</th>
-                    <th className="px-5 py-4 text-center font-semibold text-[#0b1945]">Starter</th>
-                    <th className="px-5 py-4 text-center font-semibold text-[#0b1945]">Growth</th>
-                    <th className="px-5 py-4 text-center font-semibold text-[#0b1945]">Business</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tierComparisonRows.map((row, i) => (
-                    <tr key={row.label} className={i % 2 === 1 ? "bg-[#f7f9ff]/60" : ""}>
-                      <td className="px-5 py-3.5 text-[#31436f]/84">{row.label}</td>
-                      <td className="px-5 py-3.5 text-center text-[#31436f]/84">{row.basic}</td>
-                      <td className="px-5 py-3.5 text-center text-[#31436f]/84">{row.standard}</td>
-                      <td className="px-5 py-3.5 text-center text-[#31436f]/84">{row.enterprise}</td>
-                    </tr>
+          <div className="mt-9 space-y-10">
+            {addOnGroups.map((group) => (
+              <div key={group.category}>
+                <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#7383a9]">
+                  {group.category}
+                </h3>
+                <StaggerChildren
+                  staggerDelay={0.06}
+                  className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                  {group.addOns.map((addOn) => (
+                    <StaggerItem key={addOn.code}>
+                      <article className={styles.addOnCard}>
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-base font-semibold leading-6 text-[#0f1f55]">{addOn.name}</p>
+                          <span className={styles.addOnPrice}>{formatUsd(addOn.monthlyPrice)}</span>
+                        </div>
+                        <p className="text-sm leading-6 text-[#31436f]/78">{addOn.description}</p>
+                        <p className="text-xs text-[#7383a9]">
+                          {addOn.additionalSiteMonthlyPrice > 0
+                            ? `+${formatUsd(addOn.additionalSiteMonthlyPrice)}/mo per extra site · ${addOn.featureCount} features`
+                            : `${addOn.featureCount} features`}
+                        </p>
+                        {addOn.includedInTiers.length > 0 ? (
+                          <span className={styles.addOnIncluded}>
+                            Included on{" "}
+                            {addOn.includedInTiers
+                              .map(
+                                (code) =>
+                                  MARKETING_TIERS.find((tier) => tier.code === code)?.name ?? code,
+                              )
+                              .join(", ")}
+                          </span>
+                        ) : null}
+                      </article>
+                    </StaggerItem>
                   ))}
-                </tbody>
-              </table>
+                </StaggerChildren>
+              </div>
+            ))}
+          </div>
+
+          <Reveal>
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-[18px] border border-[#d6def5] bg-[#f7f9ff] p-6">
+              <div>
+                <p className="text-base font-semibold text-[#0f1f55]">Running a school?</p>
+                <p className="mt-1 text-sm text-[#31436f]/82">
+                  Schools are priced per term against enrolment, not per month. Bands start at{" "}
+                  {formatUsd(SCHOOL_STARTING_TERM_PRICE)} a term.
+                </p>
+              </div>
+              <Button asChild className="rounded-full">
+                <Link href="/home/pricing/schools">
+                  See schools pricing
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </Reveal>
+        </section>
+
+        {/* ESTIMATOR */}
+        <section id="estimate" className="mt-20 scroll-mt-24">
+          <Reveal>
+            <p className={styles.stripeEyebrow}>Build your quote</p>
+            <h2 className="mt-3 max-w-3xl text-[clamp(1.7rem,3vw,2.5rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-[#0b1945]">
+              Work out your number before you talk to anyone
+            </h2>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-[#31436f]/82">
+              Pick your industries and how many sites you run. This is the same maths we bill on — no
+              surprises on the invoice.
+            </p>
+          </Reveal>
+
+          <div className="mt-9">
+            <PricingCalculator />
+          </div>
+        </section>
+
+        {/* COMPARISON */}
+        <section id="comparison" className="mt-20 scroll-mt-24">
+          <Reveal>
+            <p className={styles.stripeEyebrow}>Compare plans</p>
+            <h2 className="mt-3 text-[clamp(1.7rem,3vw,2.5rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-[#0b1945]">
+              What is in each plan
+            </h2>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <div className="mt-8 overflow-hidden rounded-[18px] border border-[#d6def5] bg-white">
+              <div className="max-h-[38rem] overflow-auto">
+                <table className={styles.matrixTable}>
+                  <caption className="sr-only">
+                    Feature comparison across {PLATFORM_BRAND_NAME} plans
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Feature</th>
+                      {MARKETING_TIERS.map((tier) => (
+                        <th
+                          key={tier.code}
+                          scope="col"
+                          className={tier.isMostPopular ? styles.matrixHighlight : undefined}
+                        >
+                          {tier.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {TIER_COMPARISON_ROWS.map((row) => (
+                      <tr key={row.label}>
+                        <th scope="row">{row.label}</th>
+                        {row.values.map((value, index) => (
+                          <td
+                            key={`${row.label}-${MARKETING_TIERS[index].code}`}
+                            className={
+                              MARKETING_TIERS[index].isMostPopular ? styles.matrixHighlight : undefined
+                            }
+                          >
+                            {value === "Included" ? (
+                              <span className="inline-flex items-center gap-1.5 font-medium text-[#166534]">
+                                <Check className="size-4" aria-hidden="true" />
+                                <span className="sr-only">Included</span>
+                              </span>
+                            ) : value === "—" ? (
+                              <span className="text-[#94a3c4]">
+                                <X className="size-4" aria-hidden="true" />
+                                <span className="sr-only">Not included</span>
+                              </span>
+                            ) : (
+                              value
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Reveal>
+        </section>
+
+        {/* TOTAL COST OF OWNERSHIP */}
+        <section id="compare-alternatives" className="mt-20 scroll-mt-24">
+          <Reveal>
+            <p className={styles.stripeEyebrow}>The real cost</p>
+            <h2 className="mt-3 max-w-3xl text-[clamp(1.7rem,3vw,2.5rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-[#0b1945]">
+              What the alternatives actually cost you
+            </h2>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-[#31436f]/82">
+              A realistic Zimbabwean SME: {TCO_TEAM_SIZE} staff across {TCO_SITE_COUNT} sites. Competitor
+              figures are published list prices and are indicative — your quote will differ.
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <div className="mt-8 overflow-hidden rounded-[18px] border border-[#d6def5] bg-white">
+              <div className="overflow-x-auto">
+                <table className={styles.tcoTable}>
+                  <caption className="sr-only">
+                    Total cost of ownership compared with per-seat suites, legacy desktop accounting, and
+                    spreadsheets
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">&nbsp;</th>
+                      <th scope="col">{PLATFORM_BRAND_NAME}</th>
+                      <th scope="col">Per-seat cloud suite</th>
+                      <th scope="col">Legacy desktop accounting</th>
+                      <th scope="col">Spreadsheets</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {TCO_ROWS.map((row) => (
+                      <tr key={row.label}>
+                        <th scope="row" className="font-medium text-[#31436f]">
+                          {row.label}
+                        </th>
+                        <td>{row.corelith}</td>
+                        <td className="text-[#31436f]/78">{row.perSeatSuite}</td>
+                        <td className="text-[#31436f]/78">{row.legacyDesktop}</td>
+                        <td className="text-[#31436f]/78">{row.spreadsheets}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Reveal>
+        </section>
+
+        {/* WHY US */}
+        <section className={`mt-20 ${styles.ctaWrap} px-6 py-12 text-white lg:px-10`}>
+          <Reveal>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/62">
+              Why teams pick us
+            </p>
+            <h2 className="mt-3 max-w-3xl text-[clamp(1.8rem,3.2vw,2.8rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-balance">
+              Six reasons the switch pays for itself
+            </h2>
+          </Reveal>
+
+          <StaggerChildren staggerDelay={0.08} className="mt-9 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {COMPETITIVE_EDGE.map((edge, index) => (
+              <StaggerItem key={edge.title}>
+                <article className={styles.edgeCard}>
+                  <span className={styles.edgeCardNumber}>{String(index + 1).padStart(2, "0")}</span>
+                  <h3 className="text-lg font-semibold leading-6 tracking-[-0.02em] text-white">
+                    {edge.title}
+                  </h3>
+                  <p className="text-sm leading-7 text-white/72">{edge.copy}</p>
+                </article>
+              </StaggerItem>
+            ))}
+          </StaggerChildren>
+        </section>
+
+        {/* FAQ */}
+        <section className="mt-20 grid gap-10 lg:grid-cols-[0.7fr_1.3fr]">
+          <div className="space-y-4">
+            <Reveal>
+              <p className={styles.stripeEyebrow}>Common questions</p>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <h2 className="text-[clamp(1.7rem,3vw,2.5rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-[#0b1945]">
+                Questions before you start
+              </h2>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <p className="text-base leading-7 text-[#2d3d66]/82">
+                If your question is not here, message us on WhatsApp. We reply within two hours during
+                business days.
+              </p>
+            </Reveal>
+          </div>
+
+          <StaggerChildren staggerDelay={0.06} className="grid gap-3">
+            {PRICING_FAQS.map((faq) => (
+              <StaggerItem key={faq.q}>
+                <details className={styles.faqItem}>
+                  <summary className="cursor-pointer list-none text-base font-semibold text-[#0f1f55]">
+                    {faq.q}
+                  </summary>
+                  <p className="mt-2.5 text-sm leading-7 text-[#31436f]/84">{faq.a}</p>
+                </details>
+              </StaggerItem>
+            ))}
+          </StaggerChildren>
+        </section>
+
+        {/* FINAL CTA */}
+        <section className={`mt-20 ${styles.ctaWrap} px-6 py-12 text-white lg:px-10`}>
+          <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end">
+            <div className="space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/62">
+                Ready to start?
+              </p>
+              <h2 className="max-w-2xl text-[clamp(2rem,3.7vw,3.25rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-balance">
+                Stop paying for chaos.
+              </h2>
+              <p className="max-w-2xl text-sm leading-7 text-white/74">
+                Start free for {TRIAL_DAYS} days. No credit card, no contract, no setup fee. If it is not
+                saving you time and money, cancel with one click.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <Button
+                asChild
+                size="lg"
+                className="rounded-full bg-white text-[#091127] hover:bg-white/92 hover:text-[#091127]"
+              >
+                <Link href="/home/book-demo">
+                  Start free for {TRIAL_DAYS} days
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="rounded-full border-white/18 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              >
+                <Link href="/home/products">Explore products</Link>
+              </Button>
             </div>
           </div>
-        </Reveal>
-      </section>
-
-      {/* FAQ SECTION */}
-      <section className="mt-18 grid gap-10 lg:grid-cols-[0.7fr_1.3fr]">
-        <div className="space-y-4">
-          <Reveal>
-            <p className={styles.stripeEyebrow}>Common questions</p>
-          </Reveal>
-          <Reveal delay={0.05}>
-            <h3 className="text-[clamp(1.6rem,2.8vw,2.4rem)] font-semibold leading-[1.05] tracking-[-0.04em] text-[#0b1945]">
-              Questions? We've got answers.
-            </h3>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <p className="text-base leading-7 text-[#2d3d66]/82">
-              If you don't see your question here, WhatsApp us. We reply within 2 hours.
-            </p>
-          </Reveal>
-        </div>
-
-        <StaggerChildren staggerDelay={0.08} className="grid gap-4">
-          {[
-            {
-              q: "Is there a contract?",
-              a: "No. Monthly billing. Cancel anytime. No cancellation fees.",
-            },
-            {
-              q: "What happens after the free trial?",
-              a: "You pick a plan and enter your payment details. If you don't subscribe, your data stays available for 30 days, then is deleted.",
-            },
-            {
-              q: "Can I change plans later?",
-              a: "Yes. Upgrade or downgrade anytime. Changes take effect on your next billing date.",
-            },
-            {
-              q: "What if the internet goes down?",
-              a: "Corelith works offline. Your data is stored on your device and syncs when the internet returns. We built this for Zimbabwe.",
-            },
-            {
-              q: "Do I need a computer?",
-              a: "No. Corelith works on any phone, tablet, or computer. It's a web app — no installation needed.",
-            },
-            {
-              q: "Can I get a refund?",
-              a: "If you're unhappy in your first month, contact us for a full refund. No questions asked.",
-            },
-          ].map((faq) => (
-            <StaggerItem key={faq.q}>
-              <div className="rounded-[14px] border border-[#d6def5] bg-white p-5">
-                <p className="text-base font-semibold text-[#0f1f55]">{faq.q}</p>
-                <p className="mt-2 text-sm leading-6 text-[#31436f]/82">{faq.a}</p>
-              </div>
-            </StaggerItem>
-          ))}
-        </StaggerChildren>
-      </section>
-
-      {/* FINAL CTA */}
-      <section className={`mt-18 ${styles.ctaWrap} px-6 py-10 text-white lg:px-10`}>
-        <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end">
-          <div className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/62">Ready to start?</p>
-            <h3 className="max-w-2xl text-[clamp(2rem,3.7vw,3.25rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-balance">
-              Stop losing money to chaos.
-            </h3>
-            <p className="max-w-2xl text-sm leading-7 text-white/74">
-              Start free for 14 days. No credit card. No contract. If it doesn't save you time and money, cancel with one click.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <Button asChild size="lg" className="rounded-full bg-white text-[#091127] hover:bg-white/92 hover:text-[#091127]">
-              <Link href="/home/book-demo">
-                Start Free for 14 Days
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="rounded-full border-white/18 bg-transparent text-white hover:bg-white/10 hover:text-white"
-            >
-              <Link href="/home/solutions">Explore Solutions</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-    </MarketingSubpageShell>
+        </section>
+      </MarketingSubpageShell>
+    </>
   );
 }
