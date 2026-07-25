@@ -27,6 +27,9 @@ export { ANNUAL_BILLING_MONTHS, USER_PACK_SIZE };
 /** Terms in a Zimbabwean school year — schools budget per term, not per month. */
 export const TERMS_PER_YEAR = 3;
 export const MONTHS_PER_TERM = 12 / TERMS_PER_YEAR;
+export const LAUNCH_SPRINT_DAYS = 30;
+export const LAUNCH_SPRINT_COPY =
+  "Launch setup with workflow mapping, migration, training, go-live support, and WhatsApp follow-up";
 
 export type BillingPeriod = "monthly" | "annual";
 
@@ -83,7 +86,7 @@ const TIER_COPY: Record<string, TierCopy> = {
       "Offline mode on every device",
       "WhatsApp support",
     ],
-    ctaLabel: "Start free trial",
+    ctaLabel: "Find your setup",
     ctaHref: "/home/book-demo?plan=launch",
   },
   STANDARD: {
@@ -98,7 +101,7 @@ const TIER_COPY: Record<string, TierCopy> = {
       "Email + WhatsApp support",
     ],
     isMostPopular: true,
-    ctaLabel: "Start free trial",
+    ctaLabel: "Find your setup",
     ctaHref: "/home/book-demo?plan=grow",
   },
   MEDIUM: {
@@ -112,7 +115,7 @@ const TIER_COPY: Record<string, TierCopy> = {
       "Customer and staff portals",
       "Priority support",
     ],
-    ctaLabel: "Start free trial",
+    ctaLabel: "Plan rollout",
     ctaHref: "/home/book-demo?plan=scale",
   },
   ENTERPRISE: {
@@ -408,23 +411,15 @@ export type ProductCommercials = {
 
 export const PRODUCT_COMMERCIALS: ProductCommercials[] = [
   {
-    slug: "gold-operations",
+    slug: "automotive",
     pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_GOLD_CORE"],
-    recommendedAddOnCodes: ["ADDON_GOLD_CORE", "ADDON_GOLD_ADVANCED", "ADDON_ACCOUNTING_CORE"],
-    recommendedTierCode: "MEDIUM",
+    requiredAddOnCodes: ["ADDON_AUTOS_SUITE"],
+    recommendedAddOnCodes: ["ADDON_AUTOS_SUITE", "ADDON_ACCOUNTING_CORE", "ADDON_PORTAL_SUITE"],
+    recommendedTierCode: "STANDARD",
     pricingHref: "/home/pricing",
   },
   {
-    slug: "schools",
-    pricingModel: "bespoke",
-    requiredAddOnCodes: ["ADDON_SCHOOLS_SUITE"],
-    recommendedAddOnCodes: ["ADDON_SCHOOLS_SUITE", "ADDON_ACCOUNTING_CORE"],
-    recommendedTierCode: "STANDARD",
-    pricingHref: "/home/pricing/schools",
-  },
-  {
-    slug: "retail-pos",
+    slug: "retail-wholesale",
     pricingModel: "subscription",
     requiredAddOnCodes: ["ADDON_RETAIL_SUITE"],
     recommendedAddOnCodes: ["ADDON_RETAIL_SUITE", "ADDON_ACCOUNTING_CORE", "ADDON_ZIMRA_FISCAL"],
@@ -432,75 +427,19 @@ export const PRODUCT_COMMERCIALS: ProductCommercials[] = [
     pricingHref: "/home/pricing",
   },
   {
-    slug: "scrap-recycling",
-    pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_SCRAP_METAL_SUITE"],
-    recommendedAddOnCodes: ["ADDON_SCRAP_METAL_SUITE", "ADDON_ACCOUNTING_CORE"],
+    slug: "schools",
+    pricingModel: "bespoke",
+    requiredAddOnCodes: ["ADDON_SCHOOLS_SUITE"],
+    recommendedAddOnCodes: ["ADDON_SCHOOLS_SUITE", "ADDON_ACCOUNTING_CORE", "ADDON_PORTAL_SUITE"],
     recommendedTierCode: "STANDARD",
-    pricingHref: "/home/pricing",
+    pricingHref: "/home/pricing/schools",
   },
   {
-    slug: "auto-sales",
-    pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_AUTOS_SUITE"],
-    recommendedAddOnCodes: ["ADDON_AUTOS_SUITE", "ADDON_PORTAL_SUITE"],
-    recommendedTierCode: "STANDARD",
-    pricingHref: "/home/pricing",
-  },
-  {
-    slug: "thrift-operations",
-    pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_RETAIL_SUITE"],
-    recommendedAddOnCodes: ["ADDON_RETAIL_SUITE"],
-    recommendedTierCode: "STANDARD",
-    pricingHref: "/home/pricing",
-  },
-  {
-    slug: "stores-inventory",
+    slug: "other-businesses",
     pricingModel: "subscription",
     requiredAddOnCodes: [],
-    recommendedAddOnCodes: ["ADDON_ANALYTICS_PRO"],
+    recommendedAddOnCodes: ["ADDON_ANALYTICS_PRO", "ADDON_USER_MANAGEMENT_PRO"],
     recommendedTierCode: "STANDARD",
-    pricingHref: "/home/pricing",
-  },
-  {
-    slug: "human-resources-payroll",
-    pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_ADVANCED_PAYROLL"],
-    recommendedAddOnCodes: ["ADDON_ADVANCED_PAYROLL", "ADDON_USER_MANAGEMENT_PRO"],
-    recommendedTierCode: "STANDARD",
-    pricingHref: "/home/pricing",
-  },
-  {
-    slug: "maintenance",
-    pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_MAINTENANCE_PRO"],
-    recommendedAddOnCodes: ["ADDON_MAINTENANCE_PRO", "ADDON_ANALYTICS_PRO"],
-    recommendedTierCode: "MEDIUM",
-    pricingHref: "/home/pricing",
-  },
-  {
-    slug: "compliance",
-    pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_COMPLIANCE_PRO"],
-    recommendedAddOnCodes: ["ADDON_COMPLIANCE_PRO"],
-    recommendedTierCode: "MEDIUM",
-    pricingHref: "/home/pricing",
-  },
-  {
-    slug: "cctv-surveillance",
-    pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_CCTV_SUITE"],
-    recommendedAddOnCodes: ["ADDON_CCTV_SUITE"],
-    recommendedTierCode: "MEDIUM",
-    pricingHref: "/home/pricing",
-  },
-  {
-    slug: "multi-site-operations",
-    pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_USER_MANAGEMENT_PRO"],
-    recommendedAddOnCodes: ["ADDON_USER_MANAGEMENT_PRO", "ADDON_ANALYTICS_PRO", "ADDON_CCTV_SUITE"],
-    recommendedTierCode: "MEDIUM",
     pricingHref: "/home/pricing",
   },
 ];
@@ -778,7 +717,7 @@ export const TCO_ROWS: TcoRow[] = [
   },
   {
     label: "Implementation fee",
-    corelith: "None — self-serve setup",
+    corelith: "Scoped onboarding, quoted before rollout",
     perSeatSuite: "Partner-led, often five figures",
     legacyDesktop: "Consultant install",
     spreadsheets: "None",
@@ -799,7 +738,7 @@ export const TCO_ROWS: TcoRow[] = [
   },
   {
     label: "Industry workflows ready",
-    corelith: "Gold, scrap, retail, schools, auto, thrift",
+    corelith: "Retail, automotive, schools",
     perSeatSuite: "Generic — built per project",
     legacyDesktop: "Accounting-first",
     spreadsheets: "Whatever you build",
@@ -829,7 +768,7 @@ export const COMPETITIVE_EDGE: Differentiator[] = [
   },
   {
     title: "Your industry is already built",
-    copy: "Gold, scrap, retail, schools, auto sales, and thrift workflows ship on day one. You are not funding a six-month implementation project to get a working system.",
+    copy: "Retail, automotive, and schools workflows are prepared before the demo. You are not funding a generic system just to discover whether it can match your business.",
   },
   {
     title: "Local compliance is not an afterthought",
@@ -841,7 +780,7 @@ export const COMPETITIVE_EDGE: Differentiator[] = [
   },
   {
     title: "Priced for a Zimbabwean SME",
-    copy: `Plans start at ${formatUsd(STARTING_MONTHLY_PRICE)} a month with a 14-day free trial and no card required. Cancel in one click if it is not earning its keep.`,
+    copy: `Plans start at ${formatUsd(STARTING_MONTHLY_PRICE)} a month, with onboarding scoped separately so human setup work is visible instead of hidden in the subscription.`,
   },
 ];
 
