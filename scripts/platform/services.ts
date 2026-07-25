@@ -2083,10 +2083,32 @@ async function getSubscriptionEntitledFeatureSet(companyId: string): Promise<Set
 }
 
 async function listFeatures(input?: ListFeaturesInput): Promise<FeatureSummary[]> {
-  const features = await prisma.platformFeature.findMany({
+  const dbFeatures = await prisma.platformFeature.findMany({
     select: { id: true, key: true, name: true, defaultEnabled: true, isBillable: true, isActive: true, updatedAt: true },
     orderBy: { key: "asc" },
   });
+  const catalogByKey = new Map(FEATURE_CATALOG.map((feature) => [feature.key.trim().toLowerCase(), feature]));
+  const dbFeatureByKey = new Map(dbFeatures.map((feature) => [feature.key.trim().toLowerCase(), feature]));
+  const features = [
+    ...FEATURE_CATALOG.map((catalog) => {
+      const dbFeature = dbFeatureByKey.get(catalog.key.trim().toLowerCase());
+      return {
+        id: dbFeature?.id ?? null,
+        key: catalog.key,
+        name: catalog.name,
+        defaultEnabled: catalog.defaultEnabled,
+        isBillable: catalog.isBillable,
+        isActive: true,
+        updatedAt: dbFeature?.updatedAt ?? null,
+      };
+    }),
+    ...dbFeatures
+      .filter((feature) => !catalogByKey.has(feature.key.trim().toLowerCase()))
+      .map((feature) => ({
+        ...feature,
+        id: feature.id as string | null,
+      })),
+  ].sort((left, right) => left.key.localeCompare(right.key));
 
   if (!input?.companyId) {
     return features.map((feature) => ({
@@ -2104,13 +2126,14 @@ async function listFeatures(input?: ListFeaturesInput): Promise<FeatureSummary[]
       companyId: input.companyId,
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
-    select: { featureId: true, isEnabled: true, reason: true, updatedAt: true },
+    select: { featureId: true, isEnabled: true, reason: true, updatedAt: true, feature: { select: { key: true } } },
   });
   const flagByFeatureId = new Map(flags.map((flag) => [flag.featureId, flag]));
+  const flagByFeatureKey = new Map(flags.map((flag) => [flag.feature.key.trim().toLowerCase(), flag]));
   const entitledBySubscription = await getSubscriptionEntitledFeatureSet(input.companyId);
 
   return features.map((feature) => {
-    const flag = flagByFeatureId.get(feature.id);
+    const flag = feature.id ? flagByFeatureId.get(feature.id) : flagByFeatureKey.get(feature.key.trim().toLowerCase());
     const normalizedKey = feature.key.trim().toLowerCase();
     const subscriptionEntitled = entitledBySubscription.has(normalizedKey);
     const requested = flag ? flag.isEnabled : feature.defaultEnabled;
@@ -2131,13 +2154,31 @@ async function listFeatures(input?: ListFeaturesInput): Promise<FeatureSummary[]
 
 async function setFeature(input: SetFeatureInput): Promise<FeatureSetResult> {
   const definition = getFeatureDefinition(input.featureKey);
+  const catalog = FEATURE_CATALOG.find((feature) => feature.key.toLowerCase() === definition.key);
   const company = await prisma.company.findUnique({ where: { id: input.companyId }, select: { id: true, name: true } });
   if (!company) throw new Error(`Organization not found for id: ${input.companyId}`);
 
   const feature = await prisma.platformFeature.upsert({
-    where: { key: definition.key },
-    update: { name: definition.label, isActive: true },
-    create: { key: definition.key, name: definition.label, description: `Feature flag for ${definition.key}`, isActive: true },
+    where: { key: catalog?.key ?? definition.key },
+    update: {
+      name: catalog?.name ?? definition.label,
+      description: catalog?.description ?? `Feature flag for ${definition.key}`,
+      domain: catalog?.domain ?? null,
+      defaultEnabled: catalog?.defaultEnabled ?? false,
+      isBillable: catalog?.isBillable ?? false,
+      monthlyPrice: catalog?.monthlyPrice ?? null,
+      isActive: true,
+    },
+    create: {
+      key: catalog?.key ?? definition.key,
+      name: catalog?.name ?? definition.label,
+      description: catalog?.description ?? `Feature flag for ${definition.key}`,
+      domain: catalog?.domain ?? null,
+      defaultEnabled: catalog?.defaultEnabled ?? false,
+      isBillable: catalog?.isBillable ?? false,
+      monthlyPrice: catalog?.monthlyPrice ?? null,
+      isActive: true,
+    },
     select: { id: true, key: true, isBillable: true },
   });
 
@@ -2195,8 +2236,8 @@ async function setFeature(input: SetFeatureInput): Promise<FeatureSetResult> {
   return {
     companyId: input.companyId,
     companyName: company.name,
-    feature: definition.key,
-    featureLabel: definition.label,
+    feature: feature.key,
+    featureLabel: catalog?.name ?? definition.label,
     enabled: after.isEnabled,
     reason: after.reason ?? null,
     auditEventId: audit.id,

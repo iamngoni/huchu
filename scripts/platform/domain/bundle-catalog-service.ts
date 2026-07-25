@@ -51,17 +51,31 @@ function mapBundleSummary(row: {
   isActive: boolean;
   items: Array<{ feature: { key: string } }>;
 }): BundleCatalogSummary {
-  const featureKeys = row.items.map((item) => item.feature.key).sort();
-  const source = FEATURE_BUNDLES.some((bundle) => bundle.code === row.code) ? "SYSTEM" : "CUSTOM";
+  const systemBundle = FEATURE_BUNDLES.find((bundle) => bundle.code === row.code);
+  const featureKeys = (systemBundle?.features ?? row.items.map((item) => item.feature.key)).slice().sort();
+  const source = systemBundle ? "SYSTEM" : "CUSTOM";
   return {
     code: row.code,
-    name: row.name,
-    description: row.description ?? null,
-    monthlyPrice: resolveMonthlyPrice(row.code, row.monthlyPrice),
-    additionalSiteMonthlyPrice: resolveAdditionalSiteMonthlyPrice(row.code, row.additionalSiteMonthlyPrice),
-    isActive: row.isActive,
+    name: systemBundle?.name ?? row.name,
+    description: systemBundle?.description ?? row.description ?? null,
+    monthlyPrice: systemBundle?.monthlyPrice ?? resolveMonthlyPrice(row.code, row.monthlyPrice),
+    additionalSiteMonthlyPrice: systemBundle?.additionalSiteMonthlyPrice ?? resolveAdditionalSiteMonthlyPrice(row.code, row.additionalSiteMonthlyPrice),
+    isActive: systemBundle ? true : row.isActive,
     featureKeys,
     source,
+  };
+}
+
+function mapSystemBundleSummary(bundle: (typeof FEATURE_BUNDLES)[number]): BundleCatalogSummary {
+  return {
+    code: bundle.code,
+    name: bundle.name,
+    description: bundle.description,
+    monthlyPrice: bundle.monthlyPrice,
+    additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice,
+    isActive: true,
+    featureKeys: bundle.features.slice().sort(),
+    source: "SYSTEM",
   };
 }
 
@@ -75,16 +89,17 @@ export async function getBundleFeatureKeysByCodes(bundleCodes: string[]): Promis
   });
 
   const set = new Set<string>();
-  for (const row of rows) {
-    for (const item of row.items) {
-      set.add(normalizeFeatureKey(item.feature.key));
-    }
-  }
-
   for (const code of normalizedCodes) {
-    if (rows.some((row) => row.code === code)) continue;
-    const fallback = FEATURE_BUNDLES.find((bundle) => bundle.code === code);
-    for (const featureKey of fallback?.features ?? []) {
+    const systemBundle = FEATURE_BUNDLES.find((bundle) => bundle.code === code);
+    if (systemBundle) {
+      for (const featureKey of systemBundle.features) {
+        set.add(normalizeFeatureKey(featureKey));
+      }
+      continue;
+    }
+
+    const row = rows.find((bundle) => bundle.code === code);
+    for (const featureKey of row?.items.map((item) => item.feature.key) ?? []) {
       set.add(normalizeFeatureKey(featureKey));
     }
   }
@@ -106,7 +121,15 @@ export async function listBundleCatalog(): Promise<BundleCatalogSummary[]> {
     orderBy: [{ code: "asc" }],
   });
 
-  return rows.map(mapBundleSummary);
+  const dbSummaries = rows.map(mapBundleSummary);
+  const summaryByCode = new Map(dbSummaries.map((summary) => [summary.code, summary]));
+  for (const bundle of FEATURE_BUNDLES) {
+    if (!summaryByCode.has(bundle.code)) {
+      summaryByCode.set(bundle.code, mapSystemBundleSummary(bundle));
+    }
+  }
+
+  return [...summaryByCode.values()].sort((left, right) => left.code.localeCompare(right.code));
 }
 
 export async function upsertBundleCatalog(input: UpsertBundleCatalogInput): Promise<BundleCatalogSummary> {

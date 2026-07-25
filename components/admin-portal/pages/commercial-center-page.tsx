@@ -1025,8 +1025,14 @@ export function CommercialCenterPage({
                       <td className="px-3 py-3"><CompactPill tone={bundle.isActive ? "success" : "muted"}>{bundle.isActive ? "Active" : "Inactive"}</CompactPill></td>
                       <td className="px-3 py-3">
                         <div className="flex flex-wrap justify-end gap-2">
-                          <BundleUpsertDialog actorEmail={actorEmail} bundle={bundle} triggerLabel="Edit" onCompleted={refresh} />
-                          <BundleFeatureMapDialog actorEmail={actorEmail} bundle={bundle} featureCatalog={commercial.featureCatalog} triggerLabel="Map features" onCompleted={refresh} />
+                          {bundle.source === "CUSTOM" ? (
+                            <>
+                              <BundleUpsertDialog actorEmail={actorEmail} bundle={bundle} triggerLabel="Edit" onCompleted={refresh} />
+                              <BundleFeatureMapDialog actorEmail={actorEmail} bundle={bundle} featureCatalog={commercial.featureCatalog} triggerLabel="Map features" onCompleted={refresh} />
+                            </>
+                          ) : (
+                            <CompactPill>Code-defined</CompactPill>
+                          )}
                         </div>
                       </td>
                     </tr>

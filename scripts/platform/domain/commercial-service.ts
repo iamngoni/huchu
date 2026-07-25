@@ -39,7 +39,75 @@ function resolveBundleAdditionalSiteMonthlyPrice(bundleCode: string, value: unkn
   return money(getBundleDefinition(bundleCode)?.additionalSiteMonthlyPrice ?? 0);
 }
 
+function tierAnnualPrice(tier: (typeof TIERS)[number]): number {
+  return tier.annualMonthlyPrice * 12;
+}
+
+async function ensureSubscriptionPlan(planCode: string) {
+  const tier = getTierDefinition(planCode);
+  if (!tier) return null;
+
+  return prisma.subscriptionPlan.upsert({
+    where: { code: tier.code },
+    update: {
+      name: tier.name,
+      description: tier.description,
+      monthlyPrice: tier.monthlyPrice,
+      annualPrice: tierAnnualPrice(tier),
+      maxSites: tier.includedSites,
+      maxUsers: tier.includedUsers,
+      warningDays: tier.warningDays,
+      graceDays: tier.graceDays,
+      isActive: true,
+    },
+    create: {
+      code: tier.code,
+      name: tier.name,
+      description: tier.description,
+      monthlyPrice: tier.monthlyPrice,
+      annualPrice: tierAnnualPrice(tier),
+      maxSites: tier.includedSites,
+      maxUsers: tier.includedUsers,
+      warningDays: tier.warningDays,
+      graceDays: tier.graceDays,
+      currency: "USD",
+      isActive: true,
+    },
+    select: { id: true, code: true },
+  });
+}
+
+async function ensureFeatureBundle(bundleCode: string) {
+  const bundle = getBundleDefinition(bundleCode);
+  if (!bundle) return null;
+
+  return prisma.featureBundle.upsert({
+    where: { code: bundle.code },
+    update: {
+      name: bundle.name,
+      description: bundle.description,
+      monthlyPrice: bundle.monthlyPrice,
+      additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice,
+      isActive: true,
+    },
+    create: {
+      code: bundle.code,
+      name: bundle.name,
+      description: bundle.description,
+      monthlyPrice: bundle.monthlyPrice,
+      additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice,
+      isActive: true,
+    },
+    select: { id: true, code: true, name: true },
+  });
+}
+
 async function getBundleFeatureKeys(bundleId: string, bundleCode: string): Promise<string[]> {
+  const systemBundle = getBundleDefinition(bundleCode);
+  if (systemBundle) {
+    return [...new Set(systemBundle.features.map((key) => key.trim().toLowerCase()).filter(Boolean))];
+  }
+
   const bundleItems = await prisma.featureBundleItem.findMany({
     where: { bundleId },
     select: { feature: { select: { key: true } } },
@@ -100,124 +168,7 @@ async function enableBundleFeatureFlags(input: {
 }
 
 export async function syncCommercialCatalog(): Promise<CatalogSyncResult> {
-  await prisma.$transaction(async (tx) => {
-    for (const feature of FEATURE_CATALOG) {
-      await tx.platformFeature.upsert({
-        where: { key: feature.key },
-        update: {
-          name: feature.name,
-          description: feature.description,
-          domain: feature.domain,
-          defaultEnabled: feature.defaultEnabled,
-          isBillable: feature.isBillable,
-          monthlyPrice: feature.monthlyPrice,
-          isActive: true,
-        },
-        create: {
-          key: feature.key,
-          name: feature.name,
-          description: feature.description,
-          domain: feature.domain,
-          defaultEnabled: feature.defaultEnabled,
-          isBillable: feature.isBillable,
-          monthlyPrice: feature.monthlyPrice,
-          isActive: true,
-        },
-      });
-    }
-
-    const bundleCodeToId = new Map<string, string>();
-    for (const bundle of FEATURE_BUNDLES) {
-      const savedBundle = await tx.featureBundle.upsert({
-        where: { code: bundle.code },
-        update: {
-          name: bundle.name,
-          description: bundle.description,
-          monthlyPrice: bundle.monthlyPrice,
-          additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice,
-          isActive: true,
-        },
-        create: {
-          code: bundle.code,
-          name: bundle.name,
-          description: bundle.description,
-          monthlyPrice: bundle.monthlyPrice,
-          additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice,
-          isActive: true,
-        },
-        select: { id: true, code: true },
-      });
-      bundleCodeToId.set(savedBundle.code, savedBundle.id);
-    }
-
-    const featureRows = await tx.platformFeature.findMany({
-      where: { key: { in: FEATURE_CATALOG.map((feature) => feature.key) } },
-      select: { id: true, key: true },
-    });
-    const featureByKey = new Map(featureRows.map((feature) => [feature.key, feature]));
-
-    for (const bundle of FEATURE_BUNDLES) {
-      const bundleId = bundleCodeToId.get(bundle.code);
-      if (!bundleId) continue;
-      const itemRows = bundle.features
-        .map((featureKey) => featureByKey.get(featureKey))
-        .filter((feature): feature is { id: string; key: string } => Boolean(feature))
-        .map((feature) => ({
-          bundleId,
-          featureId: feature.id,
-        }));
-      if (itemRows.length > 0) {
-        await tx.featureBundleItem.createMany({
-          data: itemRows,
-          skipDuplicates: true,
-        });
-      }
-      // Prune items removed from the in-code bundle definition so DB-backed
-      // entitlement resolution can never re-grant features a bundle no longer
-      // includes (e.g. mining ops capture removed from ADDON_OPERATIONS_CORE).
-      await tx.featureBundleItem.deleteMany({
-        where: {
-          bundleId,
-          featureId: { notIn: itemRows.map((row) => row.featureId) },
-        },
-      });
-    }
-
-    for (const tier of TIERS) {
-      // Annual is billed at ANNUAL_BILLING_MONTHS x the list monthly price (two
-      // months free), not 12 x — seeding 12 x would overcharge annual plans.
-      const annualPrice = tier.annualMonthlyPrice * 12;
-
-      await tx.subscriptionPlan.upsert({
-        where: { code: tier.code },
-        update: {
-          name: tier.name,
-          description: tier.description,
-          monthlyPrice: tier.monthlyPrice,
-          annualPrice,
-          maxSites: tier.includedSites,
-          maxUsers: tier.includedUsers,
-          warningDays: tier.warningDays,
-          graceDays: tier.graceDays,
-          isActive: true,
-        },
-        create: {
-          code: tier.code,
-          name: tier.name,
-          description: tier.description,
-          monthlyPrice: tier.monthlyPrice,
-          annualPrice,
-          maxSites: tier.includedSites,
-          maxUsers: tier.includedUsers,
-          warningDays: tier.warningDays,
-          graceDays: tier.graceDays,
-          currency: "USD",
-          isActive: true,
-        },
-      });
-    }
-  });
-
+  await Promise.all(TIERS.map((tier) => ensureSubscriptionPlan(tier.code)));
   return {
     features: FEATURE_CATALOG.length,
     bundles: FEATURE_BUNDLES.length,
@@ -231,19 +182,23 @@ export async function listTierPlans(): Promise<TierPlanSummary[]> {
     where: { isActive: true },
     orderBy: [{ monthlyPrice: "asc" }, { code: "asc" }],
   });
+  const rowByCode = new Map(rows.map((row) => [row.code, row]));
 
-  return rows.map((row) => ({
-    code: row.code,
-    name: row.name,
-    description: row.description ?? null,
-    monthlyPrice: row.monthlyPrice,
-    annualPrice: row.annualPrice ?? null,
-    includedSites: getTierDefinition(row.code)?.includedSites ?? Math.max(0, row.maxSites ?? 0),
-    additionalSiteMonthlyPrice: getTierDefinition(row.code)?.additionalSiteMonthlyPrice ?? 0,
-    warningDays: row.warningDays,
-    graceDays: row.graceDays,
-    isActive: row.isActive,
-  }));
+  return TIERS.map((tier) => {
+    const row = rowByCode.get(tier.code);
+    return {
+      code: tier.code,
+      name: tier.name,
+      description: tier.description,
+      monthlyPrice: tier.monthlyPrice,
+      annualPrice: tierAnnualPrice(tier),
+      includedSites: tier.includedSites,
+      additionalSiteMonthlyPrice: tier.additionalSiteMonthlyPrice,
+      warningDays: row?.warningDays ?? tier.warningDays,
+      graceDays: row?.graceDays ?? tier.graceDays,
+      isActive: row?.isActive ?? true,
+    };
+  }).sort((left, right) => left.monthlyPrice - right.monthlyPrice || left.code.localeCompare(right.code));
 }
 
 export async function assignTier(input: {
@@ -253,10 +208,7 @@ export async function assignTier(input: {
   reason?: string;
 }): Promise<TierAssignResult> {
   const tierCode = normalizeTier(input.tierCode);
-  const plan = await prisma.subscriptionPlan.findUnique({
-    where: { code: tierCode },
-    select: { id: true, code: true },
-  });
+  const plan = await ensureSubscriptionPlan(tierCode);
   if (!plan) {
     throw new Error(`Tier not found: ${tierCode}`);
   }
@@ -329,9 +281,24 @@ export async function listAddOnBundles(companyId: string): Promise<AddonBundleSu
   ]);
 
   const enabledByCode = new Map(enabled.map((row) => [row.bundle.code, row]));
-  return bundles.map((bundle) => {
+  const summaries: AddonBundleSummary[] = FEATURE_BUNDLES.map((bundle) => {
     const state = enabledByCode.get(bundle.code);
     return {
+      code: bundle.code,
+      name: bundle.name,
+      description: bundle.description,
+      monthlyPrice: bundle.monthlyPrice,
+      additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice,
+      isActive: true,
+      enabled: state?.isEnabled ?? false,
+      reason: state?.reason ?? null,
+    };
+  });
+
+  for (const bundle of bundles) {
+    if (getBundleDefinition(bundle.code)) continue;
+    const state = enabledByCode.get(bundle.code);
+    summaries.push({
       code: bundle.code,
       name: bundle.name,
       description: bundle.description ?? null,
@@ -340,8 +307,10 @@ export async function listAddOnBundles(companyId: string): Promise<AddonBundleSu
       isActive: bundle.isActive,
       enabled: state?.isEnabled ?? false,
       reason: state?.reason ?? null,
-    };
-  });
+    });
+  }
+
+  return summaries.sort((left, right) => left.code.localeCompare(right.code));
 }
 
 export async function setAddOnBundle(input: {
@@ -357,7 +326,7 @@ export async function setAddOnBundle(input: {
   });
   if (!company) throw new Error(`Organization not found for id: ${input.companyId}`);
 
-  const bundle = await prisma.featureBundle.findUnique({
+  const bundle = (await ensureFeatureBundle(input.bundleCode)) ?? await prisma.featureBundle.findUnique({
     where: { code: String(input.bundleCode || "").trim().toUpperCase() },
     select: { id: true, code: true, name: true },
   });
@@ -367,7 +336,7 @@ export async function setAddOnBundle(input: {
     const requiredBundles = BUNDLE_DEPENDENCIES[bundle.code] ?? [];
     for (const requiredCode of requiredBundles) {
       if (requiredCode === bundle.code) continue;
-      const requiredBundle = await prisma.featureBundle.findUnique({
+      const requiredBundle = (await ensureFeatureBundle(requiredCode)) ?? await prisma.featureBundle.findUnique({
         where: { code: requiredCode },
         select: { id: true, code: true },
       });

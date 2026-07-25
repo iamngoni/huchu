@@ -86,17 +86,15 @@ async function getBundleFeatureSet(bundleCodes: string[]): Promise<Set<string>> 
   });
 
   const set = new Set<string>();
-  for (const row of rows) {
-    for (const item of row.items) {
-      set.add(normalizeFeatureKey(item.feature.key));
-    }
-  }
-
-  // Fallback to in-code catalog if bundle rows are not yet synced.
   for (const code of normalizedCodes) {
-    if (rows.some((row) => row.code === code)) continue;
-    const fallback = FEATURE_BUNDLES.find((bundle) => bundle.code === code);
-    for (const key of fallback?.features ?? []) set.add(normalizeFeatureKey(key));
+    const systemBundle = FEATURE_BUNDLES.find((bundle) => bundle.code === code);
+    if (systemBundle) {
+      for (const key of systemBundle.features) set.add(normalizeFeatureKey(key));
+      continue;
+    }
+
+    const row = rows.find((bundle) => bundle.code === code);
+    for (const key of row?.items.map((item) => item.feature.key) ?? []) set.add(normalizeFeatureKey(key));
   }
 
   return set;
@@ -108,115 +106,6 @@ export async function syncEntitlementCatalog(): Promise<{
   bundleItems: number;
   tiers: number;
 }> {
-  await prisma.$transaction(async (tx) => {
-    for (const feature of FEATURE_CATALOG) {
-      await tx.platformFeature.upsert({
-        where: { key: feature.key },
-        update: {
-          name: feature.name,
-          description: feature.description,
-          domain: feature.domain,
-          defaultEnabled: feature.defaultEnabled,
-          isBillable: feature.isBillable,
-          monthlyPrice: feature.monthlyPrice,
-          isActive: true,
-        },
-        create: {
-          key: feature.key,
-          name: feature.name,
-          description: feature.description,
-          domain: feature.domain,
-          defaultEnabled: feature.defaultEnabled,
-          isBillable: feature.isBillable,
-          monthlyPrice: feature.monthlyPrice,
-          isActive: true,
-        },
-      });
-    }
-
-    for (const bundle of FEATURE_BUNDLES) {
-      const saved = await tx.featureBundle.upsert({
-        where: { code: bundle.code },
-        update: {
-          name: bundle.name,
-          description: bundle.description,
-          monthlyPrice: bundle.monthlyPrice,
-          additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice,
-          isActive: true,
-        },
-        create: {
-          code: bundle.code,
-          name: bundle.name,
-          description: bundle.description,
-          monthlyPrice: bundle.monthlyPrice,
-          additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice,
-          isActive: true,
-        },
-        select: { id: true },
-      });
-
-      const bundleFeatureIds: string[] = [];
-      for (const featureKey of bundle.features) {
-        const feature = await tx.platformFeature.findUnique({
-          where: { key: featureKey },
-          select: { id: true },
-        });
-        if (!feature) continue;
-        bundleFeatureIds.push(feature.id);
-        await tx.featureBundleItem.upsert({
-          where: {
-            bundleId_featureId: {
-              bundleId: saved.id,
-              featureId: feature.id,
-            },
-          },
-          update: {},
-          create: {
-            bundleId: saved.id,
-            featureId: feature.id,
-          },
-        });
-      }
-
-      // Prune items removed from the in-code bundle definition so DB-backed
-      // entitlement resolution can never re-grant features a bundle no longer
-      // includes (e.g. mining ops capture removed from ADDON_OPERATIONS_CORE).
-      await tx.featureBundleItem.deleteMany({
-        where: {
-          bundleId: saved.id,
-          featureId: { notIn: bundleFeatureIds },
-        },
-      });
-    }
-
-    for (const tier of TIERS) {
-      await tx.subscriptionPlan.upsert({
-        where: { code: tier.code },
-        update: {
-          name: tier.name,
-          description: tier.description,
-          monthlyPrice: tier.monthlyPrice,
-          maxSites: tier.includedSites,
-          warningDays: tier.warningDays,
-          graceDays: tier.graceDays,
-          isActive: true,
-        },
-        create: {
-          code: tier.code,
-          name: tier.name,
-          description: tier.description,
-          monthlyPrice: tier.monthlyPrice,
-          annualPrice: tier.monthlyPrice * 12,
-          maxSites: tier.includedSites,
-          warningDays: tier.warningDays,
-          graceDays: tier.graceDays,
-          currency: "USD",
-          isActive: true,
-        },
-      });
-    }
-  });
-
   return {
     features: FEATURE_CATALOG.length,
     bundles: FEATURE_BUNDLES.length,
@@ -229,7 +118,7 @@ export async function getCompanyFeatureMap(companyId: string): Promise<FeatureMa
   const normalizedCompanyId = companyId.trim();
   if (!normalizedCompanyId) return {};
 
-  const [features, flags, latestSubscription, addons] = await Promise.all([
+  const [dbFeatures, flags, latestSubscription, addons] = await Promise.all([
     prisma.platformFeature.findMany({
       where: { isActive: true },
       select: { key: true, defaultEnabled: true, isBillable: true },
@@ -257,6 +146,16 @@ export async function getCompanyFeatureMap(companyId: string): Promise<FeatureMa
 
   const map: FeatureMap = {};
   const featureMeta = new Map<string, { isBillable: boolean }>();
+  const catalogByKey = new Map(FEATURE_CATALOG.map((feature) => [normalizeFeatureKey(feature.key), feature]));
+  const features = [
+    ...FEATURE_CATALOG.map((catalog) => ({
+      key: catalog.key,
+      defaultEnabled: catalog.defaultEnabled,
+      isBillable: catalog.isBillable,
+    })),
+    ...dbFeatures.filter((feature) => !catalogByKey.has(normalizeFeatureKey(feature.key))),
+  ];
+
   for (const feature of features) {
     const key = normalizeFeatureKey(feature.key);
     featureMeta.set(key, { isBillable: Boolean(feature.isBillable) });
