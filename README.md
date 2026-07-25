@@ -1,119 +1,378 @@
-## 🏛️ Architecture
+# Huchu Operations Platform
 
-### Tech Stack
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Prisma ORM
-- **Database**: PostgreSQL
-- **Authentication**: NextAuth.js with credential provider
-- **UI Components**: Custom components built with Radix UI primitives
-- **Icons**: Lucide React
-- **Forms**: React Hook Form + Zod validation
-- **PWA**: Offline-first with service workers and IndexedDB
+Huchu is a multi-tenant operations and ERP platform built on Next.js, Prisma, PostgreSQL, and feature-gated workspace modules. The same runtime powers tenant workspaces, external portals, platform administration, industry packs, reporting, document output, and operator tooling.
 
-### Mobile-First Design
-- One main action per screen (no clutter)
-- Big touch targets (44px minimum)
-- Short forms with smart defaults
-- Progressive disclosure (basic → advanced)
-- Photos as evidence instead of typing
+This README is the developer entry point. For deeper product context, start with `docs/system-reference/README.md`, then use this file for day-to-day setup, commands, and contribution workflow.
 
-### Offline Support
-- Works without internet
-- Saves drafts locally
-- Auto-syncs when connected
-- Clear sync status indicators
+## Current Checkout Footprint
 
-## 🔒 Security
+This repository is broad. In the current checkout:
 
-- Role-based access control (RBAC)
-- 2FA for privileged roles (gold + admin)
-- Immutable records after approval
-- Append-only audit log for sensitive operations
-- Corrections tracked, not silent edits
-- 
-## 🛠️ Development
+- `273` App Router page files live under `app/`.
+- `449` API route handlers live under `app/api/`.
+- `215` Prisma models live in `prisma/schema.prisma`.
+- `31` Vitest files and `1` Playwright spec are present.
+- Core workspace families include gold, scrap metal, schools, retail/POS, auto sales, accounting, HR/payroll, stores, maintenance, compliance, CCTV, reports, admin, and platform management.
 
-### Project Structure
-```
-/app                    # Next.js app directory
-/components            # Reusable UI components
-  /ui                  # Base UI components
-/lib                   # Utilities and helpers
-/prisma                # Database schema and migrations
-```
+## Stack
 
-### Key Commands
+- Next.js 16 App Router
+- React 19
+- TypeScript 5.9
+- Prisma 7 with `@prisma/adapter-pg`
+- PostgreSQL
+- NextAuth 4
+- Tailwind CSS 4
+- Radix UI, Base UI, and shared custom UI primitives
+- React Query, React Hook Form, Zod
+- Vitest for unit/integration tests
+- Playwright for browser smoke/e2e tests
+- Ink and `vite-node` for the platform operator TUI
+
+Use Node.js 20+; Node 24 is known to work in this workspace. Use pnpm through Corepack.
+
+## Repository Map
+
+| Path | Purpose |
+| --- | --- |
+| `app/` | Next.js App Router pages, layouts, and API routes. Feature modules are grouped by route family. |
+| `app/api/` | Route handlers. Newer industry and portal APIs often use `app/api/v2`. |
+| `components/` | Reusable UI and feature components. Base primitives live in `components/ui`. |
+| `lib/` | Domain services, shared utilities, auth, platform gating, offline runtime, accounting, and vertical business logic. |
+| `hooks/` | Shared React hooks. |
+| `prisma/` | Prisma schema and migrations. |
+| `scripts/` | Operational CLI scripts, platform TUI, backfills, worker scripts, and agent guardrails. |
+| `docs/` | Product specs, system reference, UX playbook, rollout plans, and implementation notes. |
+| `e2e/` | Playwright tests. |
+| `public/` | Static assets, PWA assets, service worker, fonts, and uploads used in local/dev flows. |
+| `types/` | Shared TypeScript declaration files. |
+| `docker/` | Container-related assets. |
+| `cctv-server/` | CCTV conversion/gateway notes and supporting server code. |
+
+## Quick Start
+
+1. Enable Corepack if needed:
 
 ```bash
-# Development
-pnpm dev                 # Start dev server
-pnpm build               # Build for production
-pnpm start               # Start production server
-pnpm lint                # Run ESLint
-
-# Database
-pnpm prisma generate     # Generate Prisma client
-pnpm db:prepare:platform # Backfill legacy Company rows for platform tenancy fields
-pnpm db:push             # Backfill + push schema to database
-pnpm prisma studio       # Open Prisma Studio GUI
-pnpm prisma migrate dev  # Create and apply migrations
-
-# User management
-pnpm create-user --email user@example.com --name "User Name" --password "securepass" --role manager --company-id <uuid>
-
-# Employee management
-pnpm create-employee --employee-id EMP001 --name "Employee Name" --phone "+263..." --next-of-kin-name "Kin Name" --next-of-kin-phone "+263..." --passport-photo-url "https://..." --village-of-origin "Village" --company-id <uuid>
-pnpm manage-employees list --company-id <uuid> --active
-pnpm manage-employees update --employee-id EMP001 --company-id <uuid> --phone "+263..." --inactive
-
-# Inventory management (consumables)
-pnpm manage-inventory create --item-code CON001 --name "Safety gloves" --unit "pairs" --location-id <uuid> --site-id <uuid> --current-stock 20 --min-stock 10
-pnpm manage-inventory list --company-id <uuid> --category consumables
-pnpm manage-inventory update --item-code CON001 --site-id <uuid> --unit "pair"
-
-# Equipment management
-pnpm manage-equipment create --equipment-code EQ001 --name "Crusher 1" --category crusher --site-id <uuid>
-pnpm manage-equipment list --company-id <uuid> --active
-pnpm manage-equipment update --equipment-code EQ001 --site-id <uuid> --inactive
-
-# Platform management
-# Ink TUI app (default)
-pnpm platform --actor ops@huchu.com
-pnpm platform --actor ops@huchu.com --company-id <uuid>
-pnpm platform --actor ops@huchu.com --read-only
-
-# Legacy command mode (kept for automation)
-pnpm manage-platform --actor ops@huchu.com
-pnpm manage-platform org list --status active
-pnpm manage-platform org show --id <uuid>
-pnpm manage-platform org suspend --id <uuid> --actor ops@huchu.com --reason "compliance hold"
-pnpm manage-platform org activate --id <uuid> --actor ops@huchu.com --reason "restored"
-
-# Ink TUI shortcuts
-# Up/Down select, Left/Right pane, Enter action
-# / or p command palette, g Organizations, r read-only toggle, q quit
+corepack enable
 ```
 
-### Local DNS
-Use this shape :
+2. Install dependencies:
 
-- app root: `apps.pagka.local`
-- tenant app: `<tenant>.apps.pagka.local`
-- POS: `pos.<tenant>.apps.pagka.local`
-- parent portal: `parents.<tenant>.apps.pagka.local`
-- student portal: `students.<tenant>.apps.pagka.local`
-- teacher portal: `staff.<tenant>.apps.pagka.local`
-- admin: `portal.admin.pagka.local`
+```bash
+pnpm install
+```
 
-Your .env should look like this:
+3. Create local environment variables:
+
+```bash
+cp .env.example .env
 ```
-NEXTAUTH_URL=http://apps.pagka.local:3000
-PLATFORM_ROOT_DOMAIN=apps.pagka.local
-PLATFORM_ROOT_HOSTS=apps.pagka.local,apps.pagka.local:3000
-ADMIN_ROOT_DOMAIN=admin.pagka.local
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
 ```
-Then add exact entries to C:\Windows\System32\drivers\etc\hosts, for example:
+
+4. Set at least these values in `.env`:
+
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/huchu_mines?schema=public"
+NEXTAUTH_SECRET="replace-with-a-long-random-secret"
+NEXTAUTH_URL="http://localhost:3000"
+PLATFORM_ROOT_DOMAIN=""
+PLATFORM_ROOT_HOSTS="localhost:3000"
+ADMIN_ROOT_DOMAIN=""
 ```
+
+5. Generate Prisma Client:
+
+```bash
+pnpm db:generate
+```
+
+6. Push the schema to a local development database:
+
+```bash
+pnpm db:push
+```
+
+`db:push` mutates the target database and does not create a migration. Use it for local development databases. For shared environments and production-intended schema work, create/review migrations and follow the database workflow below.
+
+7. Create minimum tenant data:
+
+```bash
+pnpm create-company --name "Acme Mine" --slug acme
+pnpm create-site --name "Main Site" --code MAIN
+pnpm create-user --email admin@example.com --name "Admin User" --password "change-me" --role superadmin
+pnpm templates:seed-defaults
+```
+
+If more than one company exists, pass `--company-id <uuid>` to scripts that support it.
+
+8. Start development:
+
+```bash
+pnpm dev
+```
+
+Open `http://localhost:3000/login`.
+
+## Fixing `pnpm db:push` Ignored Builds
+
+If `pnpm db:push` fails with:
+
+```text
+[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: @prisma/engines, prisma, esbuild, sharp, unrs-resolver, ...
+Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+```
+
+The failure is from pnpm's dependency build approval gate, not from Prisma or PostgreSQL. Prisma commands trigger pnpm's dependency status check, and pnpm stops when packages with lifecycle scripts are still undecided.
+
+This repo tracks build-script decisions in `pnpm-workspace.yaml`:
+
+- approved: `@prisma/engines`, `prisma`, `esbuild`, `sharp`, `unrs-resolver`
+- denied: `core-js`
+
+After a fresh clone or after changing the approval file, run:
+
+```bash
+pnpm install
+pnpm db:generate
+pnpm db:push
+```
+
+If new packages appear in the ignored-builds error, review them and record explicit decisions. For example:
+
+```bash
+pnpm approve-builds @prisma/engines prisma esbuild sharp unrs-resolver '!core-js'
+pnpm install
+```
+
+Commit the resulting `pnpm-workspace.yaml` change so other developers do not hit the same blocker.
+
+## Day-To-Day Commands
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Start the Next.js dev server. |
+| `pnpm build` | Generate Prisma Client and build the production bundle. |
+| `pnpm start` | Start the built production app. |
+| `pnpm lint` | Run ESLint. |
+| `npx tsc --noEmit` | Run the TypeScript compiler check. |
+| `pnpm test` | Run Vitest once. |
+| `pnpm test:watch` | Run Vitest in watch mode. |
+| `pnpm test:e2e` | Run Playwright tests. Starts `pnpm dev` unless `E2E_BASE_URL` is set. |
+| `pnpm db:generate` | Generate Prisma Client. |
+| `pnpm db:push` | Push Prisma schema to the configured development database. |
+| `pnpm db:prepare:platform` | Backfill legacy company rows for platform tenancy fields. |
+| `pnpm templates:seed-defaults` | Seed or update default document templates. |
+| `pnpm worker:pdf` | Run the PDF render worker loop. |
+
+## Operational CLI Scripts
+
+Most scripts read `.env`, connect to `DATABASE_URL`, and use the Prisma PostgreSQL adapter.
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm create-company --name <name> [--slug <slug>]` | Create a tenant company. |
+| `pnpm create-site --name <name> --code <code> [--company-id <uuid>]` | Create a site. |
+| `pnpm create-user --email <email> --name <name> --password <password> --role <superadmin|manager|clerk> [--company-id <uuid>]` | Create an app user. |
+| `pnpm create-employee --name <name> --phone <phone> ...` | Create an employee record. |
+| `pnpm manage-employees ...` | List, show, update, activate, deactivate, or delete employees. |
+| `pnpm manage-inventory ...` | List, show, create, update, or delete inventory items. |
+| `pnpm manage-equipment ...` | List, show, create, update, activate, deactivate, or delete equipment. |
+| `pnpm platform --actor <email>` | Start the Ink platform operator TUI. |
+| `pnpm platform --actor <email> --read-only` | Start the platform TUI in read-only mode. |
+| `pnpm manage-platform ...` | Legacy/automation-friendly platform admin command mode. |
+| `pnpm platform:audit-feature-gates` | Audit platform feature-gate configuration. |
+| `pnpm platform:accounting-replay` | Replay accounting integration events. |
+| `pnpm platform:accounting-backfill-events` | Backfill accounting integration events. |
+| `pnpm backfill:gold-valuations` | Backfill gold valuation data. |
+| `pnpm backfill:gold-accounting-usd` | Backfill gold accounting USD values. |
+
+Run any script with `--help` for exact flags when available.
+
+## After Adding A Module
+
+When a new module, vertical, or major surface is added, update all relevant layers instead of only adding pages:
+
+1. Data model:
+   - Add or update Prisma models in `prisma/schema.prisma`.
+   - Add a migration under `prisma/migrations` for shared/prod-bound schema work.
+   - Run `pnpm db:generate`.
+   - Use `pnpm db:push` only against local development databases.
+   - P0 migrations must ship with a migration witness test.
+
+2. Domain logic:
+   - Put reusable business rules in `lib/<domain>/`.
+   - Keep API handlers thin; validation, calculations, posting, reconciliation, and workflow transitions belong in domain services where possible.
+   - Add targeted `.test.ts` or `.test.tsx` files beside the risky logic.
+
+3. API routes:
+   - Add route handlers under `app/api/<domain>/` or `app/api/v2/<domain>/`.
+   - Use existing shared API helpers and auth/session utilities.
+   - Include tenant scoping through `companyId` unless the model is explicitly platform-global.
+
+4. UI routes and components:
+   - Add pages under `app/<module>/`.
+   - Put reusable feature UI in `components/<module>/`.
+   - Follow `docs/ux/platform-ux-playbook.md`.
+
+5. Feature and navigation registration:
+   - Update `lib/platform/feature-catalog.ts` for feature keys, bundles, or tier exposure.
+   - Update route mapping in `lib/platform/gating/route-registry.ts`.
+   - Update workspace routing/navigation where relevant: `lib/navigation.ts`, `lib/workspaces.ts`, and `lib/workspace-products.ts`.
+   - Update client templates in `lib/platform/client-templates.ts` if the module should be enabled by tenant profile.
+
+6. Cross-cutting integration:
+   - Add notifications in `lib/notifications.ts` when users need workflow feedback.
+   - Add audit/event records for sensitive operations.
+   - Add document templates/rendering support if the module produces official PDFs.
+   - Add offline catalog/runtime support only when the workflow has explicit offline requirements.
+
+7. Validation:
+   - Run `npx tsc --noEmit`.
+   - Run `pnpm lint`.
+   - Run targeted tests, then `pnpm test` when the change touches shared logic.
+   - Run `pnpm test:e2e` for browser-critical flows or when route/auth/portal behavior changes.
+   - Run `pnpm build` before release or for risky framework/config changes.
+
+8. Documentation:
+   - Update this README if the setup or command surface changes.
+   - Update `CONTRIBUTING.md` if the workflow changes.
+   - Update `docs/system-reference/*` when route/API/product capabilities change materially.
+   - Update relevant domain docs under `docs/`.
+
+## Architecture Notes Developers Should Know
+
+- `Company` is the main tenant boundary. Most operational records should be scoped by `companyId`.
+- Host-based routing and tenant enforcement live in `proxy.ts` and `lib/platform/tenant.ts`.
+- Feature access is cataloged in `lib/platform/feature-catalog.ts` and enforced through platform gating utilities plus route registry mappings.
+- Navigation is feature-aware. Adding a page usually also means updating navigation and route gating.
+- Auth uses NextAuth with credentials for tenant users and admin email-link flow for the platform admin host.
+- Prisma 7 is configured with `@prisma/adapter-pg`; use `lib/prisma.ts` instead of creating ad hoc Prisma clients in app code.
+- Document rendering uses Chromium and Vercel Blob-aware artifact storage. See `lib/documents/*`, `app/api/documents/*`, and `pnpm worker:pdf`.
+- Offline support exists in `lib/offline/*` and some vertical runtimes; do not claim a new workflow is offline-ready unless it is wired into the offline catalog/runtime and tested.
+- CCTV has app APIs plus separate conversion/gateway context in `cctv-server/`.
+- Accounting/fiscalisation flows are event and posting oriented. Preserve source traceability for finance-impacting writes.
+
+## Domain Surface Map
+
+- Platform core: tenancy, feature gating, subscriptions, bundles, branding, admin portal, support access, runbooks, audit, health, and commercial controls.
+- Operations: shift reports, attendance, plant reports, dashboards, and operational reporting.
+- Gold: pours, purchases, dispatches, receipts, payouts, shift allocations, imports, corrections, reconciliation, period close, valuation, and audit.
+- Scrap metal: materials, sellers, pricing, purchases, batches, sales, settlements, offline ticketing, scale integration, and compliance.
+- HR/payroll: employees, departments, job grades, shift groups, incidents, disciplinary actions, compensation, payroll, disbursements, and approvals.
+- Stores/maintenance/compliance: inventory, stock movements, fuel ledger, equipment, work orders, downtime, permits, inspections, incidents, and training records.
+- Accounting: chart of accounts, journals, posting rules, periods, AR/AP, banking, tax, VAT, fiscalisation, assets, budgets, cost centers, currency, and reports.
+- Schools: students, guardians, teachers, classes, subjects, attendance, results, fees, boarding, notices, reports, and parent/student/teacher portals.
+- Retail/POS/thrift-facing surfaces: catalog, purchasing, goods receipts, promotions, POS, shifts, sales, refunds, voids, held carts, and POS portal.
+- Auto sales: leads, vehicle inventory, deals, reservation/contract transitions, financing, and payments.
+- CCTV: cameras, NVRs, live streams, playback, events, access logs, stream tokens, and gateway integration.
+
+## UX Rules
+
+All UX/UI work must follow `docs/ux/platform-ux-playbook.md`.
+
+Key rules:
+
+- One table per active view.
+- Use vertical tabs for multi-table contexts.
+- Keep DataTable search, submit, filters, rows-per-page, and pagination in one aligned row.
+- Prefer full-bleed primary tables and progressive disclosure.
+- Use expandable parent rows for parent-child workflows where appropriate.
+- Use the canonical status vocabulary from the playbook.
+- Use `font-mono` for numeric and time-heavy values.
+- Keep operational screens dense, calm, and scannable.
+
+## Testing
+
+There is now a configured automated test surface:
+
+- Unit/integration tests: `pnpm test`
+- Watch mode: `pnpm test:watch`
+- Browser tests: `pnpm test:e2e`
+- Type checking: `npx tsc --noEmit`
+- Linting: `pnpm lint`
+
+Tests are colocated as `.test.ts` or `.test.tsx`. Existing coverage is concentrated in gold, offline runtime, accounting-adjacent utilities, platform entitlements, notifications, marketing pricing, and selected API routes.
+
+When adding code:
+
+- Add targeted tests for domain rules, workflow transitions, calculations, imports, posting, offline logic, auth/gating, and API behavior.
+- Add Playwright coverage for critical login, route, portal, and browser workflow changes.
+- Do not defer a required test to a follow-up.
+
+## Database Workflow
+
+Local-only schema experimentation can use:
+
+```bash
+pnpm db:generate
+pnpm db:push
+```
+
+For shared, production-bound, or risky schema work:
+
+1. Update `prisma/schema.prisma`.
+2. Add a migration in `prisma/migrations`.
+3. Add or update paired tests.
+4. Run `pnpm db:generate`.
+5. Run `npx tsc --noEmit`, `pnpm lint`, and target tests.
+6. Document whether operators must run `pnpm db:push`, a migration command, or a backfill.
+
+Use the existing backfill scripts as references for production data repair and historical data enrichment. Gold P0 migrations require witness tests in the same commit.
+
+## Environment Variables
+
+See `.env.example` for a copyable template. Important variables include:
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string used by Prisma, scripts, and workers. |
+| `DATABASE_URL_LOCAL` | Optional convenience connection string for local workflows. |
+| `NEXTAUTH_SECRET` | Required secret for NextAuth JWT/session signing. |
+| `NEXTAUTH_URL` | Public app URL for auth callbacks. |
+| `PLATFORM_ROOT_DOMAIN` | Enables strict tenant subdomain routing when set. |
+| `PLATFORM_ROOT_HOSTS` | Comma-separated central/root hosts allowed for the platform. |
+| `ADMIN_ROOT_DOMAIN` | Admin wildcard/root domain. |
+| `ADMIN_PORTAL_HOST` | Optional exact admin portal host override. |
+| `ADMIN_PORTAL_EMAIL` / `ADMIN_PORTAL_ALLOWED_EMAILS` | Admin magic-link allowlist. |
+| `ADMIN_MAGIC_LINK_RESEND_API_KEY` / `ADMIN_MAGIC_LINK_WEBHOOK_URL` | Admin magic-link delivery. |
+| `BLOB_READ_WRITE_TOKEN` | Required for Vercel Blob uploads/artifacts. |
+| `PDF_INLINE_BATCH_LIMIT` | Inline PDF render route batch limit. |
+| `PDF_WORKER_INTERVAL_MS` / `PDF_WORKER_IDLE_MS` | PDF worker polling controls. |
+| `PG_POOL_MAX`, `PG_POOL_IDLE_MS`, `PG_POOL_CONN_MS` | PostgreSQL pool tuning. |
+| `PRISMA_TX_MAX_WAIT_MS`, `PRISMA_TX_TIMEOUT_MS` | Prisma transaction tuning. |
+| `PRISMA_PROVISION_TX_*` | Platform provisioning transaction tuning. |
+| `CCTV_GATEWAY_URL`, `CCTV_WEBRTC_URL`, `CCTV_HLS_BASE_URL`, `GATEWAY_KEY` | CCTV gateway and stream integration. |
+| `SCRAP_SCALE_HELPER_URL` | Optional scrap metal scale helper integration. |
+| `NEXT_PUBLIC_MARKETING_SITE_URL` | Canonical marketing site origin. |
+| `MARKETING_DEMO_WEBHOOK_URL` | Optional demo request webhook. |
+| `FEATURE_GATE_POLICY`, `NEXT_PUBLIC_FEATURE_GATE_POLICY` | Feature-gate policy selection. |
+| `FEATURE_GATES_BYPASS`, `FEATURE_GATES_BYPASS_KEYS` | Break-glass feature-gate bypass controls. |
+| `PLATFORM_VERCEL_PROJECT_ID`, `PLATFORM_VERCEL_TEAM_ID`, `PLATFORM_VERCEL_TOKEN` | Tenant domain provisioning on Vercel. |
+
+Never commit `.env` or real credentials.
+
+## Local DNS And Portals
+
+Plain `localhost:3000` is enough for many local flows. To test strict tenant and portal host behavior, use local DNS entries.
+
+Example `.env` shape:
+
+```env
+NEXTAUTH_URL="http://apps.pagka.local:3000"
+PLATFORM_ROOT_DOMAIN="apps.pagka.local"
+PLATFORM_ROOT_HOSTS="apps.pagka.local,apps.pagka.local:3000"
+ADMIN_ROOT_DOMAIN="admin.pagka.local"
+```
+
+Example Windows hosts entries in `C:\Windows\System32\drivers\etc\hosts`:
+
+```text
 127.0.0.1 apps.pagka.local
 127.0.0.1 acme.apps.pagka.local
 127.0.0.1 pos.acme.apps.pagka.local
@@ -122,95 +381,74 @@ Then add exact entries to C:\Windows\System32\drivers\etc\hosts, for example:
 127.0.0.1 staff.acme.apps.pagka.local
 127.0.0.1 portal.admin.pagka.local
 ```
-Then run pnpm dev and open:
 
-- http://acme.apps.pagka.local:3000/login
-- http://pos.acme.apps.pagka.local:3000/login
-- http://parents.acme.apps.pagka.local:3000/login
-- http://students.acme.apps.pagka.local:3000/login
-- http://staff.acme.apps.pagka.local:3000/login
-- http://portal.admin.pagka.local:3000/admin/login
+Useful local URLs:
 
-One caution: .local can sometimes clash with mDNS on some systems. If you hit weird DNS behavior, switch to pagka.test or pagka.localhost.
+- `http://acme.apps.pagka.local:3000/login`
+- `http://pos.acme.apps.pagka.local:3000/login`
+- `http://parents.acme.apps.pagka.local:3000/login`
+- `http://students.acme.apps.pagka.local:3000/login`
+- `http://staff.acme.apps.pagka.local:3000/login`
+- `http://portal.admin.pagka.local:3000/admin/login`
 
-## 📖 Deployment
+If `.local` clashes with mDNS on a machine, switch to a `.test` or `.localhost` convention and update env/hosts consistently.
 
-### Production Checklist (Vercel + Multitenancy)
-1. Set up your production PostgreSQL database.
-2. Configure Vercel project domains:
-   - `apps.pagka.dev`
-   - `*.apps.pagka.dev`
-   - `admin.pagka.dev`
-   - `*.admin.pagka.dev`
-3. Configure DNS records for both root and wildcard domains to point to Vercel.
-4. Set production environment variables in Vercel (see below).
-5. Deploy and verify tenant login on subdomains.
-6. Verify admin portal access on `*.admin.pagka.dev`.
+## Documentation Map
 
-### Production Environment Variables (Vercel)
+- `CONTRIBUTING.md` - contribution workflow, quality gates, PR expectations, and gold agent boundaries.
+- `docs/system-reference/README.md` - product/system handbook entry point.
+- `docs/system-reference/live-capabilities.md` - capability inventory, useful for product and QA context.
+- `docs/system-reference/route-and-surface-inventory.md` - route/API footprint snapshot. Refresh when major surfaces change.
+- `docs/ux/platform-ux-playbook.md` - canonical UX/UI rules.
+- `docs/_start-here/DATABASE_SETUP.md` - detailed PostgreSQL setup notes.
+- `docs/_start-here/PRODUCTION_DEPLOYMENT.md` - deployment setup notes.
+- `docs/accounting/zimra-fiscalisation.md` - accounting fiscalisation notes.
+- `cctv-server/*.md` - CCTV gateway/conversion setup notes.
+
+## Deployment Notes
+
+Production is designed around PostgreSQL, NextAuth, tenant root/wildcard domains, admin wildcard domains, and Vercel-compatible hosting.
+
+Before production deployment:
+
+1. Configure PostgreSQL and secure `DATABASE_URL`.
+2. Set `NEXTAUTH_SECRET` and production `NEXTAUTH_URL`.
+3. Configure tenant root and wildcard domains.
+4. Configure admin root/wildcard domains.
+5. Configure Blob, PDF, CCTV, fiscalisation, email-link, and webhook integrations as needed.
+6. Run migrations/backfills required for the release.
+7. Verify tenant login, cross-tenant blocking, admin login, portal routing, feature gating, and key reports.
+
+See `docs/_start-here/PRODUCTION_DEPLOYMENT.md` for the longer checklist.
+
+## Troubleshooting
+
+### `pnpm db:push` fails with ignored builds
+
+Run `pnpm install` after confirming `pnpm-workspace.yaml` has explicit `allowBuilds` booleans. See the ignored-builds section above.
+
+### Prisma Client not found or stale
+
+```bash
+pnpm db:generate
 ```
-DATABASE_URL="postgresql://user:password@localhost:5432/huchu"
-NEXTAUTH_SECRET="your-secret-key"
-NEXTAUTH_URL="https://apps.pagka.dev"
-PLATFORM_ROOT_DOMAIN="apps.pagka.dev"
-PLATFORM_ROOT_HOSTS="apps.pagka.dev"
-ADMIN_ROOT_DOMAIN="admin.pagka.dev"
-BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
 
-# Admin portal magic-link setup
-ADMIN_PORTAL_EMAIL="thehalfstackdev@gmail.com"
-ADMIN_PORTAL_ACTOR_NAME="Platform Superuser"
-ADMIN_PORTAL_COMPANY_ID="<optional-company-uuid>"
-ADMIN_MAGIC_LINK_FROM="no-reply@pagka.dev"
-# Pick one delivery method:
-ADMIN_MAGIC_LINK_RESEND_API_KEY="re_..."
-# OR
-ADMIN_MAGIC_LINK_WEBHOOK_URL="https://your-mail-webhook.example/send"
-```
+### Database connection fails
 
-### Multitenancy Notes
-1. Production tenant login URLs use:
-   - `https://<tenant-slug>.apps.pagka.dev/login`
-2. In strict production mode (`PLATFORM_ROOT_DOMAIN` set), users must log in on their tenant subdomain.
-3. Recommended preview behavior:
-   - leave `PLATFORM_ROOT_DOMAIN` unset in Preview environments to avoid strict host enforcement during QA.
+Check `DATABASE_URL`, verify PostgreSQL is running, and confirm the database exists.
 
-### Post-Deploy Verification
-1. Tenant login works:
-   - `https://acme.apps.pagka.dev/login`
-2. Cross-tenant login is blocked:
-   - ACME user cannot log in on `https://other-tenant.apps.pagka.dev/login`
-3. Root login is blocked in strict mode:
-   - `https://apps.pagka.dev/login`
+### Tenant login redirects unexpectedly
 
-## 🎓 Training & Rollout
+Check `PLATFORM_ROOT_DOMAIN`, `PLATFORM_ROOT_HOSTS`, `NEXTAUTH_URL`, hosts-file entries, and the company slug/allowed hosts.
 
-### Rollout Strategy
-1. Pick 1 pilot mine
-2. Identify 1 champion clerk
-3. Train supervisor + clerk (30 minutes)
-4. Run paper and app in parallel (7-14 days)
-5. Daily dashboard review with manager
-6. Fix friction fast
-7. Official switch when accuracy proven
+### Admin portal is blocked
 
-### Support Materials
-- One-page cheat sheets (to be created)
-- Video tutorials (to be created)
-- WhatsApp support group
-- Weekly check-ins during rollout
+Use the admin host configured by `ADMIN_ROOT_DOMAIN` or `ADMIN_PORTAL_HOST`, and confirm the email is allowed by `ADMIN_PORTAL_EMAIL` or `ADMIN_PORTAL_ALLOWED_EMAILS`.
 
-## 📝 License
+### PDF rendering fails
 
-Copyright © 2026 Huchu Enterprises. All rights reserved.
+Run `pnpm db:generate`, confirm `BLOB_READ_WRITE_TOKEN` when artifact storage is required, and check Chromium output tracing in `next.config.ts`.
 
-## 👥 Contact
+## License
 
-**Prepared by**: Christopher Chinyamakobvu  
-**Company**: Huchu Enterprises  
-**Date**: 08 January 2026
-
----
-
-**Status**: Phase 1 - Daily Heartbeat Implementation Complete  
-**Next**: Deploy to pilot site and gather feedback
+Copyright 2026 Huchu Enterprises. All rights reserved.
