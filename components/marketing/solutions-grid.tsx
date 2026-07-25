@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ArrowRight } from "@/lib/icons";
 import { solutionPages } from "@/components/marketing/marketing-data";
 import { StaggerChildren, StaggerItem } from "@/components/marketing/motion";
+import { productPriceLabel } from "@/lib/marketing/pricing";
 import styles from "@/components/marketing/marketing-site.module.css";
 
 const filters = [
@@ -83,7 +84,7 @@ export function SolutionsGrid() {
 
                 <div className="mt-4 flex items-center gap-2">
                   <span className="rounded-full bg-[#f0f4ff] px-2.5 py-1 text-[11px] font-semibold text-[#0f1f55]">
-                    {solution.recommendedTier} plan
+                    {productPriceLabel(solution.slug) ?? "Talk to sales"}
                   </span>
                 </div>
 

@@ -11,6 +11,8 @@ const demoRequestSchema = z.object({
   teamSize: z.string().trim().min(1).max(32),
   message: z.string().trim().min(10).max(4000),
   source: z.string().trim().min(1).max(64).optional(),
+  // Plan/product context captured from the page the visitor came from.
+  interest: z.string().trim().max(200).optional(),
   website: z.string().trim().max(200).optional(),
 });
 

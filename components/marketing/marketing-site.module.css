@@ -1648,3 +1648,277 @@
   background: rgba(93, 100, 255, 0.06);
   padding: 1rem;
 }
+
+/* ---------------------------------------------------------------------------
+   Pricing plans — billing toggle, plan cards, add-on catalog, comparison
+   --------------------------------------------------------------------------- */
+
+.billingToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid #d6def5;
+  background: #ffffff;
+  padding: 0.3rem;
+  box-shadow: 0 6px 18px rgba(29, 39, 79, 0.06);
+}
+
+.billingToggleButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #5b6b93;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.billingToggleButton:hover {
+  color: #0b1945;
+}
+
+.billingToggleButtonActive {
+  background: #0f1f55;
+  color: #ffffff;
+}
+
+.billingToggleButtonActive:hover {
+  color: #ffffff;
+}
+
+.billingToggleBadge {
+  border-radius: 999px;
+  background: #ff6b35;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.planCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 22px;
+  border: 1px solid #d6def5;
+  background: #ffffff;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.planCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 56px rgba(29, 39, 79, 0.12);
+}
+
+.planCardFeatured {
+  border-color: #0f1f55;
+  background: linear-gradient(180deg, #16255f 0%, #0d1a44 100%);
+  box-shadow: 0 24px 60px rgba(11, 25, 69, 0.28);
+}
+
+.planBadge {
+  position: absolute;
+  top: -0.85rem;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border-radius: 999px;
+  background: #ff6b35;
+  padding: 0.32rem 0.85rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(255, 107, 53, 0.34);
+}
+
+.addOnCard {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 16px;
+  border: 1px solid #d6def5;
+  background: #ffffff;
+  padding: 1.15rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.addOnCard:hover {
+  border-color: #b9c6ee;
+  box-shadow: 0 14px 32px rgba(29, 39, 79, 0.08);
+}
+
+.addOnPrice {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0b1945;
+}
+
+.addOnIncluded {
+  align-self: flex-start;
+  border-radius: 999px;
+  background: #dcfce7;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #166534;
+}
+
+.matrixTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.matrixTable th,
+.matrixTable td {
+  border-bottom: 1px solid #e2e8f6;
+  padding: 0.85rem 1rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.matrixTable th:first-child,
+.matrixTable td:first-child {
+  min-width: 15rem;
+  text-align: left;
+  font-weight: 500;
+  color: #31436f;
+}
+
+.matrixTable thead th {
+  position: sticky;
+  top: 0;
+  background: #f7f9ff;
+  font-weight: 700;
+  color: #0b1945;
+}
+
+.matrixTable tbody tr:nth-child(even) {
+  background: rgba(247, 249, 255, 0.62);
+}
+
+.matrixHighlight {
+  background: rgba(15, 31, 85, 0.04);
+}
+
+.tcoTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tcoTable th,
+.tcoTable td {
+  border-bottom: 1px solid #e2e8f6;
+  padding: 0.9rem 1rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.tcoTable thead th {
+  background: #f7f9ff;
+  font-weight: 700;
+  color: #0b1945;
+}
+
+.tcoTable td:nth-child(2),
+.tcoTable th:nth-child(2) {
+  background: rgba(255, 107, 53, 0.06);
+  font-weight: 600;
+  color: #0b1945;
+}
+
+.edgeCard {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1.4rem;
+}
+
+.edgeCardNumber {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 107, 53, 0.16);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #ffb694;
+}
+
+.faqItem {
+  border-radius: 14px;
+  border: 1px solid #d6def5;
+  background: #ffffff;
+  padding: 1.25rem;
+}
+
+.schoolBandCard {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  border-radius: 20px;
+  border: 1px solid #d6def5;
+  background: #ffffff;
+  padding: 1.5rem;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.schoolBandCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 50px rgba(29, 39, 79, 0.12);
+}
+
+.schoolBandCardFeatured {
+  border-color: #0f1f55;
+  box-shadow: 0 22px 50px rgba(11, 25, 69, 0.16);
+}
+
+.productCard {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-radius: 20px;
+  border: 1px solid #d6def5;
+  background: #ffffff;
+  padding: 1.5rem;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.productCard:hover {
+  transform: translateY(-4px);
+  border-color: #b9c6ee;
+  box-shadow: 0 22px 50px rgba(29, 39, 79, 0.12);
+}
+
+.productCardPrice {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid #eef1fa;
+  font-size: 0.875rem;
+  color: #31436f;
+}

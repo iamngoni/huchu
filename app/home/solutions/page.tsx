@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { Metadata } from "next";
 
 import { ArrowRight } from "@/lib/icons";
 import { PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
 import { solutionsSellingPoints } from "@/components/marketing/marketing-data";
 import { MarketingSubpageShell } from "@/components/marketing/marketing-subpage-shell";
 import { SolutionsGrid } from "@/components/marketing/solutions-grid";
@@ -10,10 +10,11 @@ import { Reveal, StaggerChildren, StaggerItem } from "@/components/marketing/mot
 import { Button } from "@/components/ui/button";
 import styles from "@/components/marketing/marketing-site.module.css";
 
-export const metadata: Metadata = {
+export const metadata = buildMarketingMetadata({
   title: "Solutions",
   description: `Explore ${PLATFORM_BRAND_NAME} solutions for gold operations, schools, retail and POS, auto sales, scrap and recycling, and multi-site operators.`,
-};
+  path: "/home/solutions",
+});
 
 export default function SolutionsPage() {
   return (

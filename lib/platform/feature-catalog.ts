@@ -42,14 +42,30 @@ export interface TierDefinition {
   code: string;
   name: string;
   description: string;
+  /** List price when billed month-to-month, in USD. */
   monthlyPrice: number;
+  /** Effective per-month price when billed annually (two months free). */
+  annualMonthlyPrice: number;
   includedSites: number;
   additionalSiteMonthlyPrice: number;
+  /**
+   * Seats included in the base price. Corelith does not price per seat — this is a
+   * fair-use ceiling, and `additionalUserPackMonthlyPrice` covers packs of
+   * `USER_PACK_SIZE` beyond it. `null` means uncapped.
+   */
+  includedUsers: number | null;
+  additionalUserPackMonthlyPrice: number;
   warningDays: number;
   graceDays: number;
   includedFeatures: string[];
   includedBundles: string[];
 }
+
+/** Seats per add-on user pack. */
+export const USER_PACK_SIZE = 5;
+
+/** Months charged when a subscription is billed annually (two months free). */
+export const ANNUAL_BILLING_MONTHS = 10;
 
 function f(entry: FeatureCatalogEntry): FeatureCatalogEntry {
   return entry;
@@ -259,10 +275,10 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
   },
   {
     code: "ADDON_GOLD_CORE",
-    name: "Gold Core",
+    name: "Gold Operations",
     description: "Core gold intake, dispatch, receipt, and operational navigation.",
-    monthlyPrice: 0,
-    additionalSiteMonthlyPrice: 0,
+    monthlyPrice: 69,
+    additionalSiteMonthlyPrice: 15,
     features: [
       "gold.home",
       "gold.intake.pours",
@@ -274,7 +290,7 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
     code: "ADDON_CUSTOM_BRANDING",
     name: "Custom Branding",
     description: "Tenant brand identity, fonts, and custom domain support.",
-    monthlyPrice: 30,
+    monthlyPrice: 29,
     additionalSiteMonthlyPrice: 0,
     features: [
       "core.branding.manage",
@@ -416,9 +432,10 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
   {
     code: "ADDON_SCHOOLS_SUITE",
     name: "Schools Suite",
-    description: "Student lifecycle, academics, boarding, fees, and school role portals.",
-    monthlyPrice: 149,
-    additionalSiteMonthlyPrice: 35,
+    description:
+      "Student lifecycle, academics, boarding, fees, and school role portals. Schools are normally quoted on per-term enrolment bands — see SCHOOL_PRICING_BANDS in lib/marketing/pricing.ts. This monthly figure is the list-price equivalent of the mid band.",
+    monthlyPrice: 129,
+    additionalSiteMonthlyPrice: 29,
     features: [
       "schools.core",
       "schools.admissions",
@@ -524,75 +541,129 @@ export const BUNDLE_DEPENDENCIES: Record<string, string[]> = {
   ADDON_CRM_SUITE: ["ADDON_ACCOUNTING_CORE", "ADDON_ACCOUNTING_ADVANCED"],
 };
 
+const PLATFORM_BASE_FEATURES = [
+  "core.auth.login",
+  "core.help.quick-tips",
+  "core.notifications.center",
+  "core.multitenancy.tenant-host-enforcement",
+];
+
+const PLATFORM_BASE_BUNDLES = [
+  "ADDON_OPERATIONS_CORE",
+  "ADDON_STORES_CORE",
+  "ADDON_WORKFORCE_CORE",
+];
+
 export const TIERS: TierDefinition[] = [
   {
     code: "BASIC",
-    name: "Solo",
-    description: "Perfect for one-person businesses getting organized.",
-    monthlyPrice: 9,
+    name: "Launch",
+    description: "Get one site off notebooks and spreadsheets.",
+    monthlyPrice: 29,
+    annualMonthlyPrice: 24,
     includedSites: 1,
-    additionalSiteMonthlyPrice: 5,
+    additionalSiteMonthlyPrice: 19,
+    includedUsers: 5,
+    additionalUserPackMonthlyPrice: 12,
     warningDays: 14,
     graceDays: 7,
-    includedFeatures: [],
-    includedBundles: [],
+    includedFeatures: PLATFORM_BASE_FEATURES,
+    includedBundles: PLATFORM_BASE_BUNDLES,
   },
   {
     code: "STANDARD",
-    name: "Small",
-    description: "For small teams ready to stop using spreadsheets.",
-    monthlyPrice: 29,
-    includedSites: 1,
-    additionalSiteMonthlyPrice: 15,
+    name: "Grow",
+    description: "For teams adding branches, managers, and daily handoffs.",
+    monthlyPrice: 79,
+    annualMonthlyPrice: 66,
+    includedSites: 3,
+    additionalSiteMonthlyPrice: 29,
+    includedUsers: 20,
+    additionalUserPackMonthlyPrice: 12,
     warningDays: 14,
     graceDays: 7,
     includedFeatures: [
-      "reports.audit-trails",
-      "reports.downtime-analytics",
+      ...PLATFORM_BASE_FEATURES,
       "core.notifications.push",
       "admin.feature-flags-console",
       "admin.subscription-console",
     ],
-    includedBundles: [],
+    includedBundles: [
+      ...PLATFORM_BASE_BUNDLES,
+      "ADDON_USER_MANAGEMENT_PRO",
+      "ADDON_ANALYTICS_PRO",
+    ],
   },
   {
     code: "MEDIUM",
-    name: "Medium",
-    description: "For growing businesses that need everything connected.",
-    monthlyPrice: 79,
-    includedSites: 3,
-    additionalSiteMonthlyPrice: 25,
+    name: "Scale",
+    description: "For multi-branch groups that need finance and assets connected.",
+    monthlyPrice: 189,
+    annualMonthlyPrice: 158,
+    includedSites: 8,
+    additionalSiteMonthlyPrice: 39,
+    includedUsers: 60,
+    additionalUserPackMonthlyPrice: 12,
     warningDays: 14,
     graceDays: 7,
     includedFeatures: [
-      "reports.audit-trails",
-      "reports.downtime-analytics",
+      ...PLATFORM_BASE_FEATURES,
       "core.notifications.push",
       "admin.feature-flags-console",
       "admin.subscription-console",
     ],
-    includedBundles: [],
+    includedBundles: [
+      ...PLATFORM_BASE_BUNDLES,
+      "ADDON_USER_MANAGEMENT_PRO",
+      "ADDON_ANALYTICS_PRO",
+      "ADDON_ACCOUNTING_CORE",
+      "ADDON_MAINTENANCE_PRO",
+      "ADDON_PORTAL_SUITE",
+    ],
   },
   {
     code: "ENTERPRISE",
-    name: "Large",
-    description: "For established businesses with complex operations.",
-    monthlyPrice: 199,
-    includedSites: 8,
-    additionalSiteMonthlyPrice: 50,
+    name: "Enterprise",
+    description: "For established groups with governance, finance, and compliance depth.",
+    monthlyPrice: 449,
+    annualMonthlyPrice: 374,
+    includedSites: 25,
+    additionalSiteMonthlyPrice: 39,
+    includedUsers: null,
+    additionalUserPackMonthlyPrice: 0,
     warningDays: 21,
     graceDays: 14,
-    includedFeatures: [],
-    includedBundles: [],
+    includedFeatures: [
+      ...PLATFORM_BASE_FEATURES,
+      "core.notifications.push",
+      "admin.feature-flags-console",
+      "admin.subscription-console",
+    ],
+    includedBundles: [
+      ...PLATFORM_BASE_BUNDLES,
+      "ADDON_USER_MANAGEMENT_PRO",
+      "ADDON_ANALYTICS_PRO",
+      "ADDON_ACCOUNTING_CORE",
+      "ADDON_ACCOUNTING_ADVANCED",
+      "ADDON_MAINTENANCE_PRO",
+      "ADDON_PORTAL_SUITE",
+      "ADDON_COMPLIANCE_PRO",
+      "ADDON_ADVANCED_PAYROLL",
+      "ADDON_CUSTOM_BRANDING",
+      "ADDON_ZIMRA_FISCAL",
+    ],
   },
 ];
 
 const TIER_CODE_ALIASES: Record<string, TierDefinition["code"]> = {
   SOLO: "BASIC",
   STARTER: "BASIC",
+  LAUNCH: "BASIC",
   SMALL: "STANDARD",
   GROWTH: "STANDARD",
+  GROW: "STANDARD",
   MEDIUM: "MEDIUM",
+  SCALE: "MEDIUM",
   LARGE: "ENTERPRISE",
   BUSINESS: "ENTERPRISE",
 };

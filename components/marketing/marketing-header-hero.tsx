@@ -3,6 +3,12 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle } from "@/lib/icons";
 import { PLATFORM_BRAND_INITIAL, PLATFORM_BRAND_NAME, PLATFORM_MARKETING_DOMAIN } from "@/lib/platform/brand";
 import { marketingNavItems, productSteps } from "@/components/marketing/marketing-data";
+import {
+  POPULAR_TIER,
+  STARTING_MONTHLY_PRICE,
+  TRIAL_DAYS,
+  formatUsd,
+} from "@/lib/marketing/pricing";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/marketing/motion";
 import styles from "@/components/marketing/marketing-site.module.css";
@@ -10,13 +16,13 @@ import styles from "@/components/marketing/marketing-site.module.css";
 const proofRail = ["Gold", "Scrap", "Retail", "Schools", "Auto", "Multi-site"];
 
 export function MarketingHeaderHero() {
-  const landingNavItems = [marketingNavItems[0], marketingNavItems[1], marketingNavItems[3]];
+  const landingNavItems = [marketingNavItems[0], marketingNavItems[1], marketingNavItems[2]];
 
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(9,14,32,0.88)] backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-4 lg:px-8">
-          <Link href="/home" className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.2em] text-white">
+          <Link href="/" className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.2em] text-white">
             <span className="flex size-9 items-center justify-center rounded-full bg-white text-[#1b2558]">{PLATFORM_BRAND_INITIAL}</span>
             {PLATFORM_BRAND_NAME}
           </Link>
@@ -47,42 +53,43 @@ export function MarketingHeaderHero() {
             <p className={styles.heroEyebrow}>Built in Zimbabwe for Zimbabwe businesses</p>
           </Reveal>
           <Reveal delay={0.1}>
-            <h1 className="mt-5 max-w-[14ch] text-[clamp(3.2rem,7vw,6.5rem)] font-medium leading-[0.9] tracking-[-0.07em] text-white text-balance">
-              Stop losing money to missing stock and broken records.
+            <h1 className="mt-5 max-w-[15ch] text-[clamp(3.2rem,7vw,6.5rem)] font-medium leading-[0.9] tracking-[-0.07em] text-white text-balance">
+              Run your whole business for less than one seat elsewhere.
             </h1>
           </Reveal>
           <Reveal delay={0.2}>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/76">
-              Zimbabwe businesses run on notebooks, WhatsApp, and memory. We built something better. One system that tracks your stock, your sales, your people, and your money — even when the internet is down.
+              Stock, sales, staff, and cash in one system that works when the internet does not. Priced
+              per site, never per user — so adding your team costs you nothing. Built in Zimbabwe, for
+              businesses like yours.
             </p>
           </Reveal>
           <Reveal delay={0.3}>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="h-12 rounded-full bg-white px-6 text-[#091127] hover:bg-white/90 hover:text-[#091127]">
                 <Link href="/home/book-demo">
-                  Start Free for 14 Days
+                  Start free for {TRIAL_DAYS} days
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-white/18 bg-white/6 px-6 text-white hover:bg-white/10 hover:text-white">
-                <Link href="/home/solutions">See solutions</Link>
+                <Link href="/home/pricing">See pricing</Link>
               </Button>
             </div>
           </Reveal>
           <Reveal delay={0.35}>
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/58">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="size-4 text-[#4ade80]" />
-                Works offline
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="size-4 text-[#4ade80]" />
-                Set up in 5 minutes
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="size-4 text-[#4ade80]" />
-                Cancel anytime
-              </span>
+              {[
+                "No credit card",
+                "Works offline",
+                "No per-user fees",
+                "Cancel anytime",
+              ].map((item) => (
+                <span key={item} className="flex items-center gap-1.5">
+                  <CheckCircle className="size-4 text-[#4ade80]" />
+                  {item}
+                </span>
+              ))}
             </div>
           </Reveal>
         </div>
@@ -103,9 +110,12 @@ export function MarketingHeaderHero() {
                 </p>
                 <div className={styles.heroMetrics}>
                   {[
-                    { value: "$39", label: "Starting price /mo" },
-                    { value: "100%", label: "Offline capable" },
-                    { value: "14-day", label: "Free trial" },
+                    { value: formatUsd(STARTING_MONTHLY_PRICE), label: "Starting price /mo" },
+                    {
+                      value: String(POPULAR_TIER.includedUsers ?? "\u221e"),
+                      label: `People on ${POPULAR_TIER.name}, no extra cost`,
+                    },
+                    { value: `${TRIAL_DAYS}-day`, label: "Free trial" },
                   ].map((item) => (
                     <div key={item.label} className={styles.heroMetric}>
                       <strong>{item.value}</strong>

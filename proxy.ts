@@ -37,8 +37,10 @@ const ADMIN_LOGIN_PATH = `${ADMIN_BASE_PATH}/login`;
 const ADMIN_INTERNAL_BASE_PATH = "/portal/admin";
 const ADMIN_LOGIN_API_PATH = "/api/platform-admin/login-link";
 const PORTAL_BASE_PATHS = ["/portal/parent", "/portal/student", "/portal/teacher", "/portal/pos", "/portal/admin"] as const;
+// `.xml` covers /sitemap.xml — without it the proxy redirects crawlers to the
+// admin host and the sitemap is unreachable.
 const PUBLIC_ASSET_PATTERN =
-  /\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|eot|js|json|webmanifest|txt)$/i;
+  /\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|eot|js|json|webmanifest|txt|xml)$/i;
 const PORTAL_HOME_BY_ROLE = {
   PARENT: "/portal/parent",
   STUDENT: "/portal/student",
@@ -238,6 +240,19 @@ export default withAuth(
     const isAdminHost = isAdminPortalHost(resolvedHost);
     const rawToken = request.nextauth.token as PlatformToken | null;
     const token = rawToken && !isAuthExpired(rawToken.authExpiresAt) ? rawToken : null;
+
+    // The site root is the public marketing home on the marketing domain, so a
+    // signed-out visitor has to reach it without a tenant context. On a tenant
+    // host the root is still the workspace, and a signed-out visitor belongs at
+    // sign-in — not the generic access-blocked page that strict tenant
+    // enforcement below would otherwise give them. Signed-in users fall through
+    // either way so they keep being routed to their own tenant host.
+    if (pathname === "/" && !token && !isAdminHost) {
+      return hostContext.isTenantHost
+        ? NextResponse.redirect(new URL(LOGIN_PATH, request.url))
+        : NextResponse.next();
+    }
+
     const normalizedCompanySlug = token?.companySlug?.trim().toLowerCase();
     const rootDomain = getRootDomain();
     const resolvedAllowedHosts = getResolvedAllowedHosts(token, rootDomain);
@@ -507,6 +522,13 @@ export default withAuth(
           return true;
         }
 
+        // The site root is the public marketing home on the marketing domain.
+        // The page itself sends signed-out visitors on a tenant host to /login,
+        // so letting the request through here does not expose a workspace.
+        if (pathname === "/") {
+          return true;
+        }
+
         if (isPathWithinRoute(pathname, MARKETING_BASE_PATH)) {
           return true;
         }
@@ -534,7 +556,7 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/((?!api/auth|api|_next/static|_next/image|favicon.ico|manifest.json|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|eot|js|json|webmanifest|txt)).*)",
+    "/((?!api/auth|api|_next/static|_next/image|favicon.ico|manifest.json|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|eot|js|json|webmanifest|txt|xml)).*)",
     "/api/platform-admin/:path*",
     "/api/cctv/:path*",
     "/api/gold/:path*",

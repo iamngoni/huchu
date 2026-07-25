@@ -9,6 +9,22 @@ The Gold module is undergoing a structured rebuild. Every agent working in this 
 2. `docs/gold-module-review-2026-05-09.md` §15 — Plan-of-record refinements (current Jira epic adjustments)
 3. `AGENTS.md` — collaboration rules and DoR/DoD
 
+## Design system
+
+UI work targets the Corelith design system (`@corelithzw/react`, installed; site at design.corelith.co.zw).
+
+**Before any UI change, read `docs/design-system/README.md`** — it is a router that tells you which of the
+seven reference files to load. Do not read the whole folder, and do not scrape the website when the answer
+is in `node_modules/@corelithzw/react/dist/index.d.ts` or `styles.css`.
+
+Two things that will bite you immediately:
+- The package ships **no `"use client"`** — add it to every file importing from `@corelithzw/react`.
+- **`--space-8` and `--space-10` mean different sizes** in `app/globals.css` than in the DS. See
+  `docs/design-system/01-setup.md` before touching spacing or importing `styles.css` globally.
+
+DS migration must **not** ride along in Gold files (`app/gold/**`, `components/gold/**`) as drive-by work —
+those are reviewer-gated and mid-rebuild. Land it as its own ticket.
+
 ## Hard rules (Gold module)
 
 - **Append-only ledger.** Never `DELETE`/`UPDATE` from `GoldInventoryEvent`. Insert `REVERSAL` events instead. See §4.4 C-4.

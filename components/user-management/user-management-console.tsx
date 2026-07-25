@@ -29,13 +29,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  FeatureAccessDialog,
+  type FeatureAccessTarget,
+} from "@/components/user-management/feature-access-dialog";
+import {
   changeManagedUserRole,
   createManagedUser,
-  fetchManagedUserFeatureAccess,
   fetchManagedUsers,
-  resetManagedUserFeatureAccess,
-  setManagedUserFeatureAccess,
-  type ManagedUserFeatureAccessEntry,
   type ManagedUserSummary,
   resetManagedUserPassword,
   setManagedUserStatus,
@@ -64,7 +64,6 @@ export type UserManagementMode =
 
 type RoleFilter = "ALL" | ManagedUserRole;
 type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
-type FeatureAccessBlockedReason = "COMPANY_DISABLED" | "TEMPLATE_BLOCKED";
 type ManagedUserTargetBase = {
   userId: string;
   userEmail: string;
@@ -116,12 +115,6 @@ function toManagedRole(
   return null;
 }
 
-function getBlockedFeatureLabel(reason: FeatureAccessBlockedReason | null): string {
-  if (reason === "COMPANY_DISABLED") return "Company Disabled";
-  if (reason === "TEMPLATE_BLOCKED") return "Template Blocked";
-  return "Unavailable";
-}
-
 export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -164,12 +157,6 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
   });
   const [roleFilter, setRoleFilter] = React.useState<RoleFilter>("ALL");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("ALL");
-  const [featureQueryState, setFeatureQueryState] = React.useState<DataTableQueryState>({
-    mode: "paginated",
-    page: 1,
-    pageSize: 20,
-    search: "",
-  });
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [createDraft, setCreateDraft] = React.useState({
@@ -194,11 +181,7 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
       role: ManagedUserRole;
     }) | null
   >(null);
-  const [featureTarget, setFeatureTarget] = React.useState<
-    (ManagedUserTargetBase & {
-      role: ManagedUserRole;
-    }) | null
-  >(null);
+  const [featureTarget, setFeatureTarget] = React.useState<FeatureAccessTarget | null>(null);
 
   React.useEffect(() => {
     if (mode === "create" && canMutate) {
@@ -214,18 +197,6 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
       }));
     }
   }, [createDraft.role, managedRoles, mode]);
-
-  const featureTargetUserId = featureTarget?.userId;
-
-  React.useEffect(() => {
-    if (!featureTargetUserId) return;
-    setFeatureQueryState({
-      mode: "paginated",
-      page: 1,
-      pageSize: 20,
-      search: "",
-    });
-  }, [featureTargetUserId]);
 
   const usersQuery = useQuery({
     queryKey: [
@@ -256,14 +227,8 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
     [users],
   );
 
-  const featureAccessQuery = useQuery({
-    queryKey: ["managed-user-feature-access", featureTarget?.userId],
-    queryFn: () => fetchManagedUserFeatureAccess(featureTarget!.userId),
-    enabled: Boolean(featureTarget?.userId) && canManageFeatureAccess,
-  });
-  const featureRows = featureAccessQuery.data?.features ?? [];
-  const totalRows = usersQuery.data?.pagination.total ?? users.length;
-  const totalPages = usersQuery.data?.pagination.pages ?? 1;
+  const totalRows = usersQuery.data?.pagination?.total ?? users.length;
+  const totalPages = usersQuery.data?.pagination?.pages ?? 1;
 
   const refreshUsers = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["managed-users"] });
@@ -354,118 +319,6 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
       });
     },
   });
-
-  const setFeatureAccessMutation = useMutation({
-    mutationFn: setManagedUserFeatureAccess,
-    onSuccess: () => {
-      toast({
-        title: "Feature access updated",
-        description: "Per-user feature access was updated successfully.",
-        variant: "success",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["managed-user-feature-access", featureTarget?.userId],
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Unable to update feature access",
-        description: getApiErrorMessage(error),
-        variant: "destructive",
-      });
-    },
-  });
-
-  const resetFeatureAccessMutation = useMutation({
-    mutationFn: resetManagedUserFeatureAccess,
-    onSuccess: () => {
-      toast({
-        title: "Feature access reset",
-        description: "User feature access was reset to role defaults.",
-        variant: "success",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["managed-user-feature-access", featureTarget?.userId],
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Unable to reset feature access",
-        description: getApiErrorMessage(error),
-        variant: "destructive",
-      });
-    },
-  });
-
-  const featureColumns: ColumnDef<ManagedUserFeatureAccessEntry>[] = [
-    {
-      id: "feature",
-      header: "Feature",
-      cell: ({ row }) => (
-        <div className="space-y-1">
-          <div className="font-medium">{row.original.name}</div>
-          <div className="font-mono text-xs text-muted-foreground">
-            {row.original.featureKey}
-          </div>
-        </div>
-      ),
-    },
-    {
-      id: "domain",
-      header: "Domain",
-      cell: ({ row }) => (
-        <Badge variant="outline" className="uppercase">
-          {row.original.domain}
-        </Badge>
-      ),
-    },
-    {
-      id: "availability",
-      header: "Availability",
-      cell: ({ row }) => {
-        if (row.original.available) {
-          return <Badge variant="secondary">Available</Badge>;
-        }
-        return (
-          <Badge variant="destructive">
-            {getBlockedFeatureLabel(
-              row.original.blockedReason as FeatureAccessBlockedReason | null,
-            )}
-          </Badge>
-        );
-      },
-    },
-    {
-      id: "access",
-      header: "Access",
-      cell: ({ row }) => {
-        const entry = row.original;
-        if (!entry.available) {
-          return <Badge variant="outline">Not Assignable</Badge>;
-        }
-
-        const nextEnabled = !entry.isEnabled;
-        return (
-          <Button
-            type="button"
-            size="sm"
-            variant={entry.isEnabled ? "outline" : "default"}
-            disabled={setFeatureAccessMutation.isPending || !featureTarget?.userId}
-            onClick={() => {
-              if (!featureTarget?.userId) return;
-              setFeatureAccessMutation.mutate({
-                userId: featureTarget.userId,
-                featureKey: entry.featureKey,
-                isEnabled: nextEnabled,
-              });
-            }}
-          >
-            {entry.isEnabled ? "Enabled" : "Disabled"}
-          </Button>
-        );
-      },
-    },
-  ];
 
   const columns = React.useMemo<ColumnDef<ManagedUserSummary>[]>(
     () => {
@@ -571,7 +424,7 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
               });
             }
 
-            if (actionsVisible.featureAccess && managedRole) {
+            if (actionsVisible.featureAccess) {
               rowActions.push({
                 key: "feature",
                 label: "Feature Access",
@@ -580,7 +433,6 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
                   setFeatureTarget({
                     userId: row.original.id,
                     userEmail: row.original.email,
-                    role: managedRole,
                   }),
               });
             }
@@ -646,16 +498,6 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
   );
 
   const heading = modeMeta[mode];
-  const openFeatureAccessFromFirstManagedUser = React.useCallback(() => {
-    const firstManagedUser = users.find((user) => toManagedRole(user.role, managedRoles));
-    const managedRole = toManagedRole(firstManagedUser?.role, managedRoles);
-    if (!firstManagedUser || !managedRole) return;
-    setFeatureTarget({
-      userId: firstManagedUser.id,
-      userEmail: firstManagedUser.email,
-      role: managedRole,
-    });
-  }, [managedRoles, users]);
 
   const showHeaderActions = canMutate && (mode === "directory" || mode === "create");
   const headerActions = showHeaderActions ? (
@@ -707,7 +549,13 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
               <span>Change Role</span>
             </DropdownMenuItem>
             {actionsVisible.featureAccess ? (
-              <DropdownMenuItem disabled={users.length === 0} onClick={openFeatureAccessFromFirstManagedUser}>
+              <DropdownMenuItem
+                onClick={() =>
+                  setFeatureTarget({
+                    userId: "",
+                    userEmail: "",
+                  })}
+              >
                 <ShieldCheck className="h-4 w-4" />
                 <span>Manage Feature Access</span>
               </DropdownMenuItem>
@@ -1201,81 +1049,14 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={Boolean(featureTarget)}
-        onOpenChange={(open) => {
-          if (!open) setFeatureTarget(null);
-        }}
-      >
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle>Manage Feature Access</DialogTitle>
-            <DialogDescription>
-              {featureTarget?.userEmail
-                ? `Set feature access for ${featureTarget.userEmail}. Effective access is company access ∩ role template ∩ user overrides.`
-                : "Select a managed user and configure feature access."}
-            </DialogDescription>
-          </DialogHeader>
-
-          {featureAccessQuery.error ? (
-            <Alert variant="destructive">
-              <AlertTitle>Unable to load feature access</AlertTitle>
-              <AlertDescription>{getApiErrorMessage(featureAccessQuery.error)}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {featureAccessQuery.isLoading ? (
-            <Skeleton className="h-16 w-full" />
-          ) : (
-            <DataTable
-              data={featureRows}
-              columns={featureColumns}
-              queryState={featureQueryState}
-              onQueryStateChange={(next) =>
-                setFeatureQueryState((current) => ({
-                  ...current,
-                  ...next,
-                }))
-              }
-              features={{ sorting: false, globalFilter: true, pagination: true }}
-              searchPlaceholder="Search by feature name or key"
-              searchSubmitLabel="Search"
-              tableClassName="text-sm"
-              noResultsText="No features found for current filters."
-              toolbar={
-                <>
-                  <Badge variant="outline">
-                    {featureRows.filter((entry) => entry.isEnabled).length} Enabled
-                  </Badge>
-                  <Badge variant="outline">
-                    {featureRows.filter((entry) => entry.available).length} Assignable
-                  </Badge>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={!featureTarget?.userId || resetFeatureAccessMutation.isPending}
-                    onClick={() => {
-                      if (!featureTarget?.userId) return;
-                      resetFeatureAccessMutation.mutate({
-                        userId: featureTarget.userId,
-                      });
-                    }}
-                  >
-                    {resetFeatureAccessMutation.isPending ? "Resetting..." : "Reset to Role Default"}
-                  </Button>
-                </>
-              }
-            />
-          )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setFeatureTarget(null)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {canManageFeatureAccess ? (
+        <FeatureAccessDialog
+          target={featureTarget}
+          users={users}
+          onTargetChange={setFeatureTarget}
+          onClose={() => setFeatureTarget(null)}
+        />
+      ) : null}
     </ManagementShell>
   );
 }

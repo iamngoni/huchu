@@ -208,17 +208,15 @@ export type ManagedUserFeatureBlockedReason =
   | "COMPANY_DISABLED"
   | "TEMPLATE_BLOCKED";
 
+  | "STOCK_CLERK";
 export type ManagedUserFeatureAccessEntry = {
   featureKey: string;
   name: string;
   description: string;
   domain: string;
-  companyEnabled: boolean;
-  templateAllowed: boolean;
-  available: boolean;
+  roleDefault: boolean;
   isEnabled: boolean;
   hasOverride: boolean;
-  blockedReason: ManagedUserFeatureBlockedReason | null;
 };
 
 function isManagedUserRole(role: string): role is ManagedUserRole {
@@ -298,6 +296,11 @@ export function isTemplateAllowedForRole(role: string, featureKey: string): bool
   return true;
 }
 
+function getRoleDefaultForFeature(templateRole: string, featureKey: string): boolean {
+  if (!isManagedUserRole(templateRole)) return true;
+  return isTemplateAllowedForRole(templateRole, featureKey);
+}
+
 export async function getUserFeatureOverrideMap(userId: string): Promise<Map<string, boolean>> {
   const normalizedUserId = userId.trim();
   if (!normalizedUserId) return new Map();
@@ -339,23 +342,21 @@ export async function getEffectiveFeaturesForUser(input: {
   const companyEnabled = getAllCompanyEnabledFeatureKeys(companyMap);
   const templateRole = resolveTemplateRoleForCompany(role, companyMap);
 
-  if (!userId || !isManagedUserRole(templateRole)) {
-    return companyEnabled;
-  }
+  const overrideMap = userId
+    ? await getUserFeatureOverrideMap(userId)
+    : new Map<string, boolean>();
 
-  const overrideMap = await getUserFeatureOverrideMap(userId);
   return companyEnabled.filter((featureKey) => {
-    if (!isTemplateAllowedForRole(templateRole, featureKey)) return false;
     const override = overrideMap.get(featureKey);
-    if (override === false) return false;
-    return true;
+    if (override !== undefined) return override;
+    return getRoleDefaultForFeature(templateRole, featureKey);
   });
 }
 
 export async function getManagedUserFeatureAccessEntries(input: {
   companyId: string;
   userId: string;
-  role: ManagedUserRole;
+  role: string;
 }): Promise<ManagedUserFeatureAccessEntry[]> {
   const companyId = input.companyId.trim();
   const userId = input.userId.trim();
@@ -367,27 +368,11 @@ export async function getManagedUserFeatureAccessEntries(input: {
   ]);
   const templateRole = resolveTemplateRoleForCompany(input.role, companyMap);
 
-  const keys = new Set<string>([
-    ...FEATURE_CATALOG.map((feature) => normalizeFeatureKey(feature.key)),
-    ...Object.keys(companyMap).map((key) => normalizeFeatureKey(key)),
-    ...overrideMap.keys(),
-  ]);
-
   const entries: ManagedUserFeatureAccessEntry[] = [];
-  for (const featureKey of keys) {
+  for (const featureKey of getAllCompanyEnabledFeatureKeys(companyMap)) {
     const catalog = CATALOG_BY_KEY.get(featureKey);
-    const companyEnabled = isCompanyFeatureEnabled(featureKey, companyMap);
-    const templateAllowed = isTemplateAllowedForRole(templateRole, featureKey);
-    const available = companyEnabled && templateAllowed;
+    const roleDefault = getRoleDefaultForFeature(templateRole, featureKey);
     const override = overrideMap.get(featureKey);
-    const hasOverride = override !== undefined;
-
-    let blockedReason: ManagedUserFeatureBlockedReason | null = null;
-    if (!companyEnabled) {
-      blockedReason = "COMPANY_DISABLED";
-    } else if (!templateAllowed) {
-      blockedReason = "TEMPLATE_BLOCKED";
-    }
 
     entries.push({
       featureKey,
@@ -395,12 +380,9 @@ export async function getManagedUserFeatureAccessEntries(input: {
       description:
         catalog?.description ?? "Custom feature flag managed at platform level.",
       domain: catalog?.domain ?? "custom",
-      companyEnabled,
-      templateAllowed,
-      available,
-      isEnabled: available && (override ?? true),
-      hasOverride,
-      blockedReason,
+      roleDefault,
+      isEnabled: override ?? roleDefault,
+      hasOverride: override !== undefined,
     });
   }
 
@@ -414,7 +396,7 @@ export async function getManagedUserFeatureAccessEntries(input: {
 export async function setManagedUserFeatureOverride(input: {
   companyId: string;
   userId: string;
-  role: ManagedUserRole;
+  role: string;
   featureKey: string;
   isEnabled: boolean;
 }): Promise<void> {
@@ -425,21 +407,11 @@ export async function setManagedUserFeatureOverride(input: {
   if (!isCompanyFeatureEnabled(normalizedFeatureKey, companyMap)) {
     throw new Error("FEATURE_NOT_ENABLED_FOR_COMPANY");
   }
-  if (!isTemplateAllowedForRole(templateRole, normalizedFeatureKey)) {
-    throw new Error("FEATURE_BLOCKED_BY_TEMPLATE");
-  }
 
   const catalog = CATALOG_BY_KEY.get(normalizedFeatureKey);
   const feature = await prisma.platformFeature.upsert({
     where: { key: catalog?.key ?? normalizedFeatureKey },
     update: {
-      name: catalog?.name ?? normalizedFeatureKey,
-      description:
-        catalog?.description ?? `Feature flag for ${normalizedFeatureKey}`,
-      domain: catalog?.domain ?? null,
-      defaultEnabled: catalog?.defaultEnabled ?? false,
-      isBillable: catalog?.isBillable ?? false,
-      monthlyPrice: catalog?.monthlyPrice ?? null,
       isActive: true,
     },
     create: {
@@ -456,7 +428,10 @@ export async function setManagedUserFeatureOverride(input: {
     select: { id: true },
   });
 
-  if (input.isEnabled) {
+  const roleDefault = getRoleDefaultForFeature(templateRole, normalizedFeatureKey);
+
+  if (input.isEnabled === roleDefault) {
+    // Matches the role default, so no override is needed.
     await prisma.userFeatureFlag.deleteMany({
       where: {
         userId: input.userId.trim(),
@@ -474,12 +449,12 @@ export async function setManagedUserFeatureOverride(input: {
       },
     },
     update: {
-      isEnabled: false,
+      isEnabled: input.isEnabled,
     },
     create: {
       userId: input.userId.trim(),
       featureId: feature.id,
-      isEnabled: false,
+      isEnabled: input.isEnabled,
     },
   });
 }
