@@ -10,8 +10,15 @@ const demoRequestSchema = z.object({
   industry: z.string().trim().min(2).max(64),
   teamSize: z.string().trim().min(1).max(32),
   message: z.string().trim().min(10).max(4000),
+  phone: z.string().trim().max(40).optional(),
+  city: z.string().trim().max(80).optional(),
+  locations: z.string().trim().max(80).optional(),
+  currentTools: z.string().trim().max(500).optional(),
+  problemArea: z.string().trim().max(160).optional(),
+  timeline: z.string().trim().max(80).optional(),
+  preferredChannel: z.string().trim().max(64).optional(),
   source: z.string().trim().min(1).max(64).optional(),
-  // Plan/product context captured from the page the visitor came from.
+  // Plan, product, or route context captured from the page the visitor came from.
   interest: z.string().trim().max(200).optional(),
   website: z.string().trim().max(200).optional(),
 });

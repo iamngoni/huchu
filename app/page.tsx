@@ -3,35 +3,15 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
-import { JsonLd } from "@/components/marketing/json-ld";
-import { LandingPage } from "@/components/marketing/landing-page";
-import { getMarketingSiteConfig } from "@/lib/marketing-site";
-import { STARTING_MONTHLY_PRICE, TRIAL_DAYS, formatUsd } from "@/lib/marketing/pricing";
-import {
-  buildMarketingMetadata,
-  organizationJsonLd,
-  softwareApplicationJsonLd,
-} from "@/lib/marketing/seo";
-import {
-  PLATFORM_BRAND_NAME,
-  PLATFORM_MARKETING_HOME_DESCRIPTION,
-} from "@/lib/platform/brand";
+import { HomeMarketingPage } from "@/app/home/home-content";
+import { seoPages } from "@/app/home/site-data";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
+import { PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
 import { getHostHeaderFromRequestHeaders, getPlatformHostContext } from "@/lib/platform/tenant";
 import { getComputedWorkspaceHomeHref } from "@/lib/workspaces";
 
 export const metadata = {
-  ...buildMarketingMetadata({
-    title: PLATFORM_BRAND_NAME,
-    description: `${PLATFORM_MARKETING_HOME_DESCRIPTION} Priced per site, never per user, from ${formatUsd(STARTING_MONTHLY_PRICE)}/month. Works offline. ${TRIAL_DAYS}-day free trial.`,
-    path: "/",
-    keywords: [
-      "business management software Zimbabwe",
-      "ERP Zimbabwe",
-      "POS system Zimbabwe",
-      "stock control software Zimbabwe",
-      "offline business software",
-    ],
-  }),
+  ...buildMarketingMetadata(seoPages.root),
   title: { absolute: PLATFORM_BRAND_NAME },
 };
 
@@ -64,10 +44,5 @@ export default async function RootPage() {
     redirect("/login");
   }
 
-  return (
-    <>
-      <JsonLd data={[organizationJsonLd(), softwareApplicationJsonLd()]} />
-      <LandingPage config={getMarketingSiteConfig()} />
-    </>
-  );
+  return <HomeMarketingPage />;
 }
