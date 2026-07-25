@@ -178,6 +178,7 @@ model Company {
   crmIntakeForms                CrmIntakeForm[]
   crmIntakeSubmissions          CrmIntakeSubmission[]
   crmApiKeys                    CrmApiKey[]
+  crmLeadSources                CrmLeadSource[]
   crmCommissionRules            CrmCommissionRule[]
   crmCommissionEntries          CrmCommissionEntry[]
 
@@ -6196,6 +6197,16 @@ model CarSalesPayment {
 // ============================================
 // CRM MODULE
 
+enum CrmLeadChannel {
+  MANUAL
+  WEB_FORM
+  WEBHOOK
+  SOCIAL
+  ADS
+  REFERRAL
+  OTHER
+}
+
 enum CrmLeadStage {
   NEW
   CONTACTED
@@ -6306,7 +6317,7 @@ model CrmClient {
 }
 
 model CrmLead {
-  id             String       @id @default(uuid())
+  id             String         @id @default(uuid())
   companyId      String
   leadNo         String
   title          String?
@@ -6314,13 +6325,14 @@ model CrmLead {
   contactName    String?
   contactEmail   String?
   contactPhone   String?
-  stage          CrmLeadStage @default(NEW)
+  stage          CrmLeadStage   @default(NEW)
   probability    Int?
   estimatedValue Float?
-  currency       String       @default("USD")
-  services       String[]     @default([])
+  currency       String         @default("USD")
+  services       String[]       @default([])
   details        Json?
   source         String?
+  sourceChannel  CrmLeadChannel @default(MANUAL)
   utmSource      String?
   utmMedium      String?
   utmCampaign    String?
@@ -6334,8 +6346,8 @@ model CrmLead {
   firstContactAt DateTime?
   wonAt          DateTime?
   lostAt         DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   company           Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   client            CrmClient?            @relation(fields: [clientId], references: [id])
@@ -6354,6 +6366,7 @@ model CrmLead {
   @@index([companyId, clientId])
   @@index([companyId, createdAt])
   @@index([companyId, source])
+  @@index([companyId, sourceChannel])
   @@index([companyId, utmSource, utmCampaign])
 }
 
@@ -6550,21 +6563,40 @@ model CrmIntakeSubmission {
 }
 
 model CrmApiKey {
-  id          String    @id @default(uuid())
-  companyId   String
-  name        String
-  keyPrefix   String
-  keyHash     String    @unique
-  lastUsedAt  DateTime?
-  revokedAt   DateTime?
-  createdById String?
-  createdAt   DateTime  @default(now())
+  id                 String          @id @default(uuid())
+  companyId          String
+  name               String
+  keyPrefix          String
+  keyHash            String          @unique
+  // Attribution defaults applied to every lead captured with this key
+  // (e.g. a "Facebook Lead Ads" key labels its leads SOCIAL/facebook).
+  defaultChannel     CrmLeadChannel?
+  defaultSourceLabel String?
+  lastUsedAt         DateTime?
+  revokedAt          DateTime?
+  createdById        String?
+  createdAt          DateTime        @default(now())
 
   company     Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdBy   User?                 @relation("CrmApiKeyCreatedBy", fields: [createdById], references: [id])
   submissions CrmIntakeSubmission[]
 
   @@index([companyId, revokedAt])
+}
+
+model CrmLeadSource {
+  id        String         @id @default(uuid())
+  companyId String
+  name      String
+  channel   CrmLeadChannel @default(OTHER)
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
 }
 
 model CrmCommissionRule {

@@ -3,9 +3,14 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { generateApiKey } from "@/lib/crm/api-keys";
+import { CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
 import { requireCrmManager } from "../_helpers";
 
-const createSchema = z.object({ name: z.string().trim().min(1).max(120) });
+const createSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  defaultChannel: z.enum(CRM_LEAD_CHANNELS as [string, ...string[]]).nullable().optional(),
+  defaultSourceLabel: z.string().trim().max(80).nullable().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +21,16 @@ export async function GET(request: NextRequest) {
 
     const keys = await prisma.crmApiKey.findMany({
       where: { companyId: session.user.companyId },
-      select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, revokedAt: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        keyPrefix: true,
+        defaultChannel: true,
+        defaultSourceLabel: true,
+        lastUsedAt: true,
+        revokedAt: true,
+        createdAt: true,
+      },
       orderBy: { createdAt: "desc" },
     });
     return successResponse({ data: keys });
@@ -33,18 +47,20 @@ export async function POST(request: NextRequest) {
     const { session } = sessionResult;
     if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
 
-    const { name } = createSchema.parse(await request.json());
+    const data = createSchema.parse(await request.json());
     const { key, prefix, hash } = generateApiKey();
 
     const created = await prisma.crmApiKey.create({
       data: {
         companyId: session.user.companyId,
-        name,
+        name: data.name,
         keyPrefix: prefix,
         keyHash: hash,
+        defaultChannel: (data.defaultChannel ?? undefined) as never,
+        defaultSourceLabel: data.defaultSourceLabel ?? undefined,
         createdById: session.user.id,
       },
-      select: { id: true, name: true, keyPrefix: true, createdAt: true },
+      select: { id: true, name: true, keyPrefix: true, defaultChannel: true, defaultSourceLabel: true, createdAt: true },
     });
 
     // Plaintext key is returned exactly once.

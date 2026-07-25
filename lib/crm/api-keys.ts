@@ -27,12 +27,20 @@ export function hashApiKey(key: string): string {
 export async function verifyApiKey(rawKey: string | null | undefined): Promise<{
   id: string;
   companyId: string;
+  defaultChannel: string | null;
+  defaultSourceLabel: string | null;
 } | null> {
   if (!rawKey || !rawKey.startsWith("crm_")) return null;
   const hash = hashApiKey(rawKey);
   const row = await prisma.crmApiKey.findUnique({
     where: { keyHash: hash },
-    select: { id: true, companyId: true, revokedAt: true },
+    select: {
+      id: true,
+      companyId: true,
+      revokedAt: true,
+      defaultChannel: true,
+      defaultSourceLabel: true,
+    },
   });
   if (!row || row.revokedAt) return null;
 
@@ -40,5 +48,10 @@ export async function verifyApiKey(rawKey: string | null | undefined): Promise<{
     .update({ where: { id: row.id }, data: { lastUsedAt: new Date() } })
     .catch(() => {});
 
-  return { id: row.id, companyId: row.companyId };
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    defaultChannel: row.defaultChannel,
+    defaultSourceLabel: row.defaultSourceLabel,
+  };
 }

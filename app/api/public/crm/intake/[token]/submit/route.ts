@@ -100,6 +100,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       referrer: data.referrer ?? null,
       landingPage: data.landingPage ?? null,
       defaultAssigneeId: form.defaultAssigneeId,
+      origin: "WEB_FORM",
     });
     return NextResponse.json({ ok: true, message: form.successMessage ?? "Thank you.", leadNo: result.leadNo });
   } catch (error) {

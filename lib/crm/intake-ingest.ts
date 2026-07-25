@@ -10,6 +10,7 @@ import { reserveIdentifier } from "@/lib/id-generator";
 import { findOrCreateClient } from "@/lib/crm/dedupe";
 import { normalizeEmail, normalizePhoneE164 } from "@/lib/crm/phone";
 import { defaultProbabilityForStage } from "@/lib/crm/pipeline";
+import { deriveLeadChannel } from "@/lib/crm/sources";
 import { emitCrmNotification, getCrmManagerRecipients } from "@/lib/notifications";
 
 export type IngestLeadInput = {
@@ -33,6 +34,10 @@ export type IngestLeadInput = {
   referrer?: string | null;
   landingPage?: string | null;
   defaultAssigneeId?: string | null;
+  /** How the lead physically entered the system. */
+  origin: "WEB_FORM" | "WEBHOOK";
+  /** Declared channel (webhook payload or API-key default); wins when valid. */
+  explicitChannel?: string | null;
 };
 
 export async function ingestLead(input: IngestLeadInput): Promise<{ leadId: string; leadNo: string; clientId: string }> {
@@ -68,6 +73,13 @@ export async function ingestLead(input: IngestLeadInput): Promise<{ leadId: stri
         services: input.selectedServices ?? [],
         details: input.answers ? (input.answers as object) : undefined,
         source: input.source ?? input.utmSource ?? undefined,
+        sourceChannel: deriveLeadChannel({
+          explicitChannel: input.explicitChannel,
+          utmMedium: input.utmMedium,
+          utmSource: input.utmSource,
+          source: input.source,
+          origin: input.origin,
+        }),
         utmSource: input.utmSource ?? undefined,
         utmMedium: input.utmMedium ?? undefined,
         utmCampaign: input.utmCampaign ?? undefined,

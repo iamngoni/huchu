@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { CRM_LEAD_STAGES, CRM_STAGE_LABELS } from "@/lib/crm/pipeline";
-import type { CrmLeadStage } from "@prisma/client";
+import { CRM_CHANNEL_LABELS, CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
+import type { CrmLeadChannel, CrmLeadStage } from "@prisma/client";
 
 type Lead = {
   id: string;
@@ -27,39 +28,64 @@ type Lead = {
   stage: CrmLeadStage;
   estimatedValue: number | null;
   currency: string;
+  source: string | null;
+  sourceChannel: CrmLeadChannel;
   client: { id: string; name: string } | null;
   assignedTo: { id: string; name: string } | null;
   updatedAt: string;
 };
 
+type LeadSource = { id: string; name: string; channel: CrmLeadChannel; isActive: boolean };
+
 export function CrmLeadsContent() {
   const queryClient = useQueryClient();
   const [stageFilter, setStageFilter] = useState<CrmLeadStage | "ALL">("ALL");
+  const [channelFilter, setChannelFilter] = useState<CrmLeadChannel | "ALL">("ALL");
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [estimatedValue, setEstimatedValue] = useState("");
+  const [sourceName, setSourceName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const leads = useQuery({
-    queryKey: ["crm-leads", stageFilter],
-    queryFn: () =>
-      fetchJson<{ data: Lead[] }>(
-        `/api/v2/crm/leads${stageFilter === "ALL" ? "" : `?stage=${stageFilter}`}`,
-      ).then((r) => r.data),
+    queryKey: ["crm-leads", stageFilter, channelFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (stageFilter !== "ALL") params.set("stage", stageFilter);
+      if (channelFilter !== "ALL") params.set("channel", channelFilter);
+      const qs = params.toString();
+      return fetchJson<{ data: Lead[] }>(`/api/v2/crm/leads${qs ? `?${qs}` : ""}`).then((r) => r.data);
+    },
+  });
+
+  const leadSources = useQuery({
+    queryKey: ["crm-lead-sources"],
+    queryFn: () => fetchJson<{ data: LeadSource[] }>("/api/v2/crm/lead-sources").then((r) => r.data),
   });
 
   const createLead = useMutation({
-    mutationFn: (body: { title: string; estimatedValue?: number }) =>
+    mutationFn: (body: { title: string; estimatedValue?: number; source?: string; sourceChannel?: string }) =>
       fetchJson<Lead>("/api/v2/crm/leads", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => {
       setOpen(false);
       setTitle("");
       setEstimatedValue("");
+      setSourceName("");
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
     },
     onError: (e) => setError(getApiErrorMessage(e)),
   });
+
+  function submitLead() {
+    const catalogSource = (leadSources.data ?? []).find((s) => s.name === sourceName);
+    createLead.mutate({
+      title,
+      estimatedValue: estimatedValue ? Number(estimatedValue) : undefined,
+      source: sourceName || undefined,
+      sourceChannel: catalogSource?.channel,
+    });
+  }
 
   const byStage = new Map<CrmLeadStage, Lead[]>();
   for (const lead of leads.data ?? []) {
@@ -91,6 +117,27 @@ export function CrmLeadsContent() {
           ))}
         </div>
 
+        <div className="flex w-full flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+          <span>Channel:</span>
+          <Badge
+            variant={channelFilter === "ALL" ? "default" : "outline"}
+            className="cursor-pointer"
+            onClick={() => setChannelFilter("ALL")}
+          >
+            All
+          </Badge>
+          {CRM_LEAD_CHANNELS.map((channel) => (
+            <Badge
+              key={channel}
+              variant={channelFilter === channel ? "default" : "outline"}
+              className="cursor-pointer"
+              onClick={() => setChannelFilter(channel)}
+            >
+              {CRM_CHANNEL_LABELS[channel]}
+            </Badge>
+          ))}
+        </div>
+
         <Button onClick={() => setOpen(true)}>New lead</Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent>
@@ -111,18 +158,27 @@ export function CrmLeadsContent() {
                   onChange={(e) => setEstimatedValue(e.target.value)}
                 />
               </div>
+              <div>
+                <Label htmlFor="lead-source">Source</Label>
+                <Input
+                  id="lead-source"
+                  list="crm-lead-source-options"
+                  value={sourceName}
+                  onChange={(e) => setSourceName(e.target.value)}
+                  placeholder="e.g. Walk-in, Facebook, Referral"
+                />
+                <datalist id="crm-lead-source-options">
+                  {(leadSources.data ?? [])
+                    .filter((s) => s.isActive)
+                    .map((s) => (
+                      <option key={s.id} value={s.name} />
+                    ))}
+                </datalist>
+              </div>
               {error ? <p className="text-sm text-red-600">{error}</p> : null}
             </div>
             <DialogFooter>
-              <Button
-                onClick={() =>
-                  createLead.mutate({
-                    title,
-                    estimatedValue: estimatedValue ? Number(estimatedValue) : undefined,
-                  })
-                }
-                disabled={createLead.isPending || !title}
-              >
+              <Button onClick={submitLead} disabled={createLead.isPending || !title}>
                 Create
               </Button>
             </DialogFooter>
@@ -157,6 +213,10 @@ export function CrmLeadsContent() {
                     </div>
                     <p className="text-xs text-[var(--text-muted)]">
                       {lead.client?.name ?? "No client"} · {lead.assignedTo?.name ?? "Unassigned"}
+                    </p>
+                    <p className="mt-1 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                      {CRM_CHANNEL_LABELS[lead.sourceChannel] ?? lead.sourceChannel}
+                      {lead.source ? ` · ${lead.source}` : ""}
                     </p>
                   </Link>
                 ))}

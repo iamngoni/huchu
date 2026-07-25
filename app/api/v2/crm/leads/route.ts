@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
 import { defaultProbabilityForStage } from "@/lib/crm/pipeline";
+import { deriveLeadChannel } from "@/lib/crm/sources";
 import { crmLeadStageSchema, isCompanyUser } from "../_helpers";
 
 const createLeadSchema = z.object({
@@ -24,6 +25,7 @@ const createLeadSchema = z.object({
   currency: z.string().trim().max(10).optional(),
   services: z.array(z.string().trim().max(80)).max(40).optional(),
   source: z.string().trim().max(120).nullable().optional(),
+  sourceChannel: z.string().trim().max(20).nullable().optional(),
   utmSource: z.string().trim().max(120).nullable().optional(),
   utmMedium: z.string().trim().max(120).nullable().optional(),
   utmCampaign: z.string().trim().max(120).nullable().optional(),
@@ -40,6 +42,7 @@ export async function GET(request: NextRequest) {
     const stage = searchParams.get("stage");
     const assignedToId = searchParams.get("assignedToId");
     const source = searchParams.get("source");
+    const channel = searchParams.get("channel");
     const search = searchParams.get("q")?.trim();
     const { page, limit, skip } = getPaginationParams(request);
 
@@ -48,6 +51,7 @@ export async function GET(request: NextRequest) {
       ...(stage ? { stage: stage as Prisma.CrmLeadWhereInput["stage"] } : {}),
       ...(assignedToId ? { assignedToId } : {}),
       ...(source ? { source } : {}),
+      ...(channel ? { sourceChannel: channel as Prisma.CrmLeadWhereInput["sourceChannel"] } : {}),
       ...(search
         ? {
             OR: [
@@ -118,6 +122,13 @@ export async function POST(request: NextRequest) {
         currency: data.currency ?? "USD",
         services: data.services ?? [],
         source: data.source ?? undefined,
+        sourceChannel: deriveLeadChannel({
+          explicitChannel: data.sourceChannel,
+          utmMedium: data.utmMedium,
+          utmSource: data.utmSource,
+          source: data.source,
+          origin: "MANUAL",
+        }),
         utmSource: data.utmSource ?? undefined,
         utmMedium: data.utmMedium ?? undefined,
         utmCampaign: data.utmCampaign ?? undefined,

@@ -17,11 +17,11 @@ export async function GET(request: NextRequest) {
       const d = new Date(v);
       return Number.isNaN(d.getTime()) ? undefined : d;
     };
-    const rows = await getSourceAttribution(session.user.companyId, {
+    const result = await getSourceAttribution(session.user.companyId, {
       from: parse(from),
       to: parse(to),
     });
-    return successResponse({ data: rows });
+    return successResponse(result);
   } catch (error) {
     console.error("[API] GET /api/v2/crm/insights/sources error:", error);
     return errorResponse("Failed to fetch source attribution");

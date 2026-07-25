@@ -71,27 +71,41 @@ export async function getSourceAttribution(companyId: string, opts: Range) {
     ...(createdAtFilter(opts) ? { createdAt: createdAtFilter(opts) } : {}),
   };
   const grouped = await prisma.crmLead.groupBy({
-    by: ["source", "utmSource", "utmCampaign", "stage"],
+    by: ["source", "sourceChannel", "utmSource", "utmCampaign", "stage"],
     where,
     _count: { _all: true },
   });
 
-  const byKey = new Map<string, { source: string; campaign: string | null; leads: number; won: number }>();
+  const byKey = new Map<
+    string,
+    { source: string; channel: string; campaign: string | null; leads: number; won: number }
+  >();
+  const byChannel = new Map<string, { channel: string; leads: number; won: number }>();
+
   for (const row of grouped) {
     const source = row.source ?? row.utmSource ?? "direct";
-    const key = `${source}::${row.utmCampaign ?? ""}`;
-    const entry = byKey.get(key) ?? { source, campaign: row.utmCampaign, leads: 0, won: 0 };
+    const channel = row.sourceChannel;
+    const key = `${channel}::${source}::${row.utmCampaign ?? ""}`;
+    const entry = byKey.get(key) ?? { source, channel, campaign: row.utmCampaign, leads: 0, won: 0 };
     entry.leads += row._count._all;
     if (row.stage === "WON") entry.won += row._count._all;
     byKey.set(key, entry);
+
+    const channelEntry = byChannel.get(channel) ?? { channel, leads: 0, won: 0 };
+    channelEntry.leads += row._count._all;
+    if (row.stage === "WON") channelEntry.won += row._count._all;
+    byChannel.set(channel, channelEntry);
   }
 
-  return Array.from(byKey.values())
-    .map((e) => ({
-      ...e,
-      conversionRate: e.leads > 0 ? Math.round((e.won / e.leads) * 1000) / 10 : 0,
-    }))
-    .sort((a, b) => b.leads - a.leads);
+  const withRate = <T extends { leads: number; won: number }>(e: T) => ({
+    ...e,
+    conversionRate: e.leads > 0 ? Math.round((e.won / e.leads) * 1000) / 10 : 0,
+  });
+
+  return {
+    sources: Array.from(byKey.values()).map(withRate).sort((a, b) => b.leads - a.leads),
+    channels: Array.from(byChannel.values()).map(withRate).sort((a, b) => b.leads - a.leads),
+  };
 }
 
 export async function getRepPerformance(companyId: string, opts: Range & { repId?: string | null }) {

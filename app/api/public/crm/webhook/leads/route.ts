@@ -14,6 +14,10 @@ const webhookSchema = z
     message: z.string().trim().max(4000).optional(),
     services: z.array(z.string().trim().max(80)).max(40).optional(),
     source: z.string().trim().max(120).optional(),
+    // Declared attribution channel: MANUAL | WEB_FORM | WEBHOOK | SOCIAL |
+    // ADS | REFERRAL | OTHER. Falls back to the API key's default channel,
+    // then to UTM/source-based derivation.
+    channel: z.string().trim().max(20).optional(),
     utm_source: z.string().trim().max(120).optional(),
     utm_medium: z.string().trim().max(120).optional(),
     utm_campaign: z.string().trim().max(120).optional(),
@@ -74,7 +78,9 @@ export async function POST(request: NextRequest) {
       phoneCountry: data.phoneCountry ?? null,
       selectedServices: data.services ?? [],
       message: data.message ?? null,
-      source: data.source ?? "webhook",
+      source: data.source ?? keyRow.defaultSourceLabel ?? "webhook",
+      origin: "WEBHOOK",
+      explicitChannel: data.channel ?? keyRow.defaultChannel,
       utmSource: data.utm_source ?? null,
       utmMedium: data.utm_medium ?? null,
       utmCampaign: data.utm_campaign ?? null,
