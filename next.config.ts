@@ -40,6 +40,12 @@ const nextConfig: NextConfig = {
   // search and onboarding). 308 = permanent; bookmarks still resolve.
   async redirects() {
     return [
+      // The marketing home moved to the site root. Redirecting here rather than
+      // from a page component gives a real 308 at the routing layer — a page-level
+      // redirect() emits a meta-refresh after a full HTML render, which costs a
+      // wasted download and is treated as a soft redirect by search engines.
+      // Only the exact path matches, so /home/pricing and friends are untouched.
+      { source: "/home", destination: "/", permanent: true },
       { source: "/gold/pour", destination: "/gold/intake/pours", permanent: true },
       { source: "/gold/pour/new", destination: "/gold/intake/pours/new", permanent: true },
       { source: "/gold/dispatch", destination: "/gold/transit/dispatches", permanent: true },

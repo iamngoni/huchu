@@ -227,6 +227,19 @@ export default withAuth(
     const isAdminHost = isAdminPortalHost(resolvedHost);
     const rawToken = request.nextauth.token as PlatformToken | null;
     const token = rawToken && !isAuthExpired(rawToken.authExpiresAt) ? rawToken : null;
+
+    // The site root is the public marketing home on the marketing domain, so a
+    // signed-out visitor has to reach it without a tenant context. On a tenant
+    // host the root is still the workspace, and a signed-out visitor belongs at
+    // sign-in — not the generic access-blocked page that strict tenant
+    // enforcement below would otherwise give them. Signed-in users fall through
+    // either way so they keep being routed to their own tenant host.
+    if (pathname === "/" && !token && !isAdminHost) {
+      return hostContext.isTenantHost
+        ? NextResponse.redirect(new URL(LOGIN_PATH, request.url))
+        : NextResponse.next();
+    }
+
     const normalizedCompanySlug = token?.companySlug?.trim().toLowerCase();
     const rootDomain = getRootDomain();
     const resolvedAllowedHosts = getResolvedAllowedHosts(token, rootDomain);
@@ -477,6 +490,13 @@ export default withAuth(
         }
 
         if (pathname === LOGIN_PATH || pathname === ACCESS_BLOCKED_PATH) {
+          return true;
+        }
+
+        // The site root is the public marketing home on the marketing domain.
+        // The page itself sends signed-out visitors on a tenant host to /login,
+        // so letting the request through here does not expose a workspace.
+        if (pathname === "/") {
           return true;
         }
 

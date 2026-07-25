@@ -22,7 +22,7 @@ export function MarketingHeaderHero() {
     <>
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(9,14,32,0.88)] backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-4 lg:px-8">
-          <Link href="/home" className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.2em] text-white">
+          <Link href="/" className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.2em] text-white">
             <span className="flex size-9 items-center justify-center rounded-full bg-white text-[#1b2558]">{PLATFORM_BRAND_INITIAL}</span>
             {PLATFORM_BRAND_NAME}
           </Link>

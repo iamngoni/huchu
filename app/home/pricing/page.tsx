@@ -96,7 +96,7 @@ export default function PricingPage() {
           softwareApplicationJsonLd(),
           faqJsonLd(PRICING_FAQS),
           breadcrumbJsonLd([
-            { name: "Home", path: "/home" },
+            { name: "Home", path: "/" },
             { name: "Pricing", path: "/home/pricing" },
           ]),
         ]}

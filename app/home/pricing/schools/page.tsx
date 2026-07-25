@@ -82,7 +82,7 @@ export default function SchoolsPricingPage() {
           }),
           faqJsonLd(SCHOOL_FAQS),
           breadcrumbJsonLd([
-            { name: "Home", path: "/home" },
+            { name: "Home", path: "/" },
             { name: "Pricing", path: "/home/pricing" },
             { name: "Schools", path: "/home/pricing/schools" },
           ]),

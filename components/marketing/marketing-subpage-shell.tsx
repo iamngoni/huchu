@@ -42,7 +42,7 @@ export function MarketingSubpageShell({
     <div className="min-h-screen overflow-x-clip bg-[linear-gradient(180deg,#0d1738_0_23rem,#f7f9ff_23rem_100%)] text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(9,14,32,0.84)] backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-4 lg:px-8">
-          <Link href="/home" className="flex items-center gap-3 text-sm font-semibold text-white">
+          <Link href="/" className="flex items-center gap-3 text-sm font-semibold text-white">
             <span className="flex size-10 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-[11px] uppercase tracking-[0.22em]">
               {PLATFORM_BRAND_INITIAL}
             </span>
@@ -127,7 +127,7 @@ export function MarketingSubpageShell({
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3 border-t border-white/10 pt-4 text-sm text-white/70">
-          <Link href="/home" className="transition-colors hover:text-white">
+          <Link href="/" className="transition-colors hover:text-white">
             Overview
           </Link>
           <Link href="/home/product" className="transition-colors hover:text-white">

@@ -138,7 +138,7 @@ export function MarketingCommercialSections({ config }: MarketingCommercialSecti
             </p>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm lg:justify-end">
-            <Link href="/home" className="hover:text-white">Home</Link>
+            <Link href="/" className="hover:text-white">Home</Link>
             <Link href="/home/product" className="hover:text-white">Product</Link>
             <Link href="/home/solutions" className="hover:text-white">Solutions</Link>
             <Link href="/home/pricing" className="hover:text-white">Pricing</Link>

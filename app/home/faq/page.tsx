@@ -110,7 +110,7 @@ export default function FAQPage() {
         data={[
           faqJsonLd(allFaqs),
           breadcrumbJsonLd([
-            { name: "Home", path: "/home" },
+            { name: "Home", path: "/" },
             { name: "FAQ", path: "/home/faq" },
           ]),
         ]}

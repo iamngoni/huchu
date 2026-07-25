@@ -125,7 +125,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           }),
           faqJsonLd(faqs),
           breadcrumbJsonLd([
-            { name: "Home", path: "/home" },
+            { name: "Home", path: "/" },
             { name: "Products", path: "/home/products" },
             { name: solution.title, path: `/home/products/${slug}` },
           ]),
