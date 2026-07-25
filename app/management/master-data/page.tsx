@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { Card } from "@corelithzw/react";
 import { MasterDataShell } from "@/components/management/master-data/master-data-shell";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { getVisibleManagementAreaNavItems } from "@/lib/settings/management-nav";
 
 export default function MasterDataOverviewPage() {
@@ -22,14 +22,20 @@ export default function MasterDataOverviewPage() {
     <MasterDataShell
       activeTab="overview"
       title="Master Data"
+      description="Operational reference data stays here. Workspace settings such as users, sites, and departments now live in Preferences."
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {visibleItems.map((entry) => (
-          <Link key={entry.href} href={entry.href} className="block">
-            <Card className="h-full transition-colors hover:border-primary/40">
-              <CardHeader>
-                <CardTitle>{entry.label}</CardTitle>
-              </CardHeader>
+          <Link key={entry.href} href={entry.href} className="block h-full">
+            <Card className="h-full transition-colors hover:border-[var(--brand)]">
+              <Card.Header>
+                <Card.Title>{entry.label}</Card.Title>
+              </Card.Header>
+              {entry.description ? (
+                <Card.Body>
+                  <p className="t-body t-muted">{entry.description}</p>
+                </Card.Body>
+              ) : null}
             </Card>
           </Link>
         ))}

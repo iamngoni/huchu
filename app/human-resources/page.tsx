@@ -875,7 +875,7 @@ export default function HumanResourcesPage() {
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <label className="block text-sm font-semibold">Department</label>
                   <Link
-                    href="/management/master-data/hr/departments"
+                    href="/preferences/organization/departments"
                     className="text-xs text-primary hover:underline"
                   >
                     Manage

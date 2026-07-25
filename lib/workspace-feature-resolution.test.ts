@@ -66,7 +66,7 @@ describe("feature catalog bundles", () => {
   it("exposes CRM as a first-class add-on bundle", () => {
     expect(FEATURE_CATALOG.some((feature) => feature.key === "crm.customers")).toBe(true);
 
-    const crm = FEATURE_BUNDLES.find((bundle) => bundle.code === "ADDON_CRM_CORE");
+    const crm = FEATURE_BUNDLES.find((bundle) => bundle.code === "ADDON_CRM_SUITE");
     expect(crm).toBeDefined();
     expect(crm?.features).toContain("crm.customers");
   });
@@ -178,10 +178,16 @@ describe("crm template", () => {
     expect(keys).not.toContain("retail.core");
   });
 
-  it("does not leak crm.* features into other templates", () => {
-    for (const code of ["TEMPLATE_CORE_STARTER", "TEMPLATE_SCHOOLS", "TEMPLATE_RETAIL", "TEMPLATE_GOLD_MINE"]) {
+  it("does not leak crm.* features into unrelated templates", () => {
+    for (const code of ["TEMPLATE_CORE_STARTER", "TEMPLATE_SCHOOLS", "TEMPLATE_GOLD_MINE"]) {
       expect(templateFeatures(code).some((key) => key.startsWith("crm."))).toBe(false);
     }
+  });
+
+  it("limits retail CRM access to the shared customer directory", () => {
+    expect(templateFeatures("TEMPLATE_RETAIL").filter((key) => key.startsWith("crm."))).toEqual([
+      "crm.customers",
+    ]);
   });
 });
 
@@ -297,6 +303,24 @@ describe("route gating", () => {
     expect(resolveFeatureKeyForPath("/shift-report")).toBe("ops.shift-report.submit");
     expect(resolveFeatureKeyForPath("/attendance")).toBe("ops.attendance.mark");
     expect(resolveFeatureKeyForPath("/plant-report")).toBe("ops.plant-report.submit");
+  });
+
+  it("gates moved preferences organization pages behind their source features", () => {
+    expect(resolveFeatureKeyForPath("/preferences/organization/users")).toBe(
+      "admin.user-management.directory",
+    );
+    expect(resolveFeatureKeyForPath("/preferences/organization/sites")).toBe(
+      "admin.sites-sections",
+    );
+    expect(resolveFeatureKeyForPath("/preferences/organization/departments")).toBe(
+      "hr.employees",
+    );
+    expect(resolveFeatureKeyForPath("/preferences/organization/branding/identity")).toBe(
+      "core.branding.manage",
+    );
+    expect(resolveFeatureKeyForPath("/preferences/organization/templates")).toBe(
+      "core.branding.manage",
+    );
   });
 
   it("gates retail customer surfaces behind CRM", () => {

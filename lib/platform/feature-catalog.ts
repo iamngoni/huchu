@@ -180,6 +180,7 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
   f({ key: "retail.shifts", name: "Retail Shifts", description: "Shift control, cash-up, and register reconciliation.", domain: "retail", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "retail.reports", name: "Retail Reports", description: "Retail dashboards and reporting surfaces.", domain: "retail", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
 
+  f({ key: "crm.customers", name: "CRM Customers", description: "Shared customer directory access for CRM and customer-aware modules.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "crm.core", name: "CRM Core", description: "CRM module landing, dashboard, and shared setup.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "crm.leads", name: "CRM Leads & Pipeline", description: "Lead pipeline, stages, and activity timeline.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "crm.clients", name: "CRM Clients", description: "Client profiles, contacts, and dedupe.", domain: "crm", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
@@ -489,6 +490,7 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
     monthlyPrice: 49,
     additionalSiteMonthlyPrice: 10,
     features: [
+      "crm.customers",
       "crm.core",
       "crm.leads",
       "crm.clients",

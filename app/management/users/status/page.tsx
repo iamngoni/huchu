@@ -1,6 +1,5 @@
-import { UserManagementConsole } from "@/components/user-management/user-management-console";
+import { redirect } from "next/navigation";
 
 export default function ManagementUsersStatusPage() {
-  return <UserManagementConsole mode="status" />;
+  redirect("/preferences/organization/users");
 }
-

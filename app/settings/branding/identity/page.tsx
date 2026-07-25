@@ -1,6 +1,5 @@
-import { BrandingSettingsSection } from "@/components/settings/branding/branding-settings-section";
+import { redirect } from "next/navigation";
 
 export default function BrandingIdentityPage() {
-  return <BrandingSettingsSection section="identity" />;
+  redirect("/preferences/organization/branding/identity");
 }
-

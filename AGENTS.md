@@ -27,9 +27,10 @@
 - Prefer clear, domain-oriented names (e.g., `dispatch`, `receipt`, `reconciliation`).
 - Run `pnpm lint` before submitting changes; there is no formatter configured, so avoid reformat-only diffs.
 
-## UX Playbook (Required)
+## Design System & UX Playbook (Required)
+- For every implementation, read `docs/design-system/README.md` first, then read the relevant files in `docs/design-system/` before changing code. These docs contain the canonical design-system setup, tokens, components, composition patterns, rules, reference URLs, and repo migration guidance.
 - Follow `docs/ux/platform-ux-playbook.md` for all UX/UI changes.
-- Treat playbook rules as default system behavior unless a task explicitly overrides them.
+- Treat design-system and playbook rules as default system behavior unless a task explicitly overrides them.
 - Key non-negotiables:
   - One table per active view; use vertical tabs for multi-table contexts.
   - Keep DataTable controls in one row (search + submit, filters, pagination).

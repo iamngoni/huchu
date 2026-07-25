@@ -29,9 +29,8 @@ export function MasterDataShell({
   children,
 }: MasterDataShellProps) {
   void activeTab;
-  void description;
   return (
-    <ManagementShell area="master-data" title={title} actions={actions}>
+    <ManagementShell area="master-data" title={title} description={description} actions={actions}>
       {children}
     </ManagementShell>
   );

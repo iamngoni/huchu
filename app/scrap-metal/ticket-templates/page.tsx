@@ -95,7 +95,7 @@ export default function ScrapTicketTemplatesPage() {
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
           <Button size="sm" variant="outline" asChild>
-            <Link href="/settings/templates">Edit</Link>
+            <Link href="/preferences/organization/templates">Edit</Link>
           </Button>
           {row.original.scope === "COMPANY" ? (
             <Button size="sm" onClick={() => setDefaultMutation.mutate(row.original.id)} disabled={setDefaultMutation.isPending}>
@@ -124,7 +124,7 @@ export default function ScrapTicketTemplatesPage() {
           <Button size="sm" variant="outline" onClick={() => bootstrapMutation.mutate()} disabled={bootstrapMutation.isPending}>
             {bootstrapMutation.isPending ? "Creating..." : "Create Company Copies"}
           </Button>
-          <Button asChild size="sm" variant="outline"><Link href="/settings/templates">Open All Templates</Link></Button>
+          <Button asChild size="sm" variant="outline"><Link href="/preferences/organization/templates">Open All Templates</Link></Button>
         </div>
       }
     >
@@ -153,7 +153,7 @@ export default function ScrapTicketTemplatesPage() {
             />
             <ScrapMobileCardActions>
               <Button size="sm" variant="outline" asChild>
-                <Link href="/settings/templates">Edit</Link>
+                <Link href="/preferences/organization/templates">Edit</Link>
               </Button>
               {row.scope === "COMPANY" ? (
                 <Button size="sm" onClick={() => setDefaultMutation.mutate(row.id)} disabled={setDefaultMutation.isPending}>

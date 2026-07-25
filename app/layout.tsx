@@ -1,10 +1,12 @@
 import "@rtcamp/frappe-ui-react/theme";
+import "@corelithzw/react/styles.css";
 import { Analytics } from "@vercel/analytics/next";
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 import "./themes/client.css";
+import "./themes/corelith-bridge.css";
 import { AppProviders } from "@/components/providers/app-providers";
 import { AppShell } from "@/components/layout/app-shell";
 import {
@@ -113,7 +115,14 @@ export default async function RootLayout({
   const brandingVars = getBrandingCssVariables(branding);
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => { try { const key = "huchu.appearance"; const value = localStorage.getItem(key) || "system"; if (["system","light","dark"].includes(value)) document.documentElement.dataset.appearance = value; } catch {} })();`,
+          }}
+        />
+      </head>
       <body
         className="font-sans subpixel-antialiased"
         data-portal-path={hostContext.portalPath ?? undefined}

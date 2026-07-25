@@ -3,6 +3,11 @@ import type { FeatureRouteEntry } from "@/lib/platform/gating/types";
 export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/login", featureKey: "core.auth.login" },
   { scope: "page", prefix: "/help", featureKey: "core.help.quick-tips" },
+  { scope: "page", prefix: "/preferences/organization/branding", featureKey: "core.branding.manage" },
+  { scope: "page", prefix: "/preferences/organization/templates", featureKey: "core.branding.manage" },
+  { scope: "page", prefix: "/preferences/organization/departments", featureKey: "hr.employees" },
+  { scope: "page", prefix: "/preferences/organization/sites", featureKey: "admin.sites-sections" },
+  { scope: "page", prefix: "/preferences/organization/users", featureKey: "admin.user-management.directory" },
   { scope: "page", prefix: "/settings/branding", featureKey: "core.branding.manage" },
   { scope: "page", prefix: "/settings/templates", featureKey: "core.branding.manage" },
 

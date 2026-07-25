@@ -114,6 +114,13 @@ const ROLE_PREFIX_ALLOWLIST: Record<string, readonly string[] | null> = {
     "crm.",
     "portal.autos",
   ],
+  SALES_REP: [
+    "core.auth.",
+    "core.help.",
+    "core.notifications.",
+    "core.multitenancy.",
+    "crm.",
+  ],
   FINANCE_OFFICER: [
     "core.auth.",
     "core.help.",
@@ -157,7 +164,7 @@ const ROLE_PREFIX_ALLOWLIST: Record<string, readonly string[] | null> = {
   ],
 };
 
-const MANAGED_USER_ROLES = new Set([
+const MANAGED_USER_ROLE_VALUES = [
   "SUPERADMIN",
   "MANAGER",
   "CLERK",
@@ -174,7 +181,10 @@ const MANAGED_USER_ROLES = new Set([
   "SHOP_MANAGER",
   "CASHIER",
   "STOCK_CLERK",
-]);
+  "SALES_REP",
+] as const;
+
+const MANAGED_USER_ROLES = new Set<string>(MANAGED_USER_ROLE_VALUES);
 
 const CATALOG_BY_KEY = new Map(
   FEATURE_CATALOG.map((feature) => [normalizeFeatureKey(feature.key), feature]),
@@ -187,29 +197,10 @@ const CATALOG_DEFAULTS = new Map(
   ]),
 );
 
-export type ManagedUserRole =
-  | "SUPERADMIN"
-  | "MANAGER"
-  | "CLERK"
-  | "OPERATOR"
-  | "SCHOOL_ADMIN"
-  | "REGISTRAR"
-  | "BURSAR"
-  | "TEACHER"
-  | "PARENT"
-  | "STUDENT"
-  | "AUTO_MANAGER"
-  | "SALES_EXEC"
-  | "FINANCE_OFFICER"
-  | "SHOP_MANAGER"
-  | "CASHIER"
-  | "STOCK_CLERK"
-  | "SALES_REP";
+export type ManagedUserRole = (typeof MANAGED_USER_ROLE_VALUES)[number];
 export type ManagedUserFeatureBlockedReason =
   | "COMPANY_DISABLED"
   | "TEMPLATE_BLOCKED";
-
-  | "STOCK_CLERK";
 export type ManagedUserFeatureAccessEntry = {
   featureKey: string;
   name: string;

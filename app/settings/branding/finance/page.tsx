@@ -1,6 +1,5 @@
-import { BrandingSettingsSection } from "@/components/settings/branding/branding-settings-section";
+import { redirect } from "next/navigation";
 
 export default function BrandingFinancePage() {
-  return <BrandingSettingsSection section="finance" />;
+  redirect("/preferences/organization/branding/finance");
 }
-
