@@ -15,8 +15,10 @@ import {
   getClientTemplateFeatureKeys,
   getClientTemplateWorkspaceProfile,
 } from "@/lib/platform/client-templates";
-import { FEATURE_BUNDLES } from "@/lib/platform/feature-catalog";
-import { resolveFeatureKeyForPath } from "@/lib/platform/gating/route-registry";
+import { FEATURE_BUNDLES, FEATURE_CATALOG } from "@/lib/platform/feature-catalog";
+import { isKnownFeatureKey } from "@/lib/platform/gating/catalog-utils";
+import { getAllRouteFeatureKeys, resolveFeatureKeyForPath } from "@/lib/platform/gating/route-registry";
+import { getAllowedUserRolesForWorkspace } from "@/lib/platform/vertical-roles";
 import { getPrimaryQuickActions } from "@/lib/primary-actions";
 import { resolveWorkspaceVerticalProductBundle } from "@/lib/workspace-products";
 import { getWorkspaceSidebarModel } from "@/lib/workspaces";
@@ -43,6 +45,11 @@ function isMiningHref(href: string): boolean {
 }
 
 describe("feature catalog bundles", () => {
+  it("maps every route feature to a known catalog feature key", () => {
+    const unknownRouteKeys = getAllRouteFeatureKeys().filter((key) => !isKnownFeatureKey(key));
+    expect(unknownRouteKeys).toEqual([]);
+  });
+
   it("keeps mining daily ops out of ADDON_OPERATIONS_CORE", () => {
     const operationsCore = FEATURE_BUNDLES.find((bundle) => bundle.code === "ADDON_OPERATIONS_CORE");
     expect(operationsCore).toBeDefined();
@@ -54,6 +61,19 @@ describe("feature catalog bundles", () => {
   it("collects mining daily ops in ADDON_MINE_DAILY_OPS", () => {
     const mineOps = FEATURE_BUNDLES.find((bundle) => bundle.code === "ADDON_MINE_DAILY_OPS");
     expect(mineOps?.features.slice().sort()).toEqual(MINE_DAILY_OPS_FEATURE_KEYS.slice().sort());
+  });
+
+  it("exposes CRM as a first-class add-on bundle", () => {
+    expect(FEATURE_CATALOG.some((feature) => feature.key === "crm.customers")).toBe(true);
+
+    const crm = FEATURE_BUNDLES.find((bundle) => bundle.code === "ADDON_CRM_SUITE");
+    expect(crm).toBeDefined();
+    expect(crm?.features).toContain("crm.customers");
+  });
+
+  it("keeps Retail Suite entitled to customer CRM", () => {
+    const retail = FEATURE_BUNDLES.find((bundle) => bundle.code === "ADDON_RETAIL_SUITE");
+    expect(retail?.features).toContain("crm.customers");
   });
 });
 
@@ -88,6 +108,34 @@ describe("client templates", () => {
   });
 });
 
+describe("vertical role registration", () => {
+  it("registers CRM sales roles only when CRM features are enabled", () => {
+    expect(
+      getAllowedUserRolesForWorkspace({
+        workspaceProfile: "GENERAL",
+        enabledFeatures: [],
+      }),
+    ).not.toContain("SALES_EXEC");
+
+    expect(
+      getAllowedUserRolesForWorkspace({
+        workspaceProfile: "GENERAL",
+        enabledFeatures: ["crm.customers"],
+      }),
+    ).toContain("SALES_EXEC");
+  });
+
+  it("keeps Autos sales roles registered through the Autos profile", () => {
+    expect(
+      getAllowedUserRolesForWorkspace({
+        workspaceProfile: "AUTOS",
+        enabledFeatures: [],
+      }),
+    ).toContain("SALES_EXEC");
+  });
+
+});
+
 describe("vertical product resolution", () => {
   it("resolves multi-site operations from the multi-site template features", () => {
     const bundle = resolveWorkspaceVerticalProductBundle({
@@ -104,6 +152,43 @@ describe("vertical product resolution", () => {
     });
     expect(bundle.id).toBe("service-workshop");
   });
+
+  it("resolves crm-sales from the CRM template features (before generic products)", () => {
+    const bundle = resolveWorkspaceVerticalProductBundle({
+      workspaceProfile: "GENERAL",
+      enabledFeatures: templateFeatures("TEMPLATE_CRM"),
+    });
+    expect(bundle.id).toBe("crm-sales");
+  });
+});
+
+describe("crm template", () => {
+  it("grants crm.* and the accounting features it depends on, but no foreign verticals", () => {
+    const keys = templateFeatures("TEMPLATE_CRM");
+    expect(keys).toContain("crm.core");
+    expect(keys).toContain("crm.documents");
+    expect(keys).toContain("accounting.ar");
+    for (const key of MINE_DAILY_OPS_FEATURE_KEYS) {
+      expect(keys).not.toContain(key);
+    }
+    expect(keys.some((key) => key.startsWith("gold."))).toBe(false);
+    expect(keys.some((key) => key.startsWith("scrap-metal."))).toBe(false);
+    expect(keys).not.toContain("schools.core");
+    expect(keys).not.toContain("autos.core");
+    expect(keys).not.toContain("retail.core");
+  });
+
+  it("does not leak crm.* features into unrelated templates", () => {
+    for (const code of ["TEMPLATE_CORE_STARTER", "TEMPLATE_SCHOOLS", "TEMPLATE_GOLD_MINE"]) {
+      expect(templateFeatures(code).some((key) => key.startsWith("crm."))).toBe(false);
+    }
+  });
+
+  it("limits retail CRM access to the shared customer directory", () => {
+    expect(templateFeatures("TEMPLATE_RETAIL").filter((key) => key.startsWith("crm."))).toEqual([
+      "crm.customers",
+    ]);
+  });
 });
 
 describe("primary quick actions", () => {
@@ -115,6 +200,7 @@ describe("primary quick actions", () => {
     ["TEMPLATE_CAR_SALES", "AUTOS"],
     ["TEMPLATE_RETAIL", "RETAIL"],
     ["TEMPLATE_SCRAP_METAL", "SCRAP_METAL"],
+    ["TEMPLATE_CRM", "GENERAL"],
   ];
 
   it.each(nonMiningCases)("%s offers no mining quick actions", (code, profile) => {
@@ -170,6 +256,16 @@ describe("primary quick actions", () => {
 });
 
 describe("workspace sidebar model", () => {
+  it("shows CRM navigation when only CRM customers is enabled", () => {
+    const model = getWorkspaceSidebarModel({
+      role: "MANAGER",
+      enabledFeatures: ["crm.customers"],
+      workspaceProfile: "GENERAL",
+    });
+    const hrefs = model.sections.flatMap((section) => section.items.map((item) => item.href));
+    expect(hrefs).toContain("/retail/customers");
+  });
+
   it("multi-site sidebar contains no mining hrefs anywhere", () => {
     const model = getWorkspaceSidebarModel({
       role: "MANAGER",
@@ -225,5 +321,11 @@ describe("route gating", () => {
     expect(resolveFeatureKeyForPath("/preferences/organization/templates")).toBe(
       "core.branding.manage",
     );
+  });
+
+  it("gates retail customer surfaces behind CRM", () => {
+    expect(resolveFeatureKeyForPath("/retail/customers")).toBe("crm.customers");
+    expect(resolveFeatureKeyForPath("/portal/pos/customers")).toBe("crm.customers");
+    expect(resolveFeatureKeyForPath("/api/v2/retail/customers/search")).toBe("crm.customers");
   });
 });

@@ -98,6 +98,7 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/car-sales/financing", featureKey: "autos.financing" },
   { scope: "page", prefix: "/car-sales", featureKey: "autos.core" },
 
+  { scope: "page", prefix: "/retail/customers", featureKey: "crm.customers" },
   { scope: "page", prefix: "/retail/catalog", featureKey: "retail.catalog" },
   { scope: "page", prefix: "/retail/purchasing", featureKey: "retail.purchasing" },
   { scope: "page", prefix: "/retail/merchandising", featureKey: "retail.promotions" },
@@ -109,6 +110,7 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/retail", featureKey: "retail.core" },
   { scope: "page", prefix: "/thrift", featureKey: "retail.core" },
 
+  { scope: "page", prefix: "/portal/pos/customers", featureKey: "crm.customers" },
   { scope: "page", prefix: "/portal/pos", featureKey: "retail.pos" },
   { scope: "page", prefix: "/portal/parent", featureKey: "schools.portal.parent" },
   { scope: "page", prefix: "/portal/student", featureKey: "schools.portal.student" },
@@ -150,6 +152,15 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/scrap-metal/sales", featureKey: "scrap-metal.sales" },
   { scope: "page", prefix: "/scrap-metal/pricing", featureKey: "scrap-metal.pricing" },
   { scope: "page", prefix: "/scrap-metal", featureKey: "scrap-metal.home" },
+
+  { scope: "page", prefix: "/crm/leads", featureKey: "crm.leads" },
+  { scope: "page", prefix: "/crm/clients", featureKey: "crm.clients" },
+  { scope: "page", prefix: "/crm/appointments", featureKey: "crm.appointments" },
+  { scope: "page", prefix: "/crm/follow-ups", featureKey: "crm.core" },
+  { scope: "page", prefix: "/crm/forms", featureKey: "crm.intake" },
+  { scope: "page", prefix: "/crm/insights", featureKey: "crm.insights" },
+  { scope: "page", prefix: "/crm/settings", featureKey: "crm.settings" },
+  { scope: "page", prefix: "/crm", featureKey: "crm.core" },
 
   { scope: "page", prefix: "/compliance", featureKey: "compliance.overview" },
   { scope: "page", prefix: "/management/master-data/hr/departments", featureKey: "hr.employees" },
@@ -354,6 +365,7 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/car-sales/financing", featureKey: "autos.financing" },
   { scope: "api", prefix: "/api/v2/car-sales", featureKey: "autos.core" },
 
+  { scope: "api", prefix: "/api/retail/customers", featureKey: "crm.customers" },
   { scope: "api", prefix: "/api/retail/catalog", featureKey: "retail.catalog" },
   { scope: "api", prefix: "/api/retail/purchasing", featureKey: "retail.purchasing" },
   { scope: "api", prefix: "/api/retail/promotions", featureKey: "retail.promotions" },
@@ -362,6 +374,7 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/retail/reports", featureKey: "retail.reports" },
   { scope: "api", prefix: "/api/retail", featureKey: "retail.core" },
   { scope: "api", prefix: "/api/thrift", featureKey: "retail.core" },
+  { scope: "api", prefix: "/api/v2/retail/customers", featureKey: "crm.customers" },
   { scope: "api", prefix: "/api/v2/retail/catalog", featureKey: "retail.catalog" },
   { scope: "api", prefix: "/api/v2/retail/purchasing", featureKey: "retail.purchasing" },
   { scope: "api", prefix: "/api/v2/retail/promotions", featureKey: "retail.promotions" },
@@ -390,6 +403,18 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/portal/car-sales", featureKey: "portal.autos" },
   { scope: "api", prefix: "/api/v2/portal/thrift", featureKey: "portal.pos" },
   { scope: "api", prefix: "/api/v2/portal", featureKey: "portal.core" },
+
+  { scope: "api", prefix: "/api/v2/crm/intake-forms", featureKey: "crm.intake" },
+  { scope: "api", prefix: "/api/v2/crm/submissions", featureKey: "crm.intake" },
+  { scope: "api", prefix: "/api/v2/crm/api-keys", featureKey: "crm.settings" },
+  { scope: "api", prefix: "/api/v2/crm/commissions", featureKey: "crm.commissions" },
+  { scope: "api", prefix: "/api/v2/crm/insights", featureKey: "crm.insights" },
+  { scope: "api", prefix: "/api/v2/crm/clients", featureKey: "crm.clients" },
+  { scope: "api", prefix: "/api/v2/crm/appointments", featureKey: "crm.appointments" },
+  { scope: "api", prefix: "/api/v2/crm/follow-ups", featureKey: "crm.core" },
+  { scope: "api", prefix: "/api/v2/crm/leads", featureKey: "crm.leads" },
+  { scope: "api", prefix: "/api/v2/crm/uploads", featureKey: "crm.core" },
+  { scope: "api", prefix: "/api/v2/crm", featureKey: "crm.core" },
 
   { scope: "api", prefix: "/api/work-orders", featureKey: "maintenance.work-orders" },
   { scope: "api", prefix: "/api/equipment", featureKey: "maintenance.equipment" },

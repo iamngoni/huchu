@@ -17,7 +17,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 export function SidebarAccountMenu({
   isCollapsed,
@@ -30,6 +35,10 @@ export function SidebarAccountMenu({
   workspaceLabel: string;
   workspaceIcon: LucideIcon;
 }) {
+  const { setOpenMobile } = useSidebar();
+  const closeMobileNav = () => {
+    if (isMobile) setOpenMobile(false);
+  };
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -62,19 +71,19 @@ export function SidebarAccountMenu({
               className="w-[min(22rem,calc(100vw-1rem))] rounded-2xl border border-[var(--edge-default)] bg-[var(--surface-base)] p-0 shadow-[var(--elevation-3)]"
             >
               <DropdownMenuItem asChild className="px-4 py-2.5 text-[14px]">
-                <Link href="/preferences">
+                <Link href="/preferences" onClick={closeMobileNav}>
                   <MedusaCogSixToothIcon className="h-4 w-4" />
                   Preferences
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="px-4 py-2.5 text-[14px]">
-                <Link href="/management/master-data">
+                <Link href="/management/master-data" onClick={closeMobileNav}>
                   <MedusaBuildingsIcon className="h-4 w-4" />
                   Workspace setup
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="px-4 py-2.5 text-[14px]">
-                <Link href="/preferences/organization/users">
+                <Link href="/preferences/organization/users" onClick={closeMobileNav}>
                   <MedusaIdBadgeIcon className="h-4 w-4" />
                   People & access
                 </Link>
@@ -83,7 +92,7 @@ export function SidebarAccountMenu({
                 asChild
                 className="px-4 py-2.5 text-[14px] text-[var(--action-destructive-bg)] focus:bg-[var(--status-error-bg)] focus:text-[var(--action-destructive-bg)]"
               >
-                <Link href="/api/auth/signout" className="text-[var(--action-destructive-bg)]">
+                <Link href="/api/auth/signout" onClick={closeMobileNav} className="text-[var(--action-destructive-bg)]">
                   <MedusaArrowRightOnRectangleIcon className="h-4 w-4" />
                   Sign out
                 </Link>

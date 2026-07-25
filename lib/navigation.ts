@@ -1,9 +1,11 @@
 import {
+  AddressBook,
   AlertCircle,
   ArrowDownward,
   ArrowUpward,
   BarChart3,
   Building2,
+  CalendarCheck,
   Calendar,
   Camera,
   ChartLine,
@@ -16,6 +18,7 @@ import {
   FileCheck,
   FileText,
   Fuel,
+  Funnel,
   History,
   LocalShipping,
   ManageAccounts,
@@ -249,6 +252,15 @@ export const navSections: NavSection[] = [
     })),
   },
   {
+    id: "crm",
+    title: "CRM",
+    description: "Customer profiles, loyalty, and ledgers",
+    featureKey: "crm.customers",
+    items: [
+      { href: "/retail/customers", icon: Users, label: "Customers" },
+    ],
+  },
+  {
     id: "gold",
     title: "Gold Operations",
     description: "Production, settlement, and control tasks",
@@ -290,6 +302,27 @@ export const navSections: NavSection[] = [
       label: tab.label,
       roles: tab.roles,
     })),
+  },
+  {
+    id: "crm",
+    title: "CRM",
+    description: "Leads, clients, site visits, and sales pipeline",
+    featureKey: "crm.core",
+    items: [
+      { href: "/crm", icon: Dashboard, label: "Overview" },
+      { href: "/crm/leads", icon: Funnel, label: "Leads & Pipeline" },
+      { href: "/crm/clients", icon: AddressBook, label: "Clients" },
+      { href: "/crm/appointments", icon: CalendarCheck, label: "Site Visits" },
+      { href: "/crm/follow-ups", icon: Checklist, label: "Follow-ups" },
+      { href: "/crm/forms", icon: NoteAdd, label: "Intake Forms" },
+      { href: "/crm/insights", icon: BarChart3, label: "Insights" },
+      {
+        href: "/crm/settings",
+        icon: ManageAccounts,
+        label: "CRM Settings",
+        roles: ["SUPERADMIN", "MANAGER"],
+      },
+    ],
   },
   {
     id: "cctv",

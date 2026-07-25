@@ -40,6 +40,7 @@ import {
 } from "@/lib/icons";
 import { getVisibleManagementModuleItems } from "@/lib/settings/management-nav";
 import { SCRAP_OPERATIONS_SECTIONS } from "@/lib/scrap-metal/tab-config";
+import { isRouteAllowedForRole } from "@/lib/auth-core/role-routes";
 
 export { WORKSPACE_PROFILES };
 export type { WorkspaceModuleId, WorkspaceProfile };
@@ -120,6 +121,7 @@ const WORKSPACE_MODULE_ORDER: readonly WorkspaceModuleId[] = [
   "schools",
   "car-sales",
   "retail",
+  "crm",
   "hr",
   "stores",
   "maintenance",
@@ -234,6 +236,12 @@ const WORKSPACE_MODULES: Record<WorkspaceModuleId, WorkspaceModuleDefinition> = 
       return items;
     },
   },
+  crm: createSectionModule({
+    id: "crm",
+    label: "CRM",
+    sectionId: "crm",
+    homeHref: "/crm",
+  }),
   hr: createSectionModule({
     id: "hr",
     label: "Human Resources",
@@ -522,10 +530,17 @@ export function getWorkspaceProfileForTemplate(code: string | null | undefined):
 }
 
 function buildContext(args: WorkspaceModelArgs): WorkspaceBuildContext {
+  // Route-restricted roles (e.g. SALES_REP → CRM only) should never be shown
+  // nav for areas the access layer will block anyway.
   const visibleNavSections = filterNavSectionsByEnabledFeatures(
     getNavSectionsForRole(args.role),
     args.enabledFeatures,
-  );
+  )
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => isRouteAllowedForRole(args.role, item.href)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   return {
     ...args,
@@ -788,7 +803,7 @@ function getQuickActions(
     workspaceProfile: args.workspaceProfile,
     role: args.role,
     enabledFeatures: args.enabledFeatures,
-  });
+  }).filter((item) => isRouteAllowedForRole(args.role, item.href));
 }
 
 function getGeneralDashboardItem(context: WorkspaceBuildContext): NavItem | null {

@@ -36,6 +36,7 @@ import {
   Users,
   Wallet,
 } from "@/lib/icons";
+import { hasTokenFeature } from "@/lib/platform/gating/token-check";
 import { canAccessPosPortal } from "@/lib/retail/pos-host";
 
 type RetailDashboardPayload = {
@@ -202,7 +203,9 @@ function SectionCard({
 
 export default function RetailOverviewPage() {
   const { data: session } = useSession();
+  const enabledFeatures = (session?.user as { enabledFeatures?: string[] } | undefined)?.enabledFeatures;
   const canOpenPos = canAccessPosPortal(session?.user?.role);
+  const canOpenCustomers = hasTokenFeature(enabledFeatures, "crm.customers");
   const { data, isLoading, error } = useQuery({
     queryKey: ["retail-dashboard-owner-overview"],
     queryFn: () => fetchJson<RetailDashboardPayload>("/api/v2/retail"),
@@ -310,11 +313,13 @@ export default function RetailOverviewPage() {
                   <LocalShipping className="h-4 w-4" /> Buy
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/retail/customers" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" /> Customers
-                </Link>
-              </DropdownMenuItem>
+              {canOpenCustomers ? (
+                <DropdownMenuItem asChild>
+                  <Link href="/retail/customers" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Customers
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem asChild>
                 <Link href="/retail/reports" className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" /> Reports

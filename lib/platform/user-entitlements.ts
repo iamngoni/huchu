@@ -111,7 +111,15 @@ const ROLE_PREFIX_ALLOWLIST: Record<string, readonly string[] | null> = {
     "core.multitenancy.",
     "autos.leads",
     "autos.deals",
+    "crm.",
     "portal.autos",
+  ],
+  SALES_REP: [
+    "core.auth.",
+    "core.help.",
+    "core.notifications.",
+    "core.multitenancy.",
+    "crm.",
   ],
   FINANCE_OFFICER: [
     "core.auth.",
@@ -173,6 +181,7 @@ const MANAGED_USER_ROLE_VALUES = [
   "SHOP_MANAGER",
   "CASHIER",
   "STOCK_CLERK",
+  "SALES_REP",
 ] as const;
 
 const MANAGED_USER_ROLES = new Set<string>(MANAGED_USER_ROLE_VALUES);
@@ -189,6 +198,9 @@ const CATALOG_DEFAULTS = new Map(
 );
 
 export type ManagedUserRole = (typeof MANAGED_USER_ROLE_VALUES)[number];
+export type ManagedUserFeatureBlockedReason =
+  | "COMPANY_DISABLED"
+  | "TEMPLATE_BLOCKED";
 export type ManagedUserFeatureAccessEntry = {
   featureKey: string;
   name: string;

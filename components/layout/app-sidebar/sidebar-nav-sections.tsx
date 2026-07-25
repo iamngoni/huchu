@@ -18,6 +18,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 import {
@@ -35,6 +36,7 @@ function SidebarNavLink({
   isActive: boolean;
   className?: string;
 }) {
+  const { isMobile, setOpenMobile } = useSidebar();
   return (
     <SidebarMenuItem key={item.href}>
       <SidebarMenuButton
@@ -50,7 +52,12 @@ function SidebarNavLink({
           className,
         )}
       >
-        <Link href={item.href}>
+        <Link
+          href={item.href}
+          onClick={() => {
+            if (isMobile) setOpenMobile(false);
+          }}
+        >
           <item.icon
             className={cn(
               "h-4 w-4 transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)]",
@@ -202,6 +209,7 @@ export function SidebarHomeLink({
   label: string;
   isActive: boolean;
 }) {
+  const { isMobile, setOpenMobile } = useSidebar();
   return (
     <SidebarGroup className="py-0.5">
       <SidebarGroupContent className="mt-0">
@@ -213,7 +221,12 @@ export function SidebarHomeLink({
               tooltip={label}
               className="h-11 rounded-[10px] border border-[var(--edge-subtle)]/70 px-2.5 text-[14px] font-medium text-[var(--sidebar-item-fg-muted)] transition-[background-color,color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:translate-x-[1px] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-item-hover-fg)] data-[active=true]:border-[var(--sidebar-item-active-border)] data-[active=true]:bg-[var(--sidebar-item-active-bg)] data-[active=true]:text-[var(--sidebar-item-active-fg)] data-[active=true]:shadow-[inset_0_0_0_1px_var(--sidebar-item-active-border)] lg:h-9"
             >
-              <Link href={href}>
+              <Link
+                href={href}
+                onClick={() => {
+                  if (isMobile) setOpenMobile(false);
+                }}
+              >
                 <MedusaHouseIcon
                   className={cn(
                     "h-4 w-4",

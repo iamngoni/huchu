@@ -37,7 +37,10 @@ export type ReservableIdEntity =
   | "RETAIL_SHIFT"
   | "RETAIL_HELD_CART"
   | "RETAIL_SALE"
-  | "RETAIL_PROMOTION";
+  | "RETAIL_PROMOTION"
+  | "CRM_CLIENT"
+  | "CRM_LEAD"
+  | "CRM_APPOINTMENT";
 
 type EntityConfig = {
   prefix: string;
@@ -88,6 +91,9 @@ export const ID_ENTITY_CONFIG: Record<ReservableIdEntity, EntityConfig> = {
   RETAIL_HELD_CART: { prefix: "RHC", requiresSiteId: false },
   RETAIL_SALE: { prefix: "RSL", requiresSiteId: true },
   RETAIL_PROMOTION: { prefix: "RPM", requiresSiteId: false },
+  CRM_CLIENT: { prefix: "CLI", requiresSiteId: false },
+  CRM_LEAD: { prefix: "CRL", requiresSiteId: false },
+  CRM_APPOINTMENT: { prefix: "SVT", requiresSiteId: false },
 };
 
 type DbClient = PrismaClient | Prisma.TransactionClient;

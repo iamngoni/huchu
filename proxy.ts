@@ -18,11 +18,20 @@ import { canAccessCapabilityWithToken, canAccessRouteWithToken } from "@/lib/pla
 import { getAdminRootDomain, isAdminPortalHost, isSuperuserRole } from "@/lib/admin-portal";
 import { buildCallbackLoginPath } from "@/lib/auth-core/redirects";
 import { isAuthExpired } from "@/lib/auth-core/session-policy";
+import {
+  isRoleRouteRestricted,
+  isRouteAllowedForRole,
+  landingPathForRole,
+} from "@/lib/auth-core/role-routes";
 import { getPosHostForCompany, isCashierRole, isPublicPosPath } from "@/lib/retail/pos-host";
 
 const ACCESS_BLOCKED_PATH = "/access-blocked";
 const LOGIN_PATH = "/login";
 const MARKETING_BASE_PATH = "/home";
+// Public, unauthenticated CRM pages: intake form (/f/[token]) and document
+// approval (/a/[token]). Shared over WhatsApp etc., so they bypass tenant/host
+// and auth gating entirely — the token is the capability.
+const CRM_PUBLIC_BASE_PATHS = ["/f", "/a"];
 const ADMIN_BASE_PATH = "/admin";
 const ADMIN_LOGIN_PATH = `${ADMIN_BASE_PATH}/login`;
 const ADMIN_INTERNAL_BASE_PATH = "/portal/admin";
@@ -220,6 +229,10 @@ export default withAuth(
       return NextResponse.next();
     }
 
+    if (CRM_PUBLIC_BASE_PATHS.some((base) => isPathWithinRoute(pathname, base))) {
+      return NextResponse.next();
+    }
+
     const hostHeader = getHostHeaderFromRequestHeaders(request.headers);
     const requestHost = request.nextUrl.host;
     const resolvedHost = hostHeader || requestHost || null;
@@ -394,6 +407,22 @@ export default withAuth(
       return redirectToAccessBlocked(request);
     }
 
+    // SALES_REP is pinned to the CRM. Pages outside the allowlist redirect to
+    // /crm; API requests get a hard 403 here as well — resolveAccessContext
+    // covers validateSession routes, but matcher-covered legacy APIs (cctv,
+    // gold, payroll, compliance) authenticate with bare getServerSession and
+    // would otherwise never see the allowlist.
+    if (token && isRoleRouteRestricted(token.role) && !isRouteAllowedForRole(token.role, pathname)) {
+      if (isApiRequest) {
+        return NextResponse.json(
+          { error: "This area is not available for your role.", code: "ROLE_ROUTE_RESTRICTED", path: pathname },
+          { status: 403 },
+        );
+      }
+      const landing = landingPathForRole(token.role) ?? "/";
+      return redirectToPath(request, landing);
+    }
+
     if (token && isPathWithinRoute(pathname, "/human-resources")) {
       if (!HR_MODULE_ALLOWED_ROLES.has(token.role ?? "")) {
         return denyAccess(request, "Human resources access is restricted");
@@ -501,6 +530,10 @@ export default withAuth(
         }
 
         if (isPathWithinRoute(pathname, MARKETING_BASE_PATH)) {
+          return true;
+        }
+
+        if (CRM_PUBLIC_BASE_PATHS.some((base) => isPathWithinRoute(pathname, base))) {
           return true;
         }
 
