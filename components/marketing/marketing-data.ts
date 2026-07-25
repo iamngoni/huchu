@@ -17,12 +17,16 @@ import {
   type LucideIcon,
 } from "@/lib/icons";
 import {
-  FEATURE_BUNDLES,
-  type FeatureBundleDefinition,
-} from "@/lib/platform/feature-catalog";
+  MARKETING_TIERS,
+  POPULAR_TIER,
+  STARTING_MONTHLY_PRICE,
+  TRIAL_DAYS,
+  formatUsd,
+  getProductPricing,
+} from "@/lib/marketing/pricing";
 
 export const marketingNavItems = [
-  { label: "Product", href: "/home/product" },
+  { label: "Products", href: "/home/products" },
   { label: "Solutions", href: "/home/solutions" },
   { label: "Pricing", href: "/home/pricing" },
   { label: "About", href: "/home/about" },
@@ -32,15 +36,18 @@ export const marketingNavItems = [
 
 export const marketingSiteHighlights = [
   "Works offline — built for Zimbabwe",
-  "Start at $39/month",
-  "Set up in 5 minutes",
+  "Never charged per user",
+  `From ${formatUsd(STARTING_MONTHLY_PRICE)}/month`,
 ];
 
 export const proofStats = [
-  { label: "Zimbabwe businesses running on Corelith", value: "3+" },
-  { label: "Industry verticals supported", value: "12+" },
+  { label: "Industry workflows ready on day one", value: "12+" },
+  {
+    label: `People included on ${POPULAR_TIER.name}, at no extra cost`,
+    value: String(POPULAR_TIER.includedUsers ?? "Unlimited"),
+  },
   { label: "Works offline when internet drops", value: "100%" },
-  { label: "Starting price per month", value: "$39" },
+  { label: "Starting price per month", value: formatUsd(STARTING_MONTHLY_PRICE) },
 ];
 
 export const valuePillars: Array<{
@@ -251,8 +258,6 @@ export type SolutionPage = {
   startWith: string;
   expandWith: string;
   modules: string[];
-  recommendedTier: "Starter" | "Growth" | "Business";
-  defaultAddOns: string[];
   category: "all" | "high-control" | "retail" | "schools" | "services" | "multi-site";
 };
 
@@ -299,8 +304,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Buying, dispatch, receipt visibility, and settlement tracking.",
     expandWith: "Compliance, maintenance, deeper finance controls, and analytics.",
     modules: ["Buying", "Dispatch", "Receipts", "Settlement", "Reporting"],
-    recommendedTier: "Business",
-    defaultAddOns: ["ADDON_GOLD_CORE", "ADDON_GOLD_ADVANCED"],
     category: "high-control",
   },
   {
@@ -345,8 +348,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Admissions, attendance, fees, notices, and core school records.",
     expandWith: "Boarding, portals, results, reporting, and deeper finance workflows.",
     modules: ["Admissions", "Attendance", "Fees", "Portals", "Reporting"],
-    recommendedTier: "Starter",
-    defaultAddOns: ["ADDON_SCHOOLS_SUITE"],
     category: "schools",
   },
   {
@@ -391,8 +392,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "POS, stock control, receiving, cashier visibility, and shift close.",
     expandWith: "Purchasing, finance, maintenance, promotions, and broader reporting.",
     modules: ["POS", "Stock", "Receiving", "Cashier control", "Shift close"],
-    recommendedTier: "Growth",
-    defaultAddOns: ["ADDON_RETAIL_SUITE"],
     category: "retail",
   },
   {
@@ -437,8 +436,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Lead tracking, inventory visibility, and deal-stage control.",
     expandWith: "Financing support, reporting, support workflows, and broader oversight.",
     modules: ["Leads", "Inventory", "Deal stages", "Approvals", "Reporting"],
-    recommendedTier: "Starter",
-    defaultAddOns: ["ADDON_AUTOS_SUITE"],
     category: "services",
   },
   {
@@ -483,8 +480,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Buying records, yard stock visibility, and bulk sales control.",
     expandWith: "Finance, compliance, maintenance, and broader reporting.",
     modules: ["Buying", "Yard stock", "Pricing", "Bulk sales", "Reporting"],
-    recommendedTier: "Starter",
-    defaultAddOns: ["ADDON_SCRAP_METAL_SUITE"],
     category: "high-control",
   },
   {
@@ -529,8 +524,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Site visibility, role-based oversight, and shared operational controls.",
     expandWith: "Maintenance, CCTV, compliance, reporting, and deeper admin workflows.",
     modules: ["Sites", "Oversight", "People", "Controls", "Reporting"],
-    recommendedTier: "Growth",
-    defaultAddOns: ["ADDON_USER_MANAGEMENT_PRO"],
     category: "multi-site",
   },
   {
@@ -575,8 +568,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Employee directory, incidents, compensation, and payroll.",
     expandWith: "Advanced payroll, settlements, user management, and reporting.",
     modules: ["Employees", "Incidents", "Compensation", "Payroll", "Disbursements"],
-    recommendedTier: "Growth",
-    defaultAddOns: ["ADDON_ADVANCED_PAYROLL"],
     category: "services",
   },
   {
@@ -621,8 +612,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Equipment register, work orders, and breakdown tracking.",
     expandWith: "Preventive schedules, downtime analytics, and compliance integration.",
     modules: ["Equipment", "Work orders", "Breakdowns", "Scheduling", "Analytics"],
-    recommendedTier: "Growth",
-    defaultAddOns: ["ADDON_MAINTENANCE_PRO"],
     category: "services",
   },
   {
@@ -667,8 +656,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Permits, inspections, and incident tracking.",
     expandWith: "Training records, deeper reporting, and multi-site compliance.",
     modules: ["Permits", "Inspections", "Incidents", "Training", "Reporting"],
-    recommendedTier: "Growth",
-    defaultAddOns: ["ADDON_COMPLIANCE_PRO"],
     category: "high-control",
   },
   {
@@ -713,8 +700,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Camera inventory, live monitoring, and event tracking.",
     expandWith: "Playback analytics, access control, and multi-site security dashboards.",
     modules: ["Cameras", "NVRs", "Live monitor", "Playback", "Events"],
-    recommendedTier: "Business",
-    defaultAddOns: ["ADDON_CCTV_SUITE"],
     category: "multi-site",
   },
   {
@@ -759,8 +744,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Inventory tracking, movements, and receiving.",
     expandWith: "Fuel ledger, retail integration, and advanced reporting.",
     modules: ["Inventory", "Movements", "Receiving", "Issue", "Fuel ledger"],
-    recommendedTier: "Starter",
-    defaultAddOns: ["ADDON_STORES_CORE"],
     category: "retail",
   },
   {
@@ -805,8 +788,6 @@ export const solutionPages: SolutionPage[] = [
     startWith: "Bale intake, grading, and lot inventory.",
     expandWith: "Retail/wholesale sales, finance integration, and reporting.",
     modules: ["Bale intake", "Grading", "Lot inventory", "Sales", "Margins"],
-    recommendedTier: "Starter",
-    defaultAddOns: ["ADDON_RETAIL_SUITE"],
     category: "retail",
   },
 ];
@@ -938,73 +919,16 @@ export const verticalCards: Array<{
   },
 ];
 
-export const pricingTiers = [
-  {
-    tier: "Starter",
-    price: "$39",
-    sites: "1 site included",
-    extraSite: "$25 / extra site",
-    stage: "Get your first site organised",
-    bestFor: "Single-site teams.",
-    summary: "A simple starting point for one location or one focused workflow.",
-    detail: "Best when you want to replace manual tracking without taking on too much at once.",
-  },
-  {
-    tier: "Growth",
-    price: "$99",
-    sites: "3 sites included",
-    extraSite: "$35 / extra site",
-    stage: "Bring growing locations together",
-    bestFor: "Growing multi-site teams.",
-    summary: "For businesses adding branches, managers, and more day-to-day handoffs.",
-    detail: "A strong fit when separate sites need the same process and clearer reporting.",
-  },
-  {
-    tier: "Business",
-    price: "$199",
-    sites: "8 sites included",
-    extraSite: "$50 / extra site",
-    stage: "Run a broader operation with tighter oversight",
-    bestFor: "Larger groups.",
-    summary: "For larger groups that need stronger oversight across more sites and workflows.",
-    detail: "Built for broader governance, deeper controls, and phased rollout at scale.",
-  },
-];
-
 export const pricingConfidencePoints = [
-  "3 simple tiers",
-  "Start at $39/month",
-  "14-day free trial",
+  `${MARKETING_TIERS.length} plans, no per-user fees`,
+  `From ${formatUsd(STARTING_MONTHLY_PRICE)}/month`,
+  `${TRIAL_DAYS}-day free trial`,
 ];
 
 export const pricingSelectionNotes = [
   "Start with the pain point.",
   "Add sites as you grow.",
   "Upgrade anytime.",
-];
-
-export const addOns = [
-  "Extra User Pack (5 users)",
-  "Extra Site",
-  "White-label & Custom Domain",
-];
-
-export const featuredAddOns = [
-  {
-    name: "Extra User Pack",
-    price: "$19/mo",
-    note: "5 additional users for any plan.",
-  },
-  {
-    name: "Extra Site",
-    price: "$25/mo",
-    note: "1 additional location on your account.",
-  },
-  {
-    name: "White-label",
-    price: "$39/mo",
-    note: "Your logo, your colors, your domain.",
-  },
 ];
 
 export const rolloutPaths = [
@@ -1028,7 +952,8 @@ export const rolloutPaths = [
 export const trustClaims = [
   "Works offline when the internet drops — built for Zimbabwe connectivity",
   "Mobile-first — runs on any phone, tablet, or computer",
-  "Start at $39/month — less than most businesses lose to one stock error",
+  "Never priced per user — add your whole team without the bill moving",
+  `From ${formatUsd(STARTING_MONTHLY_PRICE)}/month — less than most businesses lose to one stock error`,
   "Set up in 5 minutes, not 5 days",
   "All workflows already built — retail, schools, gold, scrap, auto, maintenance, compliance",
   "Add more capability without replacing the whole system",
@@ -1043,7 +968,7 @@ export const audienceSignals = [
 ];
 
 export const demoHighlights = [
-  "Start your 14-day free trial — no credit card needed.",
+  `Start your ${TRIAL_DAYS}-day free trial — no credit card needed.`,
   "See the exact workflow that matters to your business.",
   "Add your real data in minutes, not hours.",
   "Get a practical rollout plan before you leave.",];
@@ -1062,7 +987,7 @@ export const demoOutcomeItems = [
 ];
 
 export const demoConfidencePoints = [
-  "14-day free trial, no credit card",
+  `${TRIAL_DAYS}-day free trial, no credit card`,
   "Tailored to your workflow, not a generic tour",
   "Clear next step before you leave",
 ];
@@ -1130,61 +1055,25 @@ export const moduleRegistryItems = [
   { name: "Portals", purpose: "Parent, student, teacher, and POS portals.", verticals: ["Schools", "Auto", "Retail"] },
 ];
 
-// Pricing calculator data
-export const calculatorVerticals = solutionPages.map((s) => ({
-  slug: s.slug,
-  title: s.title,
-  navLabel: s.navLabel,
-  icon: s.icon,
-  recommendedTier: s.recommendedTier,
-  defaultAddOns: s.defaultAddOns,
-}));
+/**
+ * Selector options for the pricing calculator. Commercial detail is resolved
+ * from `lib/marketing/pricing.ts` so the calculator can never quote a price the
+ * billing catalog would not honour.
+ */
+export const calculatorVerticals = solutionPages
+  .map((solution) => {
+    const pricing = getProductPricing(solution.slug);
+    if (!pricing) return null;
 
-export const calculatorAddOns: Array<{
-  code: string;
-  name: string;
-  category: string;
-  base: number;
-  perSite: number;
-}> = FEATURE_BUNDLES.filter((b) => b.monthlyPrice > 0 || b.additionalSiteMonthlyPrice > 0).map(
-  (b: FeatureBundleDefinition) => ({
-    code: b.code,
-    name: b.name,
-    category: b.name.includes("Accounting")
-      ? "Finance"
-      : b.name.includes("Gold")
-        ? "Gold"
-        : b.name.includes("School")
-        ? "Schools"
-        : b.name.includes("Retail") || b.name.includes("Portal")
-        ? "Operations"
-        : b.name.includes("CCTV")
-        ? "Security"
-        : b.name.includes("Maintenance")
-        ? "Maintenance"
-        : b.name.includes("Compliance")
-        ? "Compliance"
-        : b.name.includes("Payroll") || b.name.includes("User")
-        ? "Workforce"
-        : b.name.includes("Analytics") || b.name.includes("Branding")
-        ? "Platform"
-        : "Operations",
-    base: b.monthlyPrice,
-    perSite: b.additionalSiteMonthlyPrice,
-  }),
-);
-
-export const tierComparisonRows = [
-  { label: "Included sites", basic: "1", standard: "3", enterprise: "8" },
-  { label: "Extra site rate", basic: "$25/mo", standard: "$35/mo", enterprise: "$50/mo" },
-  { label: "Included users", basic: "2", standard: "10", enterprise: "25" },
-  { label: "Extra user pack", basic: "$19/mo", standard: "$19/mo", enterprise: "$19/mo" },
-  { label: "Core operations", basic: "Included", standard: "Included", enterprise: "Included" },
-  { label: "Vertical modules", basic: "1", standard: "3", enterprise: "All" },
-  { label: "Basic reports", basic: "Included", standard: "Included", enterprise: "Included" },
-  { label: "Advanced reports", basic: "—", standard: "Included", enterprise: "Included" },
-  { label: "Stock alerts", basic: "—", standard: "Included", enterprise: "Included" },
-  { label: "Priority support", basic: "WhatsApp", standard: "Email + WhatsApp", enterprise: "Phone + WhatsApp" },
-  { label: "Custom branding", basic: "—", standard: "—", enterprise: "Included" },
-  { label: "Offline mode", basic: "Included", standard: "Included", enterprise: "Included" },
-];
+    return {
+      slug: solution.slug,
+      title: solution.title,
+      navLabel: solution.navLabel,
+      icon: solution.icon,
+      recommendedTierName: pricing.recommendedTierName,
+      defaultAddOns: pricing.requiredAddOns.map((addOn) => addOn.code),
+      isBespoke: pricing.pricingModel === "bespoke",
+      pricingHref: pricing.pricingHref,
+    };
+  })
+  .filter((entry): entry is NonNullable<typeof entry> => entry !== null);

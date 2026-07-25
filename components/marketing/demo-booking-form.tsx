@@ -51,6 +51,27 @@ export function DemoBookingForm({
   const [resolvedSchedulerHref, setResolvedSchedulerHref] = React.useState(schedulerHref);
   const [resolvedSchedulerExternal, setResolvedSchedulerExternal] = React.useState(schedulerExternal);
 
+  // Read the query string on the client rather than via useSearchParams so the
+  // pages embedding this form stay statically renderable without a Suspense
+  // boundary at every call site.
+  const [interest, setInterest] = React.useState("");
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const students = params.get("students");
+
+    setInterest(
+      [
+        params.get("product"),
+        params.get("plan"),
+        params.get("band"),
+        students ? `${students} students` : null,
+      ]
+        .filter(Boolean)
+        .join(" / "),
+    );
+  }, []);
+
   const handleChange =
     (field: keyof DemoFormState) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -71,6 +92,9 @@ export function DemoBookingForm({
         body: JSON.stringify({
           ...form,
           source,
+          // Carries which plan/product page the visitor came from, so sales
+          // opens the call already knowing what they were looking at.
+          interest: interest || undefined,
         }),
       });
 

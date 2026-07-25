@@ -6,6 +6,7 @@ import { ArrowRight } from "@/lib/icons";
 import { PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
 import { getSolutionPage, solutionPages } from "@/components/marketing/marketing-data";
 import { MarketingSubpageShell } from "@/components/marketing/marketing-subpage-shell";
+import { ProductPricingPanel } from "@/components/marketing/product-pricing-panel";
 import { Reveal, StaggerChildren, StaggerItem } from "@/components/marketing/motion";
 import { Button } from "@/components/ui/button";
 import styles from "@/components/marketing/marketing-site.module.css";
@@ -200,37 +201,13 @@ export default async function SolutionDetailPage({ params }: SolutionDetailPageP
           </Reveal>
           <Reveal delay={0.05}>
             <h3 className="max-w-xl text-[clamp(1.9rem,3.3vw,2.9rem)] font-semibold leading-[0.98] tracking-[-0.05em] text-[#0b1945] text-balance">
-              Start free for 14 days. No credit card needed.
+              What {solution.title.toLowerCase()} costs.
             </h3>
           </Reveal>
         </div>
 
         <Reveal delay={0.1}>
-          <div className={styles.pricingHintBox}>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full bg-[#0f1f55] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white">
-                {solution.recommendedTier}
-              </span>
-              <span className="text-sm text-[#31436f]/90">
-                Recommended for {solution.title.toLowerCase()}
-              </span>
-            </div>
-            <p className="mt-3 text-sm leading-7 text-[#31436f]/90">
-              Teams in {solution.title.toLowerCase()} typically begin on the <strong>{solution.recommendedTier}</strong> tier.
-              Add more users, sites, or modules as you grow. Every plan starts with a 14-day free trial.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button asChild className="rounded-full bg-[#0f1f55] text-white hover:bg-[#1a2d6b]">
-                <Link href="/home/book-demo">
-                  Start Free Trial
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="rounded-full border-[#d6def5] bg-white text-[#0b1945] hover:bg-[#f6f8ff]">
-                <Link href="/home/pricing">View full pricing</Link>
-              </Button>
-            </div>
-          </div>
+          <ProductPricingPanel slug={solution.slug} productName={solution.title} />
         </Reveal>
       </section>
 

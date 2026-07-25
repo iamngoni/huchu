@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { Metadata } from "next";
 
 import { ArrowRight } from "@/lib/icons";
 import { PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
 import {
   guardrailCards,
   moduleRegistryItems,
@@ -19,10 +19,11 @@ import { Reveal, StaggerChildren, StaggerItem } from "@/components/marketing/mot
 import { Button } from "@/components/ui/button";
 import styles from "@/components/marketing/marketing-site.module.css";
 
-export const metadata: Metadata = {
+export const metadata = buildMarketingMetadata({
   title: "Product",
   description: `See how ${PLATFORM_BRAND_NAME} combines one shared product base with modular workflows, advanced guardrails, and a posting engine for growing businesses.`,
-};
+  path: "/home/product",
+});
 
 export default function ProductPage() {
   return (

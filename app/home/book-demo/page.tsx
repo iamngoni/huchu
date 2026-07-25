@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ArrowRight, Gem, ReceiptLong, Users, Wrench } from "@/lib/icons";
 import { getMarketingSiteConfig } from "@/lib/marketing-site";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
 import { PLATFORM_BRAND_INITIAL, PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
 import {
   demoConfidencePoints,
@@ -14,10 +14,11 @@ import { DemoBookingForm } from "@/components/marketing/demo-booking-form";
 import { Button } from "@/components/ui/button";
 import styles from "@/components/marketing/marketing-site.module.css";
 
-export const metadata: Metadata = {
+export const metadata = buildMarketingMetadata({
   title: "Book a demo",
   description: `Book a tailored ${PLATFORM_BRAND_NAME} demo focused on the workflows, sites, and reporting your business needs most.`,
-};
+  path: "/home/book-demo",
+});
 
 const walkthroughTracks = [
   {

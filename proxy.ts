@@ -28,8 +28,10 @@ const ADMIN_LOGIN_PATH = `${ADMIN_BASE_PATH}/login`;
 const ADMIN_INTERNAL_BASE_PATH = "/portal/admin";
 const ADMIN_LOGIN_API_PATH = "/api/platform-admin/login-link";
 const PORTAL_BASE_PATHS = ["/portal/parent", "/portal/student", "/portal/teacher", "/portal/pos", "/portal/admin"] as const;
+// `.xml` covers /sitemap.xml — without it the proxy redirects crawlers to the
+// admin host and the sitemap is unreachable.
 const PUBLIC_ASSET_PATTERN =
-  /\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|eot|js|json|webmanifest|txt)$/i;
+  /\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|eot|js|json|webmanifest|txt|xml)$/i;
 const PORTAL_HOME_BY_ROLE = {
   PARENT: "/portal/parent",
   STUDENT: "/portal/student",
@@ -501,7 +503,7 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/((?!api/auth|api|_next/static|_next/image|favicon.ico|manifest.json|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|eot|js|json|webmanifest|txt)).*)",
+    "/((?!api/auth|api|_next/static|_next/image|favicon.ico|manifest.json|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|eot|js|json|webmanifest|txt|xml)).*)",
     "/api/platform-admin/:path*",
     "/api/cctv/:path*",
     "/api/gold/:path*",

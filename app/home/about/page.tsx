@@ -2,10 +2,18 @@ import Link from "next/link";
 
 import { ArrowRight } from "@/lib/icons";
 import { PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
+import { STARTING_MONTHLY_PRICE, formatUsd } from "@/lib/marketing/pricing";
 import { MarketingSubpageShell } from "@/components/marketing/marketing-subpage-shell";
 import { Reveal, StaggerChildren, StaggerItem } from "@/components/marketing/motion";
 import { Button } from "@/components/ui/button";
 import styles from "@/components/marketing/marketing-site.module.css";
+
+export const metadata = buildMarketingMetadata({
+  title: "About",
+  description: `${PLATFORM_BRAND_NAME} is business software built in Zimbabwe for Zimbabwean businesses — offline-first, priced per site, and ready for your industry on day one.`,
+  path: "/home/about",
+});
 
 export default function AboutPage() {
   return (
@@ -34,7 +42,7 @@ export default function AboutPage() {
           <Reveal delay={0.1}>
             <p className="max-w-2xl text-base leading-8 text-[#2d3d66]/82">
               Zimbabwe businesses are some of the most resilient in the world. They operate through power cuts,
-              network failures, cash shortages, and policy shifts. But their tools don't match their resilience.
+              network failures, cash shortages, and policy shifts. But their tools don&apos;t match their resilience.
               Most still run on notebooks, WhatsApp groups, and memory.
             </p>
           </Reveal>
@@ -50,7 +58,7 @@ export default function AboutPage() {
         <StaggerChildren staggerDelay={0.1} className="grid gap-4 md:grid-cols-2">
           {[
             { title: "Built here", copy: "Designed and developed in Zimbabwe for Zimbabwean realities. We know the context because we live it." },
-            { title: "Fair pricing", copy: "No enterprise lock-in, no hidden fees. Starter plans from $39/month. Add what you need, when you need it." },
+            { title: "Fair pricing", copy: `No enterprise lock-in, no hidden fees, and never a per-user charge. Plans from ${formatUsd(STARTING_MONTHLY_PRICE)}/month. Add what you need, when you need it.` },
             { title: "Offline first", copy: "Works without internet. Syncs when you're back online. Because that's how Zimbabwe actually works." },
             { title: "Clear records", copy: "Every transaction logged. Every change tracked. No more arguing about what happened last Tuesday." },
           ].map((item) => (
@@ -95,7 +103,7 @@ export default function AboutPage() {
       <section className="mt-18 grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
         <div className="space-y-4">
           <Reveal>
-            <p className={styles.stripeEyebrow}>Where we're going</p>
+            <p className={styles.stripeEyebrow}>Where we&apos;re going</p>
           </Reveal>
           <Reveal delay={0.05}>
             <h3 className="max-w-xl text-[clamp(1.95rem,3.4vw,3.05rem)] font-semibold leading-[0.98] tracking-[-0.05em] text-[#0b1945] text-balance">
@@ -135,7 +143,7 @@ export default function AboutPage() {
               Want to build software that matters?
             </h3>
             <p className="max-w-2xl text-sm leading-7 text-white/74">
-              We're always looking for people who care about Zimbabwean businesses and want to build tools that make a real difference.
+              We&apos;re always looking for people who care about Zimbabwean businesses and want to build tools that make a real difference.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">

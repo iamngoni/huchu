@@ -2,10 +2,18 @@ import Link from "next/link";
 
 import { ArrowRight } from "@/lib/icons";
 import { PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
+import { buildMarketingMetadata } from "@/lib/marketing/seo";
+import { TRIAL_DAYS } from "@/lib/marketing/pricing";
 import { MarketingSubpageShell } from "@/components/marketing/marketing-subpage-shell";
 import { Reveal } from "@/components/marketing/motion";
 import { Button } from "@/components/ui/button";
 import styles from "@/components/marketing/marketing-site.module.css";
+
+export const metadata = buildMarketingMetadata({
+  title: "Contact",
+  description: `Talk to the ${PLATFORM_BRAND_NAME} team about your business. WhatsApp, email, or book a demo — we reply within two hours on business days.`,
+  path: "/home/contact",
+});
 
 export default function ContactPage() {
   return (
@@ -59,7 +67,7 @@ export default function ContactPage() {
             <div className="space-y-4">
               <p className={styles.stripeEyebrow}>Book a demo</p>
               <p className="text-sm leading-7 text-[#31436f]/84">
-                See Huchu in action. We'll walk through your workflow and show you exactly how it fits.
+                See Huchu in action. We&apos;ll walk through your workflow and show you exactly how it fits.
               </p>
               <Button asChild className="rounded-full bg-[#0f1f55] text-white hover:bg-[#1a2d6b]">
                 <Link href="/home/book-demo">
@@ -129,7 +137,7 @@ export default function ContactPage() {
           <div className="space-y-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/62">Free trial</p>
             <h3 className="max-w-2xl text-[clamp(2rem,3.7vw,3.25rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-balance">
-              Not sure yet? Try it free for 14 days.
+              Not sure yet? Try it free for {TRIAL_DAYS} days.
             </h3>
             <p className="max-w-2xl text-sm leading-7 text-white/74">
               No credit card required. Set up in 5 minutes. Cancel anytime.

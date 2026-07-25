@@ -184,14 +184,19 @@ export async function syncCommercialCatalog(): Promise<CatalogSyncResult> {
     }
 
     for (const tier of TIERS) {
+      // Annual is billed at ANNUAL_BILLING_MONTHS x the list monthly price (two
+      // months free), not 12 x — seeding 12 x would overcharge annual plans.
+      const annualPrice = tier.annualMonthlyPrice * 12;
+
       await tx.subscriptionPlan.upsert({
         where: { code: tier.code },
         update: {
           name: tier.name,
           description: tier.description,
           monthlyPrice: tier.monthlyPrice,
-          annualPrice: tier.monthlyPrice * 12,
+          annualPrice,
           maxSites: tier.includedSites,
+          maxUsers: tier.includedUsers,
           warningDays: tier.warningDays,
           graceDays: tier.graceDays,
           isActive: true,
@@ -201,8 +206,9 @@ export async function syncCommercialCatalog(): Promise<CatalogSyncResult> {
           name: tier.name,
           description: tier.description,
           monthlyPrice: tier.monthlyPrice,
-          annualPrice: tier.monthlyPrice * 12,
+          annualPrice,
           maxSites: tier.includedSites,
+          maxUsers: tier.includedUsers,
           warningDays: tier.warningDays,
           graceDays: tier.graceDays,
           currency: "USD",

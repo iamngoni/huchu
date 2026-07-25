@@ -1,6 +1,16 @@
 import Link from "next/link";
 
 import { ArrowRight, ChevronDown } from "@/lib/icons";
+import { PLATFORM_BRAND_NAME } from "@/lib/platform/brand";
+import {
+  MARKETING_TIERS,
+  POPULAR_TIER,
+  STARTING_MONTHLY_PRICE,
+  TRIAL_DAYS,
+  formatUsd,
+} from "@/lib/marketing/pricing";
+import { breadcrumbJsonLd, buildMarketingMetadata, faqJsonLd } from "@/lib/marketing/seo";
+import { JsonLd } from "@/components/marketing/json-ld";
 import { MarketingSubpageShell } from "@/components/marketing/marketing-subpage-shell";
 import { Reveal } from "@/components/marketing/motion";
 import { Button } from "@/components/ui/button";
@@ -10,11 +20,24 @@ const faqCategories = [
   {
     title: "Pricing & Plans",
     questions: [
-      { q: "How much does Corelith cost?", a: "Plans start at $39/month. Growth is $99/month. Business is $199/month. See the full pricing page for details." },
-      { q: "Is there a free trial?", a: "Yes. 14 days, no credit card required. Full access to your chosen plan." },
+      {
+        q: `How much does ${PLATFORM_BRAND_NAME} cost?`,
+        a: `${MARKETING_TIERS.map((tier) => `${tier.name} is ${formatUsd(tier.monthlyPrice)}/month`).join(". ")}. Pricing is per site, never per user. See the pricing page for a full comparison.`,
+      },
+      {
+        q: "Do you charge per user?",
+        a: `No. We charge per site, not per seat. ${POPULAR_TIER.name} covers ${POPULAR_TIER.includedUsers} people for ${formatUsd(POPULAR_TIER.monthlyPrice)}/month, so hiring another clerk does not raise your bill.`,
+      },
+      {
+        q: "Is there a free trial?",
+        a: `Yes. ${TRIAL_DAYS} days, no credit card required. Full access to your chosen plan.`,
+      },
       { q: "Is there a contract?", a: "No. Monthly billing. Cancel anytime with one click." },
       { q: "Can I change plans?", a: "Yes. Upgrade or downgrade anytime. Changes take effect on your next billing date." },
-      { q: "What's included in each plan?", a: "Starter: 1 site, 2 users, 1 module. Growth: 3 sites, 10 users, 3 modules. Business: 8 sites, 25 users, all modules. See our pricing page for a full comparison." },
+      {
+        q: "What is included in each plan?",
+        a: `${MARKETING_TIERS.map((tier) => `${tier.name}: ${tier.includedSites} ${tier.includedSites === 1 ? "site" : "sites"}, ${tier.includedUsers === null ? "unlimited" : tier.includedUsers} people`).join(". ")}. Every plan includes core operations, offline mode, and mobile access.`,
+      },
       { q: "Do you offer discounts?", a: "Annual plans get 2 months free. We also offer discounts for businesses with 3+ subscriptions." },
       { q: "What currency do you bill in?", a: "USD. We accept bank transfer, EcoCash, and mobile money." },
     ],
@@ -52,7 +75,10 @@ const faqCategories = [
     title: "Features & Usage",
     questions: [
       { q: "What modules are available?", a: "Operations, Stores & Inventory, Retail & POS, Gold, Scrap & Recycling, Schools, Auto Sales, HR & Payroll, Maintenance, Compliance, CCTV, and more." },
-      { q: "Can I use multiple modules?", a: "Yes. Growth plans include 3 modules. Business plans include all modules. You can add modules as add-ons too." },
+      {
+        q: "Can I use multiple modules?",
+        a: "Yes. Higher plans bundle more modules at no extra cost, and any module can be added to any plan as an add-on. The pricing page shows exactly which plan includes what.",
+      },
       { q: "Does it work for my specific business?", a: "If your business deals with stock, sales, people, or money across one or more locations, Corelith fits. Check our solutions page for your industry." },
       { q: "Can I customize it?", a: "Business plans include custom document templates and branding. For deeper customization, contact us." },
       { q: "Does it integrate with accounting software?", a: "Corelith has built-in accounting modules. We also support ZIMRA fiscalisation and bank reconciliation." },
@@ -69,13 +95,31 @@ const faqCategories = [
   },
 ];
 
+export const metadata = buildMarketingMetadata({
+  title: "FAQ",
+  description: `Answers about ${PLATFORM_BRAND_NAME} pricing, setup, offline mode, security, and support. Plans from ${formatUsd(STARTING_MONTHLY_PRICE)}/month with a ${TRIAL_DAYS}-day free trial.`,
+  path: "/home/faq",
+});
+
 export default function FAQPage() {
+  const allFaqs = faqCategories.flatMap((category) => category.questions);
+
   return (
-    <MarketingSubpageShell
+    <>
+      <JsonLd
+        data={[
+          faqJsonLd(allFaqs),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/home" },
+            { name: "FAQ", path: "/home/faq" },
+          ]),
+        ]}
+      />
+      <MarketingSubpageShell
       eyebrow="FAQ"
       title="Questions? We&apos;ve got answers."
       description="If you don't see your question here, WhatsApp us. We reply within 2 hours."
-      pills={["14-day trial", "No credit card", "Cancel anytime"]}
+      pills={[`${TRIAL_DAYS}-day trial`, "No credit card", "Cancel anytime"]}
       panelTitle="Quick answers"
       panelBody="Most questions are answered here. For anything else, reach out on WhatsApp or email."
       panelLinks={[
@@ -139,6 +183,7 @@ export default function FAQPage() {
           </div>
         </div>
       </section>
-    </MarketingSubpageShell>
+      </MarketingSubpageShell>
+    </>
   );
 }
