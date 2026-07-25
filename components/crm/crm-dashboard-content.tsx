@@ -51,7 +51,7 @@ export function CrmDashboardContent() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Stat label="Open leads" value={s?.pipeline.openLeads ?? "—"} />
         <Stat label="Weighted pipeline" value={s ? `$${s.pipeline.weightedValue.toLocaleString()}` : "—"} />
         <Stat label="Win rate" value={s ? `${s.funnel.winRate}%` : "—"} />
@@ -83,8 +83,8 @@ export function CrmDashboardContent() {
           {overdue.data && overdue.data.length > 0 ? (
             <ul className="divide-y divide-[var(--border)]">
               {overdue.data.map((f) => (
-                <li key={f.id} className="flex items-center justify-between py-2 text-sm">
-                  <span>
+                <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <span className="min-w-0">
                     {f.title}
                     {f.lead ? (
                       <Link href={`/crm/leads/${f.lead.id}`} className="ml-2 text-[var(--text-muted)] underline">

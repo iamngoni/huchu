@@ -138,7 +138,9 @@ export function CrmLeadsContent() {
           ))}
         </div>
 
-        <Button onClick={() => setOpen(true)}>New lead</Button>
+        <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}>
+          New lead
+        </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent>
             <DialogHeader>

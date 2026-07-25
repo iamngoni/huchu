@@ -41,8 +41,8 @@ export function CrmFollowUpsContent() {
           {(followUps.data ?? []).map((f) => {
             const overdue = new Date(f.dueAt).getTime() < now;
             return (
-              <li key={f.id} className="flex items-center justify-between p-3 text-sm">
-                <span>
+              <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                <span className="min-w-0">
                   {overdue ? <Badge variant="outline" className="mr-2 text-red-600">Overdue</Badge> : null}
                   {f.title}
                   {f.lead ? (

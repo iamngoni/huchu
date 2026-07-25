@@ -61,12 +61,12 @@ export function CrmClientsContent() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Input
           placeholder="Search clients…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
+          className="min-w-0 flex-1 basis-52 sm:max-w-sm"
         />
         <Button onClick={() => setOpen(true)}>New client</Button>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -100,36 +100,54 @@ export function CrmClientsContent() {
 
       <Card>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
-                <th className="p-3">Client</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Phone</th>
-                <th className="p-3">City</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(clients.data ?? []).map((c) => (
-                <tr key={c.id} className="border-b border-[var(--border)]">
-                  <td className="p-3">
-                    <span className="font-medium">{c.name}</span>
-                    <span className="ml-2 text-xs text-[var(--text-muted)]">{c.clientNo}</span>
-                  </td>
-                  <td className="p-3 text-[var(--text-muted)]">{c.email ?? "—"}</td>
-                  <td className="p-3 text-[var(--text-muted)]">{c.phone ?? "—"}</td>
-                  <td className="p-3 text-[var(--text-muted)]">{c.city ?? "—"}</td>
+          {/* Stacked list on phones; table from sm up. */}
+          <ul className="divide-y divide-[var(--border)] sm:hidden">
+            {(clients.data ?? []).map((c) => (
+              <li key={c.id} className="space-y-0.5 p-3 text-sm">
+                <p className="font-medium">
+                  {c.name} <span className="ml-1 text-xs font-normal text-[var(--text-muted)]">{c.clientNo}</span>
+                </p>
+                <p className="truncate text-[var(--text-muted)]">
+                  {[c.email, c.phone, c.city].filter(Boolean).join(" · ") || "No contact details"}
+                </p>
+              </li>
+            ))}
+            {clients.data && clients.data.length === 0 ? (
+              <li className="p-3 text-sm text-[var(--text-muted)]">No clients yet.</li>
+            ) : null}
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
+                  <th className="p-3">Client</th>
+                  <th className="p-3">Email</th>
+                  <th className="p-3">Phone</th>
+                  <th className="p-3">City</th>
                 </tr>
-              ))}
-              {clients.data && clients.data.length === 0 ? (
-                <tr>
-                  <td className="p-3 text-[var(--text-muted)]" colSpan={4}>
-                    No clients yet.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(clients.data ?? []).map((c) => (
+                  <tr key={c.id} className="border-b border-[var(--border)]">
+                    <td className="p-3">
+                      <span className="font-medium">{c.name}</span>
+                      <span className="ml-2 text-xs text-[var(--text-muted)]">{c.clientNo}</span>
+                    </td>
+                    <td className="p-3 text-[var(--text-muted)]">{c.email ?? "—"}</td>
+                    <td className="p-3 text-[var(--text-muted)]">{c.phone ?? "—"}</td>
+                    <td className="p-3 text-[var(--text-muted)]">{c.city ?? "—"}</td>
+                  </tr>
+                ))}
+                {clients.data && clients.data.length === 0 ? (
+                  <tr>
+                    <td className="p-3 text-[var(--text-muted)]" colSpan={4}>
+                      No clients yet.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>

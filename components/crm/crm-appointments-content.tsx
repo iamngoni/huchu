@@ -48,8 +48,8 @@ export function CrmAppointmentsContent() {
           <CardContent className="p-0">
             <ul className="divide-y divide-[var(--border)]">
               {appts.map((a) => (
-                <li key={a.id} className="flex items-center justify-between p-3 text-sm">
-                  <span>
+                <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                  <span className="min-w-0">
                     {new Date(a.scheduledStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ·{" "}
                     {a.title}
                     {a.location ? <span className="text-[var(--text-muted)]"> @ {a.location}</span> : null}

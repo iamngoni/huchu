@@ -88,11 +88,11 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Link href="/crm/forms" className="text-sm text-[var(--text-muted)] underline">
           ← All forms
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {saved ? <span className="text-sm text-green-600">Saved</span> : null}
           {form.data ? (
             <button
@@ -136,9 +136,9 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
         </CardHeader>
         <CardContent className="space-y-2">
           {services.map((service, index) => (
-            <div key={index} className="grid grid-cols-12 gap-2">
+            <div key={index} className="grid grid-cols-6 gap-2 sm:grid-cols-12">
               <Input
-                className="col-span-4"
+                className="col-span-2 sm:col-span-4"
                 value={service.id}
                 onChange={(e) => {
                   const next = [...services];
@@ -147,7 +147,7 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
                 }}
               />
               <Input
-                className="col-span-7"
+                className="col-span-3 sm:col-span-7"
                 value={service.label}
                 onChange={(e) => {
                   const next = [...services];
@@ -177,9 +177,9 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
         </CardHeader>
         <CardContent className="space-y-3">
           {fields.map((field, index) => (
-            <div key={index} className="grid grid-cols-12 items-center gap-2">
+            <div key={index} className="grid grid-cols-6 items-center gap-2 sm:grid-cols-12">
               <Input
-                className="col-span-3"
+                className="col-span-3 sm:col-span-3"
                 placeholder="key"
                 value={field.key}
                 onChange={(e) => {
@@ -189,7 +189,7 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
                 }}
               />
               <Input
-                className="col-span-4"
+                className="col-span-3 sm:col-span-4"
                 placeholder="Label"
                 value={field.label}
                 onChange={(e) => {
@@ -206,7 +206,7 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
                   setFields(next);
                 }}
               >
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger className="col-span-3 sm:col-span-3">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -217,7 +217,7 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
                   ))}
                 </SelectContent>
               </Select>
-              <label className="col-span-1 flex items-center gap-1 text-xs">
+              <label className="col-span-2 flex items-center gap-1 text-xs sm:col-span-1">
                 <input
                   type="checkbox"
                   checked={field.required}
@@ -230,7 +230,7 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
                 req
               </label>
               <Button
-                className="col-span-1"
+                className="col-span-1 justify-self-end sm:justify-self-auto"
                 variant="ghost"
                 size="sm"
                 onClick={() => setFields(fields.filter((_, i) => i !== index))}

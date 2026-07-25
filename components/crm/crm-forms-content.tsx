@@ -47,8 +47,8 @@ export function CrmFormsContent() {
         <CardContent className="p-0">
           <ul className="divide-y divide-[var(--border)]">
             {(forms.data ?? []).map((f) => (
-              <li key={f.id} className="flex items-center justify-between p-3 text-sm">
-                <span>
+              <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                <span className="min-w-0">
                   <button className="font-medium underline" onClick={() => router.push(`/crm/forms/${f.id}`)}>
                     {f.name}
                   </button>

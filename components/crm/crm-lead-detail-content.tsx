@@ -106,7 +106,7 @@ export function CrmLeadDetailContent({ leadId }: { leadId: string }) {
             {data.leadNo} · {data.client?.name ?? "No client"} · {data.assignedTo?.name ?? "Unassigned"}
           </p>
         </div>
-        <div className="text-right">
+        <div className="sm:text-right">
           {data.estimatedValue ? (
             <p className="text-lg font-semibold">
               {data.currency} {data.estimatedValue.toLocaleString()}
@@ -130,12 +130,14 @@ export function CrmLeadDetailContent({ leadId }: { leadId: string }) {
       </div>
 
       <Tabs defaultValue="timeline">
-        <TabsList>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="followups">Follow-ups</TabsTrigger>
-          <TabsTrigger value="visits">Site Visits</TabsTrigger>
-        </TabsList>
+        <div className="scroll-rail max-w-full">
+          <TabsList>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="followups">Follow-ups</TabsTrigger>
+            <TabsTrigger value="visits">Site Visits</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="timeline">
           <div className="space-y-4">
@@ -228,9 +230,9 @@ function LineEditor({ lines, setLines }: { lines: LineDraft[]; setLines: (l: Lin
   return (
     <div className="space-y-2">
       {lines.map((line, index) => (
-        <div key={index} className="grid grid-cols-12 gap-2">
+        <div key={index} className="grid grid-cols-4 gap-2 sm:grid-cols-12">
           <Input
-            className="col-span-6"
+            className="col-span-4 sm:col-span-6"
             placeholder="Description"
             value={line.description}
             onChange={(e) => {
@@ -240,7 +242,7 @@ function LineEditor({ lines, setLines }: { lines: LineDraft[]; setLines: (l: Lin
             }}
           />
           <Input
-            className="col-span-3"
+            className="col-span-2 sm:col-span-3"
             type="number"
             placeholder="Qty"
             value={line.quantity}
@@ -251,7 +253,7 @@ function LineEditor({ lines, setLines }: { lines: LineDraft[]; setLines: (l: Lin
             }}
           />
           <Input
-            className="col-span-3"
+            className="col-span-2 sm:col-span-3"
             type="number"
             placeholder="Unit price"
             value={line.unitPrice}
@@ -364,7 +366,7 @@ function DocumentsTab({ lead, onChange }: { lead: LeadDetail; onChange: () => vo
 
         <ul className="divide-y divide-[var(--border)]">
           {lead.documents.map((doc) => (
-            <li key={doc.id} className="flex items-center justify-between py-2 text-sm">
+            <li key={doc.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
               <span>
                 <Badge variant="outline">{doc.type}</Badge>{" "}
                 <span className="text-[var(--text-muted)]">
@@ -440,7 +442,7 @@ function FollowUpsTab({
   return (
     <Card>
       <CardContent className="space-y-4 p-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
           <Input placeholder="Follow-up…" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
           <Button onClick={() => add.mutate()} disabled={!title || !dueAt || add.isPending}>
@@ -449,7 +451,7 @@ function FollowUpsTab({
         </div>
         <ul className="divide-y divide-[var(--border)]">
           {followUps.map((f) => (
-            <li key={f.id} className="flex items-center justify-between py-2 text-sm">
+            <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
               <span className={f.status === "COMPLETED" ? "line-through text-[var(--text-muted)]" : ""}>
                 {f.title} · {new Date(f.dueAt).toLocaleString()}
               </span>
@@ -503,7 +505,7 @@ function VisitsTab({
   return (
     <Card>
       <CardContent className="space-y-4 p-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
           <Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
           <Input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} />
           <Button onClick={() => book.mutate()} disabled={!start || book.isPending}>
@@ -512,7 +514,7 @@ function VisitsTab({
         </div>
         <ul className="divide-y divide-[var(--border)]">
           {appointments.map((a) => (
-            <li key={a.id} className="flex items-center justify-between py-2 text-sm">
+            <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
               <span>
                 {a.appointmentNo} · {new Date(a.scheduledStart).toLocaleString()}
               </span>

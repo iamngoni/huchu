@@ -54,7 +54,8 @@ export function CrmInsightsContent() {
           <CardTitle>Per-rep performance</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
                 <th className="p-3">Rep</th>
@@ -87,6 +88,7 @@ export function CrmInsightsContent() {
               ) : null}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 
@@ -95,7 +97,8 @@ export function CrmInsightsContent() {
           <CardTitle>Lead channels</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
                 <th className="p-3">Channel</th>
@@ -122,6 +125,7 @@ export function CrmInsightsContent() {
               ) : null}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 
@@ -130,7 +134,8 @@ export function CrmInsightsContent() {
           <CardTitle>Source & campaign attribution</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
                 <th className="p-3">Source</th>
@@ -161,6 +166,7 @@ export function CrmInsightsContent() {
               ) : null}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
     </div>

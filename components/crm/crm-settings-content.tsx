@@ -111,8 +111,8 @@ function ApiKeysPanel() {
         ) : null}
         <ul className="divide-y divide-[var(--border)]">
           {(keys.data ?? []).map((k) => (
-            <li key={k.id} className="flex items-center justify-between py-2 text-sm">
-              <span>
+            <li key={k.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <span className="min-w-0 break-all">
                 {k.name} <code className="text-[var(--text-muted)]">{k.keyPrefix}…</code>
                 {k.revokedAt ? <Badge variant="outline" className="ml-2">Revoked</Badge> : null}
               </span>
@@ -279,7 +279,7 @@ function CommissionsPanel() {
         <CardTitle className="text-base">Commission rules</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div>
             <Label htmlFor="rule-name">Rule name</Label>
             <Input id="rule-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -365,11 +365,13 @@ function CommissionsPanel() {
 export function CrmSettingsContent() {
   return (
     <Tabs defaultValue="keys">
-      <TabsList>
-        <TabsTrigger value="keys">API Keys</TabsTrigger>
-        <TabsTrigger value="sources">Lead Sources</TabsTrigger>
-        <TabsTrigger value="commissions">Commissions</TabsTrigger>
-      </TabsList>
+      <div className="scroll-rail max-w-full">
+        <TabsList>
+          <TabsTrigger value="keys">API Keys</TabsTrigger>
+          <TabsTrigger value="sources">Lead Sources</TabsTrigger>
+          <TabsTrigger value="commissions">Commissions</TabsTrigger>
+        </TabsList>
+      </div>
       <TabsContent value="keys">
         <ApiKeysPanel />
       </TabsContent>
