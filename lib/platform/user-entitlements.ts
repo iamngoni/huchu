@@ -203,6 +203,12 @@ export type ManagedUserRole =
   | "FINANCE_OFFICER"
   | "SHOP_MANAGER"
   | "CASHIER"
+  | "STOCK_CLERK"
+  | "SALES_REP";
+export type ManagedUserFeatureBlockedReason =
+  | "COMPANY_DISABLED"
+  | "TEMPLATE_BLOCKED";
+
   | "STOCK_CLERK";
 export type ManagedUserFeatureAccessEntry = {
   featureKey: string;

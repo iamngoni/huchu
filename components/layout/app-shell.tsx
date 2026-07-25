@@ -40,15 +40,15 @@ export function AppShell({
     <PageActionsProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="m-2 flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden rounded-xl border bg-surface-base shadow-sm">
+        <SidebarInset className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-surface-base md:m-2 md:h-[calc(100dvh-1rem)] md:min-h-[calc(100dvh-1rem)] md:rounded-xl md:border md:shadow-sm">
           <Navbar />
           <main
             className={
               isCctvRoute
                 ? "min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] py-0"
                 : isScrapRoute
-                  ? "content-shell min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] py-4 md:py-6"
-                  : "content-shell min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] py-6"
+                  ? "content-shell min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:py-6"
+                  : "content-shell min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:py-6"
             }
           >
             <OnboardingProvider>{children}</OnboardingProvider>

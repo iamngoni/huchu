@@ -18,6 +18,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 import { matchesNavHref } from "./sidebar-helpers";
@@ -37,6 +38,11 @@ export function SidebarQuickActions({
   pathname: string;
   view: string | null;
 }) {
+  const { setOpenMobile } = useSidebar();
+  const closeMobileNav = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+
   if (items.length === 0 && quickActions.length === 0) return null;
 
   return (
@@ -60,7 +66,7 @@ export function SidebarQuickActions({
                       "data-[active=true]:border-[var(--sidebar-item-active-border)] data-[active=true]:bg-[var(--sidebar-item-active-bg)] data-[active=true]:text-[var(--sidebar-item-active-fg)] data-[active=true]:shadow-[inset_0_0_0_1px_var(--sidebar-item-active-border)]",
                     )}
                   >
-                    <Link href={item.href}>
+                    <Link href={item.href} onClick={closeMobileNav}>
                       <item.icon
                         className={cn(
                           "h-4 w-4 transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)]",
@@ -107,6 +113,7 @@ export function SidebarQuickActions({
                                 >
                                   <Link
                                     href={quickAction.href}
+                                    onClick={closeMobileNav}
                                     className={
                                       quickActionActive
                                         ? "bg-[var(--sidebar-item-active-bg)] text-[var(--sidebar-item-active-fg)]"

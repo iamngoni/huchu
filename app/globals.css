@@ -392,8 +392,9 @@
   --icon-size-lg:    1.25rem;
   --icon-size-xl:    1.5rem;
 
-  --content-gutter-x:  1.5rem;
-  --section-gutter-x:  1.5rem;
+  /* Mobile-first gutters; widened for tablet/desktop below. */
+  --content-gutter-x:  1rem;
+  --section-gutter-x:  1rem;
   --table-gutter-x:    0.75rem;
   --table-row-min-h:   3rem;
   --table-head-min-h:  2.5rem;
@@ -506,6 +507,13 @@
   --scrollbar-track: transparent;
   --scrollbar-thumb: var(--neutral-300);
   --scrollbar-thumb-hover: var(--neutral-400);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --content-gutter-x: 1.5rem;
+    --section-gutter-x: 1.5rem;
+  }
 }
 
 /* ── Body Styles ────────────────────────────────────────────────────────── */

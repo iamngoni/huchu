@@ -32,11 +32,37 @@ export type DashboardPayload = {
   notes?: string[];
 };
 
+export type PartyBlock = {
+  title: string;
+  lines: string[];
+};
+
+export type TotalsRow = {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+};
+
+export type DocumentBadgeTone = "positive" | "warning" | "negative" | "neutral";
+
+export type DocumentBadge = {
+  label: string;
+  tone: DocumentBadgeTone;
+};
+
 export type UniversalDocumentPayload = {
   title: string;
   subtitle?: string;
   fileName?: string;
   meta?: DocumentMeta[];
+  /** From / Bill To blocks for financial documents. */
+  parties?: PartyBlock[];
+  /** Right-aligned totals ladder (Subtotal → Tax → Total → Paid → Balance). */
+  totals?: TotalsRow[];
+  /** Document status chip rendered next to the title (PAID, DRAFT, …). */
+  badge?: DocumentBadge;
+  /** Free-form notes / terms rendered after the line items. */
+  notes?: string[];
   list?: ListPayload;
   record?: RecordPayload;
   dashboard?: DashboardPayload;

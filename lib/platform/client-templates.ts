@@ -276,6 +276,44 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
     ],
   },
   {
+    code: "TEMPLATE_CRM",
+    label: "Sales & CRM",
+    description: "Lead-to-cash CRM with pipeline, site visits, intake forms, quoting/invoicing, and commissions for sales-led businesses.",
+    targetClients: ["Field-sales businesses", "Installers & fitters", "Service sales teams"],
+    recommendedTierCode: "STANDARD",
+    bundleCodes: [
+      "ADDON_CRM_SUITE",
+      "ADDON_ACCOUNTING_CORE",
+      "ADDON_ACCOUNTING_ADVANCED",
+      "ADDON_WORKFORCE_CORE",
+    ],
+    featureKeys: [],
+    verticalProductId: "crm-sales",
+    disabledFeatureKeys: [
+      ...MINE_DAILY_OPS_FEATURE_KEYS,
+      "stores.fuel-ledger",
+      "schools.core",
+      "autos.core",
+      "retail.core",
+      "gold.home",
+      "gold.intake.pours",
+      "gold.dispatches",
+      "gold.receipts",
+      "gold.reconciliation",
+      "gold.exceptions",
+      "gold.audit-trail",
+      "gold.payouts",
+      "scrap-metal.home",
+      "scrap-metal.purchases",
+      "scrap-metal.batches",
+      "scrap-metal.sales",
+      "scrap-metal.pricing",
+      "portal.schools",
+      "portal.autos",
+      "portal.pos",
+    ],
+  },
+  {
     code: "TEMPLATE_ALL_FEATURES",
     label: "All Features",
     description: "Enable every feature in the platform catalog for complex or custom enterprise estates.",
@@ -300,6 +338,8 @@ const TEMPLATE_ALIASES: Record<string, string> = {
   CAR_SALES: "TEMPLATE_CAR_SALES",
   THRIFT: "TEMPLATE_RETAIL",
   RETAIL: "TEMPLATE_RETAIL",
+  CRM: "TEMPLATE_CRM",
+  SALES: "TEMPLATE_CRM",
   FULL: "TEMPLATE_ALL_FEATURES",
   ALL: "TEMPLATE_ALL_FEATURES",
 };
@@ -411,6 +451,7 @@ export function getClientTemplateWorkspaceProfile(code: string | null | undefine
       return "AUTOS";
     case "TEMPLATE_RETAIL":
       return "RETAIL";
+    case "TEMPLATE_CRM":
     case "TEMPLATE_CORE_STARTER":
     case "TEMPLATE_SMALL_BUSINESS_SECURITY_STOCK":
     case "TEMPLATE_TECH_WORKSHOP":

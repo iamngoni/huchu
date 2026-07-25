@@ -31,6 +31,7 @@ export const USER_ROLE_LABELS: Partial<Record<UserRole, string>> = {
   SHOP_MANAGER: "Shop Manager",
   CASHIER: "Cashier",
   STOCK_CLERK: "Stock Clerk",
+  SALES_REP: "Sales Rep",
 };
 
 export const VERTICAL_ROLE_REGISTRY: Record<ManagedWorkspaceProfile, VerticalRoleRegistration> = {
@@ -39,7 +40,7 @@ export const VERTICAL_ROLE_REGISTRY: Record<ManagedWorkspaceProfile, VerticalRol
   AUTOS: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "AUTO_MANAGER", "SALES_EXEC", "FINANCE_OFFICER"] },
   RETAIL: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "SHOP_MANAGER", "CASHIER", "STOCK_CLERK", "FINANCE_OFFICER"] },
   SCHOOLS: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "FINANCE_OFFICER"] },
-  GENERAL: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "OPERATOR", "FINANCE_OFFICER"] },
+  GENERAL: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "OPERATOR", "FINANCE_OFFICER", "SALES_REP"] },
 };
 
 export const FEATURE_ROLE_REGISTRY: FeatureRoleRegistration[] = [

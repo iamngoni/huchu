@@ -10,6 +10,7 @@ import {
 } from "@/lib/platform/tenant";
 import { isAdminPortalHost, isSuperuserRole } from "@/lib/admin-portal";
 import { isAuthExpired } from "@/lib/auth-core/session-policy";
+import { isRouteAllowedForRole } from "@/lib/auth-core/role-routes";
 import type { AuthGuardResult, AuthenticatedSession } from "@/lib/auth-core/types";
 
 type ResolveAccessContextOptions = {
@@ -121,6 +122,19 @@ export async function resolveAccessContext(options: ResolveAccessContextOptions)
           };
         }
       }
+    }
+
+    // Role-level route pinning (e.g. SALES_REP → CRM only). Enforced before
+    // the feature check and independent of it, so a restricted role can never
+    // reach a module its tenant happens to have enabled.
+    if (pathname && !isRouteAllowedForRole(session.user.role, pathname)) {
+      return {
+        ok: false,
+        reason: "ROLE_ROUTE_RESTRICTED",
+        status: 403,
+        message: "This area is not available for your role.",
+        path: pathname,
+      };
     }
 
     if (pathname && enforceRouteFeatureCheck) {

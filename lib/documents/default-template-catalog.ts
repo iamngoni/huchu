@@ -153,7 +153,7 @@ export const DEFAULT_TEMPLATE_CATALOG: DefaultTemplateCatalogEntry[] = [
     targetType: "RECORD",
     name: "Sales Invoice Default",
     description: "Default branded sales invoice layout.",
-    schema: recordTemplate("Sales Invoice"),
+    schema: recordTemplate("Invoice"),
   },
   {
     key: "accounting.sales.quotation",
@@ -162,7 +162,7 @@ export const DEFAULT_TEMPLATE_CATALOG: DefaultTemplateCatalogEntry[] = [
     targetType: "RECORD",
     name: "Sales Quotation Default",
     description: "Default branded sales quotation layout.",
-    schema: recordTemplate("Sales Quotation"),
+    schema: recordTemplate("Quotation"),
   },
   {
     key: "accounting.sales.receipt",
@@ -171,7 +171,16 @@ export const DEFAULT_TEMPLATE_CATALOG: DefaultTemplateCatalogEntry[] = [
     targetType: "RECORD",
     name: "Sales Receipt Default",
     description: "Default branded sales receipt layout.",
-    schema: recordTemplate("Sales Receipt"),
+    schema: recordTemplate("Payment Receipt"),
+  },
+  {
+    key: "accounting.sales.credit-note",
+    sourceKey: "accounting.sales.credit-note",
+    documentType: "GENERIC_RECORD",
+    targetType: "RECORD",
+    name: "Credit Note Default",
+    description: "Default branded credit note layout.",
+    schema: recordTemplate("Credit Note"),
   },
   {
     key: "scrap-metal.purchase-ticket",

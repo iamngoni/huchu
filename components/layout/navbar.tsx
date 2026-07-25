@@ -45,16 +45,17 @@ export function Navbar() {
   const currentTitle = getCurrentPageTitle(pathname, view);
 
   return (
-    <header className="sticky top-0 z-20 h-14 max-h-14 bg-surface-base  backdrop-blur-md">
+    <header className="sticky top-0 z-20 bg-surface-base pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="px-2 h-14 lg:pr-4">
         <>
-          <div className="flex h-14 items-center gap-2 md:hidden">
+          <div className="flex h-14 items-center gap-1.5 md:hidden">
             <SidebarTrigger />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-foreground">
                 {currentTitle}
               </p>
             </div>
+            {showNotificationCenter ? <NotificationCenter /> : null}
             <MobileNavbarActions actions={actions} />
           </div>
 

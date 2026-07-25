@@ -26,6 +26,16 @@ export const uploadPolicies = {
     maxBytes: 8 * MB,
     folder: "scrap-sale-ticket-photos",
   },
+  "crm-intake-photo": {
+    allowedTypes: ["image/jpeg", "image/png", "image/webp"],
+    maxBytes: 8 * MB,
+    folder: "crm-intake-photos",
+  },
+  "crm-attachment": {
+    allowedTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
+    maxBytes: 10 * MB,
+    folder: "crm-attachments",
+  },
 } as const
 
 export type UploadContext = keyof typeof uploadPolicies

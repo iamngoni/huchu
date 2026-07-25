@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma"
 
 type DbClient = Prisma.TransactionClient | PrismaClient
 
-type NotificationCategory = "HR" | "OPS"
+type NotificationCategory = "HR" | "OPS" | "CRM"
 
 export type NotificationActionDescriptor = {
   key: string
@@ -1316,4 +1316,39 @@ export async function emitGoldDispatchReceiptedNotification(args: {
   } catch (error) {
     console.error("[Notifications] emitGoldDispatchReceiptedNotification failed:", error)
   }
+}
+
+export async function emitCrmNotification(args: {
+  companyId: string
+  recipientIds: string[]
+  type: NotificationType
+  title: string
+  summary: string
+  leadId?: string
+  viewPath: string
+  severity?: NotificationSeverity
+}): Promise<void> {
+  try {
+    const recipientIds = args.recipientIds.filter(Boolean)
+    if (recipientIds.length === 0) return
+    await createNotification(prisma, {
+      companyId: args.companyId,
+      type: args.type,
+      title: args.title,
+      summary: args.summary,
+      severity: args.severity ?? NotificationSeverity.INFO,
+      category: "CRM",
+      recipientIds,
+      payload: { leadId: args.leadId, viewPath: args.viewPath },
+      entityType: NotificationEntityType.CRM_LEAD,
+      entityId: args.leadId,
+      sourceAction: NotificationSourceAction.STATUS_CHANGE,
+    })
+  } catch (error) {
+    console.error("[Notifications] emitCrmNotification failed:", error)
+  }
+}
+
+export async function getCrmManagerRecipients(companyId: string, excludeId?: string): Promise<string[]> {
+  return getManagerIds(companyId, excludeId)
 }

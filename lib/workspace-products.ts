@@ -32,6 +32,7 @@ export type VerticalProductId =
   | "school-operations"
   | "auto-sales"
   | "retail-operations"
+  | "crm-sales"
   | "service-workshop"
   | "multi-site-operations"
   | "general-business";
@@ -281,6 +282,25 @@ export const VERTICAL_PRODUCT_BUNDLES: VerticalProductBundleDefinition[] = [
     },
   },
   {
+    id: "crm-sales",
+    label: "Sales & CRM",
+    workspaceLabel: "Sales & CRM",
+    description: "",
+    customerExamples: ["Field-sales teams", "Installers & fitters", "Service sales businesses"],
+    templateCodes: ["TEMPLATE_CRM"],
+    preferredHomeHref: "/crm",
+    primaryModules: ["crm", "reporting"],
+    foundationalModules: ["accounting", "hr", "management"],
+    moduleCopy: {
+      accounting: {
+        description: "",
+      },
+      hr: {
+        description: "",
+      },
+    },
+  },
+  {
     id: "service-workshop",
     label: "Service Workshop",
     workspaceLabel: "Service Workshop",
@@ -418,6 +438,10 @@ export function inferWorkspaceProfileFromEnabledFeatures(
 }
 
 function resolveGeneralVerticalProduct(enabledFeatures: string[] | undefined): VerticalProductId {
+  if (hasTokenFeature(enabledFeatures, "crm.core")) {
+    return "crm-sales";
+  }
+
   const hasMultiSiteSignals =
     hasTokenFeature(enabledFeatures, "cctv.overview") &&
     hasTokenFeature(enabledFeatures, "stores.inventory") &&

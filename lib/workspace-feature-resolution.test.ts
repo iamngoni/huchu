@@ -152,6 +152,37 @@ describe("vertical product resolution", () => {
     });
     expect(bundle.id).toBe("service-workshop");
   });
+
+  it("resolves crm-sales from the CRM template features (before generic products)", () => {
+    const bundle = resolveWorkspaceVerticalProductBundle({
+      workspaceProfile: "GENERAL",
+      enabledFeatures: templateFeatures("TEMPLATE_CRM"),
+    });
+    expect(bundle.id).toBe("crm-sales");
+  });
+});
+
+describe("crm template", () => {
+  it("grants crm.* and the accounting features it depends on, but no foreign verticals", () => {
+    const keys = templateFeatures("TEMPLATE_CRM");
+    expect(keys).toContain("crm.core");
+    expect(keys).toContain("crm.documents");
+    expect(keys).toContain("accounting.ar");
+    for (const key of MINE_DAILY_OPS_FEATURE_KEYS) {
+      expect(keys).not.toContain(key);
+    }
+    expect(keys.some((key) => key.startsWith("gold."))).toBe(false);
+    expect(keys.some((key) => key.startsWith("scrap-metal."))).toBe(false);
+    expect(keys).not.toContain("schools.core");
+    expect(keys).not.toContain("autos.core");
+    expect(keys).not.toContain("retail.core");
+  });
+
+  it("does not leak crm.* features into other templates", () => {
+    for (const code of ["TEMPLATE_CORE_STARTER", "TEMPLATE_SCHOOLS", "TEMPLATE_RETAIL", "TEMPLATE_GOLD_MINE"]) {
+      expect(templateFeatures(code).some((key) => key.startsWith("crm."))).toBe(false);
+    }
+  });
 });
 
 describe("primary quick actions", () => {
@@ -163,6 +194,7 @@ describe("primary quick actions", () => {
     ["TEMPLATE_CAR_SALES", "AUTOS"],
     ["TEMPLATE_RETAIL", "RETAIL"],
     ["TEMPLATE_SCRAP_METAL", "SCRAP_METAL"],
+    ["TEMPLATE_CRM", "GENERAL"],
   ];
 
   it.each(nonMiningCases)("%s offers no mining quick actions", (code, profile) => {
