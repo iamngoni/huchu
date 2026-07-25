@@ -1,6 +1,5 @@
-import { UserManagementConsole } from "@/components/user-management/user-management-console";
+import { redirect } from "next/navigation";
 
 export default function ManagementUsersRoleChangePage() {
-  return <UserManagementConsole mode="role-change" />;
+  redirect("/preferences/organization/users");
 }
-

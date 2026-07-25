@@ -10,7 +10,6 @@ import {
   MedusaCircleSlidersIcon,
   MedusaCircleStackIcon,
   MedusaIdBadgeIcon,
-  MedusaBuildingsIcon,
   RefreshCcw,
   ShieldCheck,
   UserCheck,
@@ -45,9 +44,9 @@ export const managementModuleItems: ManagementModuleItem[] = [
   {
     id: "branding",
     label: "Branding",
-    href: "/settings/branding/identity",
+    href: "/preferences/organization/branding/identity",
     icon: MedusaCircleSlidersIcon,
-    matchPrefixes: ["/settings/branding"],
+    matchPrefixes: ["/settings/branding", "/preferences/organization/branding"],
   },
   {
     id: "master-data",
@@ -66,30 +65,28 @@ export const managementModuleItems: ManagementModuleItem[] = [
   {
     id: "users",
     label: "Users",
-    href: "/management/users",
+    href: "/preferences/organization/users",
     icon: MedusaIdBadgeIcon,
-    matchPrefixes: ["/management/users", "/user-management"],
+    matchPrefixes: ["/management/users", "/user-management", "/preferences/organization/users"],
   },
   {
     id: "document-templates",
     label: "Document Templates",
-    href: "/settings/templates",
+    href: "/preferences/organization/templates",
     icon: MedusaBookOpenIcon,
-    matchPrefixes: ["/settings/templates"],
+    matchPrefixes: ["/settings/templates", "/preferences/organization/templates"],
   },
 ];
 
 const areaNavItems: Record<ManagementArea, ManagementNavItem[]> = {
   branding: [
-    { id: "identity", label: "Identity & Theme", href: "/settings/branding/identity", icon: Building2 },
-    { id: "assets", label: "Assets & Contact", href: "/settings/branding/assets", icon: Grid3x3 },
-    { id: "finance", label: "Finance & Defaults", href: "/settings/branding/finance", icon: Coins },
+    { id: "identity", label: "Identity & Theme", href: "/preferences/organization/branding/identity", icon: Building2 },
+    { id: "assets", label: "Assets & Contact", href: "/preferences/organization/branding/assets", icon: Grid3x3 },
+    { id: "finance", label: "Finance & Defaults", href: "/preferences/organization/branding/finance", icon: Coins },
   ],
   "master-data": [
     { id: "overview", label: "Overview", href: "/management/master-data", icon: Grid3x3 },
-    { id: "departments", label: "Departments", href: "/management/master-data/hr/departments", icon: Users },
     { id: "job-grades", label: "Job Grades", href: "/management/master-data/hr/job-grades", icon: UserCheck },
-    { id: "sites", label: "Sites", href: "/management/master-data/operations/sites", icon: MedusaBuildingsIcon },
     { id: "sections", label: "Sections", href: "/management/master-data/operations/sections", icon: Dataset },
     {
       id: "downtime-codes",
@@ -126,19 +123,19 @@ const areaNavItems: Record<ManagementArea, ManagementNavItem[]> = {
     { id: "training", label: "Training", href: "/compliance/training", icon: MedusaBookOpenIcon },
   ],
   users: [
-    { id: "directory", label: "Directory", href: "/management/users", icon: MedusaIdBadgeIcon },
-    { id: "create", label: "Create User", href: "/management/users/create", icon: Users },
-    { id: "status", label: "User Status", href: "/management/users/status", icon: ShieldCheck },
+    { id: "directory", label: "Directory", href: "/preferences/organization/users", icon: MedusaIdBadgeIcon },
+    { id: "create", label: "Create User", href: "/preferences/organization/users", icon: Users },
+    { id: "status", label: "User Status", href: "/preferences/organization/users", icon: ShieldCheck },
     {
       id: "password-reset",
       label: "Password Reset",
-      href: "/management/users/password-reset",
+      href: "/preferences/organization/users",
       icon: RefreshCcw,
     },
-    { id: "role-change", label: "Role Change", href: "/management/users/role-change", icon: UserCheck },
+    { id: "role-change", label: "Role Change", href: "/preferences/organization/users", icon: UserCheck },
   ],
   "document-templates": [
-    { id: "library", label: "Template Library", href: "/settings/templates", icon: MedusaBookOpenIcon },
+    { id: "library", label: "Template Library", href: "/preferences/organization/templates", icon: MedusaBookOpenIcon },
   ],
 };
 

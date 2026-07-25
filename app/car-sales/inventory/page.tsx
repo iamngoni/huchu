@@ -1,6 +1,5 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
 import { CarSalesInventoryContent } from "@/components/car-sales/inventory/car-sales-inventory-content";
 import { authOptions } from "@/lib/auth";
 
@@ -10,12 +9,5 @@ export default async function CarSalesInventoryPage() {
     redirect("/login");
   }
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading
-        title="Auto Inventory"
-      />
-      <CarSalesInventoryContent />
-    </div>
-  );
+  return <CarSalesInventoryContent />;
 }

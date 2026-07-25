@@ -603,7 +603,7 @@ function RoleStep({
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <FieldLabel>Department</FieldLabel>
-            <Link href="/management/master-data/hr/departments" className="text-xs text-primary hover:underline">
+            <Link href="/preferences/organization/departments" className="text-xs text-primary hover:underline">
               Manage
             </Link>
           </div>

@@ -1,6 +1,5 @@
-import { BrandingSettingsSection } from "@/components/settings/branding/branding-settings-section";
+import { redirect } from "next/navigation";
 
 export default function BrandingAssetsPage() {
-  return <BrandingSettingsSection section="assets" />;
+  redirect("/preferences/organization/branding/assets");
 }
-

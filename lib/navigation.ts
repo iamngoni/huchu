@@ -371,7 +371,7 @@ export const navSections: NavSection[] = [
         roles: ["SUPERADMIN", "MANAGER"],
       },
       {
-        href: "/management/users",
+        href: "/preferences/organization/users",
         icon: UserRound,
         label: "Users",
         roles: ["SUPERADMIN", "MANAGER"],
@@ -383,13 +383,13 @@ export const navSections: NavSection[] = [
         roles: ["SUPERADMIN", "MANAGER"],
       },
       {
-        href: "/settings/branding",
+        href: "/preferences/organization/branding/identity",
         icon: Building2,
         label: "Branding",
         roles: ["SUPERADMIN", "MANAGER"],
       },
       {
-        href: "/settings/templates",
+        href: "/preferences/organization/templates",
         icon: FileText,
         label: "Document Templates",
         roles: ["SUPERADMIN", "MANAGER"],

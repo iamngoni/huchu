@@ -62,7 +62,7 @@ export function SidebarAccountMenu({
               className="w-[min(22rem,calc(100vw-1rem))] rounded-2xl border border-[var(--edge-default)] bg-[var(--surface-base)] p-0 shadow-[var(--elevation-3)]"
             >
               <DropdownMenuItem asChild className="px-4 py-2.5 text-[14px]">
-                <Link href="/settings/branding">
+                <Link href="/preferences">
                   <MedusaCogSixToothIcon className="h-4 w-4" />
                   Preferences
                 </Link>
@@ -74,7 +74,7 @@ export function SidebarAccountMenu({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="px-4 py-2.5 text-[14px]">
-                <Link href="/management/users">
+                <Link href="/preferences/organization/users">
                   <MedusaIdBadgeIcon className="h-4 w-4" />
                   People & access
                 </Link>

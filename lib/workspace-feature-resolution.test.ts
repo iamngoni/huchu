@@ -208,4 +208,22 @@ describe("route gating", () => {
     expect(resolveFeatureKeyForPath("/attendance")).toBe("ops.attendance.mark");
     expect(resolveFeatureKeyForPath("/plant-report")).toBe("ops.plant-report.submit");
   });
+
+  it("gates moved preferences organization pages behind their source features", () => {
+    expect(resolveFeatureKeyForPath("/preferences/organization/users")).toBe(
+      "admin.user-management.directory",
+    );
+    expect(resolveFeatureKeyForPath("/preferences/organization/sites")).toBe(
+      "admin.sites-sections",
+    );
+    expect(resolveFeatureKeyForPath("/preferences/organization/departments")).toBe(
+      "hr.employees",
+    );
+    expect(resolveFeatureKeyForPath("/preferences/organization/branding/identity")).toBe(
+      "core.branding.manage",
+    );
+    expect(resolveFeatureKeyForPath("/preferences/organization/templates")).toBe(
+      "core.branding.manage",
+    );
+  });
 });

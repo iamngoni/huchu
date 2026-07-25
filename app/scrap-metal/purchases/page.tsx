@@ -1034,7 +1034,7 @@ export default function ScrapMetalPurchasesPage() {
                 placeholder={sitesQuery.isLoading ? "Loading sites..." : "Select site"}
                 searchPlaceholder="Search sites..."
                 onValueChange={(value) => setForm((current) => ({ ...current, siteId: value }))}
-                onAddOption={() => router.push("/management/master-data/operations/sites")}
+                onAddOption={() => router.push("/preferences/organization/sites")}
                 addLabel="Add new site"
               />
               <SearchableSelect

@@ -1,6 +1,5 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
 import { CarSalesLeadsContent } from "@/components/car-sales/leads/car-sales-leads-content";
 import { authOptions } from "@/lib/auth";
 
@@ -10,12 +9,5 @@ export default async function CarSalesLeadsPage() {
     redirect("/login");
   }
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading
-        title="Auto Leads"
-      />
-      <CarSalesLeadsContent />
-    </div>
-  );
+  return <CarSalesLeadsContent />;
 }

@@ -99,19 +99,19 @@ export default function RetailSetupBrandingPage() {
             </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href="/settings/branding/identity">
+            <Link href="/preferences/organization/branding/identity">
               <Palette className="h-4 w-4" />
               Identity
             </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href="/settings/branding/assets">
+            <Link href="/preferences/organization/branding/assets">
               <Sparkles className="h-4 w-4" />
               Assets
             </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href="/settings/branding/finance">
+            <Link href="/preferences/organization/branding/finance">
               <FileText className="h-4 w-4" />
               Finance
             </Link>
@@ -166,7 +166,7 @@ export default function RetailSetupBrandingPage() {
                 <h3 className="mt-1 text-xl font-semibold text-[var(--text-strong)]">A minimal customer-facing view</h3>
               </div>
               <Button asChild variant="ghost" size="sm">
-                <Link href="/settings/branding">
+                <Link href="/preferences/organization/branding/identity">
                   Open branding settings
                   <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -239,9 +239,9 @@ export default function RetailSetupBrandingPage() {
 
             <div className="mt-4 space-y-3 text-sm">
               {[
-                { label: "Identity & theme", href: "/settings/branding/identity" },
-                { label: "Assets & contact", href: "/settings/branding/assets" },
-                { label: "Finance & defaults", href: "/settings/branding/finance" },
+                { label: "Identity & theme", href: "/preferences/organization/branding/identity" },
+                { label: "Assets & contact", href: "/preferences/organization/branding/assets" },
+                { label: "Finance & defaults", href: "/preferences/organization/branding/finance" },
               ].map((item) => (
                 <Link
                   key={item.label}
