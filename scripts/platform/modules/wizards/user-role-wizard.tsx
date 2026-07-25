@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Text, useInput } from "ink";
 
-import type { PlatformServices, UserManagementRole, UserSummary } from "../../types";
+import type { OrganizationListItem, PlatformServices, UserManagementRole, UserSummary } from "../../types";
+import { getUserRoleOptionsForOrganization } from "../../user-role-options";
 import { applyTextInput, useInputLock } from "../input-utils";
 import { SelectorList } from "./selector-list";
 import { WizardFrame } from "./wizard-frame";
@@ -17,11 +18,13 @@ interface UserRoleWizardProps {
 
 type Step = 0 | 1 | 2 | 3;
 
-const ROLE_OPTIONS: UserManagementRole[] = ["MANAGER", "CLERK"];
-
-function getSuggestedRole(user: UserSummary | null): UserManagementRole {
-  if (!user || user.role === "CLERK") return "MANAGER";
-  return "CLERK";
+function getSuggestedRole(
+  user: UserSummary | null,
+  options: Array<{ value: UserManagementRole }>,
+): UserManagementRole {
+  const fallback = options[0]?.value ?? "MANAGER";
+  if (!user) return fallback;
+  return options.find((option) => option.value !== user.role)?.value ?? fallback;
 }
 
 function filterUsers(users: UserSummary[], query: string) {
@@ -42,6 +45,7 @@ export function UserRoleWizard({
   onBackToTree,
 }: UserRoleWizardProps) {
   const [step, setStep] = useState<Step>(0);
+  const [companies, setCompanies] = useState<OrganizationListItem[]>([]);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,9 +63,13 @@ export function UserRoleWizard({
     let ignore = false;
     async function loadUsers() {
       try {
-        const rows = await services.user.list({ companyId: focusCompanyId || undefined, limit: 100 });
+        const [companyRows, userRows] = await Promise.all([
+          services.org.list({ limit: 100 }),
+          services.user.list({ companyId: focusCompanyId || undefined, limit: 100 }),
+        ]);
         if (!ignore) {
-          setUsers(rows);
+          setCompanies(companyRows);
+          setUsers(userRows);
           setSelectedIndex(0);
         }
       } catch (error) {
@@ -72,11 +80,19 @@ export function UserRoleWizard({
     return () => {
       ignore = true;
     };
-  }, [focusCompanyId, services.user]);
+  }, [focusCompanyId, services.org, services.user]);
 
   const visibleUsers = useMemo(() => filterUsers(users, searchQuery), [users, searchQuery]);
   const selected = visibleUsers[selectedIndex] ?? null;
-  const selectedRole = ROLE_OPTIONS[roleIndex] ?? ROLE_OPTIONS[0];
+  const selectedCompany = useMemo(
+    () => companies.find((company) => company.id === selected?.companyId) ?? null,
+    [companies, selected?.companyId],
+  );
+  const roleOptions = useMemo(
+    () => getUserRoleOptionsForOrganization(selectedCompany),
+    [selectedCompany],
+  );
+  const selectedRole = roleOptions[roleIndex]?.value ?? roleOptions[0]?.value ?? "MANAGER";
   const requiresTypedConfirmation = false;
   const confirmPhrase = useMemo(
     () => `CONFIRM ROLE ${selected?.email || "user"} ${selectedRole}`,
@@ -151,8 +167,8 @@ export function UserRoleWizard({
           setErrorMessage("No user selected.");
           return;
         }
-        const suggested = getSuggestedRole(selected);
-        const nextIndex = ROLE_OPTIONS.indexOf(suggested);
+        const suggested = getSuggestedRole(selected, roleOptions);
+        const nextIndex = roleOptions.findIndex((option) => option.value === suggested);
         setRoleIndex(nextIndex >= 0 ? nextIndex : 0);
         setStep(1);
         return;
@@ -167,10 +183,14 @@ export function UserRoleWizard({
         return;
       }
       if (key.downArrow) {
-        setRoleIndex((current) => Math.min(Math.max(0, ROLE_OPTIONS.length - 1), current + 1));
+        setRoleIndex((current) => Math.min(Math.max(0, roleOptions.length - 1), current + 1));
         return;
       }
       if (key.return) {
+        if (roleOptions.length === 0) {
+          setErrorMessage("No roles are available for this user's company features.");
+          return;
+        }
         setStep(2);
       }
       return;
@@ -203,7 +223,7 @@ export function UserRoleWizard({
   return (
     <WizardFrame
       title="Change User Role Wizard"
-      description="Switch MANAGER and CLERK roles with review before apply."
+      description="Assign feature-aware managed user roles with review before apply."
       step={step}
       steps={["Select User", "Select Role", "Reason", "Review & Confirm"]}
       statusMessage={statusMessage}
@@ -230,10 +250,10 @@ export function UserRoleWizard({
             <>
               <Text>user: {selected?.email || "<none>"}</Text>
               <SelectorList
-                items={ROLE_OPTIONS}
+                items={roleOptions}
                 selectedIndex={roleIndex}
                 emptyMessage="No roles available."
-                render={(item) => item}
+                render={(item) => `${item.label} (${item.value})`}
               />
             </>
           ) : null}

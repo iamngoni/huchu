@@ -106,6 +106,8 @@ export interface OrganizationListItem {
   id: string;
   name: string;
   slug: string;
+  workspaceProfile: string | null;
+  enabledFeatures: string[];
   status: OrganizationStatus;
   isProvisioned: boolean;
   siteCount: number;
