@@ -478,6 +478,7 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
       "retail.promotions",
       "retail.shifts",
       "retail.reports",
+      "crm.customers",
       "portal.pos",
     ],
   },

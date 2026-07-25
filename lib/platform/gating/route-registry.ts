@@ -93,6 +93,7 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/car-sales/financing", featureKey: "autos.financing" },
   { scope: "page", prefix: "/car-sales", featureKey: "autos.core" },
 
+  { scope: "page", prefix: "/retail/customers", featureKey: "crm.customers" },
   { scope: "page", prefix: "/retail/catalog", featureKey: "retail.catalog" },
   { scope: "page", prefix: "/retail/purchasing", featureKey: "retail.purchasing" },
   { scope: "page", prefix: "/retail/merchandising", featureKey: "retail.promotions" },
@@ -104,6 +105,7 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/retail", featureKey: "retail.core" },
   { scope: "page", prefix: "/thrift", featureKey: "retail.core" },
 
+  { scope: "page", prefix: "/portal/pos/customers", featureKey: "crm.customers" },
   { scope: "page", prefix: "/portal/pos", featureKey: "retail.pos" },
   { scope: "page", prefix: "/portal/parent", featureKey: "schools.portal.parent" },
   { scope: "page", prefix: "/portal/student", featureKey: "schools.portal.student" },
@@ -358,6 +360,7 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/car-sales/financing", featureKey: "autos.financing" },
   { scope: "api", prefix: "/api/v2/car-sales", featureKey: "autos.core" },
 
+  { scope: "api", prefix: "/api/retail/customers", featureKey: "crm.customers" },
   { scope: "api", prefix: "/api/retail/catalog", featureKey: "retail.catalog" },
   { scope: "api", prefix: "/api/retail/purchasing", featureKey: "retail.purchasing" },
   { scope: "api", prefix: "/api/retail/promotions", featureKey: "retail.promotions" },
@@ -366,6 +369,7 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/retail/reports", featureKey: "retail.reports" },
   { scope: "api", prefix: "/api/retail", featureKey: "retail.core" },
   { scope: "api", prefix: "/api/thrift", featureKey: "retail.core" },
+  { scope: "api", prefix: "/api/v2/retail/customers", featureKey: "crm.customers" },
   { scope: "api", prefix: "/api/v2/retail/catalog", featureKey: "retail.catalog" },
   { scope: "api", prefix: "/api/v2/retail/purchasing", featureKey: "retail.purchasing" },
   { scope: "api", prefix: "/api/v2/retail/promotions", featureKey: "retail.promotions" },

@@ -1,13 +1,14 @@
 ﻿"use client";
 
 import type { ComponentProps, ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AdminSummary, SiteSummary, SupportAccessRequestRecord, SupportSessionRecord, UserSummary } from "@/scripts/platform/types";
 import type { SearchableOption } from "@/app/gold/types";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { CompanyWorkspace } from "@/components/admin-portal/types";
 import { executeOperation } from "@/components/admin-portal/api";
-import { ROLES, type UserRole } from "@/lib/roles";
+import type { UserRole } from "@/lib/roles";
+import { getAllowedUserRoleOptionsForWorkspace } from "@/lib/platform/vertical-roles";
 import { USER_ROLE_LABELS } from "@/lib/platform/vertical-role-registry";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -74,10 +75,31 @@ function toRoleLabel(role: UserRole): string {
     .join(" ");
 }
 
-const USER_ROLE_OPTIONS = ROLES.map((role) => ({
-  value: role,
-  label: toRoleLabel(role),
-}));
+function getCompanyRoleOptions(company: CompanyWorkspace | null | undefined) {
+  return getAllowedUserRoleOptionsForWorkspace({
+    workspaceProfile: company?.workspaceProfile,
+    enabledFeatures: company?.enabledFeatures,
+  })
+    .filter((option) => option.value !== "SUPERADMIN")
+    .map((option) => ({
+      value: option.value,
+      label: option.label || toRoleLabel(option.value),
+    }));
+}
+
+function getSelectedCompany(
+  companies: CompanyWorkspace[],
+  fixedCompanyId: string | undefined,
+  companyId: string,
+) {
+  const selectedCompanyId = fixedCompanyId ?? companyId;
+  return companies.find((company) => company.id === selectedCompanyId) ?? null;
+}
+
+function getDefaultUserRole(options: Array<{ value: UserRole }>, fallback: UserRole): UserRole {
+  if (options.some((option) => option.value === fallback)) return fallback;
+  return options[0]?.value ?? fallback;
+}
 
 function ConfirmDialog({
   title,
@@ -274,6 +296,21 @@ export function CreateUserDialog({
   const [role, setRole] = useState<UserRole>("CLERK");
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const selectedCompany = useMemo(
+    () => getSelectedCompany(companies, fixedCompanyId, companyId),
+    [companies, companyId, fixedCompanyId],
+  );
+  const roleOptions = useMemo(
+    () => getCompanyRoleOptions(selectedCompany),
+    [selectedCompany],
+  );
+
+  useEffect(() => {
+    const nextRole = getDefaultUserRole(roleOptions, role);
+    if (nextRole !== role) {
+      setRole(nextRole);
+    }
+  }, [role, roleOptions]);
 
   const run = async () => {
     setRunning(true);
@@ -340,7 +377,7 @@ export function CreateUserDialog({
                 <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {USER_ROLE_OPTIONS.map((option) => (
+                    {roleOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -506,6 +543,7 @@ export function PasswordResetDialog({
 export function UserRoleDialog({
   actorEmail,
   user,
+  company,
   onCompleted,
   triggerLabel,
   buttonVariant = "outline",
@@ -513,6 +551,7 @@ export function UserRoleDialog({
 }: {
   actorEmail: string;
   user: UserSummary;
+  company?: CompanyWorkspace | null;
   onCompleted?: () => void;
 } & TriggerProps) {
   const [open, setOpen] = useState(false);
@@ -520,6 +559,17 @@ export function UserRoleDialog({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const roleOptions = useMemo(
+    () => getCompanyRoleOptions(company),
+    [company],
+  );
+
+  useEffect(() => {
+    const nextRole = getDefaultUserRole(roleOptions, role);
+    if (nextRole !== role) {
+      setRole(nextRole);
+    }
+  }, [role, roleOptions]);
 
   const run = async () => {
     setRunning(true);
@@ -563,7 +613,7 @@ export function UserRoleDialog({
               <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {USER_ROLE_OPTIONS.map((option) => (
+                  {roleOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
