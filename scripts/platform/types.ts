@@ -20,6 +20,7 @@ export const USER_ROLES = [
   "SHOP_MANAGER",
   "CASHIER",
   "STOCK_CLERK",
+  "SALES_REP",
 ] as const;
 export const USER_MANAGEMENT_ROLES = [
   "MANAGER",
@@ -37,6 +38,7 @@ export const USER_MANAGEMENT_ROLES = [
   "SHOP_MANAGER",
   "CASHIER",
   "STOCK_CLERK",
+  "SALES_REP",
 ] as const;
 export const SITE_MEASUREMENT_UNITS = [
   "units",
