@@ -120,6 +120,7 @@ const WORKSPACE_MODULE_ORDER: readonly WorkspaceModuleId[] = [
   "schools",
   "car-sales",
   "retail",
+  "crm",
   "hr",
   "stores",
   "maintenance",
@@ -234,6 +235,12 @@ const WORKSPACE_MODULES: Record<WorkspaceModuleId, WorkspaceModuleDefinition> = 
       return items;
     },
   },
+  crm: createSectionModule({
+    id: "crm",
+    label: "CRM",
+    sectionId: "crm",
+    homeHref: "/retail/customers",
+  }),
   hr: createSectionModule({
     id: "hr",
     label: "Human Resources",
