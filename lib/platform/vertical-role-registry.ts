@@ -40,13 +40,13 @@ export const VERTICAL_ROLE_REGISTRY: Record<ManagedWorkspaceProfile, VerticalRol
   AUTOS: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "AUTO_MANAGER", "SALES_EXEC", "FINANCE_OFFICER"] },
   RETAIL: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "SHOP_MANAGER", "CASHIER", "STOCK_CLERK", "FINANCE_OFFICER"] },
   SCHOOLS: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "FINANCE_OFFICER"] },
-  GENERAL: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "OPERATOR", "FINANCE_OFFICER", "SALES_REP"] },
+  GENERAL: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "OPERATOR", "FINANCE_OFFICER"] },
 };
 
 export const FEATURE_ROLE_REGISTRY: FeatureRoleRegistration[] = [
   {
     id: "crm",
-    roles: ["SALES_EXEC"],
+    roles: ["SALES_EXEC", "SALES_REP"],
     featureKeys: ["crm.customers"],
     featurePrefixes: ["crm."],
   },

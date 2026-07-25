@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { solutionPages } from "@/components/marketing/marketing-data";
-import { PRODUCT_COMMERCIALS } from "@/lib/marketing/pricing";
+import { solutions } from "@/app/home/site-data";
 import { absoluteUrl } from "@/lib/marketing/seo";
 
 /**
@@ -17,30 +16,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
   }> = [
     { path: "/", priority: 1, changeFrequency: "weekly" },
+    { path: "/home", priority: 0.9, changeFrequency: "weekly" },
     { path: "/home/pricing", priority: 0.9, changeFrequency: "weekly" },
     { path: "/home/pricing/schools", priority: 0.8, changeFrequency: "monthly" },
     { path: "/home/products", priority: 0.9, changeFrequency: "weekly" },
     { path: "/home/solutions", priority: 0.8, changeFrequency: "monthly" },
-    { path: "/home/product", priority: 0.7, changeFrequency: "monthly" },
+    { path: "/home/implementation-support", priority: 0.7, changeFrequency: "monthly" },
+    { path: "/home/founding-partner", priority: 0.8, changeFrequency: "monthly" },
     { path: "/home/book-demo", priority: 0.9, changeFrequency: "monthly" },
     { path: "/home/about", priority: 0.5, changeFrequency: "yearly" },
     { path: "/home/contact", priority: 0.6, changeFrequency: "yearly" },
     { path: "/home/faq", priority: 0.6, changeFrequency: "monthly" },
+    { path: "/home/privacy", priority: 0.3, changeFrequency: "yearly" },
+    { path: "/home/terms", priority: 0.3, changeFrequency: "yearly" },
   ];
 
-  const productRoutes = PRODUCT_COMMERCIALS.map((product) => ({
-    path: `/home/products/${product.slug}`,
-    priority: 0.8,
-    changeFrequency: "monthly" as const,
-  }));
-
-  const solutionRoutes = solutionPages.map((solution) => ({
+  const solutionRoutes = solutions.map((solution, index) => ({
     path: `/home/solutions/${solution.slug}`,
-    priority: 0.7,
+    priority: index === 0 ? 0.9 : 0.75,
     changeFrequency: "monthly" as const,
   }));
 
-  return [...staticRoutes, ...productRoutes, ...solutionRoutes].map((route) => ({
+  return [...staticRoutes, ...solutionRoutes].map((route) => ({
     url: absoluteUrl(route.path),
     lastModified,
     changeFrequency: route.changeFrequency,

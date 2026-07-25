@@ -1,16 +1,16 @@
 import { ImageResponse } from "next/og";
 
 import { PLATFORM_BRAND_NAME, PLATFORM_MARKETING_DOMAIN } from "@/lib/platform/brand";
-import { STARTING_MONTHLY_PRICE, TRIAL_DAYS, formatUsd } from "@/lib/marketing/pricing";
+import {
+  LAUNCH_SPRINT_DAYS,
+  STARTING_MONTHLY_PRICE,
+  formatUsd,
+} from "@/lib/marketing/pricing";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = `${PLATFORM_BRAND_NAME} — business software built for Zimbabwe`;
+export const alt = `${PLATFORM_BRAND_NAME} - business software for formalising trade companies`;
 
-/**
- * Social card for the marketing surface. Rendered at build/request time by
- * next/og, so it stays in sync with pricing without anyone re-exporting a PNG.
- */
 export default function OpengraphImage() {
   return new ImageResponse(
     (
@@ -21,7 +21,7 @@ export default function OpengraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "linear-gradient(135deg, #0b1532 0%, #16255f 60%, #0d1a44 100%)",
+          background: "#f7f8fa",
           padding: "72px",
           fontFamily: "sans-serif",
         }}
@@ -34,9 +34,10 @@ export default function OpengraphImage() {
               justifyContent: "center",
               width: 64,
               height: 64,
-              borderRadius: 999,
+              borderRadius: 12,
+              border: "1px solid #d2d7e0",
               background: "#ffffff",
-              color: "#16255f",
+              color: "#16181d",
               fontSize: 34,
               fontWeight: 700,
             }}
@@ -45,11 +46,10 @@ export default function OpengraphImage() {
           </div>
           <div
             style={{
-              color: "#ffffff",
+              color: "#16181d",
               fontSize: 30,
               fontWeight: 600,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
+              letterSpacing: 0,
             }}
           >
             {PLATFORM_BRAND_NAME}
@@ -59,36 +59,37 @@ export default function OpengraphImage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div
             style={{
-              color: "#ffffff",
+              color: "#16181d",
               fontSize: 78,
               fontWeight: 700,
               lineHeight: 1.02,
-              letterSpacing: "-0.04em",
+              letterSpacing: 0,
               maxWidth: 960,
             }}
           >
-            Priced per site. Never per user.
+            Your business, finally connected.
           </div>
-          <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 32, maxWidth: 900 }}>
-            Stock, sales, staff, and cash in one system that works offline.
+          <div style={{ color: "#565c69", fontSize: 32, maxWidth: 900 }}>
+            Sales, stock, invoices, customers, finance and teams for formalising trade businesses in Zimbabwe.
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {[
             `From ${formatUsd(STARTING_MONTHLY_PRICE)}/month`,
-            `${TRIAL_DAYS}-day free trial`,
+            `${LAUNCH_SPRINT_DAYS}-day Launch Sprint`,
             PLATFORM_MARKETING_DOMAIN,
           ].map((chip, index) => (
             <div
               key={chip}
               style={{
                 display: "flex",
+                border: "1px solid #e5e8ee",
                 borderRadius: 999,
                 padding: "12px 26px",
                 fontSize: 26,
-                background: index === 0 ? "#ff6b35" : "rgba(255,255,255,0.1)",
-                color: "#ffffff",
+                background: index === 0 ? "#0b5df0" : "#ffffff",
+                color: index === 0 ? "#ffffff" : "#262a33",
               }}
             >
               {chip}

@@ -110,19 +110,19 @@ describe("client templates", () => {
 
 describe("vertical role registration", () => {
   it("registers CRM sales roles only when CRM features are enabled", () => {
-    expect(
-      getAllowedUserRolesForWorkspace({
-        workspaceProfile: "GENERAL",
-        enabledFeatures: [],
-      }),
-    ).not.toContain("SALES_EXEC");
+    const generalRoles = getAllowedUserRolesForWorkspace({
+      workspaceProfile: "GENERAL",
+      enabledFeatures: [],
+    });
+    expect(generalRoles).not.toContain("SALES_EXEC");
+    expect(generalRoles).not.toContain("SALES_REP");
 
-    expect(
-      getAllowedUserRolesForWorkspace({
-        workspaceProfile: "GENERAL",
-        enabledFeatures: ["crm.customers"],
-      }),
-    ).toContain("SALES_EXEC");
+    const crmRoles = getAllowedUserRolesForWorkspace({
+      workspaceProfile: "GENERAL",
+      enabledFeatures: ["crm.customers"],
+    });
+    expect(crmRoles).toContain("SALES_EXEC");
+    expect(crmRoles).toContain("SALES_REP");
   });
 
   it("keeps Autos sales roles registered through the Autos profile", () => {

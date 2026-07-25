@@ -1,0 +1,910 @@
+.site {
+  --mk-canvas: var(--canvas, var(--surface-canvas));
+  --mk-surface: var(--surface, var(--surface-base));
+  --mk-surface-muted: var(--surface-muted);
+  --mk-surface-subtle: var(--surface-subtle, var(--surface-muted));
+  --mk-border: var(--border, var(--border-default));
+  --mk-border-subtle: var(--border-subtle, var(--border-soft));
+  --mk-border-strong: var(--border-strong);
+  --mk-page-max: calc(var(--space-10) * 32);
+  --mk-prose-max: calc(var(--space-10) * 18);
+  --mk-hero-y: calc(var(--space-10) * 2);
+  --mk-section-y: calc(var(--space-10) + var(--space-8));
+  --mk-display-size: calc(var(--type-size-32) + var(--type-size-20));
+  --mk-display: var(--font-weight-bold) var(--mk-display-size) / var(--leading-tight) var(--font-family);
+  --mk-section-title: var(--font-weight-bold) var(--type-size-32) / var(--leading-tight) var(--font-family);
+  --mk-card-title: var(--font-weight-semibold) var(--type-size-16) / var(--leading-normal) var(--font-family);
+  --mk-body: var(--font-weight-regular) var(--type-size-14) / var(--leading-relaxed) var(--font-family);
+  --mk-body-lg: var(--font-weight-medium) var(--type-size-16) / var(--leading-relaxed) var(--font-family);
+  --mk-label: var(--font-weight-semibold) var(--type-size-13) / var(--leading-normal) var(--font-family);
+  --mk-caption: var(--font-weight-medium) var(--type-size-12) / var(--leading-normal) var(--font-family);
+  min-height: 100vh;
+  background: var(--mk-canvas);
+  color: var(--text-body);
+}
+
+.navInner,
+.hero,
+.pageHero,
+.section,
+.footerInner {
+  width: min(100% - (var(--content-gutter-x) * 2), var(--mk-page-max));
+  margin-inline: auto;
+}
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  border-bottom: thin solid var(--mk-border-subtle);
+  background: color-mix(in oklab, var(--mk-surface) 94%, transparent);
+  backdrop-filter: blur(var(--space-2));
+}
+
+.navInner {
+  display: flex;
+  min-height: var(--touch-target-generous);
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.brand,
+.navLink,
+.quietLink,
+.button,
+.inlineAction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+}
+
+.brand {
+  flex: none;
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.brandMark {
+  display: inline-grid;
+  width: var(--space-8);
+  height: var(--space-8);
+  place-items: center;
+  border: thin solid var(--mk-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--mk-surface);
+  color: var(--text-strong);
+  font: var(--mk-caption);
+}
+
+.navLinks {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.navActions,
+.buttonRow,
+.assuranceGrid,
+.cardTopline,
+.formFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.navLink,
+.quietLink {
+  min-height: var(--button-height);
+  color: var(--text-muted);
+  font: var(--mk-caption);
+}
+
+.navLink:hover,
+.quietLink:hover,
+.footerGroup a:hover,
+.inlineAction:hover {
+  color: var(--text-strong);
+}
+
+.button {
+  min-height: var(--button-height);
+  justify-content: center;
+  border: thin solid var(--mk-border);
+  border-radius: var(--button-radius);
+  background: var(--mk-surface);
+  color: var(--text-strong);
+  font: var(--mk-label);
+  padding-inline: var(--space-4);
+}
+
+.button:hover {
+  border-color: var(--mk-border-strong);
+  background: var(--mk-surface-muted);
+}
+
+.buttonPrimary {
+  border-color: var(--action-primary-bg);
+  background: var(--action-primary-bg);
+  color: var(--action-primary-fg);
+}
+
+.buttonPrimary:hover {
+  border-color: var(--action-primary-hover);
+  background: var(--action-primary-hover);
+  color: var(--action-primary-fg);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.button:focus-visible,
+.navLink:focus-visible,
+.quietLink:focus-visible,
+.inlineAction:focus-visible,
+.previewTab:focus-visible,
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible {
+  outline: var(--space-1) solid var(--focus-ring);
+  outline-offset: var(--space-1);
+  box-shadow: 0 0 0 var(--space-1) color-mix(in oklab, var(--focus-ring) 22%, transparent);
+}
+
+.announce {
+  border-bottom: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface);
+}
+
+.announceInner {
+  display: flex;
+  width: min(100% - (var(--content-gutter-x) * 2), var(--mk-page-max));
+  margin-inline: auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  color: var(--text-body);
+  font: var(--mk-caption);
+}
+
+.announceInner a {
+  color: var(--text-link);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.hero,
+.pageHero {
+  display: grid;
+  align-items: center;
+  padding-block: var(--mk-hero-y);
+}
+
+.hero {
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: var(--space-10);
+}
+
+.pageHero {
+  min-height: calc(var(--space-10) * 10);
+}
+
+.heroCopy,
+.stack,
+.card,
+.compactCard,
+.solutionCard,
+.moduleCard,
+.workflowCard,
+.stepCard,
+.priceCard,
+.notePanel,
+.principlePanel,
+.ctaPanel,
+.form,
+.field,
+.alert,
+.footerBrand {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.heroCopy {
+  align-content: center;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--text-subtle);
+  font: var(--mk-caption);
+}
+
+.display {
+  max-width: calc(var(--space-10) * 16);
+  margin: 0;
+  color: var(--text-strong);
+  font: var(--mk-display);
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-strong);
+  font: var(--mk-section-title);
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.cardTitle,
+.priceTitle {
+  margin: 0;
+  color: var(--text-strong);
+  font: var(--mk-card-title);
+}
+
+.lead {
+  max-width: var(--mk-prose-max);
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--mk-body-lg);
+}
+
+.body,
+.small {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.body {
+  font: var(--mk-body);
+}
+
+.small {
+  font: var(--mk-caption);
+}
+
+.assuranceGrid {
+  align-items: stretch;
+}
+
+.assuranceGrid span,
+.tagList span,
+.channelStrip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height-sm);
+  border: thin solid var(--mk-border);
+  border-radius: var(--radius-pill);
+  background: var(--mk-surface-muted);
+  color: var(--text-body);
+  font: var(--mk-caption);
+  padding-inline: var(--space-3);
+}
+
+.productPreview,
+.card,
+.compactCard,
+.solutionCard,
+.moduleCard,
+.workflowCard,
+.stepCard,
+.priceCard,
+.notePanel,
+.principlePanel,
+.ctaPanel,
+.outcomePanel,
+.commercialPanel,
+.form,
+.tableFrame {
+  border: thin solid var(--mk-border);
+  border-radius: var(--card-radius);
+  background: var(--mk-surface);
+  box-shadow: var(--shadow-none);
+}
+
+.productPreview {
+  overflow: hidden;
+}
+
+.productPreviewCompact {
+  align-self: stretch;
+}
+
+.previewHeader,
+.previewBody,
+.card,
+.solutionCard,
+.moduleCard,
+.workflowCard,
+.stepCard,
+.priceCard,
+.notePanel,
+.principlePanel,
+.ctaPanel,
+.outcomePanel,
+.commercialPanel,
+.form {
+  padding: var(--space-5);
+}
+
+.previewHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: thin solid var(--mk-border-subtle);
+}
+
+.statusPill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border: thin solid var(--status-progress-border);
+  border-radius: var(--radius-pill);
+  background: var(--status-progress-bg);
+  color: var(--status-progress-text);
+  font: var(--mk-caption);
+  padding: var(--space-1) var(--space-3);
+}
+
+.previewTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+  border-bottom: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface-muted);
+  padding: var(--space-2);
+}
+
+.previewTab {
+  display: inline-flex;
+  min-height: var(--button-height);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: var(--mk-caption);
+}
+
+.previewTabActive {
+  background: var(--mk-surface);
+  color: var(--text-strong);
+  box-shadow: var(--shadow-rest);
+}
+
+.previewBody,
+.previewColumns,
+.previewList,
+.outcomeList,
+.statStack {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.metricTile {
+  display: grid;
+  gap: var(--space-1);
+  border: thin solid var(--mk-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--mk-surface-subtle);
+  padding: var(--space-4);
+}
+
+.metricTile strong,
+.price,
+.statTile strong {
+  color: var(--text-strong);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+}
+
+.metricTile strong {
+  font-size: var(--type-size-24);
+}
+
+.metricTile span,
+.metricTile p,
+.previewRow span,
+.previewRow p,
+.statusRow span,
+.statTile span {
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--mk-caption);
+}
+
+.previewColumns {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+}
+
+.previewRow,
+.statusRow {
+  display: grid;
+  gap: var(--space-1);
+  border-bottom: thin solid var(--mk-border-subtle);
+  padding-block: var(--space-3);
+}
+
+.previewRow strong,
+.statusRow strong {
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.statusRow {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.statusRow strong {
+  grid-column: 2;
+}
+
+.section {
+  padding-block: var(--mk-section-y);
+}
+
+.sectionIntro {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: var(--space-8);
+  align-items: start;
+  margin-bottom: var(--space-8);
+}
+
+.band {
+  border-block: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface);
+}
+
+.problemGrid,
+.demoLayout,
+.commercialPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.problemSources,
+.solutionGrid,
+.cardGrid3,
+.workflowGrid,
+.moduleGrid,
+.stepGrid,
+.pricingGrid,
+.cardGrid2,
+.formGrid,
+.statStrip {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.problemSources,
+.solutionGrid,
+.cardGrid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cardGrid2,
+.formGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.moduleGrid,
+.pricingGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.workflowGrid {
+  grid-template-columns: 1fr;
+}
+
+.stepGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.statStrip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: var(--space-5);
+}
+
+.compactCard {
+  padding: var(--space-4);
+}
+
+.solutionCard {
+  color: inherit;
+  text-decoration: none;
+}
+
+.solutionCardPrimary {
+  border-color: var(--mk-border-strong);
+  background: color-mix(in oklab, var(--mk-surface) 74%, var(--mk-surface-muted));
+}
+
+.solutionCard:hover,
+.moduleCard:hover,
+.priceCard:hover {
+  border-color: var(--mk-border-strong);
+}
+
+.cardTopline {
+  justify-content: space-between;
+}
+
+.cardTopline span {
+  color: var(--text-subtle);
+  font: var(--mk-caption);
+}
+
+.cardIcon,
+.heroIcon {
+  display: inline-flex;
+  width: var(--space-8);
+  height: var(--space-8);
+  border: thin solid var(--mk-border);
+  border-radius: var(--radius-md);
+  background: var(--mk-surface-muted);
+  color: var(--text-strong);
+  padding: var(--space-2);
+}
+
+.heroIcon {
+  width: var(--space-10);
+  height: var(--space-10);
+}
+
+.inlineAction {
+  width: fit-content;
+  color: var(--text-link);
+  font: var(--mk-label);
+}
+
+.outcomePanel,
+.principlePanel {
+  align-self: stretch;
+}
+
+.outcomeItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-bottom: thin solid var(--mk-border-subtle);
+  color: var(--text-strong);
+  font: var(--mk-label);
+  padding-block: var(--space-3);
+}
+
+.workflow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflowStep {
+  min-height: calc(var(--space-10) * 2);
+  border: thin solid var(--mk-border);
+  border-radius: var(--radius-md);
+  background: var(--mk-surface);
+  padding: var(--space-3);
+}
+
+.workflowStep span {
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+}
+
+.workflowStep strong {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.connection {
+  border-top: thin solid var(--mk-border-subtle);
+  padding-top: var(--space-3);
+}
+
+.connection p {
+  margin: 0;
+  color: var(--text-body);
+  font: var(--mk-caption);
+}
+
+.priceCardFeatured {
+  border-color: var(--mk-border-strong);
+}
+
+.priceHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.price {
+  margin: 0;
+  font-size: var(--type-size-32);
+  line-height: var(--leading-tight);
+}
+
+.checkList {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checkList li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--text-body);
+  font: var(--mk-body);
+}
+
+.tableFrame {
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-body);
+  font: var(--mk-body);
+}
+
+.table th,
+.table td {
+  border-bottom: thin solid var(--mk-border-subtle);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.tagList,
+.channelStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.commercialPanel {
+  align-items: center;
+}
+
+.form {
+  gap: var(--space-5);
+}
+
+.field {
+  gap: var(--space-2);
+}
+
+.field label {
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  border: thin solid var(--mk-border);
+  border-radius: var(--button-radius);
+  background: var(--mk-surface);
+  color: var(--text-strong);
+  font: var(--mk-body);
+  padding: var(--space-3);
+}
+
+.textarea {
+  min-height: calc(var(--space-10) * 3);
+  resize: vertical;
+}
+
+.hiddenField {
+  position: absolute;
+  left: -100vw;
+  width: var(--space-1);
+  height: var(--space-1);
+  overflow: hidden;
+}
+
+.alert {
+  border: thin solid var(--mk-border);
+  border-radius: var(--card-radius);
+  padding: var(--space-4);
+}
+
+.alert strong {
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.alert span {
+  color: var(--text-body);
+  font: var(--mk-body);
+}
+
+.alertSuccess {
+  border-color: var(--status-success-border);
+  background: var(--status-success-bg);
+}
+
+.alertError {
+  border-color: var(--status-error-border);
+  background: var(--status-error-bg);
+}
+
+.spinnerIcon {
+  width: 1em;
+  height: 1em;
+  animation: spin var(--motion-duration-slow) linear infinite;
+}
+
+.icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+.footer {
+  border-top: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface);
+}
+
+.footerInner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  gap: var(--space-8);
+  padding-block: var(--space-8);
+}
+
+.footerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.footerGroup {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+}
+
+.footerGroup h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.footerGroup a {
+  color: var(--text-muted);
+  font: var(--mk-caption);
+  text-decoration: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (max-width: 68.75em) {
+  .hero,
+  .sectionIntro,
+  .problemGrid,
+  .demoLayout,
+  .commercialPanel,
+  .footerInner {
+    grid-template-columns: 1fr;
+  }
+
+  .moduleGrid,
+  .pricingGrid,
+  .problemSources,
+  .solutionGrid,
+  .cardGrid3,
+  .stepGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workflow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 47.5em) {
+  .site {
+    --mk-display-size: var(--type-size-32);
+    --mk-hero-y: calc(var(--space-10) + var(--space-8));
+    --mk-section-y: var(--space-10);
+  }
+
+  .navInner,
+  .announceInner {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-block: var(--space-3);
+  }
+
+  .navLinks {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: var(--space-3);
+  }
+
+  .navActions {
+    width: 100%;
+  }
+
+  .navActions .button {
+    flex: 1;
+  }
+
+  .previewTabs,
+  .metricGrid,
+  .previewColumns,
+  .moduleGrid,
+  .pricingGrid,
+  .problemSources,
+  .solutionGrid,
+  .cardGrid3,
+  .cardGrid2,
+  .stepGrid,
+  .formGrid,
+  .statStrip,
+  .footerGrid,
+  .workflow {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionIntro {
+    gap: var(--space-4);
+  }
+
+  .buttonRow,
+  .formFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .buttonRow .button,
+  .formFooter .button {
+    width: 100%;
+  }
+}
