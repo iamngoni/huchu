@@ -26,6 +26,7 @@ function resolveFeatureKey(sourceKey: string): string | null {
   if (sourceKey === "accounting.sales.invoice") return "accounting.ar";
   if (sourceKey === "accounting.sales.quotation") return "accounting.ar";
   if (sourceKey === "accounting.sales.receipt") return "accounting.ar";
+  if (sourceKey === "accounting.sales.credit-note") return "accounting.ar";
   return null;
 }
 

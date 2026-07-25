@@ -23,11 +23,27 @@ import type { CrmLeadStage } from "@prisma/client";
 type Document = {
   id: string;
   type: "QUOTATION" | "INVOICE" | "RECEIPT";
+  quotationId: string | null;
+  invoiceId: string | null;
+  receiptId: string | null;
   amount: number;
   currency: string;
   createdAt: string;
   approval: { token: string; status: string; respondedAt: string | null } | null;
 };
+
+function documentPdfHref(doc: Document): string | null {
+  if (doc.type === "QUOTATION" && doc.quotationId) {
+    return `/api/accounting/sales/quotations/${doc.quotationId}/pdf`;
+  }
+  if (doc.type === "INVOICE" && doc.invoiceId) {
+    return `/api/accounting/sales/invoices/${doc.invoiceId}/pdf`;
+  }
+  if (doc.type === "RECEIPT" && doc.receiptId) {
+    return `/api/accounting/sales/receipts/${doc.receiptId}/pdf`;
+  }
+  return null;
+}
 
 type Activity = { id: string; type: string; subject: string; body: string | null; occurredAt: string };
 type FollowUp = { id: string; title: string; dueAt: string; status: string };
@@ -368,6 +384,14 @@ function DocumentsTab({ lead, onChange }: { lead: LeadDetail; onChange: () => vo
                       Copy link
                     </button>
                   </>
+                ) : null}
+                {documentPdfHref(doc) ? (
+                  <a
+                    href={`${documentPdfHref(doc)}?download=1`}
+                    className="text-[var(--text-muted)] underline"
+                  >
+                    PDF
+                  </a>
                 ) : null}
               </span>
             </li>
