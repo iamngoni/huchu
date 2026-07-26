@@ -18,8 +18,11 @@ import { MobileNav } from "@/app/home/mobile-nav";
 import { ProductPreview } from "@/app/home/product-preview";
 import { SegmentSwitcher } from "@/app/home/segment-switcher";
 import {
-  LOOP_SIDE_EFFECTS,
-  ORDER_TO_CASH_LOOP,
+  COUNTER_TRADE,
+  MONEY_LEAKS,
+  MONEY_LEAK_CLOSE,
+  MONEY_TRAIL,
+  TRAIL_PAYOFF,
   companyPrinciples,
   connectedOutcomes,
   contactChannels,
@@ -163,7 +166,7 @@ export function MarketingFooter() {
             <span>{PLATFORM_BRAND_NAME}</span>
           </Link>
           <p className={styles.body}>
-            One system from the enquiry to the money in the bank. Built and supported in Zimbabwe by
+            Find the money your business is already losing. Built and supported in Zimbabwe by
             Hurudza Labs.
           </p>
           <Link
@@ -278,22 +281,22 @@ export function HomeHero() {
           <div className={styles.heroCopy}>
             <span className={styles.eyebrowMark}>
               <ShieldCheck className={styles.icon} weight="regular" />
-              Business software for Zimbabwean trade, service and production companies
+              Business software, built in Zimbabwe
             </span>
-            <h1 className={styles.display}>One system from the enquiry to the money in the bank.</h1>
+            <h1 className={styles.display}>How much did you actually make yesterday?</h1>
             <p className={styles.lead}>
-              Whether you sell stock, deliver a service, fix machines, make things or run a sales
-              team, your business lives on one loop: quote, order, deliver, invoice, get paid.
-              Corelith runs that whole loop in one place — and moves your stock, books and reports
-              with it.
+              Most owners cannot say — not because the business is failing, but because the answer
+              is spread across a till roll, a stock book, a WhatsApp thread and somebody&rsquo;s
+              memory. Meanwhile money you already earned is walking out through the gaps. Corelith
+              closes them, and shows you the number.
             </p>
             <div className={styles.buttonRow}>
               <Link href="/home/book-demo" className={`${styles.button} ${styles.buttonPrimary}`}>
-                Find your setup
+                Show me where I&rsquo;m losing money
                 <ArrowRight className={styles.icon} weight="regular" />
               </Link>
-              <Link href="/home/products" className={styles.button}>
-                See the platform
+              <Link href="/home/pricing" className={styles.button}>
+                See what it costs
               </Link>
             </div>
             <div className={styles.assuranceGrid}>
@@ -329,44 +332,81 @@ export function TrustStrip() {
   );
 }
 
-export function ProblemSection() {
+/**
+ * The intersection section. Six trades, six different leaks, one problem — and
+ * a reader finds themselves in the list rather than being sorted into a
+ * category. This is the page's argument, so it runs before anything about the
+ * product.
+ */
+export function MoneyLeakSection() {
   return (
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
-        eyebrow="The real problem"
-        title="Your business does not have a software problem. It has six versions of the truth."
-        copy="Nothing here is broken on its own. The damage comes from the gaps between them — every gap is a place where stock, money or a customer promise quietly goes missing."
+        eyebrow="Where it goes"
+        title="Every business leaks. The only question is where yours does."
+        copy="Not one of these is a software problem. They are all the same problem wearing different overalls — money that is already yours, leaving through a gap you cannot see from where you sit."
       />
 
-      <div className={styles.problemGrid}>
-        <div className={styles.problemSources}>
-          {problemFragments.map((item) => {
-            const Icon = item.icon;
+      <div className={styles.leakGrid}>
+        {MONEY_LEAKS.map((leak) => {
+          const Icon = leak.icon;
 
-            return (
-              <article key={item.label} className={styles.compactCard}>
-                <Icon className={styles.cardIcon} weight="regular" />
-                <h3 className={styles.cardTitle}>{item.label}</h3>
-                <p className={styles.body}>{item.copy}</p>
-              </article>
-            );
-          })}
-        </div>
+          return (
+            <article key={leak.where} className={styles.leakCard}>
+              <Icon className={styles.cardIcon} weight="regular" />
+              <h3 className={styles.cardTitle}>{leak.where}</h3>
+              <p className={styles.eyebrow}>{leak.who}</p>
+              <p className={styles.body}>{leak.copy}</p>
+            </article>
+          );
+        })}
+      </div>
 
-        <div className={styles.outcomePanel}>
-          <p className={styles.eyebrow}>What replaces them</p>
-          <div className={styles.outcomeList}>
-            {connectedOutcomes.map((outcome) => (
-              <div key={outcome} className={styles.outcomeItem}>
-                <Check className={styles.icon} weight="regular" />
-                <span>{outcome}</span>
-              </div>
-            ))}
+      <p className={`${styles.leakClose} ${styles.sectionFooter}`}>{MONEY_LEAK_CLOSE}</p>
+    </section>
+  );
+}
+
+/** Why the leak is invisible: an evidence problem, not a software one. */
+export function ProblemSection() {
+  return (
+    <section className={styles.band}>
+      <div className={`${styles.section} ${styles.reveal}`}>
+        <SectionIntro
+          eyebrow="Why you cannot see it"
+          title="You are not careless. You are working off six versions of the truth."
+          copy="Every one of these is fine on its own. The money disappears in the gaps between them — and the gaps are exactly where nobody is looking."
+        />
+
+        <div className={styles.problemGrid}>
+          <div className={styles.problemSources}>
+            {problemFragments.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <article key={item.label} className={styles.compactCard}>
+                  <Icon className={styles.cardIcon} weight="regular" />
+                  <h3 className={styles.cardTitle}>{item.label}</h3>
+                  <p className={styles.body}>{item.copy}</p>
+                </article>
+              );
+            })}
           </div>
-          <p className={styles.small}>
-            Not five tools that talk to each other. One record that every part of the business
-            reads.
-          </p>
+
+          <div className={styles.outcomePanel}>
+            <p className={styles.eyebrow}>What you get instead</p>
+            <div className={styles.outcomeList}>
+              {connectedOutcomes.map((outcome) => (
+                <div key={outcome} className={styles.outcomeItem}>
+                  <Check className={styles.icon} weight="regular" />
+                  <span>{outcome}</span>
+                </div>
+              ))}
+            </div>
+            <p className={styles.small}>
+              Not six tools wired together. One record that every part of the business reads.
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -374,53 +414,96 @@ export function ProblemSection() {
 }
 
 /**
- * The single idea the whole site rests on: five business types, one loop. It
- * runs before the segment switcher so a visitor recognises the shape first and
- * their own variant second.
+ * The mechanism. A reader who has just recognised their own leak wants to know
+ * what actually stops it — so this is framed as the trail behind the money,
+ * with the counter-trade version sitting beside it rather than buried.
  */
-export function LoopSection({ focusStep }: { focusStep?: string }) {
+export function MoneyTrailSection() {
   return (
-    <section className={styles.band}>
-      <div className={`${styles.section} ${styles.reveal}`}>
-        <SectionIntro
-          eyebrow="One loop, five kinds of business"
-          title="Five kinds of business. The same six steps."
-          copy="A customer asks for something, you price it, you agree it, you deliver it, you bill it, you collect. Only the deliver step looks different from business to business — and that is the one thing Corelith configures for you before the demo."
-        />
+    <section className={`${styles.section} ${styles.reveal}`}>
+      <SectionIntro
+        eyebrow="How it stops"
+        title="Give every dollar a trail it cannot fall off."
+        copy="From the first hello to the money in your bank, each step writes to the same record. Nothing gets re-typed, nothing gets remembered wrong, and nothing quietly goes missing between one person and the next."
+      />
 
-        <div className={styles.loopFrame}>
-          <ol className={styles.loop}>
-            {ORDER_TO_CASH_LOOP.map((step, index) => {
-              const Icon = step.icon;
-              const focused = focusStep ? step.step === focusStep : step.step === "Deliver";
+      <div className={styles.loopFrame}>
+        <ol className={styles.loop}>
+          {MONEY_TRAIL.map((step, index) => {
+            const Icon = step.icon;
 
-              return (
-                <li
-                  key={step.step}
-                  className={`${styles.loopStep} ${focused ? styles.loopStepFocus : ""}`}
-                >
-                  <span className={styles.loopIndex}>
-                    <Icon className={styles.icon} weight="regular" />
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <strong>{step.step}</strong>
-                  <p>{step.copy}</p>
-                </li>
-              );
-            })}
-          </ol>
+            return (
+              <li
+                key={step.step}
+                className={`${styles.loopStep} ${step.step === "You deliver" ? styles.loopStepFocus : ""}`}
+              >
+                <span className={styles.loopIndex}>
+                  <Icon className={styles.icon} weight="regular" />
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <strong>{step.step}</strong>
+                <p>{step.copy}</p>
+              </li>
+            );
+          })}
+        </ol>
 
-          <div className={styles.loopEffects}>
-            {LOOP_SIDE_EFFECTS.map((effect) => (
-              <div key={effect.label} className={styles.loopEffect}>
-                <strong>{effect.label}</strong>
-                <span>{effect.copy}</span>
-              </div>
-            ))}
-          </div>
+        <div className={styles.loopEffects}>
+          {TRAIL_PAYOFF.map((effect) => (
+            <div key={effect.label} className={styles.loopEffect}>
+              <strong>{effect.label}</strong>
+              <span>{effect.copy}</span>
+            </div>
+          ))}
         </div>
       </div>
+
+      <CounterTradeNote />
     </section>
+  );
+}
+
+/**
+ * Counter trade gets its own panel because the six-step trail genuinely does not
+ * describe a till. Handled quietly, a bottle store owner reads the trail above,
+ * decides this is not for them, and leaves.
+ */
+export function CounterTradeNote() {
+  return (
+    <div className={`${styles.counterPanel} ${styles.sectionFooter}`}>
+      <div className={styles.counterCopy}>
+        <p className={styles.eyebrow}>{COUNTER_TRADE.eyebrow}</p>
+        <h3 className={styles.cardTitle}>{COUNTER_TRADE.title}</h3>
+        <p className={styles.body}>{COUNTER_TRADE.copy}</p>
+        <p className={styles.small}>{COUNTER_TRADE.who}</p>
+      </div>
+
+      <ol className={styles.counterSteps}>
+        {COUNTER_TRADE.steps.map((step, index) => {
+          const Icon = step.icon;
+
+          return (
+            <li key={step.step} className={styles.counterStep}>
+              <span className={styles.loopIndex}>
+                <Icon className={styles.icon} weight="regular" />
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <strong>{step.step}</strong>
+              <p>{step.copy}</p>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className={styles.counterProof}>
+        {COUNTER_TRADE.proof.map((item) => (
+          <div key={item.label} className={styles.counterProofItem}>
+            <strong>{item.value}</strong>
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -428,9 +511,9 @@ export function SegmentSection() {
   return (
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
-        eyebrow="Which one are you?"
-        title="Pick your business. Your deliver step is already built."
-        copy="Each of these opens a page written for that business — its workflow, its screens, its numbers and what a first rollout should change."
+        eyebrow="Find yourself"
+        title="Pick your trade. It is already set up."
+        copy="No blank system, no six-month configuration project. Each of these opens a page built for that business — the screens your team will actually use, and what a first rollout should put back in your pocket."
       />
       <SegmentSwitcher />
     </section>
@@ -515,7 +598,7 @@ export function ModulesSection() {
       <SectionIntro
         eyebrow="What you get"
         title="Five modules. One record underneath all of them."
-        copy="These are not five products you integrate. A sale, a job card or a stock receipt writes once and every other module reads the same fact."
+        copy="Not five products you have to wire together. A sale, a job card or a stock receipt writes once, and every other part of the business reads the same fact — which is why your numbers stop disagreeing with each other."
       />
       <ModuleGrid />
       <div className={`${styles.buttonRow} ${styles.sectionFooter}`}>
@@ -551,8 +634,8 @@ export function DifferentiatorSection() {
     <section className={styles.bandSunken}>
       <div className={`${styles.section} ${styles.reveal}`}>
         <SectionIntro
-          eyebrow="Why not the alternatives"
-          title="The cheapest option in the room is usually the one already costing you the most."
+          eyebrow="Do the maths"
+          title="The cheapest option in the room is usually the one costing you the most."
           copy={`Costed at a realistic shape — ${TCO_TEAM_SIZE} staff across ${TCO_SITE_COUNT} sites. Competitor figures are published list prices and are indicative, not quotes.`}
         />
 
@@ -620,7 +703,7 @@ export function LaunchSprintSection() {
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
         eyebrow={`The ${LAUNCH_SPRINT_DAYS}-day Launch Sprint`}
-        title="We do not hand you a login and disappear."
+        title="Software nobody finished setting up saves you nothing."
         copy={`${LAUNCH_SPRINT_COPY}. The most expensive software failure is the one nobody ever finished setting up, so the rollout is scoped, priced and owned like the work it is.`}
       />
 
@@ -704,8 +787,8 @@ export function PricingPreviewSection() {
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
         eyebrow="Pricing"
-        title="Pay for sites and capacity. Never for the number of people who use it."
-        copy="Every cashier, clerk, technician and rep is included up to your seat ceiling. Onboarding is quoted separately so the human work is visible instead of buried in your monthly bill."
+        title="Pay for sites and capacity. Never for how many people use it."
+        copy="Every cashier, clerk, technician and rep is included up to your seat ceiling, so putting your whole team on it costs you nothing extra. Onboarding is quoted separately, because the human work is real and hiding it would only make the rollout worse."
       />
       <PricingCards limit={3} />
       <div className={`${styles.principlePanel} ${styles.sectionFooter}`}>
@@ -718,6 +801,10 @@ export function PricingPreviewSection() {
             </li>
           ))}
         </ul>
+        <p className={styles.small}>
+          The bar we ask you to hold it to: if it catches one bad cash-up, one dead-stock order or
+          one unbilled job a month, it has already paid for itself.
+        </p>
         <Link href="/home/pricing" className={styles.inlineAction}>
           See full pricing, add-ons and the plan comparison
           <ArrowRight className={styles.icon} weight="regular" />
@@ -800,7 +887,7 @@ export function ProofSection() {
       <SectionIntro
         eyebrow="Proof, honestly"
         title="We are not going to show you testimonials we made up."
-        copy="Corelith is early. Rather than invent social proof, we agree the numbers that matter with you before go-live and measure them after. These are the three we ask every customer to hold us to."
+        copy="Corelith is early, and inventing social proof would be the fastest way to lose you. So we agree the numbers before go-live and measure them after. These three decide whether this was worth your money — hold us to them."
       />
       <div className={styles.cardGrid3}>
         {proofFrames.map((frame) => {
@@ -859,8 +946,8 @@ export function FAQList({ items = faqs }: { items?: Array<{ q: string; a: string
 
 export function CtaBand({
   eyebrow = "Next step",
-  title = "See it running on your own workflow.",
-  copy = "Answer a short setup questionnaire — your business type, locations, current tools and the problem costing you the most. The demo opens on that, not on an empty account.",
+  title = "Find out what your gaps are costing you.",
+  copy = "Answer a few setup questions — your trade, your locations, what you use today and where you think the money is going. We come back with a demo on your own workflow and a straight view of what closing that gap is worth.",
   href = "/home/book-demo",
   label = "Find your setup",
   secondary = true,
@@ -1036,11 +1123,33 @@ export function SegmentDetail({ segment }: { segment: MarketingSegment }) {
       <section className={styles.band}>
         <div className={`${styles.section} ${styles.reveal}`}>
           <SectionIntro
-            eyebrow="Your version of the loop"
-            title={`For ${segment.title.toLowerCase()}, deliver means: ${segment.deliverStep.label.toLowerCase()}.`}
+            eyebrow="Your version of the trail"
+            title={`For ${segment.title.toLowerCase()}, delivering means: ${segment.deliverStep.label.toLowerCase()}.`}
             copy={segment.deliverStep.copy}
           />
           <Workflow steps={segment.workflow} />
+
+          {segment.modes ? (
+            <div className={`${styles.cardGrid2} ${styles.sectionFooter}`}>
+              {segment.modes.map((mode) => {
+                const ModeIcon = mode.icon;
+
+                return (
+                  <article key={mode.name} className={styles.card}>
+                    <ModeIcon className={styles.cardIcon} weight="regular" />
+                    <h3 className={styles.cardTitle}>{mode.name}</h3>
+                    <p className={styles.eyebrow}>{mode.who}</p>
+                    <p className={styles.body}>{mode.copy}</p>
+                    <div className={styles.chipList}>
+                      {mode.steps.map((step) => (
+                        <span key={step}>{step}</span>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </section>
 

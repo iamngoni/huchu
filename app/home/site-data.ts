@@ -75,6 +75,18 @@ export type MarketingSegment = {
   deliverStep: { label: string; copy: string };
   /** The segment's own six-step operating motion. */
   workflow: string[];
+  /**
+   * Some segments run the same loop two materially different ways — a counter
+   * sale and an account sale are the same concept with a different motion.
+   * Only set where the difference changes what the buyer needs to see.
+   */
+  modes?: Array<{
+    name: string;
+    who: string;
+    copy: string;
+    steps: string[];
+    icon: LucideIcon;
+  }>;
   /** Three sharp lines shown in the landing-page segment switcher. */
   landingPains: string[];
   /** The single number the switcher panel leads with. */
@@ -137,11 +149,11 @@ export const footerGroups = [
 ];
 
 const HOME_DESCRIPTION =
-  "Corelith runs the loop every trading business lives on: quote, order, deliver, invoice, get paid. One system for sellers, service providers, workshops, manufacturers and sales teams in Zimbabwe.";
+  "Every business leaks money it has already earned — in the drawer, on the shelf, in work nobody billed. Corelith shows you where, and stops it. Built in Zimbabwe for shops, bottle stores, service companies, workshops, manufacturers and sales teams.";
 
 export const seoPages = {
   home: {
-    title: "One system from the enquiry to the money in the bank",
+    title: "Find the money your business is already losing",
     description: HOME_DESCRIPTION,
     path: "/home",
     keywords: [
@@ -151,11 +163,13 @@ export const seoPages = {
       "job card software Zimbabwe",
       "manufacturing software Zimbabwe",
       "sales CRM Zimbabwe",
+      "POS system Zimbabwe",
+      "bottle store software Zimbabwe",
       "ZIMRA fiscalisation software",
     ],
   },
   root: {
-    title: "One system from the enquiry to the money in the bank",
+    title: "Find the money your business is already losing",
     description: HOME_DESCRIPTION,
     path: "/",
     keywords: [
@@ -304,65 +318,76 @@ export const seoPages = {
 } satisfies Record<string, SeoEntry>;
 
 // ---------------------------------------------------------------------------
-// The shared loop — the one idea the landing page has to land
+// The story: money you already earned, leaving through a gap you cannot see
 // ---------------------------------------------------------------------------
 
 /**
- * Sellers, service providers, workshops, manufacturers and sales teams look
- * like five different businesses and buy like one. They all take a promise from
- * a customer, spend stock, people and time keeping it, then have to invoice and
- * collect. The middle step changes shape; the loop never does.
+ * The intersection.
+ *
+ * A bottle store, a garage, a cleaning company, a maize mill and a field sales
+ * team look nothing alike and have exactly one thing in common: each of them is
+ * losing money it has already earned, through a gap nobody can see from where
+ * they sit. That is the problem the landing page sells against — not "six steps",
+ * which is a process story, and not one every business recognises.
+ *
+ * Every entry names the business type in its own words, so a reader finds
+ * themselves in the list rather than being told which category they belong to.
  */
-export const ORDER_TO_CASH_LOOP = [
+export const MONEY_LEAKS = [
   {
-    step: "Enquiry",
-    copy: "A call, a walk-in, a WhatsApp message. It lands on a customer record instead of in someone's phone.",
+    where: "In the drawer",
+    who: "Bottle stores, kiosks, tuckshops, forecourts, bars",
+    copy: "The cash you count at close does not match what the till says it sold. You know it happens. You cannot say which shift, which cashier, or how much this month.",
+    icon: Storefront,
+  },
+  {
+    where: "On the shelf",
+    who: "Hardware, spare parts, agro-dealers, wholesale, distribution",
+    copy: "Capital lying in stock that has not moved since March. And the fast line you actually sell, out again — because nobody saw it coming.",
+    icon: Package,
+  },
+  {
+    where: "In work you never billed",
+    who: "Cleaning, security, IT, logistics, plant hire, contractors",
+    copy: "Your team did the job. The client got the value. The invoice went out light, because nobody wrote it down while it was happening.",
+    icon: Work,
+  },
+  {
+    where: "In parts and hours",
+    who: "Garages, panel beaters, fitment centres, equipment repair",
+    copy: "A part leaves the store on a promise. Labour gets guessed at invoice time. Every job comes out a little thinner than it should have.",
+    icon: Wrench,
+  },
+  {
+    where: "In wastage and guesswork",
+    who: "Food and beverage, fabrication, packaging, assembly",
+    copy: "You quote a price that feels about right. You find out at stock-take whether the run made money. That is a gamble settled three months late.",
+    icon: Factory,
+  },
+  {
+    where: "In deals that went quiet",
+    who: "Field sales, distributor reps, account teams, sales floors",
+    copy: "A quote nobody chased. Stock promised to two customers. Commission argued over at month end. All of it revenue you had in your hand.",
     icon: Megaphone,
   },
-  {
-    step: "Quote",
-    copy: "Priced off live stock and your real rates, sent as a document, tracked until it is accepted.",
-    icon: FileText,
-  },
-  {
-    step: "Order",
-    copy: "The accepted quote becomes the order, with the deposit, the deadline and the owner attached.",
-    icon: ClipboardList,
-  },
-  {
-    step: "Deliver",
-    copy: "Stock goes out, the job gets done, the batch gets made. This is the only step that changes by industry.",
-    icon: LocalShipping,
-  },
-  {
-    step: "Invoice",
-    copy: "Built from what actually moved — not from what the quote guessed. Fiscalised where ZIMRA requires it.",
-    icon: ReceiptLong,
-  },
-  {
-    step: "Payment",
-    copy: "Receipts, part-payments and balances land against the customer and post straight into the books.",
-    icon: Coins,
-  },
 ];
 
-/** Everything that updates itself once the loop above is running in one place. */
-export const LOOP_SIDE_EFFECTS = [
-  { label: "Stock", copy: "Every issue, receipt and transfer moves the on-hand figure the moment it happens." },
-  { label: "Books", copy: "Sales, purchases and payments post themselves. Your accountant stops rebuilding the year." },
-  { label: "People", copy: "Every record carries the name of whoever created, approved or changed it." },
-  { label: "Reports", copy: "Margin, ageing, stock cover and branch performance are a page, not a weekend." },
-];
+/** The line that turns six separate leaks into one problem. */
+export const MONEY_LEAK_CLOSE =
+  "Different trades, same hole. Every one of these is money you already earned, walking out through a gap you cannot see from the office.";
 
+/**
+ * Why the gap exists. Not a software problem — an evidence problem.
+ */
 export const problemFragments = [
   {
     label: "WhatsApp",
-    copy: "Orders, approvals and price promises live in chats nobody can search.",
+    copy: "Orders, approvals and price promises sit in chats nobody can search when it matters.",
     icon: Users,
   },
   {
     label: "Excel",
-    copy: "Stock and branch reports depend on one person and the file they keep on one laptop.",
+    copy: "The real numbers live in one file, on one laptop, maintained by one person.",
     icon: FileText,
   },
   {
@@ -371,13 +396,13 @@ export const problemFragments = [
     icon: ReceiptLong,
   },
   {
-    label: "A separate POS",
-    copy: "It takes the money but never tells purchasing, costing or accounts what happened.",
+    label: "A till that talks to nobody",
+    copy: "It takes the money and never tells purchasing, costing or accounts what just happened.",
     icon: Storefront,
   },
   {
     label: "Staff memory",
-    copy: "The real process is in people's heads, so it walks out when they resign.",
+    copy: "The real process lives in people's heads, so it resigns when they do.",
     icon: ClipboardList,
   },
 ];
@@ -388,6 +413,94 @@ export const connectedOutcomes = [
   "One set of books",
   "One version of the truth",
 ];
+
+// ---------------------------------------------------------------------------
+// The mechanism: one trail behind every dollar
+// ---------------------------------------------------------------------------
+
+/**
+ * How the gap gets closed. Shown after the money story, as the mechanism rather
+ * than the pitch — a reader who has just recognised their own leak wants to know
+ * what actually stops it.
+ */
+export const MONEY_TRAIL = [
+  {
+    step: "Someone asks",
+    copy: "A walk-in, a call, a WhatsApp. It lands on a customer record instead of in somebody's phone.",
+    icon: Megaphone,
+  },
+  {
+    step: "You price it",
+    copy: "Off live stock and your real costs, so you know the margin before you send it — not after.",
+    icon: FileText,
+  },
+  {
+    step: "They say yes",
+    copy: "The quote becomes an order with the deposit, the deadline and an owner on it. Nothing gets promised twice.",
+    icon: ClipboardList,
+  },
+  {
+    step: "You deliver",
+    copy: "Stock goes out, the job gets done, the batch gets made. This is the only step that looks different from trade to trade.",
+    icon: LocalShipping,
+  },
+  {
+    step: "You bill",
+    copy: "Built from what actually moved, not from what the quote guessed. Fiscalised where ZIMRA needs it.",
+    icon: ReceiptLong,
+  },
+  {
+    step: "You get paid",
+    copy: "Receipts, part-payments and balances land on the customer and post into the books in one action.",
+    icon: Coins,
+  },
+];
+
+/** What closes itself once the trail runs in one place. This is the payoff. */
+export const TRAIL_PAYOFF = [
+  { label: "Stock", copy: "Moves the moment it moves. What the system says you hold is what is on the shelf." },
+  { label: "Books", copy: "Sales, purchases and payments post themselves. Your accountant stops rebuilding the year." },
+  { label: "Names", copy: "Every record carries who created, approved or changed it. Nothing is anonymous." },
+  { label: "Answers", copy: "Margin, ageing, stock cover, cash-up variance — a page you open, not a weekend you lose." },
+];
+
+/**
+ * Counter trade is not an afterthought, it is the shortest version of the trail.
+ *
+ * At a till there is no quote and no order — the customer walks in, pays and
+ * leaves. Saying otherwise loses every bottle store, kiosk and forecourt on the
+ * first screen. Same concept, three steps instead of six, and the money moves
+ * behind the counter rather than in front of it.
+ */
+export const COUNTER_TRADE = {
+  eyebrow: "Selling over a counter?",
+  title: "Your trail is three steps, not six. It matters more, not less.",
+  copy:
+    "No quote, no order, no delivery note — the sale is the entire front half. Which means everything that protects your money happens behind it, in the second after the customer walks out.",
+  who: "Bottle stores and liquor outlets, kiosks, tuckshops, supermarkets, forecourts, bars and fast-service counters",
+  steps: [
+    {
+      step: "Ring it up",
+      copy: "Scan or tap, take cash, card, EcoCash or a split tender, and print the fiscal receipt.",
+      icon: Storefront,
+    },
+    {
+      step: "Stock drops",
+      copy: "The bottle leaves the shelf on the system at the same second it leaves the shelf in the shop.",
+      icon: Package,
+    },
+    {
+      step: "The shift closes",
+      copy: "Cash counted against expected. Variance by till and by cashier, before anyone goes home.",
+      icon: Coins,
+    },
+  ],
+  proof: [
+    { value: "Offline", label: "Keeps selling through load-shedding, syncs after" },
+    { value: "Per cashier", label: "Cash-up variance you can actually act on" },
+    { value: "Fiscalised", label: "ZIMRA receipts issued from the sale itself" },
+  ],
+} as const;
 
 /** Honest, checkable claims. No logos, no invented testimonials. */
 export const trustSignals = [
@@ -408,22 +521,38 @@ export const segments: MarketingSegment[] = [
     pricingSlug: "sellers",
     title: "Sellers",
     navTitle: "Sellers",
-    who: "Retail, wholesale, spare parts, hardware, agro-dealers, distributors",
+    who: "Shops and tills, bottle stores, kiosks, hardware, spare parts, wholesale, distribution",
     eyebrow: "For businesses whose money is sitting on the shelf",
     headline: "Know what you have, what it cost, and what it made you.",
     summary:
       "Corelith ties the till to the stockroom to the ledger, so a sale reduces inventory, books the margin and shows up on the branch report the same minute it happens.",
     audience:
-      "Hardware stores, spare-parts counters, wholesalers, distributors, agro-dealers, pharmacies and multi-branch retailers carrying enough stock that shrinkage hurts.",
+      "Bottle stores, kiosks, tuckshops, supermarkets and forecourts selling over a till; hardware stores, spare-parts counters, agro-dealers, pharmacies, wholesalers and distributors selling on account. Most sellers do both.",
     cta: "See the seller setup",
     whatsapp:
-      "Hi Corelith, I run a retail, wholesale or distribution business and would like to see the seller setup.",
+      "Hi Corelith, I run a shop, bottle store, kiosk or wholesale business and would like to see the seller setup.",
     icon: Storefront,
     deliverStep: {
       label: "Pick and hand over",
       copy: "Stock leaves the shelf against the order, and the on-hand figure, the cost of sale and the margin all move together.",
     },
     workflow: ["Order", "Check stock", "Pick and issue", "Invoice", "Payment", "Reorder"],
+    modes: [
+      {
+        name: "Over the counter",
+        who: "Bottle stores, kiosks, tuckshops, supermarkets, forecourts, bars",
+        copy: "There is no quote and no order. The sale is one action at the till, and everything that matters happens behind it — stock, the fiscal receipt, the cash-up and the books.",
+        steps: ["Ring it up", "Take payment", "Stock drops", "Close the shift"],
+        icon: Storefront,
+      },
+      {
+        name: "On account",
+        who: "Hardware, spare parts, agro-dealers, wholesale, distribution",
+        copy: "The full loop runs: a customer asks for a price, you quote off live stock, you pick and deliver against the order, then you invoice and chase the balance.",
+        steps: ["Quote", "Order", "Pick and deliver", "Invoice", "Collect"],
+        icon: Warehouse,
+      },
+    ],
     landingPains: [
       "You find out about a stock-out from the customer, not the system.",
       "Nobody can tell you today's margin without a spreadsheet and an evening.",
@@ -431,16 +560,20 @@ export const segments: MarketingSegment[] = [
     ],
     landingProof: { value: "1 minute", label: "From till to margin report" },
     seo: {
-      title: "Retail, wholesale and distribution software in Zimbabwe",
+      title: "POS, retail, wholesale and distribution software in Zimbabwe",
       description:
-        "Corelith connects POS, stock, purchasing, invoicing, customer accounts, branch control and ZIMRA-ready reporting for Zimbabwean sellers and distributors.",
+        "Corelith connects POS, tills, stock, purchasing, invoicing, customer accounts, shift cash-ups, branch control and ZIMRA fiscalisation for Zimbabwean shops, bottle stores, kiosks and wholesalers.",
       path: "/home/solutions/sellers",
       keywords: [
+        "POS system Zimbabwe",
+        "bottle store software Zimbabwe",
+        "liquor store POS Zimbabwe",
+        "kiosk and tuckshop POS Zimbabwe",
         "retail software Zimbabwe",
         "wholesale software Zimbabwe",
         "spare parts software Zimbabwe",
         "stock control software Zimbabwe",
-        "POS inventory accounting Zimbabwe",
+        "ZIMRA fiscalisation POS",
       ],
     },
     productVisual: {
@@ -464,6 +597,7 @@ export const segments: MarketingSegment[] = [
       ],
     },
     pains: [
+      "The till drawer and the till report disagree, and nobody can say which cashier or which shift.",
       "Sales, receiving, transfers and supplier notes never reconcile without someone re-keying them.",
       "Stock losses only become visible after the cash is already gone.",
       "The POS, the invoice book and the accounts each hold a different version of the same day.",
@@ -472,7 +606,7 @@ export const segments: MarketingSegment[] = [
     capabilities: [
       {
         title: "Point of sale and cash-up",
-        copy: "Shifts, tenders, held carts, returns, customer accounts and a cash-up that balances before anyone goes home.",
+        copy: "Fast till entry, split tenders including cash, card and EcoCash, held carts, returns, and a shift cash-up that shows variance by till and by cashier before anyone goes home.",
         icon: ReceiptLong,
       },
       {
@@ -1154,22 +1288,22 @@ export const pricingPrinciples = [
 
 export const proofFrames = [
   {
-    title: "Stock accuracy",
+    title: "Money that reaches a bill",
+    metric: "Nothing unbilled",
+    copy: "Work completed, parts issued and stock delivered that never made it onto an invoice. This is almost always where the system pays for itself first, and it is the number we ask you to watch hardest.",
+    icon: Coins,
+  },
+  {
+    title: "What the shelf says vs what you say",
     metric: "System matches shelf",
-    copy: "The measure is the gap between what the system says you hold and what a count actually finds. We agree the starting number before go-live and re-measure after.",
+    copy: "The gap between what the system thinks you hold and what a physical count actually finds. We measure it before go-live so the after number means something.",
     icon: PackageCheck,
   },
   {
-    title: "Time to a real number",
+    title: "Time to a real answer",
     metric: "Days to minutes",
-    copy: "How long it takes to answer 'what did we make this week'. If that is still a spreadsheet exercise after rollout, the rollout did not work.",
+    copy: "How long it takes you to answer what you made this week. If that is still a spreadsheet exercise after rollout, the rollout did not work and we will say so.",
     icon: BarChart3,
-  },
-  {
-    title: "Revenue that reaches an invoice",
-    metric: "Nothing unbilled",
-    copy: "Work completed, parts issued and stock delivered that never reached a bill. This is usually where the software pays for itself first.",
-    icon: Coins,
   },
 ];
 
@@ -1220,7 +1354,11 @@ export const foundingPartnerItems = [
 export const faqs = [
   {
     q: "Who is Corelith actually for?",
-    a: "Businesses that take an order, deliver it and invoice for it — sellers, service providers, workshops, manufacturers and sales teams. If you carry stock, run jobs, or bill customers on account, the loop is the same and Corelith runs it.",
+    a: "Anyone whose money moves faster than their paperwork. Shops and bottle stores selling over a till, hardware and wholesale selling on account, service companies, workshops, manufacturers and sales teams. If you carry stock, run jobs or bill customers, you have a leak somewhere and this is built to find it.",
+  },
+  {
+    q: "I run a bottle store, a kiosk, a till. I never quote or invoice anyone.",
+    a: "Then your trail is three steps instead of six, and honestly the money matters more, not less — everything protecting it happens in the second after the customer walks out. Stock drops as it sells, the fiscal receipt comes off the same action, and the shift cash-up shows you variance by till and by cashier before anybody goes home.",
   },
   {
     q: "Do you charge per user?",
@@ -1228,7 +1366,7 @@ export const faqs = [
   },
   {
     q: "Is this an ERP?",
-    a: "It covers the same ground, but it does not arrive empty. Your industry's workflow is configured before the demo, so you are not paying a consultant to discover whether the software can match your business.",
+    a: "It covers the same ground, but it does not arrive empty and it does not need a consultant to become useful. Your trade is configured before the demo, so you spend the first month getting value instead of getting set up.",
   },
   {
     q: "Does it work when the internet is down?",
@@ -1244,7 +1382,7 @@ export const faqs = [
   },
   {
     q: "Why is there a setup fee?",
-    a: "Because migration, configuration, training and go-live support are real work done by real people. Hiding that cost inside the subscription would either inflate your monthly price or guarantee a bad rollout.",
+    a: "Because migration, configuration, training and go-live support are real work done by real people. Hiding it inside the subscription would either inflate your monthly price forever or guarantee a rollout nobody finishes — and an unfinished rollout saves you nothing.",
   },
   {
     q: "Do you offer a free trial?",

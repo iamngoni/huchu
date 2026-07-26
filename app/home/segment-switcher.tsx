@@ -56,6 +56,13 @@ export function SegmentSwitcher() {
           <p className={styles.eyebrow}>{active.who}</p>
           <h3 className={styles.sectionTitle}>{active.headline}</h3>
           <p className={styles.body}>{active.summary}</p>
+          {active.modes ? (
+            <div className={styles.chipList}>
+              {active.modes.map((mode) => (
+                <span key={mode.name}>{mode.name}</span>
+              ))}
+            </div>
+          ) : null}
           <Link href={`/home/solutions/${active.slug}`} className={styles.inlineAction}>
             {active.cta}
             <ChevronRight className={styles.icon} weight="regular" />
@@ -63,7 +70,7 @@ export function SegmentSwitcher() {
         </div>
 
         <div className={styles.segmentPanelAside}>
-          <p className={styles.eyebrow}>What this usually looks like today</p>
+          <p className={styles.eyebrow}>Where the money goes today</p>
           <ul className={styles.painList}>
             {active.landingPains.map((pain) => (
               <li key={pain}>
@@ -75,7 +82,7 @@ export function SegmentSwitcher() {
 
           <div className={styles.proofBlock}>
             <p className={styles.eyebrow}>
-              In the loop, your <strong>deliver</strong> step is: {active.deliverStep.label}
+              On the trail, your <strong>deliver</strong> step is: {active.deliverStep.label}
             </p>
             <p className={styles.body}>{active.deliverStep.copy}</p>
           </div>
@@ -84,7 +91,7 @@ export function SegmentSwitcher() {
             href={`/home/book-demo?interest=${active.slug}`}
             className={`${styles.button} ${styles.buttonPrimary}`}
           >
-            Get this configured for your business
+            Set this up for my business
             <ArrowRight className={styles.icon} weight="regular" />
           </Link>
         </div>

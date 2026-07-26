@@ -16,7 +16,7 @@ import {
 } from "@/app/home/site-components";
 import { ProductPreview } from "@/app/home/product-preview";
 import {
-  ORDER_TO_CASH_LOOP,
+  MONEY_TRAIL,
   coreModules,
   primarySegment,
   seoPages,
@@ -93,7 +93,7 @@ export default function PlatformPage() {
           title="Follow one order all the way through."
           copy="This is the loop the whole platform is built around. Every module has a job in it, and the handovers happen without anyone re-typing anything."
         />
-        <Workflow steps={ORDER_TO_CASH_LOOP.map((step) => step.step)} />
+        <Workflow steps={MONEY_TRAIL.map((step) => step.step)} />
 
         <div className={`${styles.tableFrame} ${styles.sectionFooter}`}>
           <table className={styles.table}>

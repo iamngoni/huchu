@@ -1176,6 +1176,121 @@
   font: var(--mk-caption);
 }
 
+/* ── The money leaks ─────────────────────────────────────────────────────── */
+
+.leakGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.leakCard {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  border: thin solid var(--mk-border);
+  border-radius: var(--card-radius);
+  background: var(--mk-surface);
+  padding: var(--space-5);
+}
+
+.leakCard .cardTitle {
+  margin-top: var(--space-2);
+  font: var(--font-weight-bold) var(--type-size-20) / var(--leading-tight) var(--font-family);
+}
+
+.leakCard .eyebrow {
+  color: var(--text-subtle);
+}
+
+.leakClose {
+  max-width: calc(var(--space-8) * 20);
+  margin: 0;
+  color: var(--text-strong);
+  font: var(--font-weight-semibold) var(--type-size-20) / var(--leading-normal) var(--font-family);
+  text-wrap: pretty;
+}
+
+/* ── Counter trade ───────────────────────────────────────────────────────── */
+
+.counterPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: start;
+  gap: var(--space-7);
+  border: thin solid var(--mk-border-strong);
+  border-radius: var(--card-radius);
+  background: var(--mk-surface-subtle);
+  padding: var(--space-7);
+}
+
+.counterCopy {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+}
+
+.counterCopy .cardTitle {
+  font: var(--font-weight-bold) var(--type-size-20) / var(--leading-tight) var(--font-family);
+}
+
+.counterSteps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counterStep {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  border: thin solid var(--mk-border);
+  border-radius: var(--radius-md);
+  background: var(--mk-surface);
+  padding: var(--space-4);
+}
+
+.counterStep strong {
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.counterStep p {
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--mk-caption);
+}
+
+.counterProof {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: var(--space-5);
+  border-top: thin solid var(--mk-border);
+  padding-top: var(--space-4);
+}
+
+.counterProofItem {
+  display: grid;
+  gap: var(--space-px);
+}
+
+.counterProofItem strong {
+  color: var(--text-strong);
+  font-family: var(--font-mono);
+  font-size: var(--type-size-16);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+}
+
+.counterProofItem span {
+  color: var(--text-muted);
+  font: var(--mk-caption);
+}
+
 /* ── Modules ─────────────────────────────────────────────────────────────── */
 
 .moduleCard,
@@ -1659,9 +1774,14 @@
   .segmentGrid,
   .cardGrid3,
   .capabilityGrid,
+  .leakGrid,
   .stepGrid,
   .trustInner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .counterPanel {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .loop,
@@ -1736,6 +1856,7 @@
   .cardGrid3,
   .capabilityGrid,
   .cardGrid2,
+  .leakGrid,
   .stepGrid,
   .formGrid,
   .statStrip,
@@ -1743,8 +1864,18 @@
   .trustInner,
   .loop,
   .loopEffects,
+  .counterSteps,
   .workflow {
     grid-template-columns: 1fr;
+  }
+
+  .counterPanel {
+    gap: var(--space-5);
+    padding: var(--space-5);
+  }
+
+  .leakClose {
+    font-size: var(--type-size-16);
   }
 
   .loopStep,

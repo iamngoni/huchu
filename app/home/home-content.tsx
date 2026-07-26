@@ -6,7 +6,8 @@ import {
   HomeHero,
   JsonLd,
   LaunchSprintSection,
-  LoopSection,
+  MoneyLeakSection,
+  MoneyTrailSection,
   ModulesSection,
   PricingPreviewSection,
   ProblemSection,
@@ -26,16 +27,20 @@ import {
 } from "@/lib/marketing/seo";
 
 /**
- * The landing page, in the order a cold visitor needs it:
+ * The landing page argues one thing: money you have already earned is leaving,
+ * and you cannot see where. Everything else is evidence for that claim or the
+ * answer to it — because a visitor is only ever deciding whether this makes
+ * them money or saves them money.
  *
- *   who this is for and what it does  → hero, trust strip
- *   why it matters                    → the problem
- *   the one idea                      → the order-to-cash loop
+ *   a question you cannot answer      → hero, trust strip
+ *   where your money actually goes    → the leaks, six trades, one problem
+ *   why you cannot see it             → six versions of the truth
+ *   what stops it                     → the trail, plus the counter version
  *   is this me?                       → segment switcher
  *   what do I actually get            → modules
  *   why not the cheaper option        → comparison and differentiators
- *   what does rollout look like       → Launch Sprint
- *   what does it cost                 → pricing preview
+ *   will the rollout finish           → Launch Sprint
+ *   what does it cost, and does it pay → pricing preview
  *   why should I believe you          → honest proof framing
  *   what is still bothering me        → FAQ
  *   do the thing                      → CTA
@@ -53,8 +58,9 @@ export function HomeMarketingPage() {
         ]}
       />
       <HomeHero />
+      <MoneyLeakSection />
       <ProblemSection />
-      <LoopSection />
+      <MoneyTrailSection />
       <SegmentSection />
       <ModulesSection />
       <DifferentiatorSection />
@@ -63,7 +69,7 @@ export function HomeMarketingPage() {
         <SectionIntro
           eyebrow="What actually makes the difference"
           title="Six things that decide whether this works here."
-          copy="Not feature counts. These are the constraints a system has to survive here, and the commercial terms that decide whether you can afford to put everyone on it."
+          copy="Not feature counts — nobody ever made money off a feature count. These are the conditions a system has to survive in this country, and the commercial terms that decide whether you can afford to put your whole team on it."
         />
         <CompetitiveEdgeGrid />
       </section>

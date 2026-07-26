@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import {
   CtaBand,
   JsonLd,
-  LoopSection,
+  MoneyTrailSection,
   PageHero,
   SectionIntro,
   SegmentCards,
@@ -41,8 +41,8 @@ export default function SolutionsPage() {
       />
       <PageHero
         eyebrow="Solutions"
-        title="Five kinds of business. One loop. Six configured starting points."
-        copy="Corelith does not arrive as an empty system waiting for a consultant. Pick the business you run and the workflow, screens and reports are already set up the way that business works."
+        title="Whatever you sell, the money leaves the same way."
+        copy="Corelith does not arrive as an empty system waiting for a consultant. Pick the trade you are in and the screens, workflow and reports are already set up the way that business actually runs."
       />
 
       <section className={styles.section}>
@@ -54,7 +54,7 @@ export default function SolutionsPage() {
         <SegmentCards />
       </section>
 
-      <LoopSection />
+      <MoneyTrailSection />
 
       <section className={styles.section}>
         <SectionIntro
