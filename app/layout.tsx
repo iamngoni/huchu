@@ -1,7 +1,6 @@
 import "@rtcamp/frappe-ui-react/theme";
 import "./globals.css";
 import "./themes/corelith-bridge.css";
-import "@corelithzw/react/styles.css";
 import { Analytics } from "@vercel/analytics/next";
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";

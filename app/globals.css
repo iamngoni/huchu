@@ -182,19 +182,6 @@
   --info-500:    #2d84c6;
   --info-700:    #1f5f90;
 
-  /* ── Surface Tokens (derive from neutral palette) ────────────────────── */
-  --surface-app:           var(--neutral-50);
-  --surface-panel:         var(--neutral-0);
-  --surface-elevated:      var(--neutral-0);
-  --surface-soft:          var(--neutral-100);
-  --surface-canvas:        var(--neutral-50);
-  --surface-base:          var(--neutral-0);
-  --surface-raised:        var(--neutral-0);
-  --surface-muted:         var(--neutral-100);
-  --surface-subtle:        var(--neutral-25);
-  --surface-active:        var(--primary-50);
-  --surface-row-highlight: var(--primary-50);
-  --surface-overlay:       rgb(27 33 39 / 14%);
 
   /* ── Text Tokens ─────────────────────────────────────────────────────── */
   --text-strong: var(--neutral-900);
@@ -202,29 +189,20 @@
   --text-muted:  var(--neutral-600);
   --text-subtle: var(--neutral-500);
   --text-inverse:var(--neutral-0);
-  --text-danger: var(--danger-700);
 
   /* ── Action Tokens ───────────────────────────────────────────────────── */
-  --action-primary-bg:     var(--primary);
-  --action-primary-fg:     var(--neutral-0);
-  --action-primary-hover:  var(--primary-600);
-  --action-primary-pressed:var(--primary-700);
-  --action-secondary-bg:   var(--primary-50);
-  --action-secondary-fg:   var(--primary-700);
-  --action-secondary-hover:var(--primary-100);
   --action-outline-bg:     var(--surface-base);
   --action-outline-hover-bg: var(--surface-subtle);
   --action-outline-border:   transparent;
   --action-outline-border-hover: transparent;
-  --action-destructive-bg:   var(--danger-500);
-  --action-destructive-fg:   var(--neutral-0);
-  --action-disabled-bg:      var(--neutral-100);
-  --action-disabled-fg:      var(--neutral-400);
+
+  --action-disabled-bg:      var(--gray-100);
+  --action-disabled-fg:      var(--gray-400);
 
   /* ── Edge / Border Tokens ────────────────────────────────────────────── */
-  --edge-subtle:   var(--neutral-100);
-  --edge-default:  var(--neutral-200);
-  --edge-strong:   var(--neutral-300);
+  --edge-subtle:   var(--gray-100);
+  --edge-default:  var(--gray-200);
+  --edge-strong:   var(--gray-300);
   --border-default:var(--edge-default);
   --border-soft:   var(--edge-subtle);
   --border-subtle: var(--edge-subtle);
@@ -233,7 +211,7 @@
   --input-bg:      var(--surface-base);
 
   /* ── Focus Ring ──────────────────────────────────────────────────────── */
-  --focus-ring:        var(--primary-500);
+  --focus-ring:        var(--brand-500);
   --focus-ring-offset: var(--surface-canvas);
 
   /* ── Shadow / Elevation System ───────────────────────────────────────── */
@@ -270,9 +248,9 @@
   --card-divider:     var(--edge-subtle);
 
   /* ── Status Tokens ───────────────────────────────────────────────────── */
-  --status-success-bg:    var(--success-50);
-  --status-success-border:var(--success-300);
-  --status-success-text:  var(--success-700);
+  --status-success-bg:    var(--tone-success-bg);
+  --status-success-border:var(--tone-success-bd);
+  --status-success-text:  var(--tone-success);
   --status-warning-bg:    var(--warning-50);
   --status-warning-border:var(--warning-300);
   --status-warning-text:  var(--warning-700);

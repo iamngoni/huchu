@@ -6,4 +6,4 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 minimumReleaseAgeExclude:
-  - '@corelithzw/react@0.3.2 || 0.3.3'
+  - '@corelithzw/react@0.3.2 || 0.3.3 || 0.3.4'

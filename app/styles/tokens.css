@@ -73,7 +73,7 @@
   --action-primary-fg:      #FFFFFF;
 
   --action-secondary-bg:    var(--surface);
-  --action-secondary-bg-h:  var(--surface-muted);
+  --action-secondary-bg-hover:  var(--surface-muted);
   --action-secondary-fg:    var(--text-strong);
 
   --action-destructive-bg:    #B83A2A;
