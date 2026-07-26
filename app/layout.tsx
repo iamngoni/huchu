@@ -1,6 +1,6 @@
 import "@rtcamp/frappe-ui-react/theme";
 import "./globals.css";
-import "./themes/client.css";
+import "./themes/corelith-bridge.css";
 import "@corelithzw/react/styles.css";
 import { Analytics } from "@vercel/analytics/next";
 import { Suspense } from "react";
@@ -116,11 +116,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(() => { try { const key = "huchu.appearance"; const value = localStorage.getItem(key) || "system"; if (["system","light","dark"].includes(value)) document.documentElement.dataset.appearance = value; } catch {} })();`,
-          }}
-        />
+
       </head>
       <body
         className="font-sans subpixel-antialiased"

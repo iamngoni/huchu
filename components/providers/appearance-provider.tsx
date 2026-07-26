@@ -14,7 +14,7 @@ type AppearanceContextValue = {
 const AppearanceContext = React.createContext<AppearanceContextValue | null>(null);
 
 function isAppearancePreference(value: string | null): value is AppearancePreference {
-  return value === "system" || value === "light" || value === "dark";
+  return value === "light"// || value === "light" || value === "dark";
 }
 
 function applyAppearance(next: AppearancePreference) {
@@ -22,11 +22,11 @@ function applyAppearance(next: AppearancePreference) {
 }
 
 export function AppearanceProvider({ children }: { children: React.ReactNode }) {
-  const [appearance, setAppearanceState] = React.useState<AppearancePreference>("system");
+  const [appearance, setAppearanceState] = React.useState<AppearancePreference>("light");
 
   React.useEffect(() => {
     const stored = window.localStorage.getItem(APPEARANCE_STORAGE_KEY);
-    const initial = isAppearancePreference(stored) ? stored : "system";
+    const initial = isAppearancePreference(stored) ? stored : "light";
     setAppearanceState(initial);
     applyAppearance(initial);
   }, []);

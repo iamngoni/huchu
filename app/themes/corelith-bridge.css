@@ -1,211 +1,131 @@
 /*
  * Corelith bridge.
- * The package stylesheet is loaded before app tokens; this file maps Corelith
- * component tokens onto Huchu's semantic theme so migrated surfaces inherit the
- * existing warm paper system and account appearance preference.
+ * Corelith's package CSS is the visual source of truth. This file only exposes
+ * compatibility aliases that the existing app still expects, plus the missing
+ * dark-mode token layer that the package does not ship.
  */
 
 :root {
-  --canvas: var(--surface-canvas);
-  --surface: var(--surface-base);
-  --surface-sunken: var(--surface-muted);
-  --surface-deep: var(--surface-soft);
-  --hairline: color-mix(in oklab, var(--edge-default) 70%, transparent);
+  --surface-app: var(--canvas);
+  --surface-panel: var(--surface);
+  --surface-elevated: var(--surface);
+  --surface-soft: var(--surface-deep);
+  --surface-canvas: var(--canvas);
+  --surface-base: var(--surface);
+  --surface-raised: var(--surface);
+  --surface-active: var(--brand-soft);
+  --surface-row-highlight: var(--brand-tint);
+  --surface-overlay: rgb(22 24 29 / 14%);
 
-  --brand: var(--action-primary-bg);
-  --brand-strong: var(--action-primary-hover);
-  --brand-deeper: var(--action-primary-pressed);
-  --brand-soft: var(--action-secondary-bg);
-  --brand-tint: color-mix(in oklab, var(--action-primary-bg) 10%, transparent);
-  --brand-50: var(--primary-50);
-  --brand-100: var(--primary-100);
-  --brand-300: var(--primary-300);
-  --brand-500: var(--primary-500);
-  --brand-700: var(--primary-700);
+  --text-danger: var(--tone-danger);
 
-  --tone-info: var(--status-info-text);
-  --tone-info-bg: var(--status-info-bg);
-  --tone-info-bd: var(--status-info-border);
-  --tone-success: var(--status-success-text);
-  --tone-success-bg: var(--status-success-bg);
-  --tone-success-bd: var(--status-success-border);
-  --tone-success-strong: var(--status-success-text);
-  --tone-warn: var(--status-warning-text);
-  --tone-warn-bg: var(--status-warning-bg);
-  --tone-warn-bd: var(--status-warning-border);
-  --tone-danger: var(--status-error-text);
-  --tone-danger-bg: var(--status-error-bg);
-  --tone-danger-bd: var(--status-error-border);
-  --tone-danger-strong: var(--status-error-text);
-  --tone-neutral: var(--text-muted);
-  --tone-neutral-bg: var(--surface-muted);
-  --tone-neutral-bd: var(--edge-default);
+  --edge-subtle: var(--border-subtle);
+  --edge-default: var(--border);
+  --edge-strong: var(--border-strong);
+  --border-default: var(--border);
+  --border-soft: var(--border-subtle);
+  --input-border: var(--border);
+  --input-bg: var(--surface);
 
-  --dot-attention: var(--brand);
-  --dot-progress: var(--brand);
-  --dot-ok: var(--tone-success);
-  --dot-idle: var(--text-subtle);
+  --action-primary-hover: var(--action-primary-bg-hover, var(--brand-strong));
+  --action-primary-pressed: var(--action-primary-bg-pressed, var(--brand-deeper));
+  --action-secondary-hover: var(--action-secondary-bg-h);
+  --action-outline-bg: var(--surface);
+  --action-outline-hover-bg: var(--surface-muted);
+  --action-disabled-bg: var(--surface-muted);
+  --action-disabled-fg: var(--text-subtle);
 
-  --focus-ring-soft: color-mix(in oklab, var(--focus-ring) 22%, transparent);
-  --font-sans: var(--font-family);
+  --status-success-bg: var(--tone-success-bg);
+  --status-success-border: var(--tone-success-bd);
+  --status-success-text: var(--tone-success);
+  --status-warning-bg: var(--tone-warn-bg);
+  --status-warning-border: var(--tone-warn-bd);
+  --status-warning-text: var(--tone-warn);
+  --status-error-bg: var(--tone-danger-bg);
+  --status-error-border: var(--tone-danger-bd);
+  --status-error-text: var(--tone-danger);
+  --status-info-bg: var(--tone-info-bg);
+  --status-info-border: var(--tone-info-bd);
+  --status-info-text: var(--tone-info);
+  --status-progress-bg: var(--brand-soft);
+  --status-progress-border: var(--brand-100);
+  --status-progress-text: var(--brand-strong);
+  --status-pending-bg: var(--surface-muted);
+  --status-pending-border: var(--border-strong);
+  --status-pending-text: var(--text-muted);
+  --status-inactive-bg: var(--surface-muted);
+  --status-inactive-border: var(--border-subtle);
+  --status-inactive-text: var(--text-subtle);
+
+  --table-toolbar-bg: color-mix(in oklab, var(--surface) 86%, transparent);
+  --table-toolbar-border: var(--border-subtle);
+  --table-header-bg: var(--surface-muted);
+  --table-header-text: var(--text-subtle);
+  --table-divider: var(--border-subtle);
+  --table-row-bg: var(--surface);
+  --table-row-bg-alt: var(--surface);
+  --table-row-hover-bg: var(--surface-muted);
+  --table-row-selected-bg: var(--brand-tint);
+  --datatable-toolbar-bg: color-mix(in oklab, var(--surface) 90%, transparent);
+  --datatable-toolbar-border: var(--border-subtle);
+  --datatable-expanded-bg: var(--surface-muted);
+  --datatable-empty-bg: var(--surface-muted);
+
+  --background: var(--canvas);
+  --foreground: var(--text-body);
+  --card: var(--surface);
+  --card-foreground: var(--text-body);
+  --popover: var(--surface);
+  --popover-foreground: var(--text-body);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-muted);
+  --input: var(--border);
+  --ring: var(--focus-ring);
+
+  --sidebar: var(--surface-muted);
+  --sidebar-foreground: var(--text-body);
+  --sidebar-primary: var(--action-primary-bg);
+  --sidebar-primary-foreground: var(--action-primary-fg);
+  --sidebar-accent: var(--surface);
+  --sidebar-accent-foreground: var(--text-strong);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--focus-ring);
+
+  --font-family: var(--font-sans);
   --font-display: var(--font-sans);
   --font-serif: var(--font-sans);
-  --font-mono: var(--font-ibm-plex-mono);
 
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
-  --radius-2xl: 18px;
+  --control-height-md: var(--h-control-md);
+  --radius: 0.625rem;
 
-  --h-control-xs: 24px;
-  --h-control-sm: 30px;
-  --h-control-md: var(--control-height-md);
-  --h-control-lg: 44px;
-  --button-radius: 8px;
-  --card-radius: 12px;
+  --surface-frame-shadow: inset 0 0 0 1px var(--border);
+  --surface-frame-shadow-hover:
+    inset 0 0 0 1px var(--border-strong),
+    0 4px 12px rgb(22 24 29 / 0.08);
+  --button-shadow-rest: inset 0 0 0 1px var(--border);
+  --button-shadow-hover:
+    inset 0 0 0 1px var(--border-strong),
+    0 2px 6px rgb(22 24 29 / 0.08);
+  --button-shadow-pressed: inset 0 0 0 1px var(--border-strong);
+  --button-ghost-hover-bg: var(--surface-muted);
+  --button-ghost-active-bg: var(--surface-sunken);
+  --card-shadow-rest: var(--shadow-rest);
+  --card-divider: var(--border-subtle);
+
+  --motion-duration-instant: var(--dur-instant);
+  --motion-duration-fast: var(--dur-fast);
+  --motion-duration-base: var(--dur-base);
+  --motion-duration-normal: var(--dur-base);
+  --motion-duration-slow: var(--dur-slow);
+  --motion-ease-standard: var(--ease-out);
+  --motion-ease-default: var(--ease-out);
+  --motion-ease-emphasized: var(--ease-in-out);
+  --motion-ease-exit: var(--ease-in-out);
+  --motion-ease-spring: var(--ease-spring);
+
+  --app-canvas-wash: none;
 }
 
 :root[data-appearance="light"] {
   color-scheme: light;
-}
-
-:root[data-appearance="dark"] {
-  color-scheme: dark;
-  --surface-app: var(--neutral-900);
-  --surface-panel: var(--neutral-800);
-  --surface-elevated: var(--neutral-800);
-  --surface-soft: color-mix(in oklab, var(--neutral-800) 82%, var(--neutral-900));
-  --surface-canvas: var(--neutral-900);
-  --surface-base: var(--neutral-800);
-  --surface-raised: var(--neutral-800);
-  --surface-muted: color-mix(in oklab, var(--neutral-800) 72%, var(--neutral-900));
-  --surface-subtle: color-mix(in oklab, var(--neutral-800) 58%, var(--neutral-900));
-  --surface-active: color-mix(in oklab, var(--primary-500) 18%, var(--neutral-800));
-  --surface-row-highlight: color-mix(in oklab, var(--primary-500) 16%, var(--neutral-800));
-  --surface-overlay: color-mix(in oklab, var(--neutral-900) 72%, transparent);
-
-  --text-strong: var(--neutral-0);
-  --text-body: var(--neutral-100);
-  --text-muted: var(--neutral-300);
-  --text-subtle: var(--neutral-400);
-  --text-inverse: var(--neutral-900);
-
-  --edge-subtle: color-mix(in oklab, var(--neutral-700) 45%, var(--neutral-800));
-  --edge-default: color-mix(in oklab, var(--neutral-700) 74%, var(--neutral-800));
-  --edge-strong: var(--neutral-600);
-  --border-default: var(--edge-default);
-  --border-soft: var(--edge-subtle);
-  --border-subtle: var(--edge-subtle);
-  --border-strong: var(--edge-strong);
-  --input-border: var(--edge-default);
-  --input-bg: var(--surface-base);
-
-  --action-secondary-bg: color-mix(in oklab, var(--primary-500) 16%, var(--neutral-800));
-  --action-secondary-fg: var(--neutral-0);
-  --action-secondary-hover: color-mix(in oklab, var(--primary-500) 24%, var(--neutral-800));
-  --action-outline-bg: var(--surface-base);
-  --action-outline-hover-bg: var(--surface-muted);
-  --action-disabled-bg: var(--neutral-800);
-  --action-disabled-fg: var(--neutral-500);
-
-  --status-success-bg: color-mix(in oklab, var(--success-500) 18%, var(--neutral-800));
-  --status-warning-bg: color-mix(in oklab, var(--warning-500) 18%, var(--neutral-800));
-  --status-error-bg: color-mix(in oklab, var(--danger-500) 18%, var(--neutral-800));
-  --status-info-bg: color-mix(in oklab, var(--info-500) 18%, var(--neutral-800));
-  --status-pending-bg: var(--surface-muted);
-  --status-inactive-bg: var(--surface-muted);
-
-  --table-toolbar-bg: color-mix(in oklab, var(--surface-base) 88%, transparent);
-  --table-header-bg: var(--surface-muted);
-  --table-row-bg: var(--surface-base);
-  --table-row-bg-alt: var(--surface-base);
-  --table-row-hover-bg: var(--surface-muted);
-  --datatable-toolbar-bg: color-mix(in oklab, var(--surface-base) 90%, transparent);
-  --datatable-expanded-bg: var(--surface-muted);
-  --datatable-empty-bg: var(--surface-muted);
-
-  --background: var(--surface-canvas);
-  --foreground: var(--text-body);
-  --card: var(--surface-base);
-  --card-foreground: var(--text-body);
-  --popover: var(--surface-raised);
-  --popover-foreground: var(--text-body);
-  --muted: var(--surface-muted);
-  --muted-foreground: var(--text-muted);
-  --border: var(--edge-default);
-  --input: var(--edge-default);
-  --ring: var(--focus-ring);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-appearance]),
-  :root[data-appearance="system"] {
-    color-scheme: dark;
-    --surface-app: var(--neutral-900);
-    --surface-panel: var(--neutral-800);
-    --surface-elevated: var(--neutral-800);
-    --surface-soft: color-mix(in oklab, var(--neutral-800) 82%, var(--neutral-900));
-    --surface-canvas: var(--neutral-900);
-    --surface-base: var(--neutral-800);
-    --surface-raised: var(--neutral-800);
-    --surface-muted: color-mix(in oklab, var(--neutral-800) 72%, var(--neutral-900));
-    --surface-subtle: color-mix(in oklab, var(--neutral-800) 58%, var(--neutral-900));
-    --surface-active: color-mix(in oklab, var(--primary-500) 18%, var(--neutral-800));
-    --surface-row-highlight: color-mix(in oklab, var(--primary-500) 16%, var(--neutral-800));
-    --surface-overlay: color-mix(in oklab, var(--neutral-900) 72%, transparent);
-
-    --text-strong: var(--neutral-0);
-    --text-body: var(--neutral-100);
-    --text-muted: var(--neutral-300);
-    --text-subtle: var(--neutral-400);
-    --text-inverse: var(--neutral-900);
-
-    --edge-subtle: color-mix(in oklab, var(--neutral-700) 45%, var(--neutral-800));
-    --edge-default: color-mix(in oklab, var(--neutral-700) 74%, var(--neutral-800));
-    --edge-strong: var(--neutral-600);
-    --border-default: var(--edge-default);
-    --border-soft: var(--edge-subtle);
-    --border-subtle: var(--edge-subtle);
-    --border-strong: var(--edge-strong);
-    --input-border: var(--edge-default);
-    --input-bg: var(--surface-base);
-
-    --action-secondary-bg: color-mix(in oklab, var(--primary-500) 16%, var(--neutral-800));
-    --action-secondary-fg: var(--neutral-0);
-    --action-secondary-hover: color-mix(in oklab, var(--primary-500) 24%, var(--neutral-800));
-    --action-outline-bg: var(--surface-base);
-    --action-outline-hover-bg: var(--surface-muted);
-    --action-disabled-bg: var(--neutral-800);
-    --action-disabled-fg: var(--neutral-500);
-
-    --status-success-bg: color-mix(in oklab, var(--success-500) 18%, var(--neutral-800));
-    --status-warning-bg: color-mix(in oklab, var(--warning-500) 18%, var(--neutral-800));
-    --status-error-bg: color-mix(in oklab, var(--danger-500) 18%, var(--neutral-800));
-    --status-info-bg: color-mix(in oklab, var(--info-500) 18%, var(--neutral-800));
-    --status-pending-bg: var(--surface-muted);
-    --status-inactive-bg: var(--surface-muted);
-
-    --table-toolbar-bg: color-mix(in oklab, var(--surface-base) 88%, transparent);
-    --table-header-bg: var(--surface-muted);
-    --table-row-bg: var(--surface-base);
-    --table-row-bg-alt: var(--surface-base);
-    --table-row-hover-bg: var(--surface-muted);
-    --datatable-toolbar-bg: color-mix(in oklab, var(--surface-base) 90%, transparent);
-    --datatable-expanded-bg: var(--surface-muted);
-    --datatable-empty-bg: var(--surface-muted);
-
-    --background: var(--surface-canvas);
-    --foreground: var(--text-body);
-    --card: var(--surface-base);
-    --card-foreground: var(--text-body);
-    --popover: var(--surface-raised);
-    --popover-foreground: var(--text-body);
-    --muted: var(--surface-muted);
-    --muted-foreground: var(--text-muted);
-    --border: var(--edge-default);
-    --input: var(--edge-default);
-    --ring: var(--focus-ring);
-  }
 }
