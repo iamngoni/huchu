@@ -73,9 +73,11 @@ export function ProfilePreferences() {
   if (profileQuery.isLoading) {
     return (
       <Card>
-        <Card.Body>
-          <Skeleton lines={6} gap={8} />
-        </Card.Body>
+        <div className="space-y-2">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton key={index} variant="text" />
+          ))}
+        </div>
       </Card>
     );
   }
@@ -92,56 +94,50 @@ export function ProfilePreferences() {
 
   return (
     <>
-      <Card>
-        <Card.Header>
-          <Card.Title>Account details</Card.Title>
-        </Card.Header>
-        <Card.Body>
-          <div className="settings-section">
-            <Field label="Name" required>
-              <Input
-                value={draft.name}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, name: event.target.value }))
-                }
-                required
-              />
-            </Field>
-            <Field label="Phone" description="Used for workspace contact and notifications.">
-              <Input
-                value={draft.phone}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, phone: event.target.value }))
-                }
-                placeholder="No phone number"
-              />
-            </Field>
-            <Field label="Email" description="Email changes are handled by workspace administrators.">
-              <Input value={profile.email} readOnly />
-            </Field>
-            <div className="settings-row">
-              <div>
-                <div className="t-label-sm">Role</div>
-                <p className="t-caption t-muted">Access is controlled by your workspace role.</p>
-              </div>
-              <Badge tone="outline">{profile.role}</Badge>
+      <Card title="Account details">
+        <div className="settings-section">
+          <Field label="Name" required>
+            <Input
+              value={draft.name}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, name: event.target.value }))
+              }
+              required
+            />
+          </Field>
+          <Field label="Phone" description="Used for workspace contact and notifications.">
+            <Input
+              value={draft.phone}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, phone: event.target.value }))
+              }
+              placeholder="No phone number"
+            />
+          </Field>
+          <Field label="Email" description="Email changes are handled by workspace administrators.">
+            <Input value={profile.email} readOnly />
+          </Field>
+          <div className="settings-row">
+            <div>
+              <div className="t-label-sm">Role</div>
+              <p className="t-caption t-muted">Access is controlled by your workspace role.</p>
             </div>
-            <div className="settings-row">
-              <div>
-                <div className="t-label-sm">Workspace</div>
-                <p className="t-caption t-muted">{profile.company.slug}</p>
-              </div>
-              <span className="t-mono">{profile.company.name}</span>
-            </div>
+            <Badge tone="outline">{profile.role}</Badge>
           </div>
-        </Card.Body>
+          <div className="settings-row">
+            <div>
+              <div className="t-label-sm">Workspace</div>
+              <p className="t-caption t-muted">{profile.company.slug}</p>
+            </div>
+            <span className="t-mono">{profile.company.name}</span>
+          </div>
+        </div>
       </Card>
 
       <SaveBar
         dirty={dirty}
-        title="Unsaved profile changes"
-        summary="Save your account details or discard the draft."
-        saving={updateMutation.isPending}
+        message="Unsaved profile changes — save your account details or discard the draft."
+        loading={updateMutation.isPending}
         onDiscard={() => setDraft(savedDraft)}
         onSave={() =>
           updateMutation.mutate({

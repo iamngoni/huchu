@@ -4,6 +4,17 @@ The DS primitives page says its 47 components "mirror the live `tate2301/huchu` 
 `components/ui/*` layer and the DS are **two implementations of the same intent**. Migration is
 convergence, not adoption from zero.
 
+> **Written against a newer API than the installed `@corelithzw/react@0.3.4`.** Several components named
+> below do not exist in 0.3.4: there is no `NavGroup`/`NavItem` (settings-rail nav is CSS-only —
+> `.settings-rail .rail-item`, wrapped locally in `components/ui/settings-rail.tsx`), `Card` has no compound
+> `.Header`/`.Title`/`.Body` slots (use the `title` / `subtitle` / `footer` props), `DataTable` sorts
+> client-side rather than being fully controlled (no `DataTableSortState`), `Button` uses
+> `startIcon`/`endIcon`/`iconOnly` rather than `icon`, `Select` takes `<option>` children rather than an
+> `options` array, and `AlertDialog` has no imperative `.confirm()` (see `components/ui/ds-confirm.tsx`).
+> Always check `node_modules/@corelithzw/react/dist/index.d.ts` before trusting a name here.
+>
+> Token and style migration is complete — see `01-setup.md`. What remains is component API migration.
+
 ## Blast radius — measured, use it to sequence work
 
 310 of 571 `.tsx` files under `app/` + `components/` import from `@/components/ui/`.

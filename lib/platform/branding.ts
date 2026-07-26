@@ -43,9 +43,12 @@ export type EffectiveBranding = {
 
 export const BRANDING_FONT_OPTIONS: BrandingFontOption[] = [
   {
+    // The design system's own face (Atkinson Hyperlegible). Deferring to
+    // `--font-sans` rather than naming a family keeps the default tenant on
+    // whatever @corelithzw/react ships, including its fallback stack.
     key: "huchu",
     label: `${PLATFORM_BRAND_NAME} Sans`,
-    fontFamily: '"SS Huchu", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+    fontFamily: "var(--font-sans)",
   },
   {
     key: "inter",
@@ -73,18 +76,28 @@ export const BRANDING_FONT_OPTIONS: BrandingFontOption[] = [
   },
 ];
 
+/** The option whose family defers to the design system's `--font-sans`. */
+const DEFAULT_FONT_KEY: BrandingFontKey = "huchu";
+
+/**
+ * The unbranded baseline. Colours mirror `@corelithzw/react`'s `--brand`,
+ * `--brand-soft` and `--brand-tint` so the branding editor opens on the design
+ * system rather than on a palette the product no longer uses. Nothing here
+ * reaches the DOM while `brandingEnabled` is false — see
+ * `getBrandingCssVariables` — these values only seed the editor's swatches.
+ */
 const DEFAULT_BRANDING: EffectiveBranding = {
   companyId: null,
   companyName: null,
   displayName: PLATFORM_BRAND_NAME,
-  fontFamilyKey: "huchu",
+  fontFamilyKey: DEFAULT_FONT_KEY,
   fontFamily: BRANDING_FONT_OPTIONS[0].fontFamily,
   brandingEnabled: false,
   customDomainEnabled: false,
   colors: {
-    primary: "#0f8f86",
-    secondary: "#dcf4f1",
-    accent: "#ebf7f5",
+    primary: "#0B5DF0",
+    secondary: "#E8EFFE",
+    accent: "#EEF3FE",
   },
 };
 
@@ -290,83 +303,71 @@ export async function getEffectiveBrandingForHost(hostHeader: string | null | un
   return getEffectiveBrandingForCompany(tenant.companyId);
 }
 
+/**
+ * CSS custom properties for a tenant's branding, applied inline on `<body>`.
+ *
+ * An inline style outranks every stylesheet, so anything emitted here silently
+ * overrides `@corelithzw/react`. Two rules keep that from re-opening the drift
+ * this function used to cause:
+ *
+ *  1. Emit ONLY what the tenant actually chose. Surfaces, text, borders,
+ *     statuses, charts and shadows are the design system's job — they used to
+ *     be hardcoded warm-paper hexes here, which is why every page rendered off
+ *     the token set regardless of what the stylesheets said.
+ *  2. Re-tint through the design system's OWN token names (`--brand` and its
+ *     scale), not just the app's aliases. That is what makes a tenant's colour
+ *     reach components rendered by the package, which read `--brand`.
+ *
+ * With branding disabled the result is empty and the page renders as pure
+ * design system.
+ */
 export function getBrandingCssVariables(branding: EffectiveBranding): Record<string, string> {
-  const primary = branding.colors.primary;
-  const secondary = branding.colors.secondary;
-  const accent = branding.colors.accent;
+  if (!branding.brandingEnabled) {
+    return {};
+  }
+
+  const { primary, secondary, accent } = branding.colors;
+
+  const strong = mixColors(primary, "#000000", 0.18);
+  const deeper = mixColors(primary, "#000000", 0.32);
+  const onPrimary = getContrastTextColor(primary);
 
   return {
-    // Font family
-    "--font-sans": branding.fontFamily,
-    "--font-family": branding.fontFamily,
+    // Typeface. Skipped on the default key: that option's family IS
+    // `var(--font-sans)`, and emitting it here would define `--font-sans` in
+    // terms of itself — a reference cycle that leaves the element with no
+    // font-family at all. Omitting it lets the design system's face stand.
+    ...(branding.fontFamilyKey === DEFAULT_FONT_KEY
+      ? {}
+      : { "--font-sans": branding.fontFamily }),
 
-    // Action colors (primary button)
-    "--action-primary-bg": primary,
-    "--action-primary-hover": mixColors(primary, "#000000", 0.12),
-    "--action-primary-fg": getContrastTextColor(primary),
+    // The design system's brand scale — one saturated colour, re-anchored on
+    // the tenant's. Everything downstream (actions, focus ring, info tone,
+    // links, selection wash, package components) derives from these.
+    "--brand": primary,
+    "--brand-strong": strong,
+    "--brand-deeper": deeper,
+    "--brand-soft": mixColors(primary, "#ffffff", 0.9),
+    "--brand-tint": mixColors(primary, "#ffffff", 0.94),
+    "--brand-50": mixColors(primary, "#ffffff", 0.94),
+    "--brand-100": mixColors(primary, "#ffffff", 0.86),
+    "--brand-200": mixColors(primary, "#ffffff", 0.7),
+    "--brand-300": mixColors(primary, "#ffffff", 0.48),
+    "--brand-500": primary,
+    "--brand-700": strong,
+    "--brand-900": mixColors(primary, "#000000", 0.55),
+
+    // `--action-primary-*` and `--focus-ring` already resolve through `--brand`
+    // in the package, so only the foreground needs stating: contrast against an
+    // arbitrary tenant colour cannot be derived in CSS.
+    "--action-primary-fg": onPrimary,
+
+    // Secondary and accent are separate tenant choices, not brand rungs.
     "--action-secondary-bg": secondary,
-    "--action-secondary-hover": mixColors(primary, "#000000", 0.06),
+    "--action-secondary-bg-h": mixColors(secondary, "#000000", 0.06),
     "--action-secondary-fg": getContrastTextColor(secondary),
-    "--focus-ring": mixColors(primary, "#ffffff", 0.16),
-
-    // Base colors (shadcn compatibility)
-    "--primary": primary,
-    "--primary-foreground": getContrastTextColor(primary),
-    "--secondary": secondary,
-    "--secondary-foreground": getContrastTextColor(secondary),
     "--accent": accent,
     "--accent-foreground": getContrastTextColor(accent),
-
-    // Sidebar colors
-    "--sidebar-primary": primary,
-    "--sidebar-primary-foreground": getContrastTextColor(primary),
-
-    // Surface colors (warm paper aesthetic)
-    "--surface-canvas": "#FCFCF4",
-    "--surface-base": "#FFFFFF",
-    "--surface-raised": "#FFFFFF",
-    "--surface-muted": "#F7F7F2",
-    "--surface-subtle": "#F3F3EF",
-
-    // Border colors
-    "--border": "#E6E6E0",
-    "--border-strong": "#DADAD3",
-
-    // Text colors
-    "--text-strong": "#111111",
-    "--text-body": "#111111",
-    "--text-muted": "#6B6B6B",
-    "--text-subtle": "#9A9A93",
-    "--text-inverse": "#FFFFFF",
-
-    // Status colors
-    "--status-success-bg": "#EAF7F1",
-    "--status-success-text": "#2CA47C",
-    "--status-warning-bg": "#FDF1E8",
-    "--status-warning-text": "#F46414",
-    "--status-error-bg": "#FDEBE7",
-    "--status-error-text": "#EC442C",
-
-    // Chart colors (status-based)
-    "--chart-grid": "#E6E6E0",
-    "--chart-text": "#6B6B6B",
-    "--chart-passing": "#2CA47C",
-    "--chart-failing": "#EC442C",
-    "--chart-need-changes": "#F46414",
-    "--chart-in-review": primary,
-    "--chart-in-progress": "#FCB414",
-    "--chart-pending": "#CFCFC6",
-    "--chart-inactive": "#9A9A93",
-
-    // Chart palette (generic)
-    "--chart-1": primary,
-    "--chart-2": mixColors(primary, "#ffffff", 0.22),
-    "--chart-3": mixColors(primary, "#000000", 0.18),
-    "--chart-4": "#2CA47C",
-    "--chart-5": "#FCB414",
-
-    // Shadow
-    "--shadow-popover": "0 12px 24px -12px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.06)",
   };
 }
 

@@ -1,120 +1,80 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    CLIENT THEME OVERRIDES
-   
-   This file ONLY overrides tokens that differ from the base system
-   defined in globals.css. All semantic tokens (surfaces, text, actions,
-   edges, status, badges, etc.) automatically inherit through CSS custom
-   property cascading — no need to redefine them.
-   
-   To add a new theme: create a new file in this directory that only
-   overrides the neutral palette and any theme-specific accents.
+
+   Not currently imported by any layout — kept as the worked example of how to
+   re-tune a portal on top of the design system.
+
+   The rule this file demonstrates: a theme overrides *character*, never
+   values. It mixes warmth into the package's neutrals rather than restating a
+   palette, so a colour change in `@corelithzw/react` still reaches this theme.
+   Every semantic token (surfaces, text, actions, edges, status, badges) then
+   inherits through custom-property cascading — nothing else needs redefining.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Warm Neutral Palette (replaces cool base) ───────────────────────── */
-  --neutral-0:  #ffffff;
-  --neutral-25: #fcfcfb;
-  --neutral-50: #f8f8f4;
-  --neutral-100:#f3f3ef;
-  --neutral-200:#e8e7e2;
-  --neutral-300:#d8d6cf;
-  --neutral-400:#b7b4ac;
-  --neutral-500:#918d84;
-  --neutral-600:#6e6a62;
-  --neutral-700:#534f49;
-  --neutral-800:#35332f;
-  --neutral-900:#1c1b18;
+  /* ── Warm cast ────────────────────────────────────────────────────────
+     A single warm anchor, mixed into the package's cool grey ramp at a
+     strength that fades out as the steps get darker. */
+  --warm: var(--tone-warn);
 
-  /* ── Dynamic Brand Ramps via color-mix() ───────────────────────────────
-     These generate smoother, theme-adaptive tints/shades that harmonize
-     with the warm neutral palette above. */
-  --primary-50:  color-mix(in oklab, var(--primary) 10%, var(--neutral-0));
-  --primary-100: color-mix(in oklab, var(--primary) 18%, var(--neutral-0));
-  --primary-300: color-mix(in oklab, var(--primary) 46%, var(--neutral-0));
-  --primary-500: var(--primary);
-  --primary-600: color-mix(in oklab, var(--primary) 84%, var(--neutral-900));
-  --primary-700: color-mix(in oklab, var(--primary) 72%, var(--neutral-900));
+  --neutral-0:   var(--surface);
+  --neutral-50:  color-mix(in oklab, var(--warm) 5%, var(--gray-50));
+  --neutral-25:  color-mix(in oklab, var(--neutral-50) 55%, var(--neutral-0));
+  --neutral-100: color-mix(in oklab, var(--warm) 5%, var(--gray-100));
+  --neutral-200: color-mix(in oklab, var(--warm) 5%, var(--gray-200));
+  --neutral-300: color-mix(in oklab, var(--warm) 5%, var(--gray-300));
+  --neutral-400: color-mix(in oklab, var(--warm) 4%, var(--gray-400));
+  --neutral-500: color-mix(in oklab, var(--warm) 4%, var(--gray-500));
+  --neutral-600: color-mix(in oklab, var(--warm) 3%, var(--gray-600));
+  --neutral-700: color-mix(in oklab, var(--warm) 3%, var(--gray-700));
+  --neutral-800: color-mix(in oklab, var(--warm) 2%, var(--gray-800));
+  --neutral-900: color-mix(in oklab, var(--warm) 2%, var(--gray-900));
 
-  --accent-50:  color-mix(in oklab, var(--accent) 10%, var(--neutral-0));
-  --accent-100: color-mix(in oklab, var(--accent) 18%, var(--neutral-0));
-  --accent-500: var(--accent);
-  --accent-600: color-mix(in oklab, var(--accent) 84%, var(--neutral-900));
+  /* Surfaces follow the warmed ramp rather than the package's cool one. */
+  --surface-canvas: var(--neutral-50);
+  --surface-app:    var(--neutral-50);
+  --surface-base:   var(--neutral-0);
+  --surface-panel:  var(--neutral-0);
+  --surface-raised: var(--neutral-0);
+  --surface-subtle: var(--neutral-100);
+  --surface-soft:   var(--neutral-200);
 
-  /* ── Semantic Ramps (warm-tuned values) ──────────────────────────────── */
-  --success-50:  #ecf8f1;
-  --success-100: #d8f0e2;
-  --success-300: #9cd2b2;
-  --success-500: #23885c;
-  --success-700: #185f40;
+  --edge-subtle:  var(--neutral-100);
+  --edge-default: var(--neutral-200);
+  --edge-strong:  var(--neutral-300);
 
-  --warning-50:  #fef4e6;
-  --warning-100: #fde3c2;
-  --warning-300: #f6bf75;
-  --warning-500: #d88a2f;
-  --warning-700: #9c6321;
-  --warning-800: #7b4f1a;
+  /* ── Action ───────────────────────────────────────────────────────────
+     A warmer white on the primary fill, so it does not read icy on paper. */
+  --action-primary-fg: color-mix(in oklab, var(--neutral-0) 94%, var(--brand));
 
-  --danger-50:   #fef0f1;
-  --danger-100:  #fcdde0;
-  --danger-300:  #f4a2a8;
-  --danger-500:  #d14148;
-  --danger-700:  #962c33;
+  /* ── Elevation — warm-toned shadows ──────────────────────────────────── */
+  --elevation-2: inset 0 0 0 1px var(--edge-default), var(--shadow-hover);
+  --elevation-3: inset 0 0 0 1px var(--edge-default), var(--shadow-popover);
+  --elevation-4: inset 0 0 0 1px var(--edge-strong), var(--shadow-modal);
 
-  --info-50:     #ecf6ff;
-  --info-100:    #d7ebff;
-  --info-300:    #9bc9f0;
-  --info-500:    #2d83c4;
-  --info-700:    #1e5e8d;
+  --surface-frame-shadow:       inset 0 0 0 1px var(--edge-default);
+  --surface-frame-shadow-hover: inset 0 0 0 1px var(--edge-strong), var(--shadow-hover);
+  --button-shadow-hover:        inset 0 0 0 1px var(--edge-strong), var(--shadow-rest);
 
-  /* ── Action Color Override (warmer primary foreground) ───────────────── */
-  --action-primary-fg: color-mix(in oklab, var(--neutral-0) 94%, var(--primary-500));
-
-  /* ── Shadows (warm-toned opacity) ────────────────────────────────────── */
-  --surface-frame-shadow:
-    inset 0 0 0 1px var(--edge-default),
-    0 1px 2px rgb(17 17 17 / 0.03);
-  --surface-frame-shadow-hover:
-    inset 0 0 0 1px var(--edge-strong),
-    0 4px 14px rgb(17 17 17 / 0.07);
-
-  --button-shadow-hover:
-    inset 0 0 0 1px var(--edge-strong),
-    0 2px 6px rgb(17 17 17 / 0.06);
-
-  --elevation-2:
-    inset 0 0 0 1px var(--edge-default),
-    0 2px 6px rgb(17 17 17 / 0.06);
-  --elevation-3:
-    inset 0 0 0 1px var(--edge-default),
-    0 8px 20px rgb(17 17 17 / 0.12);
-  --elevation-4:
-    inset 0 0 0 1px var(--edge-strong),
-    0 12px 28px rgb(17 17 17 / 0.16);
-
-  --shadow-popover:
-    0 12px 24px -12px rgb(17 17 17 / 0.18),
-    0 2px 6px rgb(17 17 17 / 0.06);
-
-  /* ── Table Tokens (warm-specific) ────────────────────────────────────── */
-  --table-toolbar-bg: rgb(252 252 244 / 88%);
-  --table-row-hover-bg: color-mix(in oklab, var(--primary-50) 50%, var(--surface-base));
-
-  /* ── Datatable Tokens (warm-specific) ────────────────────────────────── */
-  --datatable-toolbar-bg: rgb(252 252 244 / 92%);
+  /* ── Tables ──────────────────────────────────────────────────────────── */
+  --table-toolbar-bg:      color-mix(in oklab, var(--neutral-0) 88%, transparent);
+  --table-row-hover-bg:    color-mix(in oklab, var(--brand-50) 50%, var(--surface-base));
+  --datatable-toolbar-bg:  color-mix(in oklab, var(--neutral-0) 92%, transparent);
   --datatable-expanded-bg: var(--surface-soft);
   --datatable-empty-bg:    var(--surface-soft);
 
-  /* ── Focus Ring (warm-tuned) ─────────────────────────────────────────── */
-  --focus-ring: color-mix(in oklab, var(--primary-500) 86%, white);
+  /* ── Sidebar ─────────────────────────────────────────────────────────── */
+  --sidebar-item-fg:       color-mix(in oklab, var(--text-body) 86%, var(--text-muted));
+  --sidebar-item-fg-muted: color-mix(in oklab, var(--text-muted) 82%, var(--text-body));
+  --sidebar-item-icon:     color-mix(in oklab, var(--text-muted) 80%, var(--text-body));
+  --sidebar-item-active-border: color-mix(in oklab, var(--brand-300) 58%, var(--edge-subtle));
 
-  /* ── Sidebar (warm-tuned color-mix values) ───────────────────────────── */
-  --sidebar-item-fg:       color-mix(in oklab, var(--text-body) 86%, var(--text-muted) 14%);
-  --sidebar-item-fg-muted: color-mix(in oklab, var(--text-muted) 82%, var(--text-body) 18%);
-  --sidebar-item-icon:     color-mix(in oklab, var(--text-muted) 80%, var(--text-body) 20%);
-  --sidebar-item-active-border: color-mix(in oklab, var(--primary-300) 58%, var(--edge-subtle) 42%);
-
-  /* ── Canvas Background (warm gradient) ───────────────────────────────── */
+  /* ── Canvas ──────────────────────────────────────────────────────────── */
   --app-canvas-wash:
-    radial-gradient(1100px 480px at 92% -80px, color-mix(in oklab, var(--primary-100) 75%, white) 0%, transparent 58%),
-    linear-gradient(180deg, #fcfcf4 0%, #f7f7f2 100%);
+    radial-gradient(
+      1100px 480px at 92% -80px,
+      color-mix(in oklab, var(--brand-100) 75%, var(--neutral-0)) 0%,
+      transparent 58%
+    ),
+    linear-gradient(180deg, var(--neutral-25) 0%, var(--neutral-50) 100%);
 }

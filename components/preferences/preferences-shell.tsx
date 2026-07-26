@@ -3,7 +3,9 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { NavGroup, NavItem, PageHeader } from "@corelithzw/react";
+import { PageHeader } from "@corelithzw/react";
+
+import { NavGroup, NavItem } from "@/components/ui/settings-rail";
 
 import {
   ACCOUNT_PREFERENCES_ITEMS,
@@ -98,7 +100,7 @@ export function PreferencesShell({
       </aside>
 
       <main className="settings-content">
-        <PageHeader title={title} actions={actions} />
+        <PageHeader title={title} primaryAction={actions} />
         {description ? (
           <p className="t-body t-muted max-w-[var(--content-max)]">
             {description}

@@ -20,28 +20,23 @@ export function AppearancePreferences() {
   const { appearance, setAppearance } = useAppearance();
 
   return (
-    <Card>
-      <Card.Header>
-        <Card.Title>Theme preference</Card.Title>
-      </Card.Header>
-      <Card.Body>
-        <div className="settings-section">
-          <div className="settings-row">
-            <div>
-              <div className="t-label-sm">Appearance</div>
-              <p className="t-caption t-muted">
-                System follows this device. Light and dark override it for this browser.
-              </p>
-            </div>
-            <SegmentedControl
-              ariaLabel="Appearance preference"
-              value={appearance}
-              options={appearanceOptions}
-              onChange={setAppearance}
-            />
+    <Card title="Theme preference">
+      <div className="settings-section">
+        <div className="settings-row">
+          <div>
+            <div className="t-label-sm">Appearance</div>
+            <p className="t-caption t-muted">
+              System follows this device. Light and dark override it for this browser.
+            </p>
           </div>
+          <SegmentedControl
+            aria-label="Appearance preference"
+            value={appearance}
+            options={appearanceOptions}
+            onValueChange={(next) => setAppearance(next as AppearancePreference)}
+          />
         </div>
-      </Card.Body>
+      </div>
     </Card>
   );
 }

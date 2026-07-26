@@ -15,9 +15,11 @@ export function OrganizationOverviewPreferences() {
   if (profileQuery.isLoading) {
     return (
       <Card>
-        <Card.Body>
-          <Skeleton lines={6} gap={8} />
-        </Card.Body>
+        <div className="space-y-2">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton key={index} variant="text" />
+          ))}
+        </div>
       </Card>
     );
   }
@@ -33,44 +35,39 @@ export function OrganizationOverviewPreferences() {
   const { company } = profileQuery.data;
 
   return (
-    <Card>
-      <Card.Header>
-        <Card.Title>Workspace context</Card.Title>
-      </Card.Header>
-      <Card.Body>
-        <div className="settings-section">
-          <div className="settings-row">
-            <div>
-              <div className="t-label-sm">Organization name</div>
-              <p className="t-caption t-muted">The name shown across workspace surfaces.</p>
-            </div>
-            <span>{company.name}</span>
+    <Card title="Workspace context">
+      <div className="settings-section">
+        <div className="settings-row">
+          <div>
+            <div className="t-label-sm">Organization name</div>
+            <p className="t-caption t-muted">The name shown across workspace surfaces.</p>
           </div>
-          <div className="settings-row">
-            <div>
-              <div className="t-label-sm">Workspace slug</div>
-              <p className="t-caption t-muted">Used in hosted workspace identity and support context.</p>
-            </div>
-            <span className="t-mono">{company.slug}</span>
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="t-label-sm">Workspace profile</div>
-              <p className="t-caption t-muted">Controls role templates and module defaults.</p>
-            </div>
-            <Badge tone="outline">{company.workspaceProfile}</Badge>
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="t-label-sm">Tenant status</div>
-              <p className="t-caption t-muted">Billing and access enforcement use this state.</p>
-            </div>
-            <Badge tone={company.tenantStatus === "ACTIVE" ? "success" : "warn"}>
-              {company.tenantStatus}
-            </Badge>
-          </div>
+          <span>{company.name}</span>
         </div>
-      </Card.Body>
+        <div className="settings-row">
+          <div>
+            <div className="t-label-sm">Workspace slug</div>
+            <p className="t-caption t-muted">Used in hosted workspace identity and support context.</p>
+          </div>
+          <span className="t-mono">{company.slug}</span>
+        </div>
+        <div className="settings-row">
+          <div>
+            <div className="t-label-sm">Workspace profile</div>
+            <p className="t-caption t-muted">Controls role templates and module defaults.</p>
+          </div>
+          <Badge tone="outline">{company.workspaceProfile}</Badge>
+        </div>
+        <div className="settings-row">
+          <div>
+            <div className="t-label-sm">Tenant status</div>
+            <p className="t-caption t-muted">Billing and access enforcement use this state.</p>
+          </div>
+          <Badge tone={company.tenantStatus === "ACTIVE" ? "success" : "warn"}>
+            {company.tenantStatus}
+          </Badge>
+        </div>
+      </div>
     </Card>
   );
 }

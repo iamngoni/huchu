@@ -9,10 +9,24 @@ import {
   EmptyState,
   Input,
   Pagination,
+  Select,
   Skeleton,
   type DataTableColumn,
-  type DataTableSortState,
 } from "@corelithzw/react";
+
+/**
+ * Local wrapper over the design system's `DataTable`.
+ *
+ * Its prop surface is the app's, not the package's, so call sites stay put when
+ * the package's API moves. Two things it deliberately does NOT delegate:
+ *
+ *  · Pagination. `DataTable`'s own `pagination` prop slices `data` internally,
+ *    but every call site already hands us the rows for the current page (or
+ *    pages server-side), so the table renders what it is given and the page
+ *    controls live in the toolbar.
+ *  · Sorting. The package sorts client-side from `columns[].sortable` and
+ *    `sortAccessor`; there is no controlled sort state to forward.
+ */
 
 export type DsDataTableProps<Row> = {
   columns: DataTableColumn<Row>[];
@@ -49,8 +63,6 @@ export type DsDataTableProps<Row> = {
   pageSizeOptions?: number[];
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
-  sort?: DataTableSortState;
-  onSortChange?: (sort: DataTableSortState | undefined) => void;
 };
 
 export function DsDataTable<Row>({
@@ -80,8 +92,6 @@ export function DsDataTable<Row>({
   onPageChange,
   onPageSizeChange,
   pagination,
-  sort,
-  onSortChange,
 }: DsDataTableProps<Row>) {
   const hasSearch = searchValue !== undefined || Boolean(onSearchChange || onSearchSubmit);
   const activePage = pagination?.page ?? page;
@@ -95,77 +105,88 @@ export function DsDataTable<Row>({
     activePage !== undefined && activePageCount !== undefined && Boolean(activeOnPageChange);
   const showLoading = isLoading ?? loading ?? false;
 
+  const searchSlot = hasSearch ? (
+    <form
+      className="flex min-w-0 items-center gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSearchSubmit?.(searchValue ?? "");
+      }}
+    >
+      <Input
+        value={searchValue ?? ""}
+        onChange={(event) => onSearchChange?.(event.target.value)}
+        placeholder={searchPlaceholder}
+        aria-label={searchPlaceholder}
+      />
+      <Button type="submit" variant="secondary" size="sm">
+        {searchSubmitLabel}
+      </Button>
+    </form>
+  ) : undefined;
+
+  const actionsSlot =
+    actions || hasPagination ? (
+      <>
+        {actions}
+        {hasPagination ? (
+          <>
+            {/* `Pagination` ships no page-size control, so pair it with a Select. */}
+            {activePageSizeOptions?.length && activeOnPageSizeChange ? (
+              <Select
+                size="sm"
+                aria-label="Rows per page"
+                value={String(activePageSize ?? activePageSizeOptions[0])}
+                onChange={(event) => activeOnPageSizeChange(Number(event.target.value))}
+              >
+                {activePageSizeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option} per page
+                  </option>
+                ))}
+              </Select>
+            ) : null}
+            {activeTotal !== undefined ? (
+              <span className="t-caption t-muted whitespace-nowrap">
+                {activeTotal} total
+              </span>
+            ) : null}
+            <Pagination
+              page={activePage!}
+              count={Math.max(1, activePageCount!)}
+              onPageChange={activeOnPageChange!}
+              aria-label={`${ariaLabel} pagination`}
+            />
+          </>
+        ) : null}
+      </>
+    ) : undefined;
+
   return (
-    <div className="space-y-3">
+    <section className="space-y-3" aria-label={ariaLabel}>
       {error ? (
         <Alert tone="danger" title={errorTitle}>
           {error}
         </Alert>
       ) : null}
 
-      <DataToolbar>
-        {hasSearch ? (
-          <DataToolbar.Search>
-            <form
-              className="flex min-w-0 items-center gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                onSearchSubmit?.(searchValue ?? "");
-              }}
-            >
-              <Input
-                value={searchValue ?? ""}
-                onChange={(event) => onSearchChange?.(event.target.value)}
-                placeholder={searchPlaceholder}
-                aria-label={searchPlaceholder}
-              />
-              <Button type="submit" variant="secondary" size="sm">
-                {searchSubmitLabel}
-              </Button>
-            </form>
-          </DataToolbar.Search>
-        ) : null}
-
-        {filters ? <DataToolbar.Filters>{filters}</DataToolbar.Filters> : null}
-
-        {actions || hasPagination ? (
-          <DataToolbar.Actions>
-            {actions}
-            {hasPagination ? (
-              <Pagination
-                page={activePage!}
-                pageCount={Math.max(1, activePageCount!)}
-                total={activeTotal}
-                pageSize={activePageSize}
-                pageSizeOptions={activePageSizeOptions}
-                onPageSizeChange={activeOnPageSizeChange}
-                onChange={activeOnPageChange!}
-                aria-label={`${ariaLabel} pagination`}
-              />
-            ) : null}
-          </DataToolbar.Actions>
-        ) : null}
-      </DataToolbar>
+      <DataToolbar search={searchSlot} filters={filters} actions={actionsSlot} />
 
       {showLoading ? (
-        <Skeleton lines={6} gap={8} aria-label={loadingLabel} />
+        <div className="space-y-2" aria-label={loadingLabel} aria-busy="true">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton key={index} variant="text" />
+          ))}
+        </div>
       ) : (
         <DataTable
           columns={columns}
-          rows={rows}
-          getRowId={getRowId}
-          sort={sort}
-          onSortChange={onSortChange}
-          ariaLabel={ariaLabel}
-          emptyState={
-            <EmptyState
-              variant="inline"
-              title={emptyTitle}
-              description={emptyDescription}
-            />
-          }
+          data={rows}
+          rowKey={getRowId}
+          sortable
+          emptyState={<EmptyState title={emptyTitle} body={emptyDescription} />}
         />
       )}
-    </div>
+    </section>
   );
 }

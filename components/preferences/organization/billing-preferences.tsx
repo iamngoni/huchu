@@ -44,9 +44,11 @@ export function BillingPreferences() {
   if (billingQuery.isLoading) {
     return (
       <Card>
-        <Card.Body>
-          <Skeleton lines={8} gap={8} />
-        </Card.Body>
+        <div className="space-y-2">
+          {Array.from({ length: 8 }, (_, index) => (
+            <Skeleton key={index} variant="text" />
+          ))}
+        </div>
       </Card>
     );
   }
@@ -75,92 +77,82 @@ export function BillingPreferences() {
           label="Plan"
           value={billing.plan?.name ?? "No plan"}
           delta={billing.subscription?.status ?? billing.health.state}
-          deltaTone="neutral"
+          tone="neutral"
         />
         <StatCard
           label="Monthly amount"
           value={<span className="t-mono">{formatMoney(monthlyAmount, currency)}</span>}
           delta="Offline billing"
-          deltaTone="neutral"
+          tone="neutral"
         />
         <StatCard
           label="Next cycle"
           value={<span className="t-mono">{formatDate(billing.subscription?.currentPeriodEnd)}</span>}
           delta={billing.health.daysUntilEnd !== null ? `${billing.health.daysUntilEnd} days` : "No date"}
-          deltaTone={billing.health.daysUntilEnd !== null && billing.health.daysUntilEnd <= billing.health.warningDays ? "down" : "neutral"}
+          tone={billing.health.daysUntilEnd !== null && billing.health.daysUntilEnd <= billing.health.warningDays ? "danger" : "neutral"}
         />
         <StatCard
           label="Status"
           value={<Badge tone={healthTone(billing.health.state)}>{billing.health.status ?? billing.health.state}</Badge>}
           delta={billing.health.reason}
-          deltaTone={billing.health.shouldBlock ? "down" : "neutral"}
+          tone={billing.health.shouldBlock ? "danger" : "neutral"}
         />
       </div>
 
-      <Card>
-        <Card.Header>
-          <Card.Title>Plan limits</Card.Title>
-        </Card.Header>
-        <Card.Body>
-          <div className="settings-section">
-            <div className="settings-row">
-              <div>
-                <div className="t-label-sm">Sites</div>
-                <p className="t-caption t-muted">Active sites counted against the current plan.</p>
-              </div>
-              <span className="t-mono">
-                {billing.usage.activeSites} / {billing.usage.maxSites ?? "Unlimited"}
-              </span>
+      <Card title="Plan limits">
+        <div className="settings-section">
+          <div className="settings-row">
+            <div>
+              <div className="t-label-sm">Sites</div>
+              <p className="t-caption t-muted">Active sites counted against the current plan.</p>
             </div>
-            <div className="settings-row">
-              <div>
-                <div className="t-label-sm">Users</div>
-                <p className="t-caption t-muted">Active users counted against the current plan.</p>
-              </div>
-              <span className="t-mono">
-                {billing.usage.activeUsers} / {billing.usage.maxUsers ?? "Unlimited"}
-              </span>
-            </div>
-            <div className="settings-row">
-              <div>
-                <div className="t-label-sm">Accepted payment methods</div>
-                <p className="t-caption t-muted">Online payments are not enabled for this workspace.</p>
-              </div>
-              <div className="flex flex-wrap justify-end gap-2">
-                {billing.payments.methods.map((method) => (
-                  <Badge key={method} tone="outline">
-                    {method}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            <span className="t-mono">
+              {billing.usage.activeSites} / {billing.usage.maxSites ?? "Unlimited"}
+            </span>
           </div>
-        </Card.Body>
-      </Card>
-
-      <Card>
-        <Card.Header>
-          <Card.Title>Add-ons</Card.Title>
-        </Card.Header>
-        <Card.Body>
-          {billing.addons.length > 0 ? (
-            <div className="settings-section">
-              {billing.addons.map((addon) => (
-                <div className="settings-row" key={addon.id}>
-                  <div>
-                    <div className="t-label-sm">{addon.name}</div>
-                    <p className="t-caption t-muted">{addon.code}</p>
-                  </div>
-                  <span className="t-mono">
-                    {formatMoney(addon.monthlyPrice, currency)}
-                  </span>
-                </div>
+          <div className="settings-row">
+            <div>
+              <div className="t-label-sm">Users</div>
+              <p className="t-caption t-muted">Active users counted against the current plan.</p>
+            </div>
+            <span className="t-mono">
+              {billing.usage.activeUsers} / {billing.usage.maxUsers ?? "Unlimited"}
+            </span>
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="t-label-sm">Accepted payment methods</div>
+              <p className="t-caption t-muted">Online payments are not enabled for this workspace.</p>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              {billing.payments.methods.map((method) => (
+                <Badge key={method} tone="outline">
+                  {method}
+                </Badge>
               ))}
             </div>
-          ) : (
-            <p className="t-body t-muted">No add-ons are enabled for this workspace.</p>
-          )}
-        </Card.Body>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Add-ons">
+        {billing.addons.length > 0 ? (
+          <div className="settings-section">
+            {billing.addons.map((addon) => (
+              <div className="settings-row" key={addon.id}>
+                <div>
+                  <div className="t-label-sm">{addon.name}</div>
+                  <p className="t-caption t-muted">{addon.code}</p>
+                </div>
+                <span className="t-mono">
+                  {formatMoney(addon.monthlyPrice, currency)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="t-body t-muted">No add-ons are enabled for this workspace.</p>
+        )}
       </Card>
     </div>
   );
