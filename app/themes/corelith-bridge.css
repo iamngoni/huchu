@@ -1,131 +1,569 @@
-/*
- * Corelith bridge.
- * Corelith's package CSS is the visual source of truth. This file only exposes
- * compatibility aliases that the existing app still expects, plus the missing
- * dark-mode token layer that the package does not ship.
- */
+/* ═══════════════════════════════════════════════════════════════════════════
+   CORELITH BRIDGE — the app's backwards-compatibility token layer.
+
+   `@corelithzw/react` is the visual source of truth. Its stylesheet is imported
+   into the `corelith` cascade layer from `app/globals.css`, which declares the
+   157 design-system tokens documented in docs/design-system/02-tokens.md.
+
+   This file declares every *other* token name the app still reads — the neutral
+   and brand ramps, the semantic status set, edges, elevation, badges, tables,
+   sidebar, charts, shadcn compatibility, geometry, type, motion — and it
+   declares each one as a derivation of a design-system token.
+
+   The one rule: NO LITERALS. Every value below resolves through a package
+   token, so changing a colour, radius or duration in `@corelithzw/react`
+   changes it here too. A hex or a px in this file is a token that has silently
+   forked from the design system.
+
+   Exceptions, deliberate and marked inline:
+     · a handful of unitless multipliers (leading, font weights) which the
+       package encodes inside `font:` shorthands and does not expose separately;
+     · `--radius-full` / `--radius-pill`, which are just `9999px`.
+
+   This layer is intentionally unlayered `:root`, so it outranks the package's
+   own `:root`. That matters only for names the package does not define — for
+   the ones it does (`--text-*`, `--border*`, `--space-*`, `--radius-*`, fonts)
+   nothing is redeclared here and the package's values stand.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --surface-app: var(--canvas);
-  --surface-panel: var(--surface);
-  --surface-elevated: var(--surface);
-  --surface-soft: var(--surface-deep);
-  --surface-canvas: var(--canvas);
-  --surface-base: var(--surface);
-  --surface-raised: var(--surface);
-  --surface-active: var(--brand-soft);
-  --surface-row-highlight: var(--brand-tint);
-  --surface-overlay: rgb(22 24 29 / 14%);
+  color-scheme: light;
 
-  --text-danger: var(--tone-danger);
+  /* ══════════════════════════════════════════════════════════════════════
+     SURFACES
+     The package ships canvas / surface / -muted / -sunken / -deep. Everything
+     below is an alias onto that four-step ladder.
+     ══════════════════════════════════════════════════════════════════════ */
 
-  --edge-subtle: var(--border-subtle);
-  --edge-default: var(--border);
-  --edge-strong: var(--border-strong);
-  --border-default: var(--border);
-  --border-soft: var(--border-subtle);
-  --input-border: var(--border);
-  --input-bg: var(--surface);
+  --surface-app:            var(--canvas);
+  --surface-canvas:         var(--canvas);
+  --surface-base:           var(--surface);
+  --surface-panel:          var(--surface);
+  --surface-raised:         var(--surface);
+  --surface-elevated:       var(--surface);
+  --surface-subtle:         var(--surface-muted);
+  --surface-soft:           var(--surface-sunken);
+  --surface-hover:          var(--surface-muted);
+  --surface-active:         var(--brand-soft);
+  --surface-row-highlight:  var(--brand-tint);
+  --surface-overlay:        color-mix(in oklab, var(--ink) 14%, transparent);
 
-  --action-primary-hover: var(--action-primary-bg-hover, var(--brand-strong));
-  --action-primary-pressed: var(--action-primary-bg-pressed, var(--brand-deeper));
-  --action-secondary-hover: var(--action-secondary-bg-h);
-  --action-outline-bg: var(--surface);
+  --bg-secondary: var(--surface-muted);
+  --bg-tertiary:  var(--surface-sunken);
+  --bg-elevated:  var(--surface);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     NEUTRAL RAMP → the package gray scale
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --neutral-0:   var(--surface);
+  --neutral-25:  color-mix(in oklab, var(--gray-50) 55%, var(--surface));
+  --neutral-50:  var(--gray-50);
+  --neutral-100: var(--gray-100);
+  --neutral-200: var(--gray-200);
+  --neutral-300: var(--gray-300);
+  --neutral-400: var(--gray-400);
+  --neutral-500: var(--gray-500);
+  --neutral-600: var(--gray-600);
+  --neutral-700: var(--gray-700);
+  --neutral-800: var(--gray-800);
+  --neutral-900: var(--gray-900);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     BRAND RAMP → --brand-*
+     `--primary` itself is a package token (= `--brand`) and is not redeclared;
+     only the numbered rungs the app reads are filled in here.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --primary-50:  var(--brand-50);
+  --primary-100: var(--brand-100);
+  --primary-200: var(--brand-200);
+  --primary-300: var(--brand-300);
+  --primary-400: color-mix(in oklab, var(--brand) 70%, var(--brand-300));
+  --primary-500: var(--brand-500);
+  --primary-600: color-mix(in oklab, var(--brand-strong) 55%, var(--brand));
+  --primary-700: var(--brand-700);
+  --primary-800: color-mix(in oklab, var(--brand-900) 55%, var(--brand-700));
+  --primary-900: var(--brand-900);
+
+  --brand-primary: var(--brand);
+  --on-brand:      var(--action-primary-fg);
+
+  /* ── Accent ramp ──────────────────────────────────────────────────────
+     The design system is deliberately single-hue, so it ships no accent scale.
+     The app needs a second, distinguishable series colour (charts, deltas),
+     and the historical accent was teal. Mixing the package's success green
+     into the brand blue reproduces that hue from package tokens only.
+
+     Deliberately no bare `--accent` rung: that name belongs to the package's
+     shadcn mapping, where it is the subtle hover surface. */
+
+  --accent-500: color-mix(in oklab, var(--tone-success) 65%, var(--brand));
+  --accent-50:  color-mix(in oklab, var(--accent-500) 10%, var(--surface));
+  --accent-100: color-mix(in oklab, var(--accent-500) 18%, var(--surface));
+  --accent-200: color-mix(in oklab, var(--accent-500) 32%, var(--surface));
+  --accent-300: color-mix(in oklab, var(--accent-500) 48%, var(--surface));
+  --accent-400: color-mix(in oklab, var(--accent-500) 74%, var(--surface));
+  --accent-600: color-mix(in oklab, var(--accent-500) 82%, var(--gray-900));
+  --accent-700: color-mix(in oklab, var(--accent-500) 68%, var(--gray-900));
+  --accent-800: color-mix(in oklab, var(--accent-500) 54%, var(--gray-900));
+  --accent-900: color-mix(in oklab, var(--accent-500) 42%, var(--gray-900));
+
+  /* ══════════════════════════════════════════════════════════════════════
+     SEMANTIC RAMPS → --tone-*
+     Step 50 is the tone's tinted background, 100 its border, 500 the tone
+     itself; the darker rungs are mixed toward the neutral ink so prose on a
+     tint keeps its contrast floor.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --success-50:  var(--tone-success-bg);
+  --success-100: var(--tone-success-bd);
+  --success-200: color-mix(in oklab, var(--tone-success) 30%, var(--tone-success-bg));
+  --success-300: color-mix(in oklab, var(--tone-success) 50%, var(--tone-success-bg));
+  --success-400: color-mix(in oklab, var(--tone-success) 75%, var(--tone-success-bg));
+  --success-500: var(--tone-success);
+  --success-600: color-mix(in oklab, var(--tone-success) 60%, var(--tone-success-strong));
+  --success-700: var(--tone-success-strong);
+  --success-800: color-mix(in oklab, var(--tone-success-strong) 80%, var(--gray-900));
+  --success-900: color-mix(in oklab, var(--tone-success-strong) 60%, var(--gray-900));
+
+  --warning-50:  var(--tone-warn-bg);
+  --warning-100: var(--tone-warn-bd);
+  --warning-200: color-mix(in oklab, var(--tone-warn) 30%, var(--tone-warn-bg));
+  --warning-300: color-mix(in oklab, var(--tone-warn) 50%, var(--tone-warn-bg));
+  --warning-400: color-mix(in oklab, var(--tone-warn) 75%, var(--tone-warn-bg));
+  --warning-500: var(--tone-warn);
+  --warning-600: color-mix(in oklab, var(--tone-warn) 85%, var(--gray-900));
+  --warning-700: color-mix(in oklab, var(--tone-warn) 70%, var(--gray-900));
+  --warning-800: color-mix(in oklab, var(--tone-warn) 58%, var(--gray-900));
+  --warning-900: color-mix(in oklab, var(--tone-warn) 46%, var(--gray-900));
+
+  --danger-50:  var(--tone-danger-bg);
+  --danger-100: var(--tone-danger-bd);
+  --danger-200: color-mix(in oklab, var(--tone-danger) 30%, var(--tone-danger-bg));
+  --danger-300: color-mix(in oklab, var(--tone-danger) 50%, var(--tone-danger-bg));
+  --danger-400: color-mix(in oklab, var(--tone-danger) 75%, var(--tone-danger-bg));
+  --danger-500: var(--tone-danger);
+  --danger-600: color-mix(in oklab, var(--tone-danger) 60%, var(--tone-danger-strong));
+  --danger-700: var(--tone-danger-strong);
+  --danger-800: color-mix(in oklab, var(--tone-danger-strong) 80%, var(--gray-900));
+  --danger-900: color-mix(in oklab, var(--tone-danger-strong) 60%, var(--gray-900));
+
+  --info-50:  var(--tone-info-bg);
+  --info-100: var(--tone-info-bd);
+  --info-200: var(--brand-200);
+  --info-300: var(--brand-300);
+  --info-400: color-mix(in oklab, var(--tone-info) 75%, var(--brand-300));
+  --info-500: var(--tone-info);
+  --info-600: color-mix(in oklab, var(--brand-strong) 55%, var(--brand));
+  --info-700: var(--brand-700);
+  --info-800: color-mix(in oklab, var(--brand-900) 55%, var(--brand-700));
+  --info-900: var(--brand-900);
+
+  /* Soft tone washes — used where a tint must sit over an unknown surface. */
+  --tone-warn-soft:   var(--tone-warn-bg);
+  --tone-danger-soft: var(--tone-danger-bg);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     TEXT
+     `--text-strong/-body/-muted/-subtle/-inverse/-link` come straight from the
+     package and are not redeclared. These are the app's older spellings.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --text-primary:   var(--text-strong);
+  --text-secondary: var(--text-body);
+  --text-tertiary:  var(--text-muted);
+  --text-danger:    var(--tone-danger);
+
+  --icon-default: var(--text-muted);
+  --icon-strong:  var(--text-strong);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     EDGES
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --edge-subtle:        var(--border-subtle);
+  --edge-default:       var(--border);
+  --edge-strong:        var(--border-strong);
+  --edge-neutral-focus: var(--focus-ring-soft);
+  --border-default:     var(--border);
+  --border-soft:        var(--border-subtle);
+  --input-border:       var(--border);
+  --input-bg:           var(--surface);
+
+  --focus-ring-offset: var(--canvas);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     ACTIONS
+     `--action-primary-*` and `--action-secondary-bg/-fg` are package tokens.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --action-primary-hover:    var(--action-primary-bg-hover, var(--brand-strong));
+  --action-primary-pressed:  var(--action-primary-bg-pressed, var(--brand-deeper));
+  --action-secondary-hover:  var(--action-secondary-bg-h);
+  --action-outline-bg:       var(--surface);
   --action-outline-hover-bg: var(--surface-muted);
-  --action-disabled-bg: var(--surface-muted);
-  --action-disabled-fg: var(--text-subtle);
+  --action-outline-border:       transparent;
+  --action-outline-border-hover: transparent;
+  --action-disabled-bg:      var(--surface-muted);
+  --action-disabled-fg:      var(--text-subtle);
 
-  --status-success-bg: var(--tone-success-bg);
+  --interactive-primary:   var(--brand);
+  --interactive-secondary: var(--text-muted);
+  --interactive-danger:    var(--tone-danger);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     ELEVATION
+     The design system's position is that a border separates surfaces at rest
+     and a shadow only appears when something floats. The app's `--elevation-*`
+     ladder is kept, expressed as the package's border plus its shadow rungs.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --elevation-0: var(--shadow-none);
+  --elevation-1: inset 0 0 0 1px var(--border);
+  --elevation-2: inset 0 0 0 1px var(--border), var(--shadow-hover);
+  --elevation-3: inset 0 0 0 1px var(--border), var(--shadow-popover);
+  --elevation-4: inset 0 0 0 1px var(--border-strong), var(--shadow-modal);
+
+  --shadow-card: var(--shadow-rest);
+
+  --surface-frame-shadow:       inset 0 0 0 1px var(--border);
+  --surface-frame-shadow-hover: inset 0 0 0 1px var(--border-strong), var(--shadow-hover);
+
+  --button-shadow-rest:     inset 0 0 0 1px var(--border);
+  --button-shadow-hover:    inset 0 0 0 1px var(--border-strong), var(--shadow-hover);
+  --button-shadow-pressed:  inset 0 0 0 1px var(--border-strong);
+  --button-ghost-hover-bg:  var(--surface-muted);
+  --button-ghost-active-bg: var(--surface-sunken);
+
+  --card-shadow-rest: var(--shadow-rest);
+  --card-divider:     var(--border-subtle);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     STATUS
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --status-success-bg:     var(--tone-success-bg);
   --status-success-border: var(--tone-success-bd);
-  --status-success-text: var(--tone-success);
-  --status-warning-bg: var(--tone-warn-bg);
+  --status-success-text:   var(--tone-success-strong);
+  --status-success-500:    var(--tone-success);
+  --status-warning-bg:     var(--tone-warn-bg);
   --status-warning-border: var(--tone-warn-bd);
-  --status-warning-text: var(--tone-warn);
-  --status-error-bg: var(--tone-danger-bg);
-  --status-error-border: var(--tone-danger-bd);
-  --status-error-text: var(--tone-danger);
-  --status-info-bg: var(--tone-info-bg);
-  --status-info-border: var(--tone-info-bd);
-  --status-info-text: var(--tone-info);
-  --status-progress-bg: var(--brand-soft);
+  --status-warning-text:   var(--warning-700);
+  --status-error-bg:       var(--tone-danger-bg);
+  --status-error-border:   var(--tone-danger-bd);
+  --status-error-text:     var(--tone-danger-strong);
+  --status-danger-border:  var(--tone-danger-bd);
+  --status-info-bg:        var(--tone-info-bg);
+  --status-info-border:    var(--tone-info-bd);
+  --status-info-text:      var(--brand-strong);
+  --status-progress-bg:     var(--brand-soft);
   --status-progress-border: var(--brand-100);
-  --status-progress-text: var(--brand-strong);
-  --status-pending-bg: var(--surface-muted);
+  --status-progress-text:   var(--brand-strong);
+  --status-pending-bg:     var(--surface-muted);
   --status-pending-border: var(--border-strong);
-  --status-pending-text: var(--text-muted);
-  --status-inactive-bg: var(--surface-muted);
+  --status-pending-text:   var(--text-muted);
+  --status-inactive-bg:     var(--surface-muted);
   --status-inactive-border: var(--border-subtle);
-  --status-inactive-text: var(--text-subtle);
+  --status-inactive-text:   var(--text-subtle);
+  --status-queued:    var(--brand-strong);
+  --status-queued-bg: var(--brand-soft);
+  --status-chip:      var(--status-info-text);
 
-  --table-toolbar-bg: color-mix(in oklab, var(--surface) 86%, transparent);
-  --table-toolbar-border: var(--border-subtle);
-  --table-header-bg: var(--surface-muted);
-  --table-header-text: var(--text-subtle);
-  --table-divider: var(--border-subtle);
-  --table-row-bg: var(--surface);
-  --table-row-bg-alt: var(--surface);
-  --table-row-hover-bg: var(--surface-muted);
+  /* ══════════════════════════════════════════════════════════════════════
+     BADGES — one pair per tone, matching the package's Badge tones
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --badge-shadow:       var(--shadow-none);
+  --badge-neutral-bg:   var(--tone-neutral-bg);
+  --badge-neutral-text: var(--text-body);
+  --badge-brand-bg:     var(--brand-soft);
+  --badge-brand-text:   var(--brand-strong);
+  --badge-info-bg:      var(--tone-info-bg);
+  --badge-info-text:    var(--brand-strong);
+  --badge-success-bg:   var(--tone-success-bg);
+  --badge-success-text: var(--tone-success-strong);
+  --badge-warning-bg:   var(--tone-warn-bg);
+  --badge-warning-text: var(--warning-700);
+  --badge-danger-bg:    var(--tone-danger-bg);
+  --badge-danger-text:  var(--tone-danger-strong);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     TABLES
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --table-toolbar-bg:      color-mix(in oklab, var(--surface) 86%, transparent);
+  --table-toolbar-border:  var(--border-subtle);
+  --table-header-bg:       var(--surface-muted);
+  --table-header-text:     var(--text-subtle);
+  --table-divider:         var(--border-subtle);
+  --table-row-bg:          var(--surface);
+  --table-row-bg-alt:      var(--surface);
+  --table-row-hover-bg:    var(--surface-muted);
   --table-row-selected-bg: var(--brand-tint);
-  --datatable-toolbar-bg: color-mix(in oklab, var(--surface) 90%, transparent);
+
+  --datatable-toolbar-bg:     color-mix(in oklab, var(--surface) 90%, transparent);
   --datatable-toolbar-border: var(--border-subtle);
-  --datatable-expanded-bg: var(--surface-muted);
-  --datatable-empty-bg: var(--surface-muted);
+  --datatable-expanded-bg:    var(--surface-muted);
+  --datatable-empty-bg:       var(--surface-muted);
 
-  --background: var(--canvas);
-  --foreground: var(--text-body);
-  --card: var(--surface);
-  --card-foreground: var(--text-body);
-  --popover: var(--surface);
-  --popover-foreground: var(--text-body);
-  --muted: var(--surface-muted);
-  --muted-foreground: var(--text-muted);
-  --input: var(--border);
-  --ring: var(--focus-ring);
+  /* ══════════════════════════════════════════════════════════════════════
+     SIDEBAR
+     ══════════════════════════════════════════════════════════════════════ */
 
-  --sidebar: var(--surface-muted);
-  --sidebar-foreground: var(--text-body);
-  --sidebar-primary: var(--action-primary-bg);
+  --sidebar:                    var(--surface-muted);
+  --sidebar-foreground:         var(--text-body);
+  --sidebar-primary:            var(--action-primary-bg);
   --sidebar-primary-foreground: var(--action-primary-fg);
-  --sidebar-accent: var(--surface);
-  --sidebar-accent-foreground: var(--text-strong);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--focus-ring);
+  --sidebar-accent:             var(--surface);
+  --sidebar-accent-foreground:  var(--text-strong);
+  --sidebar-border:             var(--border);
+  --sidebar-ring:               var(--focus-ring);
+
+  --sidebar-item-fg:            color-mix(in oklab, var(--text-body) 84%, var(--text-muted));
+  --sidebar-item-fg-muted:      color-mix(in oklab, var(--text-muted) 88%, var(--text-body));
+  --sidebar-item-icon:          color-mix(in oklab, var(--text-muted) 78%, var(--text-body));
+  --sidebar-item-hover-fg:      var(--text-body);
+  --sidebar-item-active-bg:     var(--brand-soft);
+  --sidebar-item-active-fg:     var(--brand-strong);
+  --sidebar-item-active-border: color-mix(in oklab, var(--brand-300) 50%, var(--border-subtle));
+
+  /* ══════════════════════════════════════════════════════════════════════
+     CHARTS
+     Five series that stay distinguishable while drawing only on package
+     material: the brand scale plus the three non-info tones.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --chart-1: var(--brand-500);
+  --chart-2: var(--accent-500);
+  --chart-3: var(--tone-success);
+  --chart-4: var(--tone-warn);
+  --chart-5: var(--tone-danger);
+  --chart-grid: var(--border-subtle);
+  --chart-text: var(--text-muted);
+
+  --chart-passing:      var(--tone-success);
+  --chart-failing:      var(--tone-danger);
+  --chart-need-changes: var(--tone-warn);
+  --chart-in-review:    var(--brand-500);
+  --chart-in-progress:  var(--tone-warn);
+  --chart-pending:      var(--gray-400);
+  --chart-inactive:     var(--gray-500);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     SHADCN COMPATIBILITY
+
+     Nothing to do here. `@corelithzw/react` already ships the full shadcn set
+     — `--background --foreground --card --popover --primary --secondary
+     --muted --accent --destructive --input --ring --radius` and their
+     `-foreground` pairs — mapped onto its own tokens. Redeclaring any of them
+     below would shadow the package (this block is unlayered, the package's is
+     not) and re-open exactly the drift this migration closed.
+
+     Note in particular that the package's `--accent` is `--brand-soft`, the
+     subtle hover surface shadcn means by that name. It is NOT the chart accent
+     declared further up: that ramp is `--accent-50 … --accent-900` and has no
+     bare `--accent` rung, precisely so the two cannot collide.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --warm-paper: var(--surface-muted);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     GEOMETRY
+     `--radius`, `--radius-xs … --radius-2xl`, `--button-radius`,
+     `--card-radius`, `--h-control-*`, `--input-height` and `--button-height`
+     are all package tokens.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --radius-full: 9999px;      /* literal by nature — same as --radius-pill */
+
+  --control-height-sm: var(--h-control-sm);
+  --control-height-md: var(--h-control-md);
+
+  /* Icon slots. The design system specifies these as px on a 24×24 grid and
+     does not expose them as tokens (docs/design-system/02-tokens.md § Icons),
+     so these five are literal by necessity — `sm` is the documented default. */
+  --icon-size-xs: 14px;
+  --icon-size-sm: 16px;
+  --icon-size-md: 18px;
+  --icon-size-lg: 22px;
+  --icon-size-xl: 28px;
+
+  /* Page gutters. The design system's guidance is ≤430px: 16 · 431–767: 20 ·
+     ≥768: 24, with `--gutter-x` (24) as the desktop value. */
+  --content-gutter-x: var(--space-4);
+  --section-gutter-x: var(--space-4);
+  --table-gutter-x:   var(--space-3);
+  --table-row-min-h:  calc(var(--h-control-md) + var(--space-3));    /* 48 */
+  --table-head-min-h: calc(var(--h-control-md) + var(--space-1));    /* 40 */
+
+  /* ══════════════════════════════════════════════════════════════════════
+     TYPOGRAPHY
+     The package owns `--font-sans` / `--font-mono` / `--font-display` /
+     `--font-serif` and the `--type-*` role shorthands. The app additionally
+     reads a decomposed size/line/weight ladder — declared here off the same
+     numbers so the two spellings cannot drift.
+     ══════════════════════════════════════════════════════════════════════ */
 
   --font-family: var(--font-sans);
-  --font-display: var(--font-sans);
-  --font-serif: var(--font-sans);
 
-  --control-height-md: var(--h-control-md);
-  --radius: 0.625rem;
+  /* Weights are unitless and live inside the package's `font:` shorthands;
+     the design system's rule is that weight, not family, does the emphasis. */
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
 
-  --surface-frame-shadow: inset 0 0 0 1px var(--border);
-  --surface-frame-shadow-hover:
-    inset 0 0 0 1px var(--border-strong),
-    0 4px 12px rgb(22 24 29 / 0.08);
-  --button-shadow-rest: inset 0 0 0 1px var(--border);
-  --button-shadow-hover:
-    inset 0 0 0 1px var(--border-strong),
-    0 2px 6px rgb(22 24 29 / 0.08);
-  --button-shadow-pressed: inset 0 0 0 1px var(--border-strong);
-  --button-ghost-hover-bg: var(--surface-muted);
-  --button-ghost-active-bg: var(--surface-sunken);
-  --card-shadow-rest: var(--shadow-rest);
-  --card-divider: var(--border-subtle);
+  --leading-tight:   1.3;    /* --type-page-title */
+  --leading-normal:  1.4;    /* --type-section-title / --type-label */
+  --leading-relaxed: 1.55;   /* --type-body */
+
+  /* The design system's size ladder: caption 12 · body-sm 13 · body 14 ·
+     body-lg 16 · page-title 22 · display-sm 32. */
+  --type-size-12: 12px;
+  --type-size-13: 13px;
+  --type-size-14: 14px;
+  --type-size-16: 16px;
+  --type-size-20: 20px;
+  --type-size-22: 22px;
+  --type-size-24: 24px;
+  --type-size-32: 32px;
+
+  --text-xs:  var(--type-size-12);
+  --text-sm:  var(--type-size-13);
+  --text-md:  var(--type-size-14);
+  --text-lg:  var(--type-size-16);
+  --text-xl:  var(--type-size-22);
+  --text-2xl: var(--type-size-32);
+  --text-kpi: var(--type-size-32);
+
+  --type-display-size:   var(--type-size-32);
+  --type-display-line:   var(--leading-tight);
+  --type-display-weight: var(--font-weight-semibold);
+
+  --type-page-title-size:   var(--type-size-22);
+  --type-page-title-line:   var(--leading-tight);
+  --type-page-title-weight: var(--font-weight-semibold);
+
+  --type-section-title-size:   var(--type-size-16);
+  --type-section-title-line:   var(--leading-normal);
+  --type-section-title-weight: var(--font-weight-semibold);
+
+  --type-body-size:   var(--type-size-14);
+  --type-body-line:   var(--leading-relaxed);
+  --type-body-weight: var(--font-weight-regular);
+
+  --type-body-lg-size:   var(--type-size-16);
+  --type-body-lg-line:   var(--leading-relaxed);
+  --type-body-lg-weight: var(--font-weight-regular);
+
+  --type-field-label-size:   var(--type-size-13);
+  --type-field-label-line:   var(--leading-normal);
+  --type-field-label-weight: var(--font-weight-medium);
+
+  --type-field-help-size:   var(--type-size-12);
+  --type-field-help-line:   var(--leading-normal);
+  --type-field-help-weight: var(--font-weight-regular);
+
+  --type-table-text-size:   var(--type-size-14);
+  --type-table-text-line:   var(--leading-relaxed);
+  --type-table-text-weight: var(--font-weight-regular);
+
+  --type-table-header-size:   var(--type-size-12);
+  --type-table-header-line:   var(--leading-tight);
+  --type-table-header-weight: var(--font-weight-medium);
+
+  --type-caption-size:   var(--type-size-12);
+  --type-caption-line:   var(--leading-normal);
+  --type-caption-weight: var(--font-weight-regular);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     MOTION → --dur-* / --ease-*
+     ══════════════════════════════════════════════════════════════════════ */
 
   --motion-duration-instant: var(--dur-instant);
-  --motion-duration-fast: var(--dur-fast);
-  --motion-duration-base: var(--dur-base);
-  --motion-duration-normal: var(--dur-base);
-  --motion-duration-slow: var(--dur-slow);
-  --motion-ease-standard: var(--ease-out);
-  --motion-ease-default: var(--ease-out);
-  --motion-ease-emphasized: var(--ease-in-out);
-  --motion-ease-exit: var(--ease-in-out);
-  --motion-ease-spring: var(--ease-spring);
+  --motion-duration-fast:    var(--dur-fast);
+  --motion-duration-base:    var(--dur-base);
+  --motion-duration-normal:  var(--dur-base);
+  --motion-duration-slow:    var(--dur-slow);
 
+  --motion-ease-standard:   var(--ease-out);
+  --motion-ease-default:    var(--ease-out);
+  --motion-ease-emphasized: var(--ease-in-out);
+  --motion-ease-exit:       var(--ease-snap);
+  --motion-ease-spring:     var(--ease-spring);
+
+  --motion-scale-hover: 1.015;
+  --motion-scale-press: 0.985;
+  --motion-lift-y:      -2px;
+
+  /* ══════════════════════════════════════════════════════════════════════
+     TOUCH, MOBILE LISTS, SCROLLBARS
+     ══════════════════════════════════════════════════════════════════════ */
+
+  --touch-target-min:         var(--h-control-lg);                   /* 44 */
+  --touch-target-comfortable: var(--space-9);                        /* 48 */
+  --touch-target-generous:    calc(var(--space-9) + var(--space-2)); /* 56 */
+
+  --mobile-list-item-height:    var(--space-10);                     /* 64 */
+  --mobile-list-item-padding-x: var(--content-gutter-x);
+  --mobile-list-divider-color:  var(--border-subtle);
+  --mobile-list-icon-size:      var(--space-8);                      /* 40 */
+  --mobile-list-icon-radius:    var(--radius-lg);
+
+  --scrollbar-width:       var(--space-2);
+  --scrollbar-track:       transparent;
+  --scrollbar-thumb:       var(--gray-300);
+  --scrollbar-thumb-hover: var(--gray-400);
+
+  /* The design system's canvas is flat; the historical gradient wash is off.
+     Set this to a gradient on a scoped selector if a surface wants one. */
   --app-canvas-wash: none;
+
+  /* ══════════════════════════════════════════════════════════════════════
+     COMPONENT GAPS
+     Tokens that local components read but nothing ever declared, so they were
+     resolving to their inline fallback — or to nothing at all. Declared here
+     off design-system tokens so those components join the system.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* components/ui/sheet.tsx — the side sheet had no width at any breakpoint.
+     Panel widths are layout, not palette; the design system does not tokenise
+     them (it tokenises `--sidebar-w` and `--content-max` only), so these three
+     rungs are literal, sized one step under the dialog ladder in dialog.tsx. */
+  --sheet-size-mobile: 100%;
+  --sheet-size-sm: 24rem;
+  --sheet-size-md: 28rem;
+  --sheet-size-lg: 32rem;
+
+  /* components/offline/offline-keypad.tsx */
+  --keypad-bg:           var(--surface-muted);
+  --keypad-text:         var(--text-strong);
+  --keypad-shadow:       var(--border-strong);
+  --keypad-shadow-color: var(--border-strong);
+  --keypad-active:       var(--surface-sunken);
+  --keypad-clear:        var(--tone-danger);
+  --keypad-enter:        var(--action-primary-bg);
+  --keypad-enter-active: var(--action-primary-pressed);
 }
 
+/* Page gutter widens with the viewport, per the design system's gutter rule. */
+@media (min-width: 431px) {
+  :root {
+    --content-gutter-x: var(--space-5);
+    --section-gutter-x: var(--space-5);
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --content-gutter-x: var(--gutter-x);
+    --section-gutter-x: var(--gutter-x);
+  }
+}
+
+/* The design system flips its tokens on `body.is-dark`. The app is light-only
+   today; this keeps the explicit opt-in working if a surface sets it. */
 :root[data-appearance="light"] {
   color-scheme: light;
 }

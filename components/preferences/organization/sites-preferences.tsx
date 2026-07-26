@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertDialog,
   Badge,
   Button,
   Drawer,
@@ -26,6 +25,7 @@ import {
 } from "@/lib/api";
 import { getApiErrorMessage, resolveDisplayErrorMessage } from "@/lib/api-client";
 import { Pencil, Plus, Trash2 } from "@/lib/icons";
+import { dsConfirm } from "@/components/ui/ds-confirm";
 
 type SiteFormState = {
   name: string;
@@ -159,7 +159,7 @@ export function SitesPreferences() {
   }
 
   async function archiveSite(site: Site) {
-    const confirmed = await AlertDialog.confirm({
+    const confirmed = await dsConfirm({
       title: "Archive site",
       description: `Archive ${site.name}. This removes it from active operational defaults.`,
       variant: "warning",
@@ -189,47 +189,47 @@ export function SitesPreferences() {
 
   const columns: DataTableColumn<Site>[] = [
       {
-        id: "code",
+        key: "code",
         header: "Code",
         width: "8rem",
-        cell: (row) => <span className="t-mono">{row.code}</span>,
+        render: (row) => <span className="t-mono">{row.code}</span>,
       },
       {
-        id: "name",
+        key: "name",
         header: "Name",
-        cell: (row) => row.name,
+        render: (row) => row.name,
       },
       {
-        id: "location",
+        key: "location",
         header: "Location",
-        cell: (row) => row.location || "-",
+        render: (row) => row.location || "-",
       },
       {
-        id: "unit",
+        key: "unit",
         header: "Measurement unit",
-        cell: (row) => row.measurementUnit,
+        render: (row) => row.measurementUnit,
       },
       {
-        id: "status",
+        key: "status",
         header: "Status",
         width: "8rem",
-        cell: (row) => (
+        render: (row) => (
           <Badge tone={row.isActive ? "success" : "outline"}>
             {row.isActive ? "Active" : "Inactive"}
           </Badge>
         ),
       },
       {
-        id: "actions",
+        key: "actions",
         header: "Actions",
         width: "14rem",
-        cell: (row) => (
+        render: (row) => (
           <div className="flex items-center justify-end gap-2">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              icon={<Pencil className="size-4" aria-hidden="true" />}
+              startIcon={<Pencil className="size-4" aria-hidden="true" />}
               aria-label={`Edit ${row.name}`}
               onClick={() => openEditForm(row)}
             />
@@ -239,7 +239,7 @@ export function SitesPreferences() {
                 variant="ghost"
                 tone="danger"
                 size="sm"
-                icon={<Trash2 className="size-4" aria-hidden="true" />}
+                startIcon={<Trash2 className="size-4" aria-hidden="true" />}
                 aria-label={`Archive ${row.name}`}
                 loading={archiveMutation.isPending}
                 onClick={() => archiveSite(row)}
@@ -303,7 +303,7 @@ export function SitesPreferences() {
             type="button"
             variant="primary"
             size="sm"
-            icon={<Plus className="size-4" aria-hidden="true" />}
+            startIcon={<Plus className="size-4" aria-hidden="true" />}
             onClick={openCreateForm}
           >
             New site
@@ -328,7 +328,7 @@ export function SitesPreferences() {
         open={formOpen}
         onClose={closeForm}
         title={editing ? "Edit site" : "New site"}
-        subtitle={
+        description={
           editing
             ? "Update site details and active status."
             : "Create a site record for reporting and operational forms."
@@ -393,12 +393,11 @@ export function SitesPreferences() {
                   measurementUnit: event.target.value as SiteFormState["measurementUnit"],
                 }))
               }
-              options={[
-                { value: "tonnes", label: "tonnes" },
-                { value: "trips", label: "trips" },
-                { value: "wheelbarrows", label: "wheelbarrows" },
-              ]}
-            />
+            >
+              <option value="tonnes">tonnes</option>
+              <option value="trips">trips</option>
+              <option value="wheelbarrows">wheelbarrows</option>
+            </Select>
           </Field>
           <div className="settings-row">
             <div>

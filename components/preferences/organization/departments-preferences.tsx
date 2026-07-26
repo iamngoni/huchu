@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertDialog,
   Badge,
   Button,
   Drawer,
@@ -25,6 +24,7 @@ import {
 } from "@/lib/api";
 import { getApiErrorMessage, resolveDisplayErrorMessage } from "@/lib/api-client";
 import { Pencil, Plus, Trash2 } from "@/lib/icons";
+import { dsConfirm } from "@/components/ui/ds-confirm";
 
 type DepartmentFormState = {
   code: string;
@@ -152,7 +152,7 @@ export function DepartmentsPreferences() {
   }
 
   async function confirmDeleteDepartment(department: DepartmentRecord) {
-    const confirmed = await AlertDialog.confirm({
+    const confirmed = await dsConfirm({
       title: "Delete department",
       description: `Delete ${department.name}. Departments linked to employees cannot be deleted.`,
       variant: "danger",
@@ -182,44 +182,44 @@ export function DepartmentsPreferences() {
 
   const columns: DataTableColumn<DepartmentRecord>[] = [
       {
-        id: "code",
+        key: "code",
         header: "Code",
         width: "8rem",
-        cell: (row) => <span className="t-mono">{row.code}</span>,
+        render: (row) => <span className="t-mono">{row.code}</span>,
       },
       {
-        id: "name",
+        key: "name",
         header: "Name",
-        cell: (row) => row.name,
+        render: (row) => row.name,
       },
       {
-        id: "employees",
+        key: "employees",
         header: "Employees",
-        numeric: true,
+        align: "right",
         width: "8rem",
-        cell: (row) => <span className="t-mono">{row._count?.employees ?? 0}</span>,
+        render: (row) => <span className="t-mono">{row._count?.employees ?? 0}</span>,
       },
       {
-        id: "status",
+        key: "status",
         header: "Status",
         width: "8rem",
-        cell: (row) => (
+        render: (row) => (
           <Badge tone={row.isActive ? "success" : "outline"}>
             {row.isActive ? "Active" : "Inactive"}
           </Badge>
         ),
       },
       {
-        id: "actions",
+        key: "actions",
         header: "Actions",
         width: "10rem",
-        cell: (row) => (
+        render: (row) => (
           <div className="flex items-center justify-end gap-2">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              icon={<Pencil className="size-4" aria-hidden="true" />}
+              startIcon={<Pencil className="size-4" aria-hidden="true" />}
               aria-label={`Edit ${row.name}`}
               onClick={() => openEditForm(row)}
             />
@@ -228,7 +228,7 @@ export function DepartmentsPreferences() {
               variant="ghost"
               tone="danger"
               size="sm"
-              icon={<Trash2 className="size-4" aria-hidden="true" />}
+              startIcon={<Trash2 className="size-4" aria-hidden="true" />}
               aria-label={`Delete ${row.name}`}
               loading={deleteMutation.isPending}
               onClick={() => confirmDeleteDepartment(row)}
@@ -277,7 +277,7 @@ export function DepartmentsPreferences() {
             type="button"
             variant="primary"
             size="sm"
-            icon={<Plus className="size-4" aria-hidden="true" />}
+            startIcon={<Plus className="size-4" aria-hidden="true" />}
             onClick={openCreateForm}
           >
             New department
@@ -302,7 +302,7 @@ export function DepartmentsPreferences() {
         open={formOpen}
         onClose={closeForm}
         title={editing ? "Edit department" : "New department"}
-        subtitle={
+        description={
           editing
             ? "Update department details and active status."
             : "Create a department record for HR and compensation assignment."

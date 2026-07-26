@@ -41,61 +41,107 @@ DS markup, wrap it in a thin client child rather than adding `"use client"` up t
 import { Button, DataTable } from "@corelithzw/react";
 ```
 
-### 2. Token name collisions with `app/globals.css`
+### 2. Token name collisions with `app/globals.css` — RESOLVED
 
-39 of the DS's 157 tokens already exist in `app/globals.css` under the same names with **different values**.
-Importing `styles.css` after `globals.css` silently reflows existing UI. These are the ones that change size
-or shape — the dangerous set:
+**Status: done.** `styles.css` is imported globally and the collisions below have been reconciled. Kept as
+the record of what changed and why.
 
-| Token | This repo | Design system | Consequence |
+The package is now imported from `app/globals.css` into a dedicated cascade layer:
+
+```css
+@layer theme, base, corelith, app, components, utilities;
+
+@import "tailwindcss";
+@import "@corelithzw/react/styles.css" layer(corelith);
+```
+
+That single line does the collision resolution. `corelith` sits **above** Tailwind's `theme` layer, so for
+every same-named token the package's value wins automatically — `--radius-*`, `--font-sans`, `--font-mono`,
+`--ease-*` and the rest resolve to design-system values with no mapping to maintain. It sits **below**
+`utilities`, so a Tailwind class on a design-system component still overrides that component's CSS.
+
+`app/globals.css` no longer declares a single token literal. Every legacy name the app still reads is
+re-derived from a package token in `app/themes/corelith-bridge.css`.
+
+How each collision landed:
+
+| Token | Was | Now | Note |
 |---|---|---|---|
-| `--space-8` | 32px | **40px** | Scale divergence — see below |
-| `--space-10` | 40px | **64px** | Scale divergence — see below |
-| `--button-radius` | 11px | 8px | Every button gets squarer |
-| `--radius-sm` / `md` / `lg` / `xl` / `2xl` | `calc()` off `--radius` | 6 / 8 / 10 / 14 / 18px | Radius scale replaced |
-| `--button-height` / `--input-height` | `2.25rem` | `var(--h-control-md)` = 36px | Same size, different mechanism |
-| `--font-sans` | `var(--font-sans)` → "SS Huchu" | Atkinson Hyperlegible Next | **Whole-product typeface change** |
+| `--space-8` / `--space-10` | 32 / 40px | DS scale (40 / 64px) | Use sites renamed → `--space-7` / `--space-8`; same rendered px |
+| `--button-radius` | 11px | 8px (package) | Buttons are squarer |
+| `--radius-sm … 2xl` | `calc()` off `--radius` | 6 / 8 / 10 / 14 / 18px (package) | `--radius-3xl` / `4xl` extend the package's ladder |
+| `--radius` | `0.625rem` | `var(--radius-md)` = 8px | The package ships its own `--radius` |
+| `--button-height` / `--input-height` | `2.25rem` | `var(--h-control-md)` = 36px | Same size |
+| `--font-sans` | "SS Huchu" | Atkinson Hyperlegible Next | Decided — see below |
 | `--shadow-popover` | `0 8px 24px …` | `0 12px 32px -8px …` | Deeper popovers |
+| `--text-xl` / `--text-2xl` | 20 / 28px | 22 / 32px | Aligned to the DS page-title and display-sm rungs |
+| shadcn set | repo aliases | **package tokens** | See below |
 
-**The spacing scale is the real trap.** This repo indexes roughly by 4×n; the DS indexes by step. They agree
-through `--space-6` and diverge after:
+**The spacing scale.** The repo indexed roughly by 4×n, the DS indexes by step. They agree through
+`--space-6` and diverged after:
 
 | | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| repo | 4 | 8 | 12 | 16 | 20 | 24 | — | **32** | — | **40** | — | — | — |
+| repo (old) | 4 | 8 | 12 | 16 | 20 | 24 | — | **32** | — | **40** | — | — | — |
 | DS | 4 | 8 | 12 | 16 | 20 | 24 | 32 | **40** | 48 | **64** | 80 | 96 | 128 |
 
-So repo `--space-8` (32px) is DS `--space-7`, and repo `--space-10` (40px) is DS `--space-8`. Any existing
-rule using `--space-8` or `--space-10` shifts if the DS values win.
+The DS scale is now the only one. The two use sites of the old rungs (`app/home/marketing.module.css`) were
+renamed `--space-8` → `--space-7` and `--space-10` → `--space-8`, so they render identically.
 
-The remaining collisions (`--text-*`, `--border*`, `--action-*`, `--focus-ring`, `--surface-muted`) are
-indirection-only: the repo aliases its own palette, the DS uses literals. Resolved values are close, so they
-are low-risk — but they are the seam where the two colour systems meet.
+**The package already ships a shadcn bridge.** `styles.css` declares `--background --foreground --card
+--popover --primary --secondary --muted --accent --destructive --input --ring --radius` and their
+`-foreground` pairs, mapped onto its own tokens. `corelith-bridge.css` deliberately does **not** redeclare
+any of them. Note `--accent` is `--brand-soft` there (shadcn's subtle hover surface); the app's chart accent
+is a separate `--accent-50 … --accent-900` ramp with no bare `--accent` rung so the two cannot collide.
+
+**Watch the shadowed Tailwind namespaces.** `--text-xs … --text-2xl` and `--leading-tight/normal/relaxed`
+are Tailwind font-size and line-height theme keys. The bridge declares them in an unlayered `:root`, so they
+override Tailwind's defaults for every `text-sm` / `leading-normal` class in the app. That is intentional and
+long-standing — but it means changing one of those values in the bridge resizes text app-wide.
+
+### 3. Tenant branding used to override everything
+
+`getBrandingCssVariables` in `lib/platform/branding.ts` writes CSS custom properties **inline on `<body>`**,
+which outranks every stylesheet including the package. It used to emit a complete hardcoded warm-paper
+palette — surfaces, text, borders, statuses, charts, shadows — on every request, branded or not. That, more
+than any collision, is why the product rendered off-token.
+
+It now emits nothing when branding is disabled, and when enabled it re-anchors the design system's own
+`--brand` scale on the tenant's colour rather than restating a palette. Two rules if you touch it:
+
+1. Emit only what the tenant actually chose.
+2. Re-tint through the package's token names, not the app's aliases — that is what makes a tenant's colour
+   reach components rendered by `@corelithzw/react`.
 
 ### Dark mode
 
-The DS ships **no** `prefers-color-scheme` or `.dark` block — verified, zero matches across all package CSS.
-`app/globals.css` has dark-mode handling. Any surface migrated to raw DS tokens loses dark mode.
-Options: keep the repo's dark overrides layered on top and re-map DS tokens inside them, or scope the DS to
-light-only surfaces. Do not assume the DS handles it. The site's colours page claims surfaces flip in dark
-mode; the shipped CSS does not implement that.
+The DS ships no `prefers-color-scheme` or `.dark` block; it flips tokens on `body.is-dark`. The app is
+light-only today (`app/globals.css` has a dark block for `.pos-terminal` only). Any surface that wants dark
+should add `is-dark` to `<body>` and let the package's token flip do the work.
 
-## Recommended adoption order
+### Typeface — decided
 
-Scoped, reversible, and it keeps the collision surface small.
+**Atkinson Hyperlegible.** The self-hosted "SS Huchu" `@font-face` blocks are gone and `--font-sans` comes
+from the package untouched. One consequence: `styles.css` pulls the two families from Google Fonts via an
+`@import` on its line 14, and once bundled that lands *inside* `@layer corelith`, where it is invalid CSS
+that browsers drop. `app/globals.css` hoists the same import to the top of the file — that copy is the one
+that loads. If a CSP or an offline build blocks Google Fonts the stack falls back to `-apple-system`; the fix
+is to self-host the two families, not to remove the hoisted import.
 
-1. **Do not** import `styles.css` globally into `app/layout.tsx` yet — that fires all 39 collisions at once.
-2. Add the DS's non-colliding tokens (118 of them) to `app/globals.css` under their own names. `--brand-*`,
-   `--tone-*`, `--type-*`, `--dur-*`, `--ease-*`, `--h-control-*`, `--gray-*`, `--space-7/9/11/12/13`,
-   `--sidebar-w`, `--gutter-x` — all safe, all additive.
-3. Migrate route-by-route. Import `styles.css` inside the migrated subtree, or accept it globally only once
-   the collision table above has been reconciled deliberately.
-4. Reconcile spacing before anything else: rename repo `--space-8` → `--space-7` and `--space-10` → `--space-8`
-   at every use site, then adopt the DS scale wholesale. Do this as one mechanical commit with no other changes.
-5. Decide the typeface explicitly. "SS Huchu" vs Atkinson Hyperlegible is a product decision, not a
-   refactor detail — flag it, don't silently switch it.
-6. Delete the local `components/ui/*` equivalent only after its DS replacement is proven at every call site.
-   See `07-repo-migration.md`.
+The `.woff2` files remain in `public/` and are now unreferenced.
+
+## Remaining adoption work
+
+Tokens and styling are done. What is left is component-by-component API migration:
+
+1. Migrate call sites off `components/ui/*` onto the package's exports, and delete the local component only
+   once its replacement is proven everywhere. See `07-repo-migration.md`.
+2. Drop superseded dependencies (`@radix-ui/*`, `@base-ui/react`, `@rtcamp/frappe-ui-react`) from
+   `package.json` only once nothing imports them.
+
+Note that `07-repo-migration.md` documents an API that is **newer than the installed 0.3.4** in places — it
+lists `NavGroup`/`NavItem`, compound `Card.Header`/`Card.Body`, and a controlled `DataTable` with
+`DataTableSortState`, none of which 0.3.4 exports. Check `dist/index.d.ts` before trusting a component name.
 
 ## Verified environment notes
 

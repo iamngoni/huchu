@@ -3,7 +3,9 @@
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { NavGroup, NavItem, PageHeader } from "@corelithzw/react";
+import { PageHeader } from "@corelithzw/react";
+
+import { NavGroup, NavItem } from "@/components/ui/settings-rail";
 import {
   getAreaLabel,
   getVisibleManagementAreaNavItems,
@@ -93,7 +95,7 @@ export function ManagementShell({
       </aside>
 
       <section className="settings-content">
-        <PageHeader title={title || modulePresentation.title} actions={actions} />
+        <PageHeader title={title || modulePresentation.title} primaryAction={actions} />
         {description ? (
           <p className="t-body t-muted max-w-[var(--content-max)]">{description}</p>
         ) : null}

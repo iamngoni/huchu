@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import {
   Alert,
-  AlertDialog,
   Badge,
   Button,
   Drawer,
@@ -29,6 +28,7 @@ import {
   type ManagedUserSummary,
 } from "@/lib/user-management-api";
 import { Plus, RefreshCcw, ShieldCheck, UserCheck } from "@/lib/icons";
+import { dsConfirm } from "@/components/ui/ds-confirm";
 
 type RoleFilter = "ALL" | ManagedUserRole;
 type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
@@ -224,7 +224,7 @@ export function UsersPreferences() {
 
   async function toggleStatus(user: ManagedUserSummary) {
     const nextActive = !user.isActive;
-    const confirmed = await AlertDialog.confirm({
+    const confirmed = await dsConfirm({
       title: nextActive ? "Activate user" : "Deactivate user",
       description: `${nextActive ? "Activate" : "Deactivate"} ${user.email}.`,
       variant: nextActive ? "default" : "warning",
@@ -237,9 +237,9 @@ export function UsersPreferences() {
 
   const columns: DataTableColumn<ManagedUserSummary>[] = [
       {
-        id: "user",
+        key: "user",
         header: "User",
-        cell: (row) => (
+        render: (row) => (
           <div>
             <div>{row.name}</div>
             <div className="t-caption t-muted">{row.email}</div>
@@ -247,40 +247,40 @@ export function UsersPreferences() {
         ),
       },
       {
-        id: "role",
+        key: "role",
         header: "Role",
         width: "12rem",
-        cell: (row) => <Badge tone="outline">{row.role}</Badge>,
+        render: (row) => <Badge tone="outline">{row.role}</Badge>,
       },
       {
-        id: "status",
+        key: "status",
         header: "Status",
         width: "8rem",
-        cell: (row) => (
+        render: (row) => (
           <Badge tone={row.isActive ? "success" : "outline"}>
             {row.isActive ? "Active" : "Inactive"}
           </Badge>
         ),
       },
       {
-        id: "updated",
+        key: "updated",
         header: "Updated",
         width: "12rem",
-        cell: (row) => <span className="t-mono">{formatDate(row.updatedAt ?? row.createdAt)}</span>,
+        render: (row) => <span className="t-mono">{formatDate(row.updatedAt ?? row.createdAt)}</span>,
       },
       ...(canMutate
         ? [
             {
-              id: "actions",
+              key: "actions",
               header: "Actions",
               width: "22rem",
-              cell: (row: ManagedUserSummary) => (
+              render: (row: ManagedUserSummary) => (
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <Button
                     type="button"
                     variant="secondary"
                     size="sm"
-                    icon={<ShieldCheck className="size-4" aria-hidden="true" />}
+                    startIcon={<ShieldCheck className="size-4" aria-hidden="true" />}
                     loading={statusMutation.isPending}
                     onClick={() => toggleStatus(row)}
                   >
@@ -290,7 +290,7 @@ export function UsersPreferences() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    icon={<RefreshCcw className="size-4" aria-hidden="true" />}
+                    startIcon={<RefreshCcw className="size-4" aria-hidden="true" />}
                     onClick={() =>
                       setPasswordTarget({
                         userId: row.id,
@@ -305,7 +305,7 @@ export function UsersPreferences() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    icon={<UserCheck className="size-4" aria-hidden="true" />}
+                    startIcon={<UserCheck className="size-4" aria-hidden="true" />}
                     onClick={() =>
                       setRoleTarget({
                         userId: row.id,
@@ -376,21 +376,23 @@ export function UsersPreferences() {
               aria-label="Role filter"
               value={roleFilter}
               onChange={(event) => setRoleFilter(event.target.value as RoleFilter)}
-              options={[
-                { value: "ALL", label: "All roles" },
-                ...roleOptions.map((role) => ({ value: role.value, label: role.label })),
-              ]}
-            />
+            >
+              <option value="ALL">All roles</option>
+              {roleOptions.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label}
+                </option>
+              ))}
+            </Select>
             <Select
               aria-label="Status filter"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-              options={[
-                { value: "ALL", label: "All statuses" },
-                { value: "ACTIVE", label: "Active" },
-                { value: "INACTIVE", label: "Inactive" },
-              ]}
-            />
+            >
+              <option value="ALL">All statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </Select>
           </div>
         }
         actions={
@@ -399,7 +401,7 @@ export function UsersPreferences() {
               type="button"
               variant="primary"
               size="sm"
-              icon={<Plus className="size-4" aria-hidden="true" />}
+              startIcon={<Plus className="size-4" aria-hidden="true" />}
               onClick={() => setCreateOpen(true)}
             >
               New user
@@ -425,7 +427,7 @@ export function UsersPreferences() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         title="New user"
-        subtitle="Provision a managed user account for this workspace."
+        description="Provision a managed user account for this workspace."
         footer={
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
@@ -480,9 +482,14 @@ export function UsersPreferences() {
                   role: event.target.value as ManagedUserRole,
                 }))
               }
-              options={roleOptions}
               required
-            />
+            >
+              {roleOptions.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label}
+                </option>
+              ))}
+            </Select>
           </Field>
         </form>
       </Drawer>
@@ -491,7 +498,7 @@ export function UsersPreferences() {
         open={Boolean(passwordTarget)}
         onClose={() => setPasswordTarget(null)}
         title="Reset password"
-        subtitle={passwordTarget?.userEmail}
+        description={passwordTarget?.userEmail}
         footer={
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setPasswordTarget(null)}>
@@ -531,7 +538,7 @@ export function UsersPreferences() {
         open={Boolean(roleTarget)}
         onClose={() => setRoleTarget(null)}
         title="Change role"
-        subtitle={roleTarget?.userEmail}
+        description={roleTarget?.userEmail}
         footer={
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setRoleTarget(null)}>
@@ -556,9 +563,14 @@ export function UsersPreferences() {
                   current ? { ...current, role: event.target.value as ManagedUserRole } : current,
                 )
               }
-              options={roleOptions}
               required
-            />
+            >
+              {roleOptions.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label}
+                </option>
+              ))}
+            </Select>
           </Field>
         </form>
       </Drawer>

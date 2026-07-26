@@ -120,13 +120,7 @@ export default async function RootLayout({
       <body
         className="font-sans subpixel-antialiased"
         data-portal-path={hostContext.portalPath ?? undefined}
-        style={
-          {
-            "--font-ibm-plex-mono":
-              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-            ...brandingVars,
-          } as React.CSSProperties
-        }
+        style={brandingVars as React.CSSProperties}
       >
         <Analytics />
         <div className="app-root">

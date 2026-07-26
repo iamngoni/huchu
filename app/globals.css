@@ -1,58 +1,98 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   CORELITH APP STYLESHEET
+
+   `@corelithzw/react` is the single source of truth for design tokens and for
+   the styling of every component it exports. This file only wires Tailwind
+   around it. Every legacy token name the app still references is re-derived
+   from a package token in `app/themes/corelith-bridge.css` — no colour, size,
+   radius, shadow or duration literal belongs in this file.
+
+   See docs/design-system/02-tokens.md for the token catalogue.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Cascade layer order. Declared ahead of the imports so it is the order that
+   sticks (Tailwind re-declares `theme, base, components, utilities` and layers
+   are ordered by first appearance).
+
+     corelith  the design-system package — sits above Tailwind's preflight, so
+               its resets and its `:root` token values win over Tailwind's.
+     app       this repo's element-level base styles, layered above the package
+               so the app keeps the last word on `body` and friends.
+
+   Utilities stay on top: a Tailwind class on a design-system component still
+   overrides the component's own CSS. */
+@layer theme, base, corelith, app, components, utilities;
+
+/* Atkinson Hyperlegible — the design system's typeface, and the app's since the
+   SS Huchu face was retired.
+
+   The package's styles.css pulls this itself on its line 14, but that `@import`
+   lands *inside* `@layer corelith` once bundled, and an `@import` nested in a
+   layer block is invalid CSS that browsers drop. Hoisting it here is what
+   actually loads the font; the nested copy is inert. If a CSP or an offline
+   build blocks Google Fonts, the stack falls back to `-apple-system` and the
+   intended metrics are lost — self-host the two families to fix that. */
+@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@200..800&family=Atkinson+Hyperlegible+Mono:wght@400..700&display=swap");
+
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@corelithzw/react/styles.css" layer(corelith);
 
 @source "../node_modules/@rtcamp/frappe-ui-react/dist";
 
-/* Custom Font: SS Huchu ──────────────────────────────────────────────── */
+/* ── Tailwind Theme Mappings ────────────────────────────────────────────────
+   Deliberately thin. Tailwind's own theme keys (`--font-sans`, `--font-mono`,
+   `--radius-*`, `--ease-*`) are left alone: the package redefines those exact
+   names in the `corelith` layer, which outranks Tailwind's `theme` layer, so
+   `font-sans`, `rounded-lg`, `ease-out` and the rest already resolve to
+   design-system values. Only names Tailwind does not ship are declared here.
 
-@font-face {
-  font-family: "SS Huchu";
-  src: url(/regular.4b554656.woff2) format("woff2");
-  font-display: swap;
-  font-weight: 400;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "SS Huchu";
-  src: url(/medium.501e532c.woff2) format("woff2");
-  font-display: swap;
-  font-weight: 500;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "SS Huchu";
-  src: url(/bold.37baf660.woff2) format("woff2");
-  font-display: swap;
-  font-weight: 700;
-  font-style: normal;
-}
-
-/* ── Tailwind Theme Mappings ────────────────────────────────────────────── */
+   Every value is `var(--package-token)` so a token change in the package flows
+   through without editing this file. */
 
 @theme inline {
-  --font-sans: var(--font-sans);
-  --font-mono:
-    var(--font-jetbrains-mono), var(--font-ibm-plex-mono), ui-monospace,
-    SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
-  --font-family:
-    "SS Huchu", "Inter", ui-sans-serif, system-ui, "Segoe UI",
-    "Helvetica Neue", Arial, sans-serif;
-
-  /* Surface tokens */
-  --color-surface-canvas: var(--surface-canvas);
-  --color-surface-base: var(--surface-base);
-  --color-surface-raised: var(--surface-raised);
+  /* Design-system palette → colour utilities (bg-*, text-*, border-*) */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
-  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-deep: var(--surface-deep);
 
-  /* Text tokens */
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-deeper: var(--brand-deeper);
+  --color-brand-soft: var(--brand-soft);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+
   --color-text-strong: var(--text-strong);
   --color-text-body: var(--text-body);
   --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
   --color-text-inverse: var(--text-inverse);
+  --color-text-link: var(--text-link);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-hairline: var(--hairline);
+
+  /* Semantic tones. The short aliases (`text-info`, `bg-danger`, …) are the
+     names call sites already use; the `tone-*` spellings match the package. */
+  --color-tone-info: var(--tone-info);
+  --color-tone-success: var(--tone-success);
+  --color-tone-warn: var(--tone-warn);
+  --color-tone-danger: var(--tone-danger);
+  --color-tone-neutral: var(--tone-neutral);
+  --color-info: var(--tone-info);
+  --color-success: var(--tone-success);
+  --color-warning: var(--tone-warn);
+  --color-danger: var(--tone-danger);
+
+  /* Surface tokens (legacy spellings — see corelith-bridge.css) */
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-subtle: var(--surface-subtle);
 
   /* Action tokens */
   --color-action-primary-bg: var(--action-primary-bg);
@@ -102,14 +142,11 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  /* Radius scale */
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  /* Radius. `--radius-xs … --radius-2xl` come from the package (4/6/8/10/14/18)
+     and need no mapping. Only the two rungs the design system does not define
+     are extended here, kept on the same +4px cadence as `--radius-xl`. */
+  --radius-3xl: calc(var(--radius-2xl) + 4px);
+  --radius-4xl: calc(var(--radius-2xl) + 8px);
 
   /* POS-specific breakpoints */
   --breakpoint-ms: 520px;
@@ -118,431 +155,60 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ROOT DESIGN TOKEN SYSTEM
+
+   Deliberately empty. Every token the app reads — the neutral and brand ramps,
+   the semantic status set, edges, elevation, geometry, type, motion, spacing —
+   is now declared once in `app/themes/corelith-bridge.css`, derived from the
+   `@corelithzw/react` token set. Adding a literal back here would silently
+   outrank the package, which is the failure mode this migration removed.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-:root {
-  color-scheme: light;
 
-  /* ── Neutral Palette (cool base — overridden by theme files) ─────────── */
-  --neutral-0:  #ffffff;
-  --neutral-25: #fcfcfb;
-  --neutral-50: #f8f9f8;
-  --neutral-100:#f2f4f4;
-  --neutral-200:#e6e9ea;
-  --neutral-300:#d6dbdd;
-  --neutral-400:#b7bfc3;
-  --neutral-500:#8c959b;
-  --neutral-600:#666f76;
-  --neutral-700:#485159;
-  --neutral-800:#2f363d;
-  --neutral-900:#1b2127;
+/* ── App Base Layer ─────────────────────────────────────────────────────────
+   Everything element-level lives in the `app` layer, above `corelith`. The
+   package's own `body` and `button` resets ship unlayered inside styles.css and
+   would otherwise outrank anything written here.
 
-  /* ── Brand Colors ────────────────────────────────────────────────────── */
-  --primary:     #2f6bff;
-  --accent:      #0f8f86;
-  --destructive: #d3434a;
+   Type, colour and canvas all come from the package's `body` rule; this layer
+   only adds what the app needs on top of it. */
 
-  /* ── Primary Ramp ────────────────────────────────────────────────────── */
-  --primary-50:  #edf3ff;
-  --primary-100: #d8e6ff;
-  --primary-300: #8fb2ff;
-  --primary-500: var(--primary);
-  --primary-600: #1f57e6;
-  --primary-700: #1f46c4;
-
-  /* ── Accent Ramp ─────────────────────────────────────────────────────── */
-  --accent-50:  #edf9f7;
-  --accent-100: #d5f0ec;
-  --accent-500: var(--accent);
-  --accent-600: #0c746d;
-
-  /* ── Semantic Color Ramps ───────────────────────────────────────────── */
-  --success-50:  #edf9f2;
-  --success-100: #d7f1e1;
-  --success-300: #9dd8b7;
-  --success-500: #23885c;
-  --success-700: #1a6444;
-
-  --warning-50:  #fef6ea;
-  --warning-100: #fde6cb;
-  --warning-300: #f6c278;
-  --warning-500: #d98a2f;
-  --warning-700: #9f6523;
-  --warning-800: #7f511c;
-
-  --danger-50:   #fef0f1;
-  --danger-100:  #fddde0;
-  --danger-300:  #f5a4ab;
-  --danger-500:  #d3434a;
-  --danger-700:  #9c2f35;
-
-  --info-50:     #eef7ff;
-  --info-100:    #d8ecff;
-  --info-300:    #9ecdf4;
-  --info-500:    #2d84c6;
-  --info-700:    #1f5f90;
-
-
-  /* ── Text Tokens ─────────────────────────────────────────────────────── */
-  --text-strong: var(--neutral-900);
-  --text-body:   var(--neutral-900);
-  --text-muted:  var(--neutral-600);
-  --text-subtle: var(--neutral-500);
-  --text-inverse:var(--neutral-0);
-
-  /* ── Action Tokens ───────────────────────────────────────────────────── */
-  --action-outline-bg:     var(--surface-base);
-  --action-outline-hover-bg: var(--surface-subtle);
-  --action-outline-border:   transparent;
-  --action-outline-border-hover: transparent;
-
-  --action-disabled-bg:      var(--gray-100);
-  --action-disabled-fg:      var(--gray-400);
-
-  /* ── Edge / Border Tokens ────────────────────────────────────────────── */
-  --edge-subtle:   var(--gray-100);
-  --edge-default:  var(--gray-200);
-  --edge-strong:   var(--gray-300);
-  --border-default:var(--edge-default);
-  --border-soft:   var(--edge-subtle);
-  --border-subtle: var(--edge-subtle);
-  --border-strong: var(--edge-strong);
-  --input-border:  var(--edge-default);
-  --input-bg:      var(--surface-base);
-
-  /* ── Focus Ring ──────────────────────────────────────────────────────── */
-  --focus-ring:        var(--brand-500);
-  --focus-ring-offset: var(--surface-canvas);
-
-  /* ── Shadow / Elevation System ───────────────────────────────────────── */
-  --elevation-0: none;
-  --elevation-1: inset 0 0 0 1px var(--edge-default);
-  --elevation-2:
-    inset 0 0 0 1px var(--edge-default),
-    0 2px 6px rgb(16 24 40 / 0.06);
-  --elevation-3:
-    inset 0 0 0 1px var(--edge-default),
-    0 8px 20px rgb(16 24 40 / 0.12);
-  --elevation-4:
-    inset 0 0 0 1px var(--edge-strong),
-    0 12px 28px rgb(16 24 40 / 0.16);
-
-  --shadow-none:    none;
-  --shadow-card:    0 1px 2px rgb(16 24 40 / 0.04), 0 8px 20px rgb(16 24 40 / 0.04);
-  --shadow-popover: 0 8px 24px rgb(16 24 40 / 0.14), 0 2px 6px rgb(16 24 40 / 0.08);
-
-  --surface-frame-shadow:
-    inset 0 0 0 1px var(--edge-default),
-    0 1px 2px rgb(16 24 40 / 0.03);
-  --surface-frame-shadow-hover:
-    inset 0 0 0 1px var(--edge-strong),
-    0 4px 12px rgb(16 24 40 / 0.08);
-
-  --button-shadow-rest:   inset 0 0 0 1px var(--edge-default);
-  --button-shadow-hover:  inset 0 0 0 1px var(--edge-strong), 0 2px 6px rgb(16 24 40 / 0.08);
-  --button-shadow-pressed:inset 0 0 0 1px var(--edge-strong);
-  --button-ghost-hover-bg:  var(--surface-subtle);
-  --button-ghost-active-bg: var(--surface-muted);
-
-  --card-shadow-rest: var(--shadow-card);
-  --card-divider:     var(--edge-subtle);
-
-  /* ── Status Tokens ───────────────────────────────────────────────────── */
-  --status-success-bg:    var(--tone-success-bg);
-  --status-success-border:var(--tone-success-bd);
-  --status-success-text:  var(--tone-success);
-  --status-warning-bg:    var(--warning-50);
-  --status-warning-border:var(--warning-300);
-  --status-warning-text:  var(--warning-700);
-  --status-error-bg:      var(--danger-50);
-  --status-error-border:  var(--danger-300);
-  --status-error-text:    var(--danger-700);
-  --status-info-bg:       var(--info-50);
-  --status-info-border:   var(--info-300);
-  --status-info-text:     var(--info-700);
-  --status-progress-bg:   var(--primary-50);
-  --status-progress-border:var(--primary-300);
-  --status-progress-text: var(--primary-700);
-  --status-pending-bg:    var(--neutral-100);
-  --status-pending-border:var(--neutral-300);
-  --status-pending-text:  var(--neutral-600);
-  --status-inactive-bg:   var(--neutral-100);
-  --status-inactive-border:var(--neutral-300);
-  --status-inactive-text: var(--neutral-500);
-
-  /* ── Badge Tokens ────────────────────────────────────────────────────── */
-  --badge-shadow:        none;
-  --badge-neutral-bg:    var(--neutral-100);
-  --badge-neutral-text:  var(--neutral-700);
-  --badge-brand-bg:      var(--primary-50);
-  --badge-brand-text:    var(--primary-700);
-  --badge-info-bg:       var(--info-50);
-  --badge-info-text:     var(--info-700);
-  --badge-success-bg:    var(--success-50);
-  --badge-success-text:  var(--success-700);
-  --badge-warning-bg:    var(--warning-50);
-  --badge-warning-text:  var(--warning-700);
-  --badge-danger-bg:     var(--danger-50);
-  --badge-danger-text:   var(--danger-700);
-
-  /* ── Table Tokens ────────────────────────────────────────────────────── */
-  --table-toolbar-bg:   rgb(255 255 255 / 86%);
-  --table-toolbar-border:var(--edge-subtle);
-  --table-header-bg:    var(--neutral-25);
-  --table-header-text:  var(--text-subtle);
-  --table-divider:      var(--edge-subtle);
-  --table-row-bg:       var(--surface-base);
-  --table-row-bg-alt:   var(--surface-base);
-  --table-row-hover-bg: #f7faff;
-  --table-row-selected-bg:var(--primary-50);
-
-  /* ── Datatable Tokens ────────────────────────────────────────────────── */
-  --datatable-toolbar-bg:   rgb(255 255 255 / 90%);
-  --datatable-toolbar-border:var(--edge-subtle);
-  --datatable-expanded-bg:  var(--neutral-25);
-  --datatable-empty-bg:     var(--neutral-25);
-
-  /* ── Sidebar Tokens ──────────────────────────────────────────────────── */
-  --sidebar:              var(--neutral-25);
-  --sidebar-foreground:   var(--text-body);
-  --sidebar-primary:      var(--action-primary-bg);
-  --sidebar-primary-foreground: var(--action-primary-fg);
-  --sidebar-accent:       var(--surface-subtle);
-  --sidebar-accent-foreground:  var(--text-body);
-  --sidebar-border:       var(--edge-subtle);
-  --sidebar-item-fg:      color-mix(in oklab, var(--text-body) 84%, var(--text-muted) 16%);
-  --sidebar-item-fg-muted:color-mix(in oklab, var(--text-muted) 88%, var(--text-body) 12%);
-  --sidebar-item-icon:    color-mix(in oklab, var(--text-muted) 78%, var(--text-body) 22%);
-  --sidebar-item-hover-fg:var(--text-body);
-  --sidebar-item-active-bg:   var(--primary-50);
-  --sidebar-item-active-fg:   var(--primary-700);
-  --sidebar-item-active-border: color-mix(in oklab, var(--primary-300) 50%, var(--edge-subtle) 50%);
-  --sidebar-ring:         var(--focus-ring);
-
-  /* ── Chart Tokens ────────────────────────────────────────────────────── */
-  --chart-1: var(--primary-500);
-  --chart-2: var(--accent-500);
-  --chart-3: var(--success-500);
-  --chart-4: var(--warning-500);
-  --chart-5: var(--danger-500);
-  --chart-grid:   var(--edge-subtle);
-  --chart-text:   var(--text-muted);
-  --chart-passing:var(--success-500);
-  --chart-failing:var(--danger-500);
-  --chart-need-changes:   var(--warning-500);
-  --chart-in-review:      var(--primary-500);
-  --chart-in-progress:    var(--warning-500);
-  --chart-pending:        var(--neutral-400);
-  --chart-inactive:       var(--neutral-500);
-
-  /* ── Shadcn Compatibility Mappings ───────────────────────────────────── */
-  --background:          var(--surface-canvas);
-  --foreground:          var(--text-body);
-  --card:                var(--surface-base);
-  --card-foreground:     var(--text-body);
-  --popover:             var(--surface-raised);
-  --popover-foreground:  var(--text-body);
-  --primary-foreground:  var(--text-inverse);
-  --secondary:           var(--action-secondary-bg);
-  --secondary-foreground:var(--action-secondary-fg);
-  --muted:               var(--surface-muted);
-  --muted-foreground:    var(--text-muted);
-  --accent-foreground:   var(--text-inverse);
-  --border:              var(--edge-default);
-  --input:               var(--edge-default);
-  --ring:                var(--focus-ring);
-
-  /* ── Legacy Compatibility Aliases ────────────────────────────────────── */
-  --brand-primary: var(--primary-500);
-  --warm-paper:    var(--surface-subtle);
-  --status-chip:   var(--status-info-text);
-
-  /* ── Geometry ────────────────────────────────────────────────────────── */
-  --radius:          0.625rem;
-  --radius-pill:     9999px;
-  --radius-full:     9999px;
-  --button-radius:   11px;
-  --card-radius:     12px;
-
-  --icon-size-xs:    0.75rem;
-  --icon-size-sm:    0.9375rem;
-  --icon-size-md:    1.125rem;
-  --icon-size-lg:    1.25rem;
-  --icon-size-xl:    1.5rem;
-
-  /* Mobile-first gutters; widened for tablet/desktop below. */
-  --content-gutter-x:  1rem;
-  --section-gutter-x:  1rem;
-  --table-gutter-x:    0.75rem;
-  --table-row-min-h:   3rem;
-  --table-head-min-h:  2.5rem;
-
-  --control-height-sm: 2rem;
-  --control-height-md: 2.25rem;
-  --input-height:      2.25rem;
-  --button-height:     2.25rem;
-
-  /* ── Typography Scale ────────────────────────────────────────────────── */
-  --font-weight-regular:  400;
-  --font-weight-medium:   500;
-  --font-weight-semibold: 600;
-  --font-weight-bold:     700;
-
-  --text-xs:  12px;
-  --text-sm:  13px;
-  --text-md:  14px;
-  --text-lg:  16px;
-  --text-xl:  20px;
-  --text-2xl: 28px;
-  --text-kpi: 38px;
-
-  --leading-tight:  1.1;
-  --leading-normal: 1.4;
-  --leading-relaxed:1.5;
-
-  --type-size-12: 0.75rem;
-  --type-size-13: 0.8125rem;
-  --type-size-14: 0.875rem;
-  --type-size-16: 1rem;
-  --type-size-20: 1.25rem;
-  --type-size-24: 1.5rem;
-  --type-size-32: 2rem;
-
-  --type-display-size:     var(--type-size-32);
-  --type-display-line:     2.5rem;
-  --type-display-weight:   700;
-  --type-page-title-size:  var(--type-size-24);
-  --type-page-title-line:  2rem;
-  --type-page-title-weight:700;
-  --type-section-title-size:   var(--type-size-20);
-  --type-section-title-line:   1.5rem;
-  --type-section-title-weight: 700;
-  --type-body-size:        var(--type-size-14);
-  --type-body-line:        1.5rem;
-  --type-body-weight:      400;
-  --type-body-lg-size:     var(--type-size-16);
-  --type-body-lg-line:     1.5rem;
-  --type-body-lg-weight:   500;
-  --type-field-label-size: var(--type-size-13);
-  --type-field-label-line: 1rem;
-  --type-field-label-weight:600;
-  --type-field-help-size:  var(--type-size-12);
-  --type-field-help-line:  1rem;
-  --type-field-help-weight:400;
-  --type-table-text-size:  var(--type-size-14);
-  --type-table-text-line:  1.5rem;
-  --type-table-text-weight:500;
-  --type-table-header-size:var(--type-size-12);
-  --type-table-header-line:1rem;
-  --type-table-header-weight:600;
-  --type-caption-size:     var(--type-size-12);
-  --type-caption-line:     1rem;
-  --type-caption-weight:   500;
-
-  /* ── Motion ──────────────────────────────────────────────────────────── */
-  --motion-duration-instant: 90ms;
-  --motion-duration-fast:    160ms;
-  --motion-duration-base:    240ms;
-  --motion-duration-normal:  240ms;
-  --motion-duration-slow:    360ms;
-
-  --motion-ease-standard:   cubic-bezier(0.2, 0.8, 0.2, 1);
-  --motion-ease-default:    cubic-bezier(0.2, 0.8, 0.2, 1);
-  --motion-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-  --motion-ease-exit:       cubic-bezier(0.4, 0, 1, 1);
-  --motion-ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
-  --motion-scale-hover:     1.015;
-  --motion-scale-press:     0.985;
-  --motion-lift-y:          -2px;
-
-  /* ── Spacing ─────────────────────────────────────────────────────────── */
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3:  12px;
-  --space-4:  16px;
-  --space-5:  20px;
-  --space-6:  24px;
-  --space-8:  32px;
-  --space-10: 40px;
-
-  /* ── Mobile Touch Targets ────────────────────────────────────────────── */
-  --touch-target-min: 44px;
-  --touch-target-comfortable: 48px;
-  --touch-target-generous: 56px;
-
-  /* ── Mobile List Tokens ──────────────────────────────────────────────── */
-  --mobile-list-item-height: 64px;
-  --mobile-list-item-padding-x: var(--content-gutter-x);
-  --mobile-list-divider-color: var(--edge-subtle);
-  --mobile-list-icon-size: 40px;
-  --mobile-list-icon-radius: 10px;
-
-  /* ── Canvas Background ───────────────────────────────────────────────── */
-  --app-canvas-wash: radial-gradient(1200px 520px at 100% -120px, #e8f1ff 0%, transparent 55%);
-
-  /* ── Scrollbar ───────────────────────────────────────────────────────── */
-  --scrollbar-width: 8px;
-  --scrollbar-track: transparent;
-  --scrollbar-thumb: var(--neutral-300);
-  --scrollbar-thumb-hover: var(--neutral-400);
-}
-
-@media (min-width: 768px) {
-  :root {
-    --content-gutter-x: 1.5rem;
-    --section-gutter-x: 1.5rem;
-  }
-}
-
-/* ── Body Styles ────────────────────────────────────────────────────────── */
-
-body {
-  font-family: var(--font-family);
-  text-rendering: optimizeLegibility;
-  position: relative;
-}
-
-.app-root {
-  isolation: isolate;
-}
-
-/* Prevent iOS zoom on input focus */
-@media (max-width: 640px) {
-  html { font-size: 16px; }
-  input, select, textarea { font-size: 16px; }
-}
-
-/* Date input color scheme */
-input[type="date"],
-input[type="datetime-local"] {
-  color-scheme: light;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  opacity: 0.65;
-}
-
-/* ── Base Layer ─────────────────────────────────────────────────────────── */
-
-@layer base {
+@layer app {
   * {
     @apply border-border outline-ring/50;
   }
 
   body {
-    @apply bg-background text-foreground;
+    position: relative;
     background-image: var(--app-canvas-wash);
     background-attachment: fixed;
-    font-size: var(--type-body-size);
-    line-height: var(--type-body-line);
-    font-weight: var(--type-body-weight);
+    text-rendering: optimizeLegibility;
   }
 
   @media (hover: none) and (pointer: coarse) {
     body {
       background-attachment: scroll;
     }
+  }
+
+  .app-root {
+    isolation: isolate;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  @media (max-width: 640px) {
+    html { font-size: 16px; }
+    input, select, textarea { font-size: 16px; }
+  }
+
+  /* Date input color scheme */
+  input[type="date"],
+  input[type="datetime-local"] {
+    color-scheme: light;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    opacity: 0.65;
   }
 
   :where(
@@ -588,12 +254,13 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     font-weight: var(--type-table-text-weight);
   }
 
+  /* Matches the design system's `--type-table-head` (500 12/1.3). Sentence
+     case, not caps — the type rules in docs/design-system/02-tokens.md rule out
+     ALL CAPS everywhere, `<th>` included. */
   .text-table-header {
     font-size: var(--type-table-header-size);
     line-height: var(--type-table-header-line);
     font-weight: var(--type-table-header-weight);
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
     color: var(--table-header-text);
   }
 

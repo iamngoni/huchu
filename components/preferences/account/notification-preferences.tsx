@@ -74,9 +74,11 @@ export function NotificationPreferences() {
   if (preferencesQuery.isLoading) {
     return (
       <Card>
-        <Card.Body>
-          <Skeleton lines={6} gap={8} />
-        </Card.Body>
+        <div className="space-y-2">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton key={index} variant="text" />
+          ))}
+        </div>
       </Card>
     );
   }
@@ -92,30 +94,25 @@ export function NotificationPreferences() {
   const preferences = preferencesQuery.data;
 
   return (
-    <Card>
-      <Card.Header>
-        <Card.Title>Notification routing</Card.Title>
-      </Card.Header>
-      <Card.Body>
-        <div className="settings-section">
-          {preferenceRows.map((row) => (
-            <div className="settings-row" key={row.key}>
-              <div>
-                <div className="t-label-sm">{row.label}</div>
-                <p className="t-caption t-muted">{row.description}</p>
-              </div>
-              <Switch
-                aria-label={row.label}
-                checked={preferences[row.key]}
-                disabled={updateMutation.isPending}
-                onChange={(event) =>
-                  updateMutation.mutate({ [row.key]: event.target.checked })
-                }
-              />
+    <Card title="Notification routing">
+      <div className="settings-section">
+        {preferenceRows.map((row) => (
+          <div className="settings-row" key={row.key}>
+            <div>
+              <div className="t-label-sm">{row.label}</div>
+              <p className="t-caption t-muted">{row.description}</p>
             </div>
-          ))}
-        </div>
-      </Card.Body>
+            <Switch
+              aria-label={row.label}
+              checked={preferences[row.key]}
+              disabled={updateMutation.isPending}
+              onChange={(event) =>
+                updateMutation.mutate({ [row.key]: event.target.checked })
+              }
+            />
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }

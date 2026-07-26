@@ -27,14 +27,14 @@ export default function MasterDataOverviewPage() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {visibleItems.map((entry) => (
           <Link key={entry.href} href={entry.href} className="block h-full">
-            <Card className="h-full transition-colors hover:border-[var(--brand)]">
-              <Card.Header>
-                <Card.Title>{entry.label}</Card.Title>
-              </Card.Header>
+            {/* Card takes its header through props — it has no compound
+                `.Header`/`.Title`/`.Body` slots in @corelithzw/react. */}
+            <Card
+              className="h-full transition-colors hover:border-[var(--brand)]"
+              title={entry.label}
+            >
               {entry.description ? (
-                <Card.Body>
-                  <p className="t-body t-muted">{entry.description}</p>
-                </Card.Body>
+                <p className="t-body t-muted">{entry.description}</p>
               ) : null}
             </Card>
           </Link>

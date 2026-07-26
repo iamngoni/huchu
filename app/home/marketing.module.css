@@ -6,10 +6,10 @@
   --mk-border: var(--border, var(--border-default));
   --mk-border-subtle: var(--border-subtle, var(--border-soft));
   --mk-border-strong: var(--border-strong);
-  --mk-page-max: calc(var(--space-10) * 32);
-  --mk-prose-max: calc(var(--space-10) * 18);
-  --mk-hero-y: calc(var(--space-10) * 2);
-  --mk-section-y: calc(var(--space-10) + var(--space-8));
+  --mk-page-max: calc(var(--space-8) * 32);
+  --mk-prose-max: calc(var(--space-8) * 18);
+  --mk-hero-y: calc(var(--space-8) * 2);
+  --mk-section-y: calc(var(--space-8) + var(--space-7));
   --mk-display-size: calc(var(--type-size-32) + var(--type-size-20));
   --mk-display: var(--font-weight-bold) var(--mk-display-size) / var(--leading-tight) var(--font-family);
   --mk-section-title: var(--font-weight-bold) var(--type-size-32) / var(--leading-tight) var(--font-family);
@@ -67,8 +67,8 @@
 
 .brandMark {
   display: inline-grid;
-  width: var(--space-8);
-  height: var(--space-8);
+  width: var(--space-7);
+  height: var(--space-7);
   place-items: center;
   border: thin solid var(--mk-border-strong);
   border-radius: var(--radius-md);
@@ -188,11 +188,11 @@
 
 .hero {
   grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
-  gap: var(--space-10);
+  gap: var(--space-8);
 }
 
 .pageHero {
-  min-height: calc(var(--space-10) * 10);
+  min-height: calc(var(--space-8) * 10);
 }
 
 .heroCopy,
@@ -226,7 +226,7 @@
 }
 
 .display {
-  max-width: calc(var(--space-10) * 16);
+  max-width: calc(var(--space-8) * 16);
   margin: 0;
   color: var(--text-strong);
   font: var(--mk-display);
@@ -465,9 +465,9 @@
 .sectionIntro {
   display: grid;
   grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
-  gap: var(--space-8);
+  gap: var(--space-7);
   align-items: start;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-7);
 }
 
 .band {
@@ -559,8 +559,8 @@
 .cardIcon,
 .heroIcon {
   display: inline-flex;
-  width: var(--space-8);
-  height: var(--space-8);
+  width: var(--space-7);
+  height: var(--space-7);
   border: thin solid var(--mk-border);
   border-radius: var(--radius-md);
   background: var(--mk-surface-muted);
@@ -569,8 +569,8 @@
 }
 
 .heroIcon {
-  width: var(--space-10);
-  height: var(--space-10);
+  width: var(--space-8);
+  height: var(--space-8);
 }
 
 .inlineAction {
@@ -604,7 +604,7 @@
 }
 
 .workflowStep {
-  min-height: calc(var(--space-10) * 2);
+  min-height: calc(var(--space-8) * 2);
   border: thin solid var(--mk-border);
   border-radius: var(--radius-md);
   background: var(--mk-surface);
@@ -731,7 +731,7 @@
 }
 
 .textarea {
-  min-height: calc(var(--space-10) * 3);
+  min-height: calc(var(--space-8) * 3);
   resize: vertical;
 }
 
@@ -789,8 +789,8 @@
 .footerInner {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
-  gap: var(--space-8);
-  padding-block: var(--space-8);
+  gap: var(--space-7);
+  padding-block: var(--space-7);
 }
 
 .footerGrid {
@@ -850,8 +850,8 @@
 @media (max-width: 47.5em) {
   .site {
     --mk-display-size: var(--type-size-32);
-    --mk-hero-y: calc(var(--space-10) + var(--space-8));
-    --mk-section-y: var(--space-10);
+    --mk-hero-y: calc(var(--space-8) + var(--space-7));
+    --mk-section-y: var(--space-8);
   }
 
   .navInner,
