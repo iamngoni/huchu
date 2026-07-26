@@ -3,7 +3,11 @@
 import { FormEvent, useMemo, useState } from "react";
 
 import { ArrowRight, ExternalLink, Loader2 } from "@/lib/icons";
-import { contactChannels, solutions } from "@/app/home/site-data";
+import {
+  contactChannels,
+  getSegmentByAnySlug,
+  segments,
+} from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
 
 type FormState = {
@@ -29,13 +33,22 @@ type SubmitState =
   | { status: "success"; submittedAt: string; scheduleUrl: string | null }
   | { status: "error"; message: string };
 
+/**
+ * Schools are not a segment, but they still arrive here from their own page via
+ * `?interest=schools`, so the picker carries them as a sixth option.
+ */
+const BUSINESS_TYPES: Array<{ value: string; label: string }> = [
+  ...segments.map((segment) => ({ value: segment.slug, label: segment.title })),
+  { value: "schools", label: "School" },
+];
+
 const initialState: FormState = {
   name: "",
   email: "",
   company: "",
   phone: "",
   city: "",
-  industry: "commerce",
+  industry: BUSINESS_TYPES[0].value,
   teamSize: "",
   locations: "",
   currentTools: "",
@@ -46,6 +59,16 @@ const initialState: FormState = {
   website: "",
 };
 
+function resolveBusinessType(interest: string | undefined): string | null {
+  if (!interest) return null;
+  if (interest === "schools") return "schools";
+  return getSegmentByAnySlug(interest)?.slug ?? null;
+}
+
+function businessTypeLabel(value: string): string {
+  return BUSINESS_TYPES.find((type) => type.value === value)?.label ?? BUSINESS_TYPES[0].label;
+}
+
 function fieldId(name: keyof FormState) {
   return `demo-${name}`;
 }
@@ -53,24 +76,22 @@ function fieldId(name: keyof FormState) {
 export function DemoRequestForm({ initialInterest }: { initialInterest?: string }) {
   const [form, setForm] = useState<FormState>({
     ...initialState,
-    industry: initialInterest && solutions.some((solution) => solution.slug === initialInterest)
-      ? initialInterest
-      : initialState.industry,
+    industry: resolveBusinessType(initialInterest) ?? initialState.industry,
   });
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle" });
 
-  const selectedSolution = solutions.find((solution) => solution.slug === form.industry) ?? solutions[0];
+  const selectedLabel = businessTypeLabel(form.industry);
   const whatsappHref = useMemo(() => {
     const lines = [
       "Hi Corelith, I would like help finding the right setup.",
       form.company ? `Business: ${form.company}` : "",
-      selectedSolution ? `Interest: ${selectedSolution.title}` : "",
+      `Interest: ${selectedLabel}`,
       form.city ? `City: ${form.city}` : "",
       form.problemArea ? `Problem: ${form.problemArea}` : "",
     ].filter(Boolean);
 
     return `https://wa.me/263784939111?text=${encodeURIComponent(lines.join("\n"))}`;
-  }, [form.city, form.company, form.problemArea, selectedSolution]);
+  }, [form.city, form.company, form.problemArea, selectedLabel]);
 
   function updateField(name: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -86,8 +107,8 @@ export function DemoRequestForm({ initialInterest }: { initialInterest?: string 
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...form,
-          industry: selectedSolution.title,
-          interest: selectedSolution.slug,
+          industry: selectedLabel,
+          interest: form.industry,
           source: "book-demo",
         }),
       });
@@ -168,7 +189,7 @@ export function DemoRequestForm({ initialInterest }: { initialInterest?: string 
         <Field label="Phone" name="phone" type="tel" value={form.phone} onChange={updateField} />
         <Field label="City" name="city" value={form.city} onChange={updateField} />
         <div className={styles.field}>
-          <label htmlFor={fieldId("industry")}>Industry</label>
+          <label htmlFor={fieldId("industry")}>Business type</label>
           <select
             id={fieldId("industry")}
             value={form.industry}
@@ -176,9 +197,9 @@ export function DemoRequestForm({ initialInterest }: { initialInterest?: string 
             className={styles.select}
             required
           >
-            {solutions.map((solution) => (
-              <option key={solution.slug} value={solution.slug}>
-                {solution.title}
+            {BUSINESS_TYPES.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
               </option>
             ))}
           </select>

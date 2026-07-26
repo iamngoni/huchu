@@ -3,13 +3,13 @@ import type { Metadata } from "next";
 import {
   CtaBand,
   JsonLd,
+  LoopSection,
   PageHero,
-  PrimarySolutionNote,
   SectionIntro,
+  SegmentCards,
   SiteChrome,
-  SolutionCards,
 } from "@/app/home/site-components";
-import { seoPages, solutions } from "@/app/home/site-data";
+import { seoPages, segments } from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
 import {
   breadcrumbJsonLd,
@@ -28,53 +28,49 @@ export default function SolutionsPage() {
             { name: "Home", path: "/home" },
             { name: "Solutions", path: "/home/solutions" },
           ]),
-          ...solutions.map((solution) =>
+          ...segments.map((segment) =>
             serviceJsonLd({
-              name: `${solution.title} software`,
-              description: solution.seo.description,
-              path: solution.seo.path,
-              serviceType: solution.title,
-              keywords: solution.seo.keywords,
+              name: `${segment.title} — business software`,
+              description: segment.seo.description,
+              path: segment.seo.path,
+              serviceType: segment.title,
+              keywords: segment.seo.keywords,
             }),
           ),
         ]}
       />
       <PageHero
-        eyebrow="Industry-ready workflows"
-        title="Lead with the business pain, then show the system."
-        copy="The site should not target every small business equally. It should speak to formalising operators with enough stock, invoices, customers, staff and compliance pressure to pay now."
+        eyebrow="Solutions"
+        title="Five kinds of business. One loop. Six configured starting points."
+        copy="Corelith does not arrive as an empty system waiting for a consultant. Pick the business you run and the workflow, screens and reports are already set up the way that business works."
       />
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Vertical hierarchy"
-          title="Commerce first. Workshops and auto next. Schools separately."
-          copy="That order reflects the GTM documents: trade businesses are the launch wedge, workshops and auto raise workflow value, and schools require enterprise buying logic."
+          eyebrow="Choose your business"
+          title="Start where the money is leaking."
+          copy="Most businesses straddle two of these. That is normal — it is one system either way, and the second pack is a setting rather than a second project."
         />
-        <SolutionCards />
+        <SegmentCards />
       </section>
 
-      <section className={styles.band}>
-        <div className={styles.section}>
-          <SectionIntro
-            eyebrow="Who should respond"
-            title="The right buyer already feels operational leakage."
-            copy="They are using notebooks, Excel, WhatsApp and perhaps a separate POS or accounting tool, but they cannot get one clear answer about stock, customers, payments and work in progress."
-          />
-          <div className={styles.cardGrid3}>
-            {solutions.map((solution) => (
-              <article key={solution.slug} className={styles.card}>
-                <p className={styles.eyebrow}>{solution.title}</p>
-                <h2 className={styles.cardTitle}>{solution.audience}</h2>
-                <p className={styles.body}>{solution.summary}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+      <LoopSection />
 
       <section className={styles.section}>
-        <PrimarySolutionNote />
+        <SectionIntro
+          eyebrow="Who this fits"
+          title="The businesses that get the most out of it."
+          copy="If you carry stock, run jobs, bill on account, or have more than one location, the gaps between your tools are already costing you real money."
+        />
+        <div className={styles.cardGrid3}>
+          {segments.map((segment) => (
+            <article key={segment.slug} className={styles.card}>
+              <p className={styles.eyebrow}>{segment.title}</p>
+              <h2 className={styles.cardTitle}>{segment.audience}</h2>
+              <p className={styles.body}>{segment.summary}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <CtaBand />

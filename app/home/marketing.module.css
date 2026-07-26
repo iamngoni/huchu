@@ -1,23 +1,56 @@
-.site {
+/* ═══════════════════════════════════════════════════════════════════════════
+   CORELITH MARKETING SITE
+
+   Same design language as the app — borders at rest, brand blue reserved for
+   action and focus, weight rather than colour doing the emphasis — but tuned
+   for a marketing page: a bigger display scale, more air between sections, and
+   a small number of motion and depth affordances the product UI does not use.
+
+   Every value resolves to a token. See docs/design-system/02-tokens.md.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.site,
+.navDrawer {
   --mk-canvas: var(--canvas, var(--surface-canvas));
   --mk-surface: var(--surface, var(--surface-base));
   --mk-surface-muted: var(--surface-muted);
   --mk-surface-subtle: var(--surface-subtle, var(--surface-muted));
+  --mk-surface-sunken: var(--surface-sunken, var(--surface-muted));
   --mk-border: var(--border, var(--border-default));
   --mk-border-subtle: var(--border-subtle, var(--border-soft));
   --mk-border-strong: var(--border-strong);
+
   --mk-page-max: calc(var(--space-8) * 32);
   --mk-prose-max: calc(var(--space-8) * 18);
   --mk-hero-y: calc(var(--space-8) * 2);
-  --mk-section-y: calc(var(--space-8) + var(--space-7));
-  --mk-display-size: calc(var(--type-size-32) + var(--type-size-20));
+  --mk-section-y: calc(var(--space-8) * 2);
+
+  /* Marketing gets a display size the product UI never needs. Fluid between
+     the app's largest step and twice it, so the hero reads on a phone and
+     still commands a 27-inch screen. */
+  --mk-display-size: clamp(
+    calc(var(--type-size-32) + var(--type-size-12)),
+    5.6vw,
+    calc(var(--type-size-32) * 2)
+  );
+  --mk-section-size: clamp(
+    var(--type-size-24),
+    2.4vw,
+    calc(var(--type-size-32) + var(--type-size-12) / 2)
+  );
+
   --mk-display: var(--font-weight-bold) var(--mk-display-size) / var(--leading-tight) var(--font-family);
-  --mk-section-title: var(--font-weight-bold) var(--type-size-32) / var(--leading-tight) var(--font-family);
+  --mk-section-title: var(--font-weight-bold) var(--mk-section-size) / var(--leading-tight) var(--font-family);
   --mk-card-title: var(--font-weight-semibold) var(--type-size-16) / var(--leading-normal) var(--font-family);
   --mk-body: var(--font-weight-regular) var(--type-size-14) / var(--leading-relaxed) var(--font-family);
-  --mk-body-lg: var(--font-weight-medium) var(--type-size-16) / var(--leading-relaxed) var(--font-family);
+  --mk-body-lg: var(--font-weight-regular) var(--type-size-16) / var(--leading-relaxed) var(--font-family);
   --mk-label: var(--font-weight-semibold) var(--type-size-13) / var(--leading-normal) var(--font-family);
   --mk-caption: var(--font-weight-medium) var(--type-size-12) / var(--leading-normal) var(--font-family);
+
+  --mk-lift: var(--motion-duration-fast, 120ms) var(--motion-ease-standard, ease);
+}
+
+.site {
   min-height: 100vh;
   background: var(--mk-canvas);
   color: var(--text-body);
@@ -27,32 +60,37 @@
 .hero,
 .pageHero,
 .section,
-.footerInner {
+.footerInner,
+.announceInner,
+.stickyInner {
   width: min(100% - (var(--content-gutter-x) * 2), var(--mk-page-max));
   margin-inline: auto;
 }
+
+/* ── Navigation ──────────────────────────────────────────────────────────── */
 
 .nav {
   position: sticky;
   top: 0;
   z-index: 60;
   border-bottom: thin solid var(--mk-border-subtle);
-  background: color-mix(in oklab, var(--mk-surface) 94%, transparent);
-  backdrop-filter: blur(var(--space-2));
+  background: color-mix(in oklab, var(--mk-surface) 88%, transparent);
+  backdrop-filter: blur(var(--space-3));
 }
 
 .navInner {
   display: flex;
   min-height: var(--touch-target-generous);
   align-items: center;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .brand,
 .navLink,
 .quietLink,
 .button,
-.inlineAction {
+.inlineAction,
+.navTrigger {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -62,7 +100,8 @@
 .brand {
   flex: none;
   color: var(--text-strong);
-  font: var(--mk-label);
+  font: var(--font-weight-bold) var(--type-size-16) / var(--leading-normal) var(--font-family);
+  letter-spacing: 0;
 }
 
 .brandMark {
@@ -70,19 +109,17 @@
   width: var(--space-7);
   height: var(--space-7);
   place-items: center;
-  border: thin solid var(--mk-border-strong);
   border-radius: var(--radius-md);
-  background: var(--mk-surface);
-  color: var(--text-strong);
-  font: var(--mk-caption);
+  background: var(--ink, var(--text-strong));
+  color: var(--text-inverse);
+  font: var(--font-weight-bold) var(--type-size-13) / 1 var(--font-family);
 }
 
 .navLinks {
   display: flex;
   flex: 1;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-5);
+  gap: var(--space-1);
 }
 
 .navActions,
@@ -96,33 +133,171 @@
   gap: var(--space-2);
 }
 
+.navActions {
+  flex: none;
+  gap: var(--space-3);
+}
+
 .navLink,
-.quietLink {
-  min-height: var(--button-height);
+.quietLink,
+.navTrigger {
+  min-height: var(--h-control-md, var(--button-height));
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
   color: var(--text-muted);
-  font: var(--mk-caption);
+  cursor: pointer;
+  font: var(--mk-label);
+  padding-inline: var(--space-3);
 }
 
 .navLink:hover,
 .quietLink:hover,
+.navTrigger:hover,
 .footerGroup a:hover,
 .inlineAction:hover {
+  background: var(--mk-surface-muted);
   color: var(--text-strong);
 }
 
-.button {
-  min-height: var(--button-height);
-  justify-content: center;
+.quietLink:hover {
+  background: transparent;
+}
+
+/* Solutions dropdown. CSS-only hover plus :focus-within so it is reachable by
+   keyboard without a state machine. */
+.navMenu {
+  position: relative;
+}
+
+.navPanel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 70;
+  display: grid;
+  width: max-content;
+  max-width: calc(var(--space-8) * 14);
+  gap: var(--space-1);
   border: thin solid var(--mk-border);
+  border-radius: var(--card-radius);
+  background: var(--mk-surface);
+  box-shadow: var(--shadow-popover, var(--shadow-rest));
+  opacity: 0;
+  padding: var(--space-2);
+  pointer-events: none;
+  transform: translateY(calc(var(--space-1) * -1));
+  transition: opacity var(--mk-lift), transform var(--mk-lift);
+}
+
+.navMenu:hover .navPanel,
+.navMenu:focus-within .navPanel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.navPanelItem {
+  display: grid;
+  gap: var(--space-px);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  text-decoration: none;
+}
+
+.navPanelItem:hover {
+  background: var(--mk-surface-muted);
+}
+
+.navPanelItem strong {
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.navPanelItem span {
+  color: var(--text-muted);
+  font: var(--mk-caption);
+}
+
+.navToggle {
+  display: none;
+}
+
+/* Mobile drawer. Rendered under the sticky nav and scrollable on its own so a
+   long link list never traps the page behind it. */
+.navDrawer {
+  position: fixed;
+  inset: var(--touch-target-generous) 0 0;
+  z-index: 65;
+  overflow-y: auto;
+  border-top: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface);
+}
+
+.navDrawerInner {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--content-gutter-x) var(--space-8);
+}
+
+.navDrawerLink {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-bottom: thin solid var(--mk-border-subtle);
+  color: var(--text-strong);
+  font: var(--font-weight-semibold) var(--type-size-16) / var(--leading-normal) var(--font-family);
+  padding-block: var(--space-3);
+  text-decoration: none;
+}
+
+.navDrawerGroup {
+  display: grid;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+}
+
+.navDrawerGroup > p {
+  margin: 0;
+  color: var(--text-subtle);
+  font: var(--mk-caption);
+}
+
+.navDrawerSub {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  color: var(--text-muted);
+  font: var(--mk-body);
+  text-decoration: none;
+}
+
+.navDrawerActions {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.button {
+  min-height: var(--h-control-lg, var(--touch-target-min));
+  justify-content: center;
+  border: thin solid var(--mk-border-strong);
   border-radius: var(--button-radius);
   background: var(--mk-surface);
   color: var(--text-strong);
+  cursor: pointer;
   font: var(--mk-label);
-  padding-inline: var(--space-4);
+  padding-inline: var(--space-5);
+  transition: background-color var(--mk-lift), border-color var(--mk-lift);
 }
 
 .button:hover {
-  border-color: var(--mk-border-strong);
+  border-color: var(--border-hover, var(--mk-border-strong));
   background: var(--mk-surface-muted);
 }
 
@@ -138,6 +313,11 @@
   color: var(--action-primary-fg);
 }
 
+.buttonQuiet {
+  border-color: transparent;
+  background: transparent;
+}
+
 .button:disabled {
   cursor: not-allowed;
   opacity: 0.68;
@@ -145,29 +325,33 @@
 
 .button:focus-visible,
 .navLink:focus-visible,
+.navTrigger:focus-visible,
 .quietLink:focus-visible,
 .inlineAction:focus-visible,
 .previewTab:focus-visible,
+.segmentTab:focus-visible,
 .input:focus-visible,
 .select:focus-visible,
-.textarea:focus-visible {
-  outline: var(--space-1) solid var(--focus-ring);
+.textarea:focus-visible,
+.faqItem summary:focus-visible {
+  outline: var(--space-px) solid var(--focus-ring);
   outline-offset: var(--space-1);
-  box-shadow: 0 0 0 var(--space-1) color-mix(in oklab, var(--focus-ring) 22%, transparent);
+  box-shadow: 0 0 0 var(--space-1) var(--focus-ring-soft, transparent);
 }
+
+/* ── Announcement ────────────────────────────────────────────────────────── */
 
 .announce {
   border-bottom: thin solid var(--mk-border-subtle);
-  background: var(--mk-surface);
+  background: var(--mk-surface-sunken);
 }
 
 .announceInner {
   display: flex;
-  width: min(100% - (var(--content-gutter-x) * 2), var(--mk-page-max));
-  margin-inline: auto;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding-block: var(--space-2);
   color: var(--text-body);
   font: var(--mk-caption);
@@ -179,31 +363,84 @@
   text-decoration: none;
 }
 
+.announceInner a:hover {
+  text-decoration: underline;
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+
 .hero,
 .pageHero {
   display: grid;
-  align-items: center;
   padding-block: var(--mk-hero-y);
 }
 
 .hero {
-  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
-  gap: var(--space-8);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: var(--space-9);
 }
 
+.heroFull {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  text-align: center;
+}
+
+.heroFull .heroCopy {
+  justify-items: center;
+}
+
+.heroFull .display,
+.heroFull .lead {
+  margin-inline: auto;
+}
+
+/* Sub-page heroes run title-left, copy-and-actions-right. A single centred
+   column at this display size leaves half the fold empty. */
 .pageHero {
-  min-height: calc(var(--space-8) * 10);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: end;
+  gap: var(--space-8);
+  padding-block: calc(var(--mk-hero-y) * 0.75) var(--space-8);
+}
+
+.pageHeroTitle,
+.pageHeroAside {
+  display: grid;
+  align-content: end;
+  gap: var(--space-4);
+}
+
+.pageHeroAside {
+  gap: var(--space-5);
+}
+
+.pageHero .display {
+  max-width: none;
+}
+
+/* A quiet backdrop that separates the top of the page from the fold without
+   using brand colour as decoration. */
+.heroBackdrop {
+  position: relative;
+  overflow: clip;
+  border-bottom: thin solid var(--mk-border-subtle);
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      color-mix(in oklab, var(--mk-surface) 92%, var(--mk-canvas)),
+      transparent 70%
+    ),
+    var(--mk-canvas);
 }
 
 .heroCopy,
 .stack,
 .card,
 .compactCard,
-.solutionCard,
-.moduleCard,
-.workflowCard,
+.segmentCard,
 .stepCard,
-.priceCard,
 .notePanel,
 .principlePanel,
 .ctaPanel,
@@ -217,6 +454,7 @@
 
 .heroCopy {
   align-content: center;
+  gap: var(--space-5);
 }
 
 .eyebrow {
@@ -225,12 +463,25 @@
   font: var(--mk-caption);
 }
 
+.eyebrowMark {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: var(--space-2);
+  border: thin solid var(--mk-border);
+  border-radius: var(--radius-pill);
+  background: var(--mk-surface);
+  color: var(--text-body);
+  font: var(--mk-caption);
+  padding: var(--space-1) var(--space-3);
+}
+
 .display {
-  max-width: calc(var(--space-8) * 16);
+  max-width: calc(var(--space-8) * 17);
   margin: 0;
   color: var(--text-strong);
   font: var(--mk-display);
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
@@ -238,7 +489,7 @@
   margin: 0;
   color: var(--text-strong);
   font: var(--mk-section-title);
-  letter-spacing: 0;
+  letter-spacing: -0.005em;
   text-wrap: balance;
 }
 
@@ -254,12 +505,14 @@
   margin: 0;
   color: var(--text-muted);
   font: var(--mk-body-lg);
+  text-wrap: pretty;
 }
 
 .body,
 .small {
   margin: 0;
   color: var(--text-muted);
+  text-wrap: pretty;
 }
 
 .body {
@@ -282,18 +535,48 @@
   min-height: var(--control-height-sm);
   border: thin solid var(--mk-border);
   border-radius: var(--radius-pill);
-  background: var(--mk-surface-muted);
+  background: var(--mk-surface);
   color: var(--text-body);
   font: var(--mk-caption);
   padding-inline: var(--space-3);
 }
 
+/* ── Trust strip ─────────────────────────────────────────────────────────── */
+
+.trustStrip {
+  border-block: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface);
+}
+
+.trustInner {
+  display: grid;
+  width: min(100% - (var(--content-gutter-x) * 2), var(--mk-page-max));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-inline: auto;
+  gap: var(--space-4);
+  padding-block: var(--space-5);
+}
+
+.trustItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-body);
+  font: var(--mk-label);
+}
+
+.trustItem svg {
+  flex: none;
+  color: var(--text-subtle);
+}
+
+/* ── Surfaces ────────────────────────────────────────────────────────────── */
+
 .productPreview,
 .card,
 .compactCard,
-.solutionCard,
+.segmentCard,
 .moduleCard,
-.workflowCard,
 .stepCard,
 .priceCard,
 .notePanel,
@@ -302,15 +585,18 @@
 .outcomePanel,
 .commercialPanel,
 .form,
-.tableFrame {
+.tableFrame,
+.segmentPanel,
+.faqItem,
+.loopFrame {
   border: thin solid var(--mk-border);
   border-radius: var(--card-radius);
   background: var(--mk-surface);
-  box-shadow: var(--shadow-none);
 }
 
 .productPreview {
   overflow: hidden;
+  box-shadow: var(--shadow-card, var(--shadow-rest));
 }
 
 .productPreviewCompact {
@@ -320,18 +606,20 @@
 .previewHeader,
 .previewBody,
 .card,
-.solutionCard,
+.segmentCard,
 .moduleCard,
-.workflowCard,
 .stepCard,
 .priceCard,
 .notePanel,
 .principlePanel,
-.ctaPanel,
 .outcomePanel,
 .commercialPanel,
 .form {
   padding: var(--space-5);
+}
+
+.ctaPanel {
+  padding: var(--space-8);
 }
 
 .previewHeader {
@@ -340,6 +628,7 @@
   justify-content: space-between;
   gap: var(--space-4);
   border-bottom: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface-subtle);
 }
 
 .statusPill {
@@ -355,17 +644,23 @@
 }
 
 .previewTabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  overflow-x: auto;
   gap: var(--space-1);
   border-bottom: thin solid var(--mk-border-subtle);
   background: var(--mk-surface-muted);
   padding: var(--space-2);
+  scrollbar-width: none;
+}
+
+.previewTabs::-webkit-scrollbar {
+  display: none;
 }
 
 .previewTab {
   display: inline-flex;
-  min-height: var(--button-height);
+  flex: 1 0 auto;
+  min-height: var(--h-control-md, var(--button-height));
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
@@ -375,6 +670,8 @@
   color: var(--text-muted);
   cursor: pointer;
   font: var(--mk-caption);
+  padding-inline: var(--space-3);
+  white-space: nowrap;
 }
 
 .previewTabActive {
@@ -409,7 +706,8 @@
 
 .metricTile strong,
 .price,
-.statTile strong {
+.statTile strong,
+.proofValue {
   color: var(--text-strong);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -417,7 +715,7 @@
 }
 
 .metricTile strong {
-  font-size: var(--type-size-24);
+  font-size: var(--type-size-22);
 }
 
 .metricTile span,
@@ -458,22 +756,40 @@
   grid-column: 2;
 }
 
+/* ── Section rhythm ──────────────────────────────────────────────────────── */
+
 .section {
   padding-block: var(--mk-section-y);
 }
 
 .sectionIntro {
   display: grid;
-  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: var(--space-7);
-  align-items: start;
-  margin-bottom: var(--space-7);
+  align-items: end;
+  margin-bottom: var(--space-8);
+}
+
+.sectionIntroCentered {
+  max-width: calc(var(--space-8) * 20);
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  margin-inline: auto;
+  gap: var(--space-4);
+  text-align: center;
 }
 
 .band {
   border-block: thin solid var(--mk-border-subtle);
   background: var(--mk-surface);
 }
+
+.bandSunken {
+  border-block: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface-sunken);
+}
+
+/* ── Grids ───────────────────────────────────────────────────────────────── */
 
 .problemGrid,
 .demoLayout,
@@ -485,22 +801,22 @@
 }
 
 .problemSources,
-.solutionGrid,
+.segmentGrid,
 .cardGrid3,
-.workflowGrid,
 .moduleGrid,
 .stepGrid,
 .pricingGrid,
 .cardGrid2,
 .formGrid,
-.statStrip {
+.statStrip,
+.capabilityGrid {
   display: grid;
   gap: var(--space-4);
 }
 
 .problemSources,
-.solutionGrid,
-.cardGrid3 {
+.cardGrid3,
+.capabilityGrid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -509,13 +825,20 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.moduleGrid,
+.segmentGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.moduleGrid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .pricingGrid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.workflowGrid {
-  grid-template-columns: 1fr;
+.pricingGrid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .stepGrid {
@@ -527,24 +850,45 @@
   margin-top: var(--space-5);
 }
 
+.statTile {
+  display: grid;
+  gap: var(--space-1);
+  border: thin solid var(--mk-border);
+  border-radius: var(--card-radius);
+  background: var(--mk-surface);
+  padding: var(--space-5);
+}
+
+.statTile strong {
+  font-size: var(--type-size-22);
+}
+
+/* Trailing row under a grid — a "see everything" link or a rules panel. */
+.sectionFooter {
+  margin-top: var(--space-5);
+}
+
 .compactCard {
   padding: var(--space-4);
 }
 
-.solutionCard {
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+
+.segmentCard {
+  align-content: start;
   color: inherit;
   text-decoration: none;
+  transition: border-color var(--mk-lift), transform var(--mk-lift);
 }
 
-.solutionCardPrimary {
-  border-color: var(--mk-border-strong);
-  background: color-mix(in oklab, var(--mk-surface) 74%, var(--mk-surface-muted));
-}
-
-.solutionCard:hover,
+.segmentCard:hover,
 .moduleCard:hover,
 .priceCard:hover {
   border-color: var(--mk-border-strong);
+}
+
+.segmentCard:hover {
+  transform: translateY(calc(var(--space-px) * -2));
 }
 
 .cardTopline {
@@ -575,13 +919,29 @@
 
 .inlineAction {
   width: fit-content;
+  border-radius: var(--radius-md);
   color: var(--text-link);
   font: var(--mk-label);
+}
+
+.inlineAction:hover {
+  background: transparent;
+  color: var(--text-link);
+  text-decoration: underline;
 }
 
 .outcomePanel,
 .principlePanel {
   align-self: stretch;
+}
+
+.outcomePanel {
+  align-content: start;
+}
+
+.outcomePanel .small {
+  margin-top: auto;
+  padding-top: var(--space-4);
 }
 
 .outcomeItem {
@@ -594,6 +954,88 @@
   padding-block: var(--space-3);
 }
 
+/* ── The order-to-cash loop ──────────────────────────────────────────────── */
+
+.loopFrame {
+  overflow: hidden;
+}
+
+.loop {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.loopStep {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  border-right: thin solid var(--mk-border-subtle);
+  padding: var(--space-5);
+}
+
+.loopStep:last-child {
+  border-right: 0;
+}
+
+/* The one step that changes shape by industry gets the emphasis. */
+.loopStepFocus {
+  background: var(--mk-surface-subtle);
+}
+
+.loopIndex {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--type-size-12);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+}
+
+.loopStep strong {
+  color: var(--text-strong);
+  font: var(--mk-card-title);
+}
+
+.loopStep p {
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--mk-caption);
+}
+
+.loopEffects {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface-subtle);
+}
+
+.loopEffect {
+  display: grid;
+  gap: var(--space-1);
+  border-right: thin solid var(--mk-border-subtle);
+  padding: var(--space-4) var(--space-5);
+}
+
+.loopEffect:last-child {
+  border-right: 0;
+}
+
+.loopEffect strong {
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.loopEffect span {
+  color: var(--text-muted);
+  font: var(--mk-caption);
+}
+
+/* The compact stepper reused on segment pages. */
 .workflow {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -625,6 +1067,136 @@
   font: var(--mk-label);
 }
 
+/* ── Segment switcher ────────────────────────────────────────────────────── */
+
+.segmentTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.segmentTab {
+  display: inline-flex;
+  min-height: var(--h-control-lg, var(--touch-target-min));
+  align-items: center;
+  gap: var(--space-2);
+  border: thin solid var(--mk-border);
+  border-radius: var(--radius-pill);
+  background: var(--mk-surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: var(--mk-label);
+  padding-inline: var(--space-4);
+  transition: border-color var(--mk-lift), background-color var(--mk-lift);
+}
+
+.segmentTab:hover {
+  border-color: var(--mk-border-strong);
+  color: var(--text-strong);
+}
+
+.segmentTabActive {
+  border-color: transparent;
+  background: var(--ink, var(--text-strong));
+  color: var(--text-inverse);
+}
+
+.segmentTabActive:hover {
+  border-color: transparent;
+  color: var(--text-inverse);
+}
+
+.segmentPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.segmentPanelCopy {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-8);
+}
+
+.segmentPanelAside {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  border-left: thin solid var(--mk-border-subtle);
+  background: var(--mk-surface-subtle);
+  padding: var(--space-8);
+}
+
+.painList {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.painList li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  border-bottom: thin solid var(--mk-border-subtle);
+  color: var(--text-body);
+  font: var(--mk-body);
+  padding-bottom: var(--space-3);
+}
+
+.painList li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.painList svg {
+  flex: none;
+  margin-top: calc(var(--space-1) / 2);
+  color: var(--text-subtle);
+}
+
+.proofBlock {
+  display: grid;
+  gap: var(--space-1);
+  border: thin solid var(--mk-border);
+  border-radius: var(--card-radius);
+  background: var(--mk-surface);
+  padding: var(--space-5);
+}
+
+.proofValue {
+  font-size: var(--type-size-24);
+}
+
+.proofBlock span {
+  color: var(--text-muted);
+  font: var(--mk-caption);
+}
+
+/* ── Modules ─────────────────────────────────────────────────────────────── */
+
+.moduleCard,
+.priceCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.moduleCard > *,
+.priceCard > * {
+  flex: none;
+}
+
+/* The connection note and the plan CTA both belong on the card's floor, so a
+   taller neighbour never leaves them floating mid-card. */
+.moduleCard .connection,
+.moduleCard .cardTitle {
+  font: var(--font-weight-bold) var(--type-size-16) / var(--leading-normal) var(--font-family);
+}
+
 .connection {
   border-top: thin solid var(--mk-border-subtle);
   padding-top: var(--space-3);
@@ -636,8 +1208,31 @@
   font: var(--mk-caption);
 }
 
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.chipList span {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--mk-surface-muted);
+  color: var(--text-muted);
+  font: var(--mk-caption);
+  padding: var(--space-px) var(--space-2);
+}
+
+/* ── Pricing ─────────────────────────────────────────────────────────────── */
+
+.priceCard {
+  gap: var(--space-4);
+}
+
 .priceCardFeatured {
   border-color: var(--mk-border-strong);
+  box-shadow: var(--shadow-card, var(--shadow-rest));
 }
 
 .priceHeader {
@@ -651,6 +1246,12 @@
   margin: 0;
   font-size: var(--type-size-32);
   line-height: var(--leading-tight);
+}
+
+.priceMeta {
+  margin: 0;
+  color: var(--text-subtle);
+  font: var(--mk-caption);
 }
 
 .checkList {
@@ -669,8 +1270,15 @@
   font: var(--mk-body);
 }
 
+.checkList svg {
+  flex: none;
+  margin-top: calc(var(--space-1) / 2);
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+
 .tableFrame {
-  overflow: auto;
+  overflow-x: auto;
 }
 
 .table {
@@ -688,9 +1296,28 @@
   vertical-align: top;
 }
 
-.table th {
+.table thead th {
+  background: var(--mk-surface-subtle);
   color: var(--text-strong);
   font: var(--mk-label);
+  white-space: nowrap;
+}
+
+.table tbody th {
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.table tr:last-child th,
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+/* The Corelith column in the comparison table. */
+.tableOwn {
+  background: var(--mk-surface-subtle);
+  color: var(--text-strong);
+  font-weight: var(--font-weight-semibold);
 }
 
 .tagList,
@@ -703,6 +1330,140 @@
 .commercialPanel {
   align-items: center;
 }
+
+/* ── FAQ ─────────────────────────────────────────────────────────────────── */
+
+.faqList {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.faqItem summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-radius: var(--card-radius);
+  color: var(--text-strong);
+  cursor: pointer;
+  font: var(--mk-card-title);
+  list-style: none;
+  padding: var(--space-5);
+}
+
+.faqItem summary::-webkit-details-marker {
+  display: none;
+}
+
+.faqItem summary svg {
+  flex: none;
+  color: var(--text-subtle);
+  transition: transform var(--mk-lift);
+}
+
+.faqItem[open] summary svg {
+  transform: rotate(0.5turn);
+}
+
+.faqAnswer {
+  margin: 0;
+  border-top: thin solid var(--mk-border-subtle);
+  color: var(--text-muted);
+  font: var(--mk-body);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+/* ── CTA ─────────────────────────────────────────────────────────────────── */
+
+.ctaPanel {
+  border-color: transparent;
+  background: var(--ink, var(--text-strong));
+  color: var(--text-inverse);
+  gap: var(--space-5);
+  justify-items: center;
+  text-align: center;
+}
+
+.ctaPanel .sectionTitle {
+  max-width: calc(var(--space-8) * 16);
+  color: var(--text-inverse);
+}
+
+.ctaPanel .eyebrow,
+.ctaPanel .lead,
+.ctaPanel .small {
+  color: color-mix(in oklab, var(--text-inverse) 76%, transparent);
+}
+
+.ctaPanel .lead {
+  max-width: calc(var(--space-8) * 14);
+}
+
+.ctaPanel .button {
+  border-color: var(--mk-surface);
+  background: var(--mk-surface);
+  color: var(--text-strong);
+}
+
+.ctaPanel .button:hover {
+  border-color: var(--mk-surface-muted);
+  background: var(--mk-surface-muted);
+}
+
+.ctaPanel .buttonQuiet {
+  border-color: color-mix(in oklab, var(--text-inverse) 32%, transparent);
+  background: transparent;
+  color: var(--text-inverse);
+}
+
+.ctaPanel .buttonQuiet:hover {
+  border-color: var(--text-inverse);
+  background: color-mix(in oklab, var(--text-inverse) 12%, transparent);
+  color: var(--text-inverse);
+}
+
+/* ── Sticky mobile call to action ────────────────────────────────────────── */
+
+.stickyCta {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 55;
+  display: none;
+  width: 100%;
+  border-top: thin solid var(--mk-border);
+  background: color-mix(in oklab, var(--mk-surface) 94%, transparent);
+  backdrop-filter: blur(var(--space-3));
+  padding-block: var(--space-3);
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+}
+
+.stickyInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.stickyInner .button {
+  flex: 1;
+}
+
+.stickyMeta {
+  display: grid;
+  gap: var(--space-px);
+}
+
+.stickyMeta strong {
+  color: var(--text-strong);
+  font: var(--mk-label);
+}
+
+.stickyMeta span {
+  color: var(--text-muted);
+  font: var(--mk-caption);
+}
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
 
 .form {
   gap: var(--space-5);
@@ -781,6 +1542,34 @@
   flex: none;
 }
 
+/* ── Scroll reveal ───────────────────────────────────────────────────────── */
+
+.reveal {
+  animation: reveal-in var(--motion-duration-slow, 320ms) var(--motion-ease-standard, ease) both;
+  animation-range: entry 0% cover 22%;
+  animation-timeline: view();
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-4));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
 .footer {
   border-top: thin solid var(--mk-border-subtle);
   background: var(--mk-surface);
@@ -790,7 +1579,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
   gap: var(--space-7);
-  padding-block: var(--space-7);
+  padding-block: var(--space-8);
 }
 
 .footerGrid {
@@ -812,89 +1601,172 @@
 }
 
 .footerGroup a {
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   font: var(--mk-caption);
   text-decoration: none;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(1turn);
-  }
+.footerGroup a:hover {
+  background: transparent;
+  color: var(--text-strong);
 }
+
+.footerLegal {
+  border-top: thin solid var(--mk-border-subtle);
+}
+
+.footerLegalInner {
+  display: flex;
+  width: min(100% - (var(--content-gutter-x) * 2), var(--mk-page-max));
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-inline: auto;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+  color: var(--text-subtle);
+  font: var(--mk-caption);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
 
 @media (max-width: 68.75em) {
   .hero,
+  .pageHero,
   .sectionIntro,
   .problemGrid,
   .demoLayout,
   .commercialPanel,
+  .segmentPanel,
   .footerInner {
     grid-template-columns: 1fr;
   }
 
+  .sectionIntro {
+    align-items: start;
+  }
+
+  .segmentPanelAside {
+    border-top: thin solid var(--mk-border-subtle);
+    border-left: 0;
+  }
+
   .moduleGrid,
   .pricingGrid,
+  .pricingGrid3,
   .problemSources,
-  .solutionGrid,
+  .segmentGrid,
   .cardGrid3,
-  .stepGrid {
+  .capabilityGrid,
+  .stepGrid,
+  .trustInner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .loop,
   .workflow {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .loopStep:nth-child(3n) {
+    border-right: 0;
+  }
+
+  .loopStep:nth-child(-n + 3) {
+    border-bottom: thin solid var(--mk-border-subtle);
+  }
+
+  .loopEffects {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .loopEffect:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .loopEffect:nth-child(-n + 2) {
+    border-bottom: thin solid var(--mk-border-subtle);
+  }
+}
+
+@media (max-width: 61.25em) {
+  .navLinks,
+  .navActions .quietLink,
+  .navActions > .button {
+    display: none;
+  }
+
+  .navToggle {
+    display: inline-flex;
+  }
+
+  .navActions {
+    margin-left: auto;
+  }
+
+  .navInner {
+    gap: var(--space-3);
+  }
+
+  .stickyCta {
+    display: block;
+  }
+
+  .site {
+    /* Room for the sticky bar so the footer is never trapped underneath it. */
+    padding-bottom: calc(var(--space-9) + var(--space-4));
   }
 }
 
 @media (max-width: 47.5em) {
   .site {
-    --mk-display-size: var(--type-size-32);
-    --mk-hero-y: calc(var(--space-8) + var(--space-7));
-    --mk-section-y: var(--space-8);
+    --mk-display-size: calc(var(--type-size-32) + var(--type-size-16) / 2);
+    --mk-hero-y: var(--space-8);
+    --mk-section-y: calc(var(--space-8) + var(--space-4));
   }
 
-  .navInner,
-  .announceInner {
-    align-items: flex-start;
-    flex-direction: column;
-    padding-block: var(--space-3);
-  }
-
-  .navLinks {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: var(--space-3);
-  }
-
-  .navActions {
-    width: 100%;
-  }
-
-  .navActions .button {
-    flex: 1;
-  }
-
-  .previewTabs,
-  .metricGrid,
   .previewColumns,
+  .metricGrid,
   .moduleGrid,
   .pricingGrid,
+  .pricingGrid3,
   .problemSources,
-  .solutionGrid,
+  .segmentGrid,
   .cardGrid3,
+  .capabilityGrid,
   .cardGrid2,
   .stepGrid,
   .formGrid,
   .statStrip,
   .footerGrid,
+  .trustInner,
+  .loop,
+  .loopEffects,
   .workflow {
     grid-template-columns: 1fr;
   }
 
+  .loopStep,
+  .loopEffect {
+    border-right: 0;
+    border-bottom: thin solid var(--mk-border-subtle);
+  }
+
+  .loopStep:last-child,
+  .loopEffect:last-child {
+    border-bottom: 0;
+  }
+
   .sectionIntro {
     gap: var(--space-4);
+    margin-bottom: var(--space-7);
+  }
+
+  .segmentPanelCopy,
+  .segmentPanelAside,
+  .ctaPanel {
+    padding: var(--space-5);
   }
 
   .buttonRow,
@@ -906,5 +1778,61 @@
   .buttonRow .button,
   .formFooter .button {
     width: 100%;
+  }
+
+  .segmentTabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: calc(var(--content-gutter-x) * -1);
+    padding-inline: var(--content-gutter-x);
+    scrollbar-width: none;
+  }
+
+  .segmentTabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .segmentTab {
+    flex: 0 0 auto;
+  }
+
+  .stickyMeta {
+    display: none;
+  }
+
+  /* Three stacked metric tiles push the whole hero preview off the first two
+     screens. Laying each one out as label-then-value keeps the proof visible
+     without costing four scrolls to get past it. */
+  .metricTile {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .metricTile span {
+    grid-area: 1 / 1;
+  }
+
+  .metricTile strong {
+    grid-area: 1 / 2;
+    font-size: var(--type-size-16);
+  }
+
+  .metricTile p {
+    grid-area: 2 / 1 / 2 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+
+  .segmentCard:hover {
+    transform: none;
+  }
+
+  .navPanel {
+    transition: none;
   }
 }

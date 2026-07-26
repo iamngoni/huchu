@@ -37,8 +37,8 @@ export default function ImplementationSupportPage() {
       />
       <PageHero
         eyebrow="Implementation and support"
-        title="The rollout is part of the product."
-        copy={`${LAUNCH_SPRINT_DAYS}-day Launch Sprint: ${LAUNCH_SPRINT_COPY}. This is how Corelith reduces the fear of lost data, disruption, staff resistance and abandoned support.`}
+        title="The rollout is the part everybody underestimates."
+        copy={`A ${LAUNCH_SPRINT_DAYS}-day Launch Sprint: ${LAUNCH_SPRINT_COPY}. Most software failures are not software failures — they are rollouts nobody ever finished. So we scope it, price it and own it.`}
       />
 
       <LaunchSprintSection />
@@ -47,16 +47,16 @@ export default function ImplementationSupportPage() {
         <div className={styles.section}>
           <SectionIntro
             eyebrow="Success targets"
-            title="A Launch Sprint should end with operating proof, not a vague login."
-            copy="The first rollout is scoped around the workflows that make the customer ready to keep using the system weekly."
+            title="A Launch Sprint ends with proof, not a login."
+            copy="These are the things that have to be true before we call the rollout done. We agree them with you before it starts."
           />
           <div className={styles.cardGrid2}>
             {[
-              "Products, customers, suppliers or school records loaded within agreed scope",
+              "Products, customers, suppliers and opening balances loaded within the agreed scope",
               "Roles and permissions configured for the people doing the work",
-              "First invoices, receipts, stock receipts, job cards or school fee records created",
-              "First weekly operating report reviewed with the owner or leadership team",
-              "Support channel agreed for follow-up questions and adoption issues",
+              "First invoices, receipts, stock movements and job cards created on live data",
+              "The first weekly operating report reviewed with the owner",
+              "A named support channel agreed for follow-up questions and adoption issues",
               "Next module or add-on identified only when it pays for itself",
             ].map((target) => (
               <article key={target} className={styles.compactCard}>
@@ -71,8 +71,8 @@ export default function ImplementationSupportPage() {
       <section className={styles.section}>
         <SectionIntro
           eyebrow="Rollout steps"
-          title="Every step has a job."
-          copy="Implementation should feel practical, calm and accountable. The buyer should know what happens before money changes hands."
+          title="Every step has a job, and you can see all of them."
+          copy="You should know exactly what happens, and in what order, before any money changes hands."
         />
         <div className={styles.tableFrame}>
           <table className={styles.table}>
@@ -97,7 +97,7 @@ export default function ImplementationSupportPage() {
 
       <CtaBand
         title="Start with a setup questionnaire, not a blank account."
-        copy="Tell us your current tools, locations, data, workflow pressure and go-live timing so the rollout conversation is practical from the first call."
+        copy="Your current tools, your locations, the state of your data and when you want to go live. That is enough for the first call to be useful rather than exploratory."
       />
     </SiteChrome>
   );

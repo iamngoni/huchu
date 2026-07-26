@@ -46,6 +46,22 @@ const nextConfig: NextConfig = {
       // wasted download and is treated as a soft redirect by search engines.
       // Only the exact path matches, so /home/pricing and friends are untouched.
       { source: "/home", destination: "/", permanent: true },
+
+      // Marketing IA moved: the site is now organised by the kind of business a
+      // visitor runs, and schools carry their pricing on their own page. These
+      // live here, not in page components, for the same 308-vs-meta-refresh
+      // reason as the rule above.
+      { source: "/home/product", destination: "/home/products", permanent: true },
+      { source: "/home/products/retail-wholesale", destination: "/home/solutions/sellers", permanent: true },
+      { source: "/home/products/automotive", destination: "/home/solutions/workshops", permanent: true },
+      { source: "/home/products/schools", destination: "/home/schools", permanent: true },
+      { source: "/home/solutions/commerce", destination: "/home/solutions/sellers", permanent: true },
+      { source: "/home/solutions/retail-wholesale", destination: "/home/solutions/sellers", permanent: true },
+      { source: "/home/solutions/workshops-auto", destination: "/home/solutions/workshops", permanent: true },
+      { source: "/home/solutions/automotive", destination: "/home/solutions/workshops", permanent: true },
+      { source: "/home/solutions/schools", destination: "/home/schools", permanent: true },
+      { source: "/home/pricing/schools", destination: "/home/schools", permanent: true },
+
       { source: "/gold/pour", destination: "/gold/intake/pours", permanent: true },
       { source: "/gold/pour/new", destination: "/gold/intake/pours/new", permanent: true },
       { source: "/gold/dispatch", destination: "/gold/transit/dispatches", permanent: true },

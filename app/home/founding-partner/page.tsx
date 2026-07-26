@@ -39,14 +39,14 @@ export default function FoundingPartnerPage() {
       <PageHero
         eyebrow="Founding Partner Programme"
         title="For businesses ready to prove Corelith in real operations."
-        copy="The programme is for selected trade and workshop businesses willing to implement a focused workflow, give structured feedback and measure whether the rollout changed the way the business runs."
+        copy="A limited number of sellers, service providers, workshops and manufacturers who will put one workflow live properly, give us honest feedback, and agree up front how we measure whether it worked."
       />
 
       <section className={styles.section}>
         <SectionIntro
           eyebrow="Eligibility"
           title="This is not an open sandbox."
-          copy="The best founding partners already feel stock, invoicing, branch, job-card or customer follow-up pain and have a manager ready to own the rollout."
+          copy="The best founding partners already know exactly where the money is leaking, and have someone senior enough to own the rollout inside the business."
         />
         <div className={styles.demoLayout}>
           <FoundingPartnerList />
@@ -68,14 +68,14 @@ export default function FoundingPartnerPage() {
         <div className={styles.section}>
           <SectionIntro
             eyebrow="What Corelith needs to learn"
-            title="The programme exists to prove repeatable sales and implementation."
-            copy="By the end of the first deals, Corelith should know whether the strongest wedge is commerce-heavy, workshop-heavy or another adjacent formalising trade workflow."
+            title="We are being upfront: you are also helping us prove something."
+            copy="These first rollouts tell us whether the product goes live cleanly and gets used. That is why the terms are better — it is a genuine exchange, not a discount dressed up as an invitation."
           />
           <div className={styles.cardGrid3}>
             {[
-              "Can the sale close within 30 to 45 days?",
-              "Can the customer go live without major custom development?",
-              "Does the customer use the system weekly after launch?",
+              "Does a rollout go live inside the sprint we scoped?",
+              "Does it go live without custom development?",
+              "Is the team still using it, unprompted, three months later?",
             ].map((question) => (
               <article key={question} className={styles.compactCard}>
                 <p className={styles.cardTitle}>{question}</p>
@@ -87,8 +87,8 @@ export default function FoundingPartnerPage() {
 
       <CtaBand
         title="Apply with your real operating problem."
-        copy="Tell Corelith what you run, where the leakage is and what would make the first rollout worth paying for."
-        href="/home/book-demo?interest=commerce"
+        copy="Tell us what you run, where the money is going missing, and what the first rollout would have to change to be worth paying for."
+        href="/home/book-demo"
         label="Apply for founding partner review"
       />
     </SiteChrome>

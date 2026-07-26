@@ -33,14 +33,14 @@ export default function ContactPage() {
       <PageHero
         eyebrow="Contact"
         title="Start in the channel that fits the sale."
-        copy="WhatsApp is visible because it matters in Zimbabwe. Procurement, partnerships and larger rollouts can still move through email, calendar and formal proposal flow."
+        copy="WhatsApp is first because that is where business actually happens here. Procurement, partnerships and larger rollouts still move through email and a formal proposal."
       />
 
       <section className={styles.section}>
         <SectionIntro
           eyebrow="Channels"
           title="Fast conversation first. Formal proposal when the scope is clear."
-          copy="A good enquiry should quickly become a setup conversation: industry, locations, current tools, pain, migration scope and go-live timing."
+          copy="A good enquiry turns into a setup conversation quickly: business type, locations, current tools, the problem, how much data moves and when you want to go live."
         />
         <ContactChannelGrid />
       </section>
@@ -50,10 +50,10 @@ export default function ContactPage() {
           <SectionIntro
             eyebrow="What to include"
             title="Useful context makes the first reply sharper."
-            copy="Tell Corelith what you sell or manage, how many sites you run, which tools you use today and where the operational leakage is showing up."
+            copy="Tell us what you sell or deliver, how many sites you run, what you use today, and where the money is leaking. That is enough for a straight answer."
           />
           <div className={styles.cardGrid3}>
-            {["Industry and city", "Number of locations", "Current tools", "Main operating problem", "Go-live timing", "Preferred contact channel"].map((item) => (
+            {["Business type and city", "Number of locations", "Current tools", "Main operating problem", "Go-live timing", "Preferred contact channel"].map((item) => (
               <article key={item} className={styles.compactCard}>
                 <p className={styles.cardTitle}>{item}</p>
               </article>

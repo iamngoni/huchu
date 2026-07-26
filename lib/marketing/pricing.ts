@@ -211,7 +211,7 @@ const ADD_ON_CATEGORY_BY_CODE: Record<string, AddOnCategory> = {
   ADDON_GOLD_ADVANCED: "Industry",
   ADDON_SCRAP_METAL_SUITE: "Industry",
   ADDON_RETAIL_SUITE: "Industry",
-  ADDON_CRM_CORE: "Sales & CRM",
+  ADDON_CRM_SUITE: "Sales & CRM",
   ADDON_AUTOS_SUITE: "Industry",
   ADDON_SCHOOLS_SUITE: "Industry",
   ADDON_ACCOUNTING_CORE: "Finance",
@@ -409,20 +409,56 @@ export type ProductCommercials = {
   pricingHref: string;
 };
 
+/**
+ * One entry per segment page under `/home/solutions`, keyed by the same slug.
+ *
+ * Every subscription segment sits on the same plan ladder — the segment only
+ * decides which industry pack is switched on first. Schools are the exception:
+ * they buy per term against enrolment, so they carry `bespoke` and route to
+ * their own page.
+ */
 export const PRODUCT_COMMERCIALS: ProductCommercials[] = [
   {
-    slug: "automotive",
+    slug: "sellers",
     pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_AUTOS_SUITE"],
-    recommendedAddOnCodes: ["ADDON_AUTOS_SUITE", "ADDON_ACCOUNTING_CORE", "ADDON_PORTAL_SUITE"],
+    requiredAddOnCodes: ["ADDON_RETAIL_SUITE"],
+    recommendedAddOnCodes: ["ADDON_RETAIL_SUITE", "ADDON_ACCOUNTING_CORE", "ADDON_ZIMRA_FISCAL"],
     recommendedTierCode: "STANDARD",
     pricingHref: "/home/pricing",
   },
   {
-    slug: "retail-wholesale",
+    slug: "service-providers",
     pricingModel: "subscription",
-    requiredAddOnCodes: ["ADDON_RETAIL_SUITE"],
-    recommendedAddOnCodes: ["ADDON_RETAIL_SUITE", "ADDON_ACCOUNTING_CORE", "ADDON_ZIMRA_FISCAL"],
+    requiredAddOnCodes: ["ADDON_CRM_SUITE"],
+    recommendedAddOnCodes: ["ADDON_CRM_SUITE", "ADDON_ACCOUNTING_CORE", "ADDON_PORTAL_SUITE"],
+    recommendedTierCode: "STANDARD",
+    pricingHref: "/home/pricing",
+  },
+  {
+    slug: "workshops",
+    pricingModel: "subscription",
+    requiredAddOnCodes: ["ADDON_AUTOS_SUITE"],
+    recommendedAddOnCodes: ["ADDON_AUTOS_SUITE", "ADDON_MAINTENANCE_PRO", "ADDON_ACCOUNTING_CORE"],
+    recommendedTierCode: "STANDARD",
+    pricingHref: "/home/pricing",
+  },
+  {
+    slug: "manufacturers",
+    pricingModel: "subscription",
+    requiredAddOnCodes: ["ADDON_MAINTENANCE_PRO"],
+    recommendedAddOnCodes: [
+      "ADDON_MAINTENANCE_PRO",
+      "ADDON_ACCOUNTING_CORE",
+      "ADDON_ANALYTICS_PRO",
+    ],
+    recommendedTierCode: "MEDIUM",
+    pricingHref: "/home/pricing",
+  },
+  {
+    slug: "sales-teams",
+    pricingModel: "subscription",
+    requiredAddOnCodes: ["ADDON_CRM_SUITE"],
+    recommendedAddOnCodes: ["ADDON_CRM_SUITE", "ADDON_ANALYTICS_PRO", "ADDON_PORTAL_SUITE"],
     recommendedTierCode: "STANDARD",
     pricingHref: "/home/pricing",
   },
@@ -432,15 +468,7 @@ export const PRODUCT_COMMERCIALS: ProductCommercials[] = [
     requiredAddOnCodes: ["ADDON_SCHOOLS_SUITE"],
     recommendedAddOnCodes: ["ADDON_SCHOOLS_SUITE", "ADDON_ACCOUNTING_CORE", "ADDON_PORTAL_SUITE"],
     recommendedTierCode: "STANDARD",
-    pricingHref: "/home/pricing/schools",
-  },
-  {
-    slug: "other-businesses",
-    pricingModel: "subscription",
-    requiredAddOnCodes: [],
-    recommendedAddOnCodes: ["ADDON_ANALYTICS_PRO", "ADDON_USER_MANAGEMENT_PRO"],
-    recommendedTierCode: "STANDARD",
-    pricingHref: "/home/pricing",
+    pricingHref: "/home/schools",
   },
 ];
 
@@ -738,7 +766,7 @@ export const TCO_ROWS: TcoRow[] = [
   },
   {
     label: "Industry workflows ready",
-    corelith: "Retail, automotive, schools",
+    corelith: "Selling, service, workshop, production",
     perSeatSuite: "Generic — built per project",
     legacyDesktop: "Accounting-first",
     spreadsheets: "Whatever you build",
@@ -768,7 +796,7 @@ export const COMPETITIVE_EDGE: Differentiator[] = [
   },
   {
     title: "Your industry is already built",
-    copy: "Retail, automotive, and schools workflows are prepared before the demo. You are not funding a generic system just to discover whether it can match your business.",
+    copy: "Selling, service delivery, workshop, production, and sales-team workflows are prepared before the demo. You are not funding a generic system just to discover whether it can match your business.",
   },
   {
     title: "Local compliance is not an afterthought",

@@ -35,15 +35,15 @@ export default async function BookDemoPage({ searchParams }: Props) {
       />
       <PageHero
         eyebrow="Find your Corelith setup"
-        title="Answer the questions that make the demo useful."
-        copy="The first conversion is not a blank ERP account. It is a short setup questionnaire that tells Corelith what to configure, what workflow to show and what implementation risk to discuss."
+        title="Twelve questions, and the demo is about your business."
+        copy="We would rather spend twenty minutes preparing than waste an hour of yours clicking through a blank system. Tell us what you run and the demo opens on your workflow, with your kind of data in it."
       />
 
       <section className={styles.section}>
         <SectionIntro
           eyebrow="Setup questionnaire"
-          title="Give us enough context to prepare a serious demo."
-          copy="Industry, locations, people, current tools, problem area, timeline and preferred contact channel all change the right recommendation."
+          title="Enough context to give you a straight recommendation."
+          copy="Business type, locations, headcount, current tools, the problem and your timing all change what we would actually recommend — including telling you when we are not the right fit."
         />
         <div className={styles.demoLayout}>
           <DemoRequestForm initialInterest={initialInterest} />
