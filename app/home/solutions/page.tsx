@@ -40,16 +40,16 @@ export default function SolutionsPage() {
         ]}
       />
       <PageHero
-        eyebrow="Solutions"
-        title="Whatever you sell, the money leaves the same way."
-        copy="Corelith does not arrive as an empty system waiting for a consultant. Pick the trade you are in and the screens, workflow and reports are already set up the way that business actually runs."
+        eyebrow="By trade"
+        title="Your business is making money. Not all of it is reaching you."
+        copy="Some of it stops in a till drawer that came up short. Some sits on a shelf as stock nobody has sold since March. Some was work you did and never billed. It leaves differently in a bottle store than in a garage, so pick the one that looks like your business and see what it is worth to close."
       />
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Choose your business"
-          title="Start where the money is leaking."
-          copy="Most businesses straddle two of these. That is normal — it is one system either way, and the second pack is a setting rather than a second project."
+          eyebrow="Find your business"
+          title="Six trades. Six different holes. Same money."
+          copy="A bottle store bleeds at the counter. A hardware yard bleeds on the shelf. A cleaning company bleeds on work it did and forgot to charge for. Start with the one that matches how you earn, and if you run two of them, that is normal and it is still one system."
         />
         <SegmentCards />
       </section>
@@ -58,9 +58,9 @@ export default function SolutionsPage() {
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Who this fits"
-          title="The businesses that get the most out of it."
-          copy="If you carry stock, run jobs, bill on account, or have more than one location, the gaps between your tools are already costing you real money."
+          eyebrow="Who this is built for"
+          title="Three to sixty staff, one to eight locations, and money moving faster than the paperwork."
+          copy="If you carry stock, run jobs, bill on account or count more than one till at close, there is a gap between what your business earned and what you banked. It gets wider with every branch you open and every person you hire."
         />
         <div className={styles.cardGrid3}>
           {segments.map((segment) => (

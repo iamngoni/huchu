@@ -34,16 +34,16 @@ export default async function BookDemoPage({ searchParams }: Props) {
         ])}
       />
       <PageHero
-        eyebrow="Find your Corelith setup"
-        title="Twelve questions, and the demo is about your business."
-        copy="We would rather spend twenty minutes preparing than waste an hour of yours clicking through a blank system. Tell us what you run and the demo opens on your workflow, with your kind of data in it."
+        eyebrow="Find your setup"
+        title="Tell us where the money goes. We will show you the part that stops it."
+        copy="About a minute of questions: what you sell, how many sites, what you use now, and what is bothering you. Then the demo opens on your trade with your kind of numbers in it, instead of a blank account you have to imagine your business into. No obligation, no card, and a real price rather than a range."
       />
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Setup questionnaire"
-          title="Enough context to give you a straight recommendation."
-          copy="Business type, locations, headcount, current tools, the problem and your timing all change what we would actually recommend — including telling you when we are not the right fit."
+          eyebrow="Before we meet"
+          title="Short answers are fine. Rough numbers are fine."
+          copy="Nobody is going to hold you to what you type here. The more we know beforehand, the less of your time the first call wastes, and the sooner you get a figure worth deciding on."
         />
         <div className={styles.demoLayout}>
           <DemoRequestForm initialInterest={initialInterest} />

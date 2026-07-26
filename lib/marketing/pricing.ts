@@ -77,28 +77,28 @@ type TierCopy = {
 
 const TIER_COPY: Record<string, TierCopy> = {
   BASIC: {
-    tagline: "Get organised",
-    bestFor: "One shop, yard, or office replacing notebooks.",
+    tagline: "Get it out of the notebook",
+    bestFor: "One shop, yard or office where the real records still live in a book and one person's head.",
     costAnchor: "About a dollar a day",
     highlights: [
-      "Stock, movements, and receiving",
-      "Employee directory and daily operations",
-      "Offline mode on every device",
+      "Stock, movements and receiving",
+      "Staff directory and daily operations",
+      "Works offline on every device",
       "WhatsApp support",
     ],
     ctaLabel: "Find your setup",
     ctaHref: "/home/book-demo?plan=launch",
   },
   STANDARD: {
-    tagline: "Bring branches together",
-    bestFor: "Growing teams running two to three locations.",
+    tagline: "Make the branches agree",
+    bestFor: "Two or three locations where nobody can compare one against the other without asking for a spreadsheet.",
     costAnchor: "Less than one stock-count mistake a month",
     highlights: [
       "Everything in Launch",
-      "User management and role controls",
-      "Advanced reports and audit trails",
-      "Push notifications and stock alerts",
-      "Email + WhatsApp support",
+      "Roles, permissions and approval limits",
+      "Advanced reports and full audit trails",
+      "Stock alerts and push notifications",
+      "Email and WhatsApp support",
     ],
     isMostPopular: true,
     ctaLabel: "Find your setup",
@@ -106,31 +106,31 @@ const TIER_COPY: Record<string, TierCopy> = {
   },
   MEDIUM: {
     tagline: "Run the whole group",
-    bestFor: "Multi-branch groups that need finance and assets connected.",
+    bestFor: "Multi-branch operators who need finance, work orders and portals connected rather than reconciled.",
     costAnchor: "Less than a junior clerk's salary",
     highlights: [
       "Everything in Grow",
-      "Accounting core, journals, and statements",
-      "Maintenance, work orders, and PM schedules",
+      "Accounting core, journals and statements",
+      "Maintenance, work orders and service schedules",
       "Customer and staff portals",
       "Priority support",
     ],
-    ctaLabel: "Plan rollout",
+    ctaLabel: "Plan a rollout",
     ctaHref: "/home/book-demo?plan=scale",
   },
   ENTERPRISE: {
-    tagline: "Govern at scale",
-    bestFor: "Established groups with compliance and audit obligations.",
+    tagline: "Govern it properly",
+    bestFor: "Established groups carrying audit, compliance and payroll obligations across many sites.",
     costAnchor: "Priced against the cost of one bad audit",
     highlights: [
       "Everything in Scale",
-      "AR/AP, banking, fixed assets, multi-currency",
-      "Compliance, permits, inspections, and training",
+      "Receivables, payables, banking, fixed assets and multi-currency",
+      "Compliance, permits, inspections and training records",
       "Advanced payroll and disbursements",
       "ZIMRA fiscalisation and custom branding",
-      "Unlimited users, named account manager",
+      "Unlimited users and a named account manager",
     ],
-    ctaLabel: "Talk to sales",
+    ctaLabel: "Talk to us",
     ctaHref: "/home/book-demo?plan=enterprise",
   },
 };
@@ -787,28 +787,28 @@ export type Differentiator = {
 
 export const COMPETITIVE_EDGE: Differentiator[] = [
   {
-    title: "We do not charge per user",
-    copy: `Add every cashier, clerk, supervisor, and driver you need. ${tcoTier.name} covers ${tcoTier.includedUsers} people for ${formatUsd(tcoTier.monthlyPrice)} a month. The per-seat suites would charge that for one person.`,
+    title: "Adding staff costs you nothing",
+    copy: `${tcoTier.name} covers ${tcoTier.includedUsers} people across ${tcoTier.includedSites} sites for ${formatUsd(tcoTier.monthlyPrice)} a month. Per-seat suites charge $25 to $38 for every person you add, every month, which is why owners quietly keep half the team off the system and lose the trail.`,
   },
   {
     title: "It works when the internet does not",
-    copy: "Capture sales, stock, and attendance offline. Everything syncs the moment you are back online. Load-shedding and dead links stop being your problem.",
+    copy: "Sales, stock moves and attendance carry on offline and sync the moment the line comes back. Load-shedding stops the lights, not the shop.",
   },
   {
-    title: "Your industry is already built",
-    copy: "Selling, service delivery, workshop, production, and sales-team workflows are prepared before the demo. You are not funding a generic system just to discover whether it can match your business.",
+    title: "Your trade is built before you arrive",
+    copy: "Selling, service, workshop, production and sales workflows are configured already. You are not paying anyone to find out whether a generic system can be bent into your business.",
   },
   {
-    title: "Local compliance is not an afterthought",
-    copy: "ZIMRA fiscalisation, USD and multi-currency handling, and the reporting your accountant asks for are part of the product, not a bolt-on.",
+    title: "ZIMRA is handled inside the product",
+    copy: "Fiscalisation, USD and ZWG side by side, and the reports your accountant asks for are part of the software rather than a connector you have to keep alive.",
   },
   {
-    title: "Start with one problem, not the whole business",
-    copy: "Turn on the module causing you the most pain this month. Add the next one when your team is ready. You are never forced into a big-bang rollout.",
+    title: "Start with the one thing bleeding this month",
+    copy: "Switch on the part that is costing you money now and add the rest when it earns its place. There is no big-bang rollout to survive.",
   },
   {
-    title: "Priced for a Zimbabwean SME",
-    copy: `Plans start at ${formatUsd(STARTING_MONTHLY_PRICE)} a month, with onboarding scoped separately so human setup work is visible instead of hidden in the subscription.`,
+    title: "Priced for a Zimbabwean business",
+    copy: `Plans start at ${formatUsd(STARTING_MONTHLY_PRICE)} a month, and paying annually means paying for ${ANNUAL_BILLING_MONTHS} months. Onboarding is quoted separately so the setup work is visible instead of buried in your subscription forever.`,
   },
 ];
 

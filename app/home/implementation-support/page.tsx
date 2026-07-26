@@ -8,12 +8,9 @@ import {
   SectionIntro,
   SiteChrome,
 } from "@/app/home/site-components";
-import { launchSprintSteps, seoPages } from "@/app/home/site-data";
+import { launchSprintDone, launchSprintSteps, seoPages } from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
-import {
-  LAUNCH_SPRINT_COPY,
-  LAUNCH_SPRINT_DAYS,
-} from "@/lib/marketing/pricing";
+import { LAUNCH_SPRINT_DAYS } from "@/lib/marketing/pricing";
 import {
   breadcrumbJsonLd,
   buildMarketingMetadata,
@@ -36,9 +33,9 @@ export default function ImplementationSupportPage() {
         ]}
       />
       <PageHero
-        eyebrow="Implementation and support"
-        title="The rollout is the part everybody underestimates."
-        copy={`A ${LAUNCH_SPRINT_DAYS}-day Launch Sprint: ${LAUNCH_SPRINT_COPY}. Most software failures are not software failures — they are rollouts nobody ever finished. So we scope it, price it and own it.`}
+        eyebrow="Getting it live"
+        title="Software nobody finished setting up saves you nothing."
+        copy={`Most systems that fail here did not fail technically. They were bought, half-configured, half-trained and quietly abandoned, and the money kept leaking the whole time. The Launch Sprint is ${LAUNCH_SPRINT_DAYS} days of scoped work that ends with your team using it on a normal Tuesday. It is quoted separately so you can see exactly what you are paying for.`}
       />
 
       <LaunchSprintSection />
@@ -46,19 +43,12 @@ export default function ImplementationSupportPage() {
       <section className={styles.band}>
         <div className={styles.section}>
           <SectionIntro
-            eyebrow="Success targets"
-            title="A Launch Sprint ends with proof, not a login."
-            copy="These are the things that have to be true before we call the rollout done. We agree them with you before it starts."
+            eyebrow="What done looks like"
+            title="A rollout ends with proof, not a login."
+            copy="These are agreed with you before the sprint starts. If they are not true at the end of it, the rollout is not finished, and we will say so rather than invoice and disappear."
           />
           <div className={styles.cardGrid2}>
-            {[
-              "Products, customers, suppliers and opening balances loaded within the agreed scope",
-              "Roles and permissions configured for the people doing the work",
-              "First invoices, receipts, stock movements and job cards created on live data",
-              "The first weekly operating report reviewed with the owner",
-              "A named support channel agreed for follow-up questions and adoption issues",
-              "Next module or add-on identified only when it pays for itself",
-            ].map((target) => (
+            {launchSprintDone.map((target) => (
               <article key={target} className={styles.compactCard}>
                 <Check className={styles.cardIcon} weight="regular" />
                 <p className={styles.cardTitle}>{target}</p>
@@ -70,9 +60,9 @@ export default function ImplementationSupportPage() {
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Rollout steps"
-          title="Every step has a job, and you can see all of them."
-          copy="You should know exactly what happens, and in what order, before any money changes hands."
+          eyebrow="The 30-day Launch Sprint"
+          title="Six steps, in this order, with a person's name against each."
+          copy="You should know exactly what happens and when before any money changes hands. Nothing here is discovered halfway through."
         />
         <div className={styles.tableFrame}>
           <table className={styles.table}>
@@ -96,8 +86,8 @@ export default function ImplementationSupportPage() {
       </section>
 
       <CtaBand
-        title="Start with a setup questionnaire, not a blank account."
-        copy="Your current tools, your locations, the state of your data and when you want to go live. That is enough for the first call to be useful rather than exploratory."
+        title="Ask us what a rollout would look like for you."
+        copy="Your current tools, your locations, the state of your data and when you would want to go live. That is enough for us to come back with a scope and a number instead of a brochure."
       />
     </SiteChrome>
   );

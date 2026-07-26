@@ -18,6 +18,7 @@ import { ProductPreview } from "@/app/home/product-preview";
 import {
   MONEY_TRAIL,
   coreModules,
+  firstRollout,
   primarySegment,
   seoPages,
 } from "@/app/home/site-data";
@@ -58,8 +59,8 @@ export default function PlatformPage() {
       />
       <PageHero
         eyebrow="The platform"
-        title="Everything on Corelith, and how the parts hold together."
-        copy="Five modules cover the whole order-to-cash loop. Industry packs shape the middle of it. Add-ons switch on depth when you need it — and nothing you turn on later needs a migration."
+        title="One record. Every part of the business reading the same fact."
+        copy="Most businesses are not short of software. They are short of agreement between the software they have. A sale written once is a sale that stock, costing, the ledger and the owner all see the same way, which is why the numbers stop drifting apart and money stops falling into the gaps between them."
       >
         <div className={styles.buttonRow}>
           <Link href="/home/book-demo" className={`${styles.button} ${styles.buttonPrimary}`}>
@@ -67,7 +68,7 @@ export default function PlatformPage() {
             <ArrowRight className={styles.icon} weight="regular" />
           </Link>
           <Link href="/home/pricing" className={styles.button}>
-            See pricing
+            See what it costs
           </Link>
         </div>
       </PageHero>
@@ -80,8 +81,8 @@ export default function PlatformPage() {
         <div className={styles.section}>
           <SectionIntro
             eyebrow="The five modules"
-            title="One record, read five ways."
-            copy="A sale is not copied into stock and then into the ledger. It is written once and everything else reads the same fact, which is why the numbers cannot drift apart."
+            title="Written once, read five ways."
+            copy="A sale is not copied into stock and then again into the ledger. It is written once, and everything else reads it. Copying is where numbers disagree, and disagreeing numbers are where money hides."
           />
           <ModuleGrid />
         </div>
@@ -89,9 +90,9 @@ export default function PlatformPage() {
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="How the modules meet"
-          title="Follow one order all the way through."
-          copy="This is the loop the whole platform is built around. Every module has a job in it, and the handovers happen without anyone re-typing anything."
+          eyebrow="How they meet"
+          title="Follow one order from hello to bank."
+          copy="Every module has a job in this and every handover happens without anyone re-typing anything. That is the whole mechanism."
         />
         <Workflow steps={MONEY_TRAIL.map((step) => step.step)} />
 
@@ -121,9 +122,9 @@ export default function PlatformPage() {
       <section className={styles.bandSunken}>
         <div className={styles.section}>
           <SectionIntro
-            eyebrow="Platform capabilities"
-            title="What is true of every module, on every plan."
-            copy="These are not features you buy. They are properties of the platform, and they decide whether the system survives a normal week here."
+            eyebrow="True on every plan"
+            title="The things that decide whether it survives a normal week here."
+            copy="Load-shedding, a dead link, two currencies and a ZIMRA obligation are not edge cases. Software that ignores them costs you more than software that costs more."
           />
           <PlatformCapabilities />
         </div>
@@ -132,8 +133,8 @@ export default function PlatformPage() {
       <section className={styles.section}>
         <SectionIntro
           eyebrow="Industry packs"
-          title="The middle of the loop, already configured."
-          copy="Each pack changes the deliver step and the vocabulary around it. You start with one; adding another later is a setting, not a project."
+          title="The middle of the loop, shaped like your trade."
+          copy="Selling, servicing, fixing, making and quoting all look different in the middle and identical at both ends. Start with one pack. Adding another later is a setting, not a second project."
         />
         <SegmentCards />
       </section>
@@ -142,8 +143,8 @@ export default function PlatformPage() {
         <div className={styles.section}>
           <SectionIntro
             eyebrow="Add-ons"
-            title="Depth you switch on when it pays for itself."
-            copy="Every add-on is priced per month and listed openly. Several are already bundled into the higher plans, and the plan comparison on the pricing page shows which."
+            title="Depth you switch on when it starts paying for itself."
+            copy="Every add-on is priced monthly and listed here in full. Several are already bundled into the higher plans, so check the plan comparison before you buy anything twice."
           />
 
           {groups.map((group) => {
@@ -180,19 +181,13 @@ export default function PlatformPage() {
         <SectionIntro
           eyebrow="Where to start"
           title="You do not switch everything on in week one."
-          copy="Pick the module that is costing you money this month. The rest sits ready, and turning it on later does not disturb what is already running."
+          copy="Turn on the part that is losing you money this month. The rest waits, and turning it on later does not disturb what is already running."
         />
         <div className={styles.problemGrid}>
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>A sensible first rollout</h2>
             <ul className={styles.checkList}>
-              {[
-                "Core platform, users, roles and your sites",
-                "The one industry pack that matches your deliver step",
-                "Stock or job cards — whichever is bleeding",
-                "Invoicing and receipts, fiscalised where you need it",
-                "The two or three reports the owner actually opens",
-              ].map((item) => (
+              {firstRollout.map((item) => (
                 <li key={item}>
                   <Check className={styles.icon} weight="regular" />
                   <span>{item}</span>
@@ -207,7 +202,7 @@ export default function PlatformPage() {
       <FaqSection
         eyebrow="Platform questions"
         title="What people ask once they have seen the modules."
-        copy="If something here is a dealbreaker, it is better to find out now than three weeks into a rollout."
+        copy="If one of these is a dealbreaker, it is much cheaper to find out on this page than three weeks into a rollout."
       />
 
       <CtaBand

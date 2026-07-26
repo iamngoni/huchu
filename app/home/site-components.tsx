@@ -18,6 +18,7 @@ import { MobileNav } from "@/app/home/mobile-nav";
 import { ProductPreview } from "@/app/home/product-preview";
 import { SegmentSwitcher } from "@/app/home/segment-switcher";
 import {
+  CONNECTED_OUTCOMES_CLOSE,
   COUNTER_TRADE,
   MONEY_LEAKS,
   MONEY_LEAK_CLOSE,
@@ -46,7 +47,6 @@ import {
 } from "@/app/home/site-data";
 import {
   COMPETITIVE_EDGE,
-  LAUNCH_SPRINT_COPY,
   LAUNCH_SPRINT_DAYS,
   MARKETING_ADD_ONS,
   MARKETING_TIERS,
@@ -166,8 +166,8 @@ export function MarketingFooter() {
             <span>{PLATFORM_BRAND_NAME}</span>
           </Link>
           <p className={styles.body}>
-            Find the money your business is already losing. Built and supported in Zimbabwe by
-            Hurudza Labs.
+            Corelith finds the money your business is already losing. Built and supported in
+            Zimbabwe by Hurudza Labs.
           </p>
           <Link
             href={whatsappHref("Hi Corelith, I would like help finding the right setup.")}
@@ -211,9 +211,10 @@ export function Announcement() {
     <div className={styles.announce}>
       <div className={styles.announceInner}>
         <span>
-          Founding Partner Programme: discounted onboarding and your rate held for 12 months.
+          Founding Partner Programme: discounted onboarding, your rate held for 12 months, limited
+          places.
         </span>
-        <Link href="/home/founding-partner">Check eligibility</Link>
+        <Link href="/home/founding-partner">See if you qualify</Link>
       </div>
     </div>
   );
@@ -283,16 +284,17 @@ export function HomeHero() {
               <ShieldCheck className={styles.icon} weight="regular" />
               Business software, built in Zimbabwe
             </span>
-            <h1 className={styles.display}>How much did you actually make yesterday?</h1>
+            <h1 className={styles.display}>You earned more last month than you banked.</h1>
             <p className={styles.lead}>
-              Most owners cannot say — not because the business is failing, but because the answer
-              is spread across a till roll, a stock book, a WhatsApp thread and somebody&rsquo;s
-              memory. Meanwhile money you already earned is walking out through the gaps. Corelith
-              closes them, and shows you the number.
+              The difference is sitting in a drawer that came up short, a shelf that has not moved
+              since March, and a job somebody did and nobody billed. Corelith puts your sales,
+              stock, jobs, invoices and cash on one record, so a gap shows up the day it opens
+              instead of at year end. Built in Zimbabwe, works through load-shedding, fiscalised for
+              ZIMRA.
             </p>
             <div className={styles.buttonRow}>
               <Link href="/home/book-demo" className={`${styles.button} ${styles.buttonPrimary}`}>
-                Show me where I&rsquo;m losing money
+                Show me where my money is going
                 <ArrowRight className={styles.icon} weight="regular" />
               </Link>
               <Link href="/home/pricing" className={styles.button}>
@@ -343,8 +345,8 @@ export function MoneyLeakSection() {
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
         eyebrow="Where it goes"
-        title="Every business leaks. The only question is where yours does."
-        copy="Not one of these is a software problem. They are all the same problem wearing different overalls — money that is already yours, leaving through a gap you cannot see from where you sit."
+        title="Six trades. Six places the money walks out."
+        copy="Nobody loses money in one big event. It goes in small amounts on ordinary days, in the part of the business nobody can watch while you are busy running the rest of it. Add up a year of it and it is usually the difference between a good year and a flat one."
       />
 
       <div className={styles.leakGrid}>
@@ -374,8 +376,8 @@ export function ProblemSection() {
       <div className={`${styles.section} ${styles.reveal}`}>
         <SectionIntro
           eyebrow="Why you cannot see it"
-          title="You are not careless. You are working off six versions of the truth."
-          copy="Every one of these is fine on its own. The money disappears in the gaps between them — and the gaps are exactly where nobody is looking."
+          title="You are not careless. You are running the business off six things that do not talk."
+          copy="Each of these works well enough on its own. The money goes missing in the space between them, because not one of them ever shows you the whole day."
         />
 
         <div className={styles.problemGrid}>
@@ -403,9 +405,7 @@ export function ProblemSection() {
                 </div>
               ))}
             </div>
-            <p className={styles.small}>
-              Not six tools wired together. One record that every part of the business reads.
-            </p>
+            <p className={styles.small}>{CONNECTED_OUTCOMES_CLOSE}</p>
           </div>
         </div>
       </div>
@@ -423,8 +423,8 @@ export function MoneyTrailSection() {
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
         eyebrow="How it stops"
-        title="Give every dollar a trail it cannot fall off."
-        copy="From the first hello to the money in your bank, each step writes to the same record. Nothing gets re-typed, nothing gets remembered wrong, and nothing quietly goes missing between one person and the next."
+        title="Put a trail behind every dollar."
+        copy="From the first enquiry to the money in your account, every step writes to the same record. Nothing gets re-typed, nothing gets remembered wrong, and nothing goes quiet between one person and the next."
       />
 
       <div className={styles.loopFrame}>
@@ -511,9 +511,9 @@ export function SegmentSection() {
   return (
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
-        eyebrow="Find yourself"
+        eyebrow="Find your trade"
         title="Pick your trade. It is already set up."
-        copy="No blank system, no six-month configuration project. Each of these opens a page built for that business — the screens your team will actually use, and what a first rollout should put back in your pocket."
+        copy="Same platform underneath, same books, same permissions. The screens, the language and the reports match how your business actually runs, so nobody spends six months configuring it before it earns you anything."
       />
       <SegmentSwitcher />
     </section>
@@ -555,8 +555,11 @@ export function SegmentCards() {
           <span>From {formatUsd(SCHOOL_STARTING_TERM_PRICE)}/term</span>
         </div>
         <h3 className={styles.cardTitle}>Schools</h3>
-        <p className={styles.body}>{schoolsTrack.audience}</p>
-        <p className={styles.body}>{schoolsTrack.headline}</p>
+        <p className={styles.body}>
+          Private, mission, boarding and group schools. Priced per campus, per term, against
+          enrolment.
+        </p>
+        <p className={styles.body}>Fees collected on time, and one student record instead of four.</p>
         <span className={styles.inlineAction}>
           {schoolsTrack.cta}
           <ChevronRight className={styles.icon} weight="regular" />
@@ -596,9 +599,9 @@ export function ModulesSection() {
   return (
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
-        eyebrow="What you get"
-        title="Five modules. One record underneath all of them."
-        copy="Not five products you have to wire together. A sale, a job card or a stock receipt writes once, and every other part of the business reads the same fact — which is why your numbers stop disagreeing with each other."
+        eyebrow="What you actually get"
+        title="Five modules, one record underneath all of them."
+        copy="A sale, a job card or a stock receipt gets written once and read by everything else. That is why the numbers stop disagreeing, and why nobody types the same figure into three places."
       />
       <ModuleGrid />
       <div className={`${styles.buttonRow} ${styles.sectionFooter}`}>
@@ -636,7 +639,7 @@ export function DifferentiatorSection() {
         <SectionIntro
           eyebrow="Do the maths"
           title="The cheapest option in the room is usually the one costing you the most."
-          copy={`Costed at a realistic shape — ${TCO_TEAM_SIZE} staff across ${TCO_SITE_COUNT} sites. Competitor figures are published list prices and are indicative, not quotes.`}
+          copy={`Costed at a shape you will probably recognise: ${TCO_TEAM_SIZE} staff across ${TCO_SITE_COUNT} sites. Competitor figures are published list prices and are indicative rather than quotes.`}
         />
 
         <div className={styles.tableFrame}>
@@ -704,7 +707,7 @@ export function LaunchSprintSection() {
       <SectionIntro
         eyebrow={`The ${LAUNCH_SPRINT_DAYS}-day Launch Sprint`}
         title="Software nobody finished setting up saves you nothing."
-        copy={`${LAUNCH_SPRINT_COPY}. The most expensive software failure is the one nobody ever finished setting up, so the rollout is scoped, priced and owned like the work it is.`}
+        copy={`Most software failures are not bad software. They are a rollout that stopped halfway, so the team went back to the notebook and the money kept leaking. The Sprint is scoped, quoted and owned like the work it is: ${LAUNCH_SPRINT_DAYS} days from mapping your workflow to reviewing your first month of real numbers.`}
       />
 
       <div className={styles.stepGrid}>
@@ -786,9 +789,9 @@ export function PricingPreviewSection() {
   return (
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
-        eyebrow="Pricing"
+        eyebrow="What it costs"
         title="Pay for sites and capacity. Never for how many people use it."
-        copy="Every cashier, clerk, technician and rep is included up to your seat ceiling, so putting your whole team on it costs you nothing extra. Onboarding is quoted separately, because the human work is real and hiding it would only make the rollout worse."
+        copy="Plans run from $29 a month for one site to $449 for twenty-five. Every cashier, clerk, technician and rep is included up to your seat ceiling, so putting the whole team on it costs you nothing extra."
       />
       <PricingCards limit={3} />
       <div className={`${styles.principlePanel} ${styles.sectionFooter}`}>
@@ -802,8 +805,8 @@ export function PricingPreviewSection() {
           ))}
         </ul>
         <p className={styles.small}>
-          The bar we ask you to hold it to: if it catches one bad cash-up, one dead-stock order or
-          one unbilled job a month, it has already paid for itself.
+          Hold it to this: catch one short cash-up, one dead-stock order or one unbilled job a
+          month, and it has already paid for itself.
         </p>
         <Link href="/home/pricing" className={styles.inlineAction}>
           See full pricing, add-ons and the plan comparison
@@ -885,9 +888,9 @@ export function ProofSection() {
   return (
     <section className={`${styles.section} ${styles.reveal}`}>
       <SectionIntro
-        eyebrow="Proof, honestly"
-        title="We are not going to show you testimonials we made up."
-        copy="Corelith is early, and inventing social proof would be the fastest way to lose you. So we agree the numbers before go-live and measure them after. These three decide whether this was worth your money — hold us to them."
+        eyebrow="How you will know it worked"
+        title="Judge it on three numbers out of your own business."
+        copy="Nothing on this page is worth as much as what happens in your own figures. So we measure these three before go-live, agree the targets in writing, and measure them again after."
       />
       <div className={styles.cardGrid3}>
         {proofFrames.map((frame) => {
@@ -909,9 +912,9 @@ export function ProofSection() {
 
 export function FaqSection({
   items = faqs,
-  eyebrow = "Objections, answered",
+  eyebrow = "Before you decide",
   title = "The questions worth asking before you commit.",
-  copy = "If an answer here rules us out for your business, that is a good outcome for both of us.",
+  copy = "If one of these answers rules us out for your business, that is a good outcome for both of us and it costs you nothing to find out here.",
 }: {
   items?: Array<{ q: string; a: string }>;
   eyebrow?: string;
@@ -946,8 +949,8 @@ export function FAQList({ items = faqs }: { items?: Array<{ q: string; a: string
 
 export function CtaBand({
   eyebrow = "Next step",
-  title = "Find out what your gaps are costing you.",
-  copy = "Answer a few setup questions — your trade, your locations, what you use today and where you think the money is going. We come back with a demo on your own workflow and a straight view of what closing that gap is worth.",
+  title = "Find out what the gap is costing you.",
+  copy = "Tell us your trade, your sites, what you use today and where you think the money is going. You get a demo running your own workflow and a straight view of what closing that gap is worth in a month.",
   href = "/home/book-demo",
   label = "Find your setup",
   secondary = true,
@@ -1106,9 +1109,9 @@ export function SegmentDetail({ segment }: { segment: MarketingSegment }) {
 
       <section className={`${styles.section} ${styles.reveal}`}>
         <SectionIntro
-          eyebrow="Where it hurts"
-          title="You are probably here because one of these is already costing you money."
-          copy="Nobody shops for business software in the abstract. There is usually a specific leak, and it has usually been leaking for a while."
+          eyebrow={segment.sectionIntros.pains.eyebrow}
+          title={segment.sectionIntros.pains.title}
+          copy={segment.sectionIntros.pains.copy}
         />
         <div className={styles.cardGrid2}>
           {segment.pains.map((pain) => (
@@ -1123,9 +1126,9 @@ export function SegmentDetail({ segment }: { segment: MarketingSegment }) {
       <section className={styles.band}>
         <div className={`${styles.section} ${styles.reveal}`}>
           <SectionIntro
-            eyebrow="Your version of the trail"
-            title={`For ${segment.title.toLowerCase()}, delivering means: ${segment.deliverStep.label.toLowerCase()}.`}
-            copy={segment.deliverStep.copy}
+            eyebrow={segment.sectionIntros.workflow.eyebrow}
+            title={segment.sectionIntros.workflow.title}
+            copy={segment.sectionIntros.workflow.copy}
           />
           <Workflow steps={segment.workflow} />
 
@@ -1155,9 +1158,9 @@ export function SegmentDetail({ segment }: { segment: MarketingSegment }) {
 
       <section className={`${styles.section} ${styles.reveal}`}>
         <SectionIntro
-          eyebrow="What is configured"
-          title="This is what is switched on before your demo."
-          copy="Same platform underneath, same books, same permissions — with the screens, language and reports this business actually uses."
+          eyebrow={segment.sectionIntros.capabilities.eyebrow}
+          title={segment.sectionIntros.capabilities.title}
+          copy={segment.sectionIntros.capabilities.copy}
         />
         <div className={styles.cardGrid2}>
           {segment.capabilities.map((capability) => {
@@ -1177,9 +1180,9 @@ export function SegmentDetail({ segment }: { segment: MarketingSegment }) {
       <section className={styles.bandSunken}>
         <div className={`${styles.section} ${styles.reveal}`}>
           <SectionIntro
-            eyebrow="What should change"
-            title="What a first rollout is supposed to fix."
-            copy="These are the outcomes we will agree with you up front and measure after go-live, rather than a list of features you have to translate yourself."
+            eyebrow={segment.sectionIntros.outcomes.eyebrow}
+            title={segment.sectionIntros.outcomes.title}
+            copy={segment.sectionIntros.outcomes.copy}
           />
           <div className={styles.cardGrid2}>
             {segment.outcomes.map((outcome) => (
@@ -1202,16 +1205,17 @@ export function SegmentDetail({ segment }: { segment: MarketingSegment }) {
 
       <section className={`${styles.section} ${styles.reveal}`}>
         <SectionIntro
-          eyebrow="The commercials"
-          title="The price is on the table before the proposal is."
-          copy="You should know roughly what this costs before you spend an hour on a demo. The exact figure depends on sites, seats and how much of your data we migrate."
+          eyebrow={segment.sectionIntros.commercials.eyebrow}
+          title={segment.sectionIntros.commercials.title}
+          copy={segment.sectionIntros.commercials.copy}
         />
         <div className={styles.commercialPanel}>
           <div className={styles.stack}>
             <p className={styles.eyebrow}>Starting point</p>
             <p className={styles.price}>{priceLabel ?? "Tailored"}</p>
             <p className={styles.body}>
-              Priced per site with seats included. Onboarding is scoped and quoted separately.
+              Priced per site with seats included up to your ceiling. Onboarding is scoped and
+              quoted separately, before you commit to anything.
             </p>
             <Link href="/home/pricing" className={styles.inlineAction}>
               See full pricing
@@ -1229,8 +1233,8 @@ export function SegmentDetail({ segment }: { segment: MarketingSegment }) {
       <section className={`${styles.section} ${styles.reveal}`}>
         <SectionIntro
           eyebrow="Not quite you?"
-          title="Every other business type runs the same loop."
-          copy="If your business straddles two of these, that is normal and it is one system either way."
+          title="Money leaves a garage differently to a bottle store."
+          copy="If your business straddles two of these, that is normal, and it is still one system either way."
         />
         <SegmentCards />
       </section>

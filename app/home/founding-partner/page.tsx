@@ -8,7 +8,7 @@ import {
   SectionIntro,
   SiteChrome,
 } from "@/app/home/site-components";
-import { launchTargets, seoPages } from "@/app/home/site-data";
+import { foundingPartnerQuestions, launchTargets, seoPages } from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
 import {
   breadcrumbJsonLd,
@@ -38,15 +38,15 @@ export default function FoundingPartnerPage() {
       />
       <PageHero
         eyebrow="Founding Partner Programme"
-        title="For businesses ready to prove Corelith in real operations."
-        copy="A limited number of sellers, service providers, workshops and manufacturers who will put one workflow live properly, give us honest feedback, and agree up front how we measure whether it worked."
+        title="Better terms, in exchange for a rollout that goes properly."
+        copy="A limited number of sellers, service providers, workshops and manufacturers who will put one real workflow live, tell us the truth about how it went, and agree up front how we will both judge whether it worked. You get discounted setup and your rate held for twelve months. We get the thing we cannot buy, which is evidence."
       />
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Eligibility"
-          title="This is not an open sandbox."
-          copy="The best founding partners already know exactly where the money is leaking, and have someone senior enough to own the rollout inside the business."
+          eyebrow="What you get"
+          title="Cheaper to start, fixed for a year, and closer to the people building it."
+          copy="The terms are better because the first rollouts matter more to us than the margin on them. That is the whole trade, and it is worth saying plainly."
         />
         <div className={styles.demoLayout}>
           <FoundingPartnerList />
@@ -67,16 +67,12 @@ export default function FoundingPartnerPage() {
       <section className={styles.band}>
         <div className={styles.section}>
           <SectionIntro
-            eyebrow="What Corelith needs to learn"
-            title="We are being upfront: you are also helping us prove something."
-            copy="These first rollouts tell us whether the product goes live cleanly and gets used. That is why the terms are better — it is a genuine exchange, not a discount dressed up as an invitation."
+            eyebrow="What we get"
+            title="We are asking for something real in return."
+            copy="Time from someone senior, honest feedback when something is wrong, and permission to measure whether the rollout actually changed your numbers. If that sounds like more than you want to take on, take the normal terms instead. They are fine."
           />
           <div className={styles.cardGrid3}>
-            {[
-              "Does a rollout go live inside the sprint we scoped?",
-              "Does it go live without custom development?",
-              "Is the team still using it, unprompted, three months later?",
-            ].map((question) => (
+            {foundingPartnerQuestions.map((question) => (
               <article key={question} className={styles.compactCard}>
                 <p className={styles.cardTitle}>{question}</p>
               </article>
@@ -86,8 +82,8 @@ export default function FoundingPartnerPage() {
       </section>
 
       <CtaBand
-        title="Apply with your real operating problem."
-        copy="Tell us what you run, where the money is going missing, and what the first rollout would have to change to be worth paying for."
+        title="Tell us what it is costing you."
+        copy="What you run, where the money is going missing, and what the first rollout would have to change to be worth paying for. If the numbers do not work, we would both rather know now."
         href="/home/book-demo"
         label="Apply for founding partner review"
       />

@@ -13,10 +13,8 @@ import {
 import { schoolsTrack, seoPages, whatsappHref } from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
 import {
-  MONTHS_PER_TERM,
   SCHOOL_ADD_ONS,
   SCHOOL_GROUP_INDICATIVE_PER_STUDENT_PER_TERM,
-  SCHOOL_STARTING_TERM_PRICE,
   TERMS_PER_YEAR,
   formatUsd,
 } from "@/lib/marketing/pricing";
@@ -80,7 +78,7 @@ export default function SchoolsPage() {
                 href="/home/book-demo?interest=schools"
                 className={`${styles.button} ${styles.buttonPrimary}`}
               >
-                Arrange a school consultation
+                {schoolsTrack.cta}
                 <ArrowRight className={styles.icon} weight="regular" />
               </Link>
               <Link
@@ -89,14 +87,14 @@ export default function SchoolsPage() {
                 target="_blank"
                 rel="noreferrer"
               >
-                WhatsApp us
+                {schoolsTrack.secondaryCta}
                 <ExternalLink className={styles.icon} weight="regular" />
               </Link>
             </div>
             <div className={styles.assuranceGrid}>
-              <span>From {formatUsd(SCHOOL_STARTING_TERM_PRICE)}/term</span>
-              <span>Unlimited staff accounts</span>
-              <span>Data migration included in the rollout scope</span>
+              {schoolsTrack.assurances.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
             </div>
           </div>
         </section>
@@ -104,9 +102,9 @@ export default function SchoolsPage() {
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Why schools are separate"
-          title="A school does not run on invoices and stock. It runs on a term."
-          copy="Everything about the buying decision is different: the money arrives three times a year, the decision goes through a board, and the records you keep are governed by the ministry rather than by ZIMRA. So the pricing, the rollout and this page are different too."
+          eyebrow={schoolsTrack.sectionIntros.why.eyebrow}
+          title={schoolsTrack.sectionIntros.why.title}
+          copy={schoolsTrack.sectionIntros.why.copy}
         />
         <div className={styles.cardGrid2}>
           {schoolsTrack.pains.map((pain) => (
@@ -121,9 +119,9 @@ export default function SchoolsPage() {
       <section className={styles.band}>
         <div className={styles.section}>
           <SectionIntro
-            eyebrow="The school year, end to end"
-            title="One record from application to report card."
-            copy="A student is admitted once. The bursar, the registrar, the class teacher and the parent then read the same record instead of keeping four copies of it."
+            eyebrow={schoolsTrack.sectionIntros.year.eyebrow}
+            title={schoolsTrack.sectionIntros.year.title}
+            copy={schoolsTrack.sectionIntros.year.copy}
           />
           <Workflow steps={[...schoolsTrack.workflow]} />
         </div>
@@ -131,9 +129,9 @@ export default function SchoolsPage() {
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="What is included"
-          title="Everything a school office does, in one place."
-          copy="Admissions through to results, with the finance side connected rather than bolted on afterwards."
+          eyebrow={schoolsTrack.sectionIntros.included.eyebrow}
+          title={schoolsTrack.sectionIntros.included.title}
+          copy={schoolsTrack.sectionIntros.included.copy}
         />
         <div className={styles.cardGrid3}>
           {schoolsTrack.capabilities.map((capability) => {
@@ -154,9 +152,9 @@ export default function SchoolsPage() {
       <section className={styles.bandSunken} id="pricing">
         <div className={styles.section}>
           <SectionIntro
-            eyebrow="Schools pricing"
-            title="Priced per campus, per term, against enrolment."
-            copy={`Three terms a year, so each band covers roughly ${MONTHS_PER_TERM} months. Bands are flat: growing within your band never costs more, and every plan includes unlimited staff accounts.`}
+            eyebrow={schoolsTrack.sectionIntros.pricing.eyebrow}
+            title={schoolsTrack.sectionIntros.pricing.title}
+            copy={schoolsTrack.sectionIntros.pricing.copy}
           />
           <SchoolBands />
 
@@ -167,9 +165,9 @@ export default function SchoolsPage() {
                 {[
                   "Unlimited staff and teacher accounts",
                   "Every campus keeps its own registers and fee structure",
-                  "Term and year-end reporting for the board",
-                  "Offline-capable attendance and fee capture",
-                  "Your data exported on request, at any time",
+                  "Term and year-end reporting in the shape a board asks for",
+                  "Attendance and fee capture that works with no connection",
+                  "Your records exported whenever you ask",
                 ].map((item) => (
                   <li key={item}>
                     <Check className={styles.icon} weight="regular" />
@@ -182,13 +180,13 @@ export default function SchoolsPage() {
             <article className={styles.card}>
               <h2 className={styles.cardTitle}>Over 1,500 students</h2>
               <p className={styles.body}>
-                Group quotes are worked from an indicative{" "}
+                Group quotes work from an indicative{" "}
                 {formatUsd(SCHOOL_GROUP_INDICATIVE_PER_STUDENT_PER_TERM * 100)} per 100 students per
                 term, which keeps the per-student rate below the Premier band. Growing past a band
                 should never cost a school more per head than staying inside it.
               </p>
               <p className={styles.body}>
-                Billed {TERMS_PER_YEAR} times a year, in line with how fees actually come in.
+                Billed {TERMS_PER_YEAR} times a year, in line with how fees actually arrive.
               </p>
               <Link href="/home/book-demo?interest=schools" className={styles.inlineAction}>
                 Request a group quote
@@ -201,9 +199,9 @@ export default function SchoolsPage() {
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="School add-ons"
-          title="Add transport, fiscalisation, branding or migration when you need them."
-          copy="Priced per term alongside the band, except data migration, which is a single one-off charge at the start of the rollout."
+          eyebrow={schoolsTrack.sectionIntros.addOns.eyebrow}
+          title={schoolsTrack.sectionIntros.addOns.title}
+          copy={schoolsTrack.sectionIntros.addOns.copy}
         />
         <div className={styles.tableFrame}>
           <table className={styles.table}>
@@ -231,9 +229,9 @@ export default function SchoolsPage() {
       <section className={styles.band}>
         <div className={styles.section}>
           <SectionIntro
-            eyebrow="What should change"
-            title="What a first term on Corelith is supposed to fix."
-            copy="We agree these with the head and the bursar before the rollout, then review them at the end of the first term."
+            eyebrow={schoolsTrack.sectionIntros.outcomes.eyebrow}
+            title={schoolsTrack.sectionIntros.outcomes.title}
+            copy={schoolsTrack.sectionIntros.outcomes.copy}
           />
           <div className={styles.cardGrid2}>
             {schoolsTrack.outcomes.map((outcome) => (
@@ -248,18 +246,19 @@ export default function SchoolsPage() {
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Questions from school leadership"
-          title="The things a board asks before it approves anything."
+          eyebrow={schoolsTrack.sectionIntros.faq.eyebrow}
+          title={schoolsTrack.sectionIntros.faq.title}
+          copy={schoolsTrack.sectionIntros.faq.copy}
         />
         <FAQList items={[...schoolsTrack.faqs]} />
       </section>
 
       <CtaBand
         eyebrow="Next step"
-        title="Start with a consultation, not a checkout page."
-        copy="Tell us enrolment, campuses, your fee structure, your current system and when in the school year you want to switch. We will come back with a scoped rollout plan your board can read."
+        title="Start with a conversation, not a checkout page."
+        copy="Tell us your enrolment, your campuses, your fee structure, what you use now and when in the year you would want to switch. You get back a scoped rollout plan and a price your board can read."
         href="/home/book-demo?interest=schools"
-        label="Arrange a school consultation"
+        label={schoolsTrack.cta}
       />
     </SiteChrome>
   );

@@ -31,16 +31,16 @@ export default function AboutPage() {
         ]}
       />
       <PageHero
-        eyebrow="Company"
-        title="Built in Zimbabwe, for businesses that have outgrown running on memory."
-        copy="Corelith is the business platform from Hurudza Labs. The job is unglamorous and specific: connect sales, stock, work, finance and people for growing operators — without a foreign-consultant ERP project and the bill that comes with it."
+        eyebrow="Why we built this"
+        title="Most businesses here are more profitable than their records make them look."
+        copy="Corelith is built by Hurudza Labs in Harare, for owners running three to sixty staff across one to eight locations. Businesses that outgrew the notebook years ago, cannot justify a foreign-consultant ERP project, and are losing real money in the gap between the two."
       />
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Point of view"
-          title="The product is local because the constraints are."
-          copy="This is not a patriotism pitch. It means load-shedding, patchy data, USD and ZWG side by side, WhatsApp-led communication, ZIMRA and the very real fear of a failed rollout are design inputs here rather than edge cases someone will get to later."
+          eyebrow="Where we stand"
+          title="The constraints here are the brief, not the excuse."
+          copy="Load-shedding, patchy data, USD and ZWG side by side, WhatsApp as the place business happens, ZIMRA, staff who move on, and an owner who does not trust a number on a screen until it matches the shelf. Software written somewhere else treats all of that as an edge case. Here it is the starting point."
         />
         <CompanyPrinciples />
       </section>
@@ -48,15 +48,15 @@ export default function AboutPage() {
       <section className={styles.band}>
         <div className={styles.section}>
           <SectionIntro
-            eyebrow="What Corelith is not"
-            title="Not a cheap POS clone. Not an ERP slogan."
-            copy="If Corelith wins, it wins because it starts from your workflow, shows you the rollout instead of hiding it, and grows out of the first problem that was actually costing you money."
+            eyebrow="Being straight"
+            title="Not a cheap till clone, and not an ERP slogan."
+            copy="A till that talks to nobody leaves you exactly where you started. A twelve-month ERP project costs more than the leak it was bought to fix. What is left is the useful middle, and that is the only thing we are trying to build."
           />
           <div className={styles.cardGrid3}>
             {[
-              "You should understand what this is within ten seconds of landing here.",
-              "You should recognise your own business on the page, not a generic one.",
-              "Price, migration and rollout should be visible before a sales call, not after.",
+              "A till that takes money and tells nobody leaves you where you started.",
+              "An ERP project can cost more than the leak it was bought to fix.",
+              "The useful middle is the only thing worth building, so that is what we build.",
             ].map((item) => (
               <article key={item} className={styles.compactCard}>
                 <p className={styles.cardTitle}>{item}</p>

@@ -11,11 +11,10 @@ import {
   SectionIntro,
   SiteChrome,
 } from "@/app/home/site-components";
-import { pricingPrinciples, seoPages } from "@/app/home/site-data";
+import { onboardingCovers, pricingPrinciples, seoPages } from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
 import {
   ANNUAL_BILLING_MONTHS,
-  LAUNCH_SPRINT_COPY,
   LAUNCH_SPRINT_DAYS,
   MARKETING_TIERS,
   MONEY_BACK_DAYS,
@@ -49,7 +48,7 @@ export default function PricingPage() {
       <PageHero
         eyebrow="Pricing"
         title="Priced per site. Never per user."
-        copy={`From ${formatUsd(STARTING_MONTHLY_PRICE)} a month, with every cashier, clerk, technician and rep included up to your seat ceiling. Onboarding is scoped and quoted before you commit, so the human work is visible rather than buried in the subscription.`}
+        copy={`From ${formatUsd(STARTING_MONTHLY_PRICE)} a month. Every cashier, clerk, technician and rep is included up to your seat ceiling, so putting your whole team on it costs you nothing extra. Setup is scoped and quoted before you commit, because the human work is real and hiding it inside a subscription only makes rollouts fail.`}
       >
         <div className={styles.assuranceGrid}>
           <span>Pay annually, pay for {ANNUAL_BILLING_MONTHS} months</span>
@@ -61,8 +60,8 @@ export default function PricingPage() {
       <section className={styles.section}>
         <SectionIntro
           eyebrow="Plans"
-          title="Pick the plan by sites and capacity, not by headcount."
-          copy="The plan sets how many sites you run, how many seats are included and how much finance and governance depth ships switched on. The industry pack sets what the middle of your workflow looks like."
+          title="Choose by sites and capacity, not by headcount."
+          copy="The plan decides how many locations you run, how many seats are included and how much finance and governance ships switched on. Your trade decides what the middle of the workflow looks like, and that costs nothing extra to choose."
         />
         <PricingCards />
         <p className={`${styles.small} ${styles.sectionFooter}`}>
@@ -75,8 +74,8 @@ export default function PricingPage() {
         <div className={styles.section}>
           <SectionIntro
             eyebrow="Compare"
-            title="Everything each plan includes, side by side."
-            copy="Anything marked with a price is available as an add-on on the lower plans, at the monthly rate shown."
+            title="Everything each plan includes, in one table."
+            copy="Anything showing a price is available as an add-on on the lower plans at that monthly rate. Nothing here changes once you are a customer."
           />
           <div className={styles.tableFrame}>
             <table className={styles.table}>
@@ -110,7 +109,7 @@ export default function PricingPage() {
         <SectionIntro
           eyebrow="Add-ons"
           title="Buy depth when it pays for itself, not before."
-          copy="Nothing here is hidden behind a sales call. If an add-on is already bundled into your plan, it costs you nothing."
+          copy="Nothing is hidden behind a sales call. If your plan already bundles an add-on, it costs you nothing, and the table above shows which."
         />
         <AddOnTable />
       </section>
@@ -119,21 +118,14 @@ export default function PricingPage() {
         <div className={styles.section}>
           <SectionIntro
             eyebrow="Onboarding"
-            title="Setup is charged, and here is exactly what it buys."
-            copy={`${LAUNCH_SPRINT_COPY}. It is a ${LAUNCH_SPRINT_DAYS}-day piece of work, scoped and quoted against your business before you sign anything.`}
+            title="Setup is charged, and this is exactly what it buys."
+            copy={`${LAUNCH_SPRINT_DAYS} days of scoped work: mapping how you run today, configuring it, importing your data, training your people and standing with you through the first live day. Quoted against your business before you sign anything.`}
           />
           <div className={styles.cardGrid2}>
             <article className={styles.card}>
               <h2 className={styles.cardTitle}>What onboarding covers</h2>
               <ul className={styles.checkList}>
-                {[
-                  "Mapping how your business actually works today",
-                  "Configuring the platform, your industry pack, sites and roles",
-                  "Importing products, customers, suppliers and opening balances",
-                  "Training the people who will use it daily",
-                  "Being on the line through your first live day",
-                  "WhatsApp follow-up through the first month",
-                ].map((item) => (
+                {onboardingCovers.map((item) => (
                   <li key={item}>
                     <Check className={styles.icon} weight="regular" />
                     <span>{item}</span>
@@ -166,8 +158,9 @@ export default function PricingPage() {
             <p className={styles.eyebrow}>Schools</p>
             <h2 className={styles.sectionTitle}>Schools are priced per term, not per month.</h2>
             <p className={styles.body}>
-              Fees come in three times a year, so the software cost sits in the same cycle. Bands are
-              set by enrolment and every one includes unlimited staff accounts.
+              Fees arrive three times a year, so the software sits in the same cycle. Bands are set
+              by enrolment, every band includes unlimited staff accounts, and growing inside your
+              band never costs more.
             </p>
           </div>
           <div className={styles.stack}>
@@ -187,8 +180,8 @@ export default function PricingPage() {
       />
 
       <CtaBand
-        title="Get a real number for your business."
-        copy="Sites, seats, the pack you need and how much data we migrate. Answer the setup questions and we will come back with a figure rather than a range."
+        title="Get a real number, not a range."
+        copy="Sites, seats, the pack you need and how much of your data we move. Answer the setup questions and we come back with a figure you can actually decide on."
       />
     </SiteChrome>
   );

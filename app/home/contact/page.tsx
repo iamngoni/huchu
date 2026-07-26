@@ -8,7 +8,7 @@ import {
   SectionIntro,
   SiteChrome,
 } from "@/app/home/site-components";
-import { seoPages } from "@/app/home/site-data";
+import { contactChecklist, seoPages } from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
 import {
   breadcrumbJsonLd,
@@ -31,16 +31,16 @@ export default function ContactPage() {
         ]}
       />
       <PageHero
-        eyebrow="Contact"
-        title="Start in the channel that fits the sale."
-        copy="WhatsApp is first because that is where business actually happens here. Procurement, partnerships and larger rollouts still move through email and a formal proposal."
+        eyebrow="Talk to us"
+        title="Ask us what it would cost you, and what it would save you."
+        copy="You do not need a shortlist, a budget or a decision to ask. Tell us what you sell, how many sites you run and where the money seems to be going, and you will get a straight answer, including if the answer is that we are not the right fit yet."
       />
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Channels"
-          title="Fast conversation first. Formal proposal when the scope is clear."
-          copy="A good enquiry turns into a setup conversation quickly: business type, locations, current tools, the problem, how much data moves and when you want to go live."
+          eyebrow="Pick a channel"
+          title="Message us, email us, or let us set up the demo properly first."
+          copy="WhatsApp is fastest and it is where most of this ends up anyway. Email suits procurement, proposals and anything a committee has to read."
         />
         <ContactChannelGrid />
       </section>
@@ -48,12 +48,12 @@ export default function ContactPage() {
       <section className={styles.band}>
         <div className={styles.section}>
           <SectionIntro
-            eyebrow="What to include"
-            title="Useful context makes the first reply sharper."
-            copy="Tell us what you sell or deliver, how many sites you run, what you use today, and where the money is leaking. That is enough for a straight answer."
+            eyebrow="What to tell us"
+            title="Six things, and the first reply will be worth reading."
+            copy="We would rather come back with a real number than a range. That takes about a minute of context from you."
           />
           <div className={styles.cardGrid3}>
-            {["Business type and city", "Number of locations", "Current tools", "Main operating problem", "Go-live timing", "Preferred contact channel"].map((item) => (
+            {contactChecklist.map((item) => (
               <article key={item} className={styles.compactCard}>
                 <p className={styles.cardTitle}>{item}</p>
               </article>

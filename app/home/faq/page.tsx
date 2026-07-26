@@ -31,16 +31,16 @@ export default function FAQPage() {
         ]}
       />
       <PageHero
-        eyebrow="FAQ"
+        eyebrow="Questions"
         title="Straight answers, including the ones that might rule us out."
-        copy="The useful questions are not about how many modules we have. They are about fit, price, rollout risk, migration and what happens the week after go-live."
+        copy="The useful questions are never about how many features exist. They are about what this costs, what it saves, what happens to the records you already have, and what the week after go-live actually looks like."
       />
 
       <section className={styles.section}>
         <SectionIntro
           eyebrow="General"
-          title="Fit, pricing, rollout and support."
-          copy="If one of these answers is a dealbreaker for your business, it is far cheaper to know now."
+          title="Fit, price, rollout and what happens after."
+          copy="If one of these answers is a dealbreaker for your business, it is much cheaper to find out on this page than three weeks into a rollout."
         />
         <FAQList items={faqs} />
       </section>
@@ -49,8 +49,8 @@ export default function FAQPage() {
         <div className={styles.section}>
           <SectionIntro
             eyebrow="Schools"
-            title="Questions from school leadership."
-            copy="Schools buy differently, so they get their own answers — and their own page."
+            title="Questions from heads, bursars and boards."
+            copy="Schools budget per term, decide by committee and answer to the ministry, so they get their own answers and their own page."
           />
           <FAQList items={[...schoolsTrack.faqs]} />
         </div>

@@ -38,6 +38,12 @@ export type SeoEntry = {
   keywords: string[];
 };
 
+export type SectionIntro = {
+  eyebrow: string;
+  title: string;
+  copy: string;
+};
+
 export type ProductVisual = {
   eyebrow: string;
   title: string;
@@ -89,8 +95,18 @@ export type MarketingSegment = {
   }>;
   /** Three sharp lines shown in the landing-page segment switcher. */
   landingPains: string[];
-  /** The single number the switcher panel leads with. */
-  landingProof: { value: string; label: string };
+  /**
+   * The five section intros on this trade's page. Held per trade rather than
+   * hardcoded once, so a workshop page argues like a workshop instead of
+   * repeating a generic line under a different heading.
+   */
+  sectionIntros: {
+    pains: SectionIntro;
+    workflow: SectionIntro;
+    capabilities: SectionIntro;
+    outcomes: SectionIntro;
+    commercials: SectionIntro;
+  };
   seo: SeoEntry;
   productVisual: ProductVisual;
   pains: string[];
@@ -149,11 +165,11 @@ export const footerGroups = [
 ];
 
 const HOME_DESCRIPTION =
-  "Every business leaks money it has already earned — in the drawer, on the shelf, in work nobody billed. Corelith shows you where, and stops it. Built in Zimbabwe for shops, bottle stores, service companies, workshops, manufacturers and sales teams.";
+  "Corelith puts sales, stock, jobs, invoices and cash on one record. Built in Zimbabwe, works offline, ZIMRA fiscalisation built in. From $29 a month.";
 
 export const seoPages = {
   home: {
-    title: "Find the money your business is already losing",
+    title: "Find the money your business is losing",
     description: HOME_DESCRIPTION,
     path: "/home",
     keywords: [
@@ -169,7 +185,7 @@ export const seoPages = {
     ],
   },
   root: {
-    title: "Find the money your business is already losing",
+    title: "Find the money your business is losing",
     description: HOME_DESCRIPTION,
     path: "/",
     keywords: [
@@ -183,7 +199,7 @@ export const seoPages = {
   platform: {
     title: "The Corelith platform",
     description:
-      "Every module on Corelith: Sell, Stock, Work, Books and People, plus the industry packs and add-ons you can switch on when they pay for themselves.",
+      "One record every part of the business reads. Sell, Stock, Work, Books and People, plus the industry packs and add-ons you switch on when they pay for themselves.",
     path: "/home/products",
     keywords: [
       "business platform Zimbabwe",
@@ -193,9 +209,9 @@ export const seoPages = {
     ],
   },
   solutions: {
-    title: "Corelith solutions by business type",
+    title: "Corelith by trade",
     description:
-      "Sellers, service providers, workshops, manufacturers and sales teams run the same order-to-cash loop. Corelith arrives with each one already configured.",
+      "A shop, a garage and a maize mill lose money in different places. Pick the trade that looks like your business and see what closing that gap is worth.",
     path: "/home/solutions",
     keywords: [
       "retail wholesale software Zimbabwe",
@@ -208,7 +224,7 @@ export const seoPages = {
   pricing: {
     title: "Corelith pricing",
     description:
-      "Priced per site, never per user. Plans start low, every seat is included up to your ceiling, and onboarding is scoped and quoted before you commit.",
+      "Priced per site, never per user. From $29 a month with every seat included up to your ceiling. Pay annually and pay for ten months. 30-day money-back guarantee.",
     path: "/home/pricing",
     keywords: [
       "Corelith pricing",
@@ -220,7 +236,7 @@ export const seoPages = {
   schools: {
     title: "Corelith for schools",
     description:
-      "Admissions, fees, academics, boarding and parent portals on one system. Priced per term against enrolment, with an implementation-led rollout for school leadership.",
+      "Collect the fees you are owed and keep one record of every child. Admissions, fees, academics, boarding and parent portals, priced per campus per term from $249.",
     path: "/home/schools",
     keywords: [
       "school management software Zimbabwe",
@@ -231,9 +247,9 @@ export const seoPages = {
     ],
   },
   implementation: {
-    title: "Implementation and support",
+    title: "Getting it live",
     description:
-      "The Launch Sprint covers workflow mapping, data import, configuration, training, go-live support and WhatsApp follow-up. Rollout is part of the product.",
+      "Software nobody finished setting up saves you nothing. Thirty days of scoped work: mapping, configuration, data import, training and go-live support.",
     path: "/home/implementation-support",
     keywords: [
       "software implementation Zimbabwe",
@@ -245,7 +261,7 @@ export const seoPages = {
   foundingPartner: {
     title: "Founding Partner Programme",
     description:
-      "A limited programme for businesses ready to put Corelith into real operations, agree success targets before go-live, and hold the rate for twelve months.",
+      "Discounted setup and your rate held for twelve months, in exchange for a rollout that goes properly and honest feedback about how it went.",
     path: "/home/founding-partner",
     keywords: [
       "Corelith founding partner",
@@ -257,7 +273,7 @@ export const seoPages = {
   bookDemo: {
     title: "Find your Corelith setup",
     description:
-      "Answer a short setup questionnaire so the demo starts from your industry, your locations, your current tools and the problem actually costing you money.",
+      "Tell us where the money goes and we will show you the part that stops it. About a minute of questions, then a demo on your trade with your kind of numbers in it.",
     path: "/home/book-demo",
     keywords: [
       "book Corelith demo",
@@ -269,7 +285,7 @@ export const seoPages = {
   about: {
     title: "About Corelith",
     description:
-      "Corelith is built by Hurudza Labs in Zimbabwe for businesses that have outgrown spreadsheets but do not want a foreign-consultant ERP project.",
+      "Most businesses here are more profitable than their records make them look. Corelith is built in Harare for owners running three to sixty staff across one to eight sites.",
     path: "/home/about",
     keywords: [
       "Corelith Zimbabwe",
@@ -281,7 +297,7 @@ export const seoPages = {
   contact: {
     title: "Contact Corelith",
     description:
-      "Reach Corelith on WhatsApp, by email, or through a tailored demo about selling, service, workshop, production, sales or school operations.",
+      "Ask us what it would cost you and what it would save you. WhatsApp, email or a demo set up properly first. No shortlist or budget required.",
     path: "/home/contact",
     keywords: [
       "contact Corelith",
@@ -292,7 +308,7 @@ export const seoPages = {
   faq: {
     title: "Corelith FAQ",
     description:
-      "Straight answers on fit, price, per-site billing, implementation, migration, offline use, ZIMRA fiscalisation and what happens after go-live.",
+      "Straight answers on price, per-site billing, migration, offline use, ZIMRA fiscalisation, staff adoption and what happens the week after go-live.",
     path: "/home/faq",
     keywords: [
       "Corelith FAQ",
@@ -336,45 +352,45 @@ export const seoPages = {
 export const MONEY_LEAKS = [
   {
     where: "In the drawer",
-    who: "Bottle stores, kiosks, tuckshops, forecourts, bars",
-    copy: "The cash you count at close does not match what the till says it sold. You know it happens. You cannot say which shift, which cashier, or how much this month.",
+    who: "Bottle stores, liquor outlets, kiosks, tuckshops, supermarkets, forecourts, bars",
+    copy: "The count at close is $40 short and the shift has already gone home. Twice a week for a year is a cashier's wage paid to nobody.",
     icon: Storefront,
   },
   {
     where: "On the shelf",
     who: "Hardware, spare parts, agro-dealers, wholesale, distribution",
-    copy: "Capital lying in stock that has not moved since March. And the fast line you actually sell, out again — because nobody saw it coming.",
+    copy: "Capital asleep in lines that have not moved since March, while the fast seller is out of stock again. One of those is cash you cannot touch, the other is cash walking to the shop down the road.",
     icon: Package,
   },
   {
-    where: "In work you never billed",
-    who: "Cleaning, security, IT, logistics, plant hire, contractors",
-    copy: "Your team did the job. The client got the value. The invoice went out light, because nobody wrote it down while it was happening.",
+    where: "In work nobody billed",
+    who: "Cleaning, security, IT, logistics, plant hire, contractors, consultancies",
+    copy: "Your team did the extra visits, the callout, the emergency job. The client got all of it and the invoice only carried the contract line.",
     icon: Work,
   },
   {
     where: "In parts and hours",
     who: "Garages, panel beaters, fitment centres, equipment repair",
-    copy: "A part leaves the store on a promise. Labour gets guessed at invoice time. Every job comes out a little thinner than it should have.",
+    copy: "A filter and two litres of oil leave the store on a promise and never reach a job card. Labour gets rounded down at invoice time because nobody wrote the hours while the work was happening.",
     icon: Wrench,
   },
   {
     where: "In wastage and guesswork",
-    who: "Food and beverage, fabrication, packaging, assembly",
-    copy: "You quote a price that feels about right. You find out at stock-take whether the run made money. That is a gamble settled three months late.",
+    who: "Food and beverage, fabrication, packaging, furniture, assembly",
+    copy: "You price the order on what a unit felt like it cost last time. If that run wasted more than you thought, you find out at stock-take, months after you agreed the price.",
     icon: Factory,
   },
   {
     where: "In deals that went quiet",
-    who: "Field sales, distributor reps, account teams, sales floors",
-    copy: "A quote nobody chased. Stock promised to two customers. Commission argued over at month end. All of it revenue you had in your hand.",
+    who: "Field sales, distributor reps, account teams, dealership floors",
+    copy: "A quote went out and nobody chased it. The same stock got promised to two customers, and commission turns into an argument at month end.",
     icon: Megaphone,
   },
 ];
 
 /** The line that turns six separate leaks into one problem. */
 export const MONEY_LEAK_CLOSE =
-  "Different trades, same hole. Every one of these is money you already earned, walking out through a gap you cannot see from the office.";
+  "Six trades, one hole. In every case it is money you have already earned, leaving through a gap you cannot see from the office.";
 
 /**
  * Why the gap exists. Not a software problem — an evidence problem.
@@ -382,37 +398,40 @@ export const MONEY_LEAK_CLOSE =
 export const problemFragments = [
   {
     label: "WhatsApp",
-    copy: "Orders, approvals and price promises sit in chats nobody can search when it matters.",
+    copy: "Prices, orders and approvals get agreed in chats. Three weeks later the customer disputes the figure and nobody can find it.",
     icon: Users,
   },
   {
     label: "Excel",
-    copy: "The real numbers live in one file, on one laptop, maintained by one person.",
+    copy: "The real numbers live in one file, on one laptop, kept by one person. When that person is away, the business guesses.",
     icon: FileText,
   },
   {
     label: "Paper books",
-    copy: "Delivery notes, job cards and receipts have to be re-typed before anyone can read them.",
+    copy: "Delivery notes, job cards and receipts have to be typed up before anyone can read them, so the truth is always a few days behind the money.",
     icon: ReceiptLong,
   },
   {
-    label: "A till that talks to nobody",
-    copy: "It takes the money and never tells purchasing, costing or accounts what just happened.",
+    label: "A till that talks to nothing",
+    copy: "It takes the cash and tells no one. Purchasing, costing and the books find out later, if at all.",
     icon: Storefront,
   },
   {
     label: "Staff memory",
-    copy: "The real process lives in people's heads, so it resigns when they do.",
+    copy: "The real process lives in people's heads. It leaves through the gate when they resign, and you train the replacement from scratch.",
     icon: ClipboardList,
   },
 ];
 
 export const connectedOutcomes = [
   "One customer record",
-  "One stock position",
+  "One stock figure",
   "One set of books",
-  "One version of the truth",
+  "One number everybody is working from",
 ];
+
+export const CONNECTED_OUTCOMES_CLOSE =
+  "Everything writes to the same record, so your figures stop disagreeing with each other and you stop paying for the argument.";
 
 // ---------------------------------------------------------------------------
 // The mechanism: one trail behind every dollar
@@ -426,17 +445,17 @@ export const connectedOutcomes = [
 export const MONEY_TRAIL = [
   {
     step: "Someone asks",
-    copy: "A walk-in, a call, a WhatsApp. It lands on a customer record instead of in somebody's phone.",
+    copy: "A walk-in, a phone call, a WhatsApp message. It lands on a customer record instead of in somebody's phone.",
     icon: Megaphone,
   },
   {
     step: "You price it",
-    copy: "Off live stock and your real costs, so you know the margin before you send it — not after.",
+    copy: "Quote off live stock and your real costs, so you know the margin before you send the number rather than after.",
     icon: FileText,
   },
   {
     step: "They say yes",
-    copy: "The quote becomes an order with the deposit, the deadline and an owner on it. Nothing gets promised twice.",
+    copy: "The quote becomes an order carrying the deposit, the deadline and an owner. Nothing gets promised to two customers.",
     icon: ClipboardList,
   },
   {
@@ -446,7 +465,7 @@ export const MONEY_TRAIL = [
   },
   {
     step: "You bill",
-    copy: "Built from what actually moved, not from what the quote guessed. Fiscalised where ZIMRA needs it.",
+    copy: "The invoice is built from what actually moved, not from what the quote guessed, and fiscalised where ZIMRA requires it.",
     icon: ReceiptLong,
   },
   {
@@ -458,10 +477,22 @@ export const MONEY_TRAIL = [
 
 /** What closes itself once the trail runs in one place. This is the payoff. */
 export const TRAIL_PAYOFF = [
-  { label: "Stock", copy: "Moves the moment it moves. What the system says you hold is what is on the shelf." },
-  { label: "Books", copy: "Sales, purchases and payments post themselves. Your accountant stops rebuilding the year." },
-  { label: "Names", copy: "Every record carries who created, approved or changed it. Nothing is anonymous." },
-  { label: "Answers", copy: "Margin, ageing, stock cover, cash-up variance — a page you open, not a weekend you lose." },
+  {
+    label: "Stock",
+    copy: "What the system says you hold is what is on the shelf, every day, not just on count day.",
+  },
+  {
+    label: "Books",
+    copy: "Sales, purchases and payments post themselves, so your accountant stops rebuilding the year from a box of paper.",
+  },
+  {
+    label: "Names",
+    copy: "Every record carries who created it, who approved it and who changed it.",
+  },
+  {
+    label: "Answers",
+    copy: "Margin, ageing, stock cover and cash-up variance are pages you open, not a weekend you lose.",
+  },
 ];
 
 /**
@@ -474,14 +505,14 @@ export const TRAIL_PAYOFF = [
  */
 export const COUNTER_TRADE = {
   eyebrow: "Selling over a counter?",
-  title: "Your trail is three steps, not six. It matters more, not less.",
+  title: "Three steps, not six. Your money moves faster, so it matters more.",
   copy:
-    "No quote, no order, no delivery note — the sale is the entire front half. Which means everything that protects your money happens behind it, in the second after the customer walks out.",
-  who: "Bottle stores and liquor outlets, kiosks, tuckshops, supermarkets, forecourts, bars and fast-service counters",
+    "There is no quote and no invoice at a till. The sale is the whole front half, which means everything protecting your cash happens in the second after the customer walks out.",
+  who: "Bottle stores and liquor outlets, kiosks, tuckshops, supermarkets, forecourts, bars and fast-service counters.",
   steps: [
     {
       step: "Ring it up",
-      copy: "Scan or tap, take cash, card, EcoCash or a split tender, and print the fiscal receipt.",
+      copy: "Scan or tap, take cash, card, EcoCash or a split payment, and print the fiscal receipt.",
       icon: Storefront,
     },
     {
@@ -491,13 +522,13 @@ export const COUNTER_TRADE = {
     },
     {
       step: "The shift closes",
-      copy: "Cash counted against expected. Variance by till and by cashier, before anyone goes home.",
+      copy: "Cash counted against expected, variance by till and by cashier, before anybody goes home.",
       icon: Coins,
     },
   ],
   proof: [
-    { value: "Offline", label: "Keeps selling through load-shedding, syncs after" },
-    { value: "Per cashier", label: "Cash-up variance you can actually act on" },
+    { value: "Offline", label: "Keeps selling through load-shedding, syncs when the line returns" },
+    { value: "Per cashier", label: "Cash-up variance you can act on the same night" },
     { value: "Fiscalised", label: "ZIMRA receipts issued from the sale itself" },
   ],
 } as const;
@@ -505,7 +536,7 @@ export const COUNTER_TRADE = {
 /** Honest, checkable claims. No logos, no invented testimonials. */
 export const trustSignals = [
   { label: "Priced per site, never per user", icon: Users },
-  { label: "Works with no internet, syncs when it returns", icon: WifiOff },
+  { label: "Keeps selling when the internet drops", icon: WifiOff },
   { label: "ZIMRA fiscalisation built in", icon: ShieldCheck },
   { label: "Built and supported in Zimbabwe", icon: Building2 },
 ];
@@ -521,59 +552,84 @@ export const segments: MarketingSegment[] = [
     pricingSlug: "sellers",
     title: "Sellers",
     navTitle: "Sellers",
-    who: "Shops and tills, bottle stores, kiosks, hardware, spare parts, wholesale, distribution",
-    eyebrow: "For businesses whose money is sitting on the shelf",
-    headline: "Know what you have, what it cost, and what it made you.",
+    who: "Bottle stores, kiosks, forecourts, supermarkets, hardware, spare parts, wholesale",
+    eyebrow: "Shops, bottle stores, hardware, wholesale",
+    headline: "Know what you hold, what it cost, and what it made you.",
     summary:
-      "Corelith ties the till to the stockroom to the ledger, so a sale reduces inventory, books the margin and shows up on the branch report the same minute it happens.",
+      "A sale drops the stock, books the margin and posts to the ledger in the same second the customer pays. So the shelf, the till and the report finally agree, and short cash stops being something you find out about weeks later.",
     audience:
-      "Bottle stores, kiosks, tuckshops, supermarkets and forecourts selling over a till; hardware stores, spare-parts counters, agro-dealers, pharmacies, wholesalers and distributors selling on account. Most sellers do both.",
-    cta: "See the seller setup",
+      "Bottle stores, liquor outlets, kiosks, tuckshops, supermarkets, bars and forecourts selling over a counter. Hardware, spare parts, agro-dealers, pharmacies, wholesalers and distributors selling on account. Plenty of you do both.",
+    cta: "See it running a shop",
     whatsapp:
-      "Hi Corelith, I run a shop, bottle store, kiosk or wholesale business and would like to see the seller setup.",
+      "Hi Corelith, I run a shop, bottle store or wholesale business. What would this cost me and what would it fix?",
     icon: Storefront,
     deliverStep: {
       label: "Pick and hand over",
-      copy: "Stock leaves the shelf against the order, and the on-hand figure, the cost of sale and the margin all move together.",
+      copy: "The stock leaves the shelf against the sale, and your on-hand figure, your cost of sale and your margin all move at the same moment.",
     },
     workflow: ["Order", "Check stock", "Pick and issue", "Invoice", "Payment", "Reorder"],
     modes: [
       {
         name: "Over the counter",
-        who: "Bottle stores, kiosks, tuckshops, supermarkets, forecourts, bars",
-        copy: "There is no quote and no order. The sale is one action at the till, and everything that matters happens behind it — stock, the fiscal receipt, the cash-up and the books.",
-        steps: ["Ring it up", "Take payment", "Stock drops", "Close the shift"],
+        who: "Bottle stores, liquor outlets, kiosks, tuckshops, supermarkets, bars, forecourts",
+        copy: "There is no quote and no order. Somebody walks in, pays and walks out, and the whole sale is one action at the till. Which means every dollar you protect is protected in the second afterwards: the stock drops, the fiscal receipt prints, the cash is counted against what the shift should have taken.",
+        steps: ["Ring it up", "Take cash, card or EcoCash", "Stock drops", "Fiscal receipt", "Close the shift"],
         icon: Storefront,
       },
       {
         name: "On account",
         who: "Hardware, spare parts, agro-dealers, wholesale, distribution",
-        copy: "The full loop runs: a customer asks for a price, you quote off live stock, you pick and deliver against the order, then you invoice and chase the balance.",
+        copy: "A customer asks for a price, and the quote comes off live stock and your real cost, so you know the margin before you send it. Then you pick, deliver, invoice from what actually left the yard, and chase the balance with a statement instead of a phone call.",
         steps: ["Quote", "Order", "Pick and deliver", "Invoice", "Collect"],
         icon: Warehouse,
       },
     ],
     landingPains: [
-      "You find out about a stock-out from the customer, not the system.",
+      "You hear about a stock-out from a customer who has already left.",
       "Nobody can tell you today's margin without a spreadsheet and an evening.",
-      "Branch cash-ups arrive on Monday for money that moved on Thursday.",
+      "Thursday's cash-up reaches you on Monday, when nothing can be done about it.",
     ],
-    landingProof: { value: "1 minute", label: "From till to margin report" },
+    sectionIntros: {
+      pains: {
+        eyebrow: "What it costs you now",
+        title: "Most shops lose more at the counter than they do on price.",
+        copy: "A case here, a short till there, capital parked in stock nobody wants. None of it looks like theft on the day. Add it up over a year and it is usually bigger than the discount you argued over with your supplier.",
+      },
+      workflow: {
+        eyebrow: "How a sale runs",
+        title: "From the shelf to the bank, in one straight line.",
+        copy: "Every step writes to the same record, so nothing gets typed twice and nothing quietly goes missing between the counter and the books.",
+      },
+      capabilities: {
+        eyebrow: "What you actually get",
+        title: "The four things that stop the leak.",
+        copy: "Nothing exotic. Just the parts of a shop that have to agree with each other, finally agreeing with each other.",
+      },
+      outcomes: {
+        eyebrow: "What changes",
+        title: "What the first month should put back in your pocket.",
+        copy: "Agreed with you before go-live and checked afterwards. One caught cash-up, one dead-stock order avoided, and the subscription has already paid for itself.",
+      },
+      commercials: {
+        eyebrow: "What it costs",
+        title: "The price is on the table before you spend an hour on a demo.",
+        copy: "Priced per site, with every cashier and clerk included up to your seat ceiling. Pay for the year and you pay for ten months. Setup is scoped and quoted separately, so you can see what you are buying.",
+      },
+    },
     seo: {
-      title: "POS, retail, wholesale and distribution software in Zimbabwe",
+      title: "POS, stock and wholesale software in Zimbabwe",
       description:
-        "Corelith connects POS, tills, stock, purchasing, invoicing, customer accounts, shift cash-ups, branch control and ZIMRA fiscalisation for Zimbabwean shops, bottle stores, kiosks and wholesalers.",
+        "Know what you hold, what it cost and what it made. Corelith links till, stockroom and ledger for Zimbabwean shops, bottle stores and wholesalers.",
       path: "/home/solutions/sellers",
       keywords: [
         "POS system Zimbabwe",
         "bottle store software Zimbabwe",
         "liquor store POS Zimbabwe",
-        "kiosk and tuckshop POS Zimbabwe",
-        "retail software Zimbabwe",
-        "wholesale software Zimbabwe",
-        "spare parts software Zimbabwe",
         "stock control software Zimbabwe",
+        "wholesale software Zimbabwe",
+        "spare parts shop software Zimbabwe",
         "ZIMRA fiscalisation POS",
+        "shop cash-up software",
       ],
     },
     productVisual: {
@@ -597,44 +653,43 @@ export const segments: MarketingSegment[] = [
       ],
     },
     pains: [
-      "The till drawer and the till report disagree, and nobody can say which cashier or which shift.",
-      "Sales, receiving, transfers and supplier notes never reconcile without someone re-keying them.",
-      "Stock losses only become visible after the cash is already gone.",
-      "The POS, the invoice book and the accounts each hold a different version of the same day.",
-      "Comparing two branches means waiting for two spreadsheets from two people.",
+      "The drawer and the till report disagree, and nobody can say which cashier or which shift, so the loss just gets absorbed.",
+      "Capital sits in lines that have not moved since March, while the fast seller you actually make money on is out of stock again.",
+      "Deliveries, transfers and supplier notes get re-keyed by hand, and every re-key is a chance to lose a case of stock on paper.",
+      "Comparing two branches means waiting for two spreadsheets from two people who are both busy.",
     ],
     capabilities: [
       {
-        title: "Point of sale and cash-up",
-        copy: "Fast till entry, split tenders including cash, card and EcoCash, held carts, returns, and a shift cash-up that shows variance by till and by cashier before anyone goes home.",
+        title: "Till, tender and cash-up",
+        copy: "Fast entry, split payments across cash, card and EcoCash, returns and held carts, then a shift close that shows variance by till and by cashier before anybody goes home.",
         icon: ReceiptLong,
       },
       {
-        title: "Stock and purchasing",
-        copy: "Products, suppliers, purchase orders, receiving, transfers, stock counts and reorder points that fire on their own.",
+        title: "Stock that moves when the stock moves",
+        copy: "Purchase orders, receiving, transfers between branches, counts and reorder points that fire on their own instead of waiting for someone to notice.",
         icon: Package,
       },
       {
-        title: "Invoicing and receivables",
-        copy: "Quotes, invoices, part-payments, customer statements, ageing and exports your accountant will accept.",
+        title: "Invoices, accounts and what you are owed",
+        copy: "Quotes, invoices, part-payments, statements and an ageing list that tells you exactly who is sitting on your money and for how long.",
         icon: Wallet,
       },
       {
-        title: "Branch control",
-        copy: "Sales, stock cover, cash-up status and margin per branch, side by side, without asking anyone for a file.",
+        title: "Branch by branch, side by side",
+        copy: "Sales, stock cover, cash-up status and margin for every branch on one screen, without phoning anyone for a file.",
         icon: BarChart3,
       },
     ],
     outcomes: [
-      "Stock on the system matches stock on the shelf",
-      "Cash-up closes the same day it happens",
-      "Purchasing decisions come off live cover, not memory",
-      "Fiscalised receipts and clean records for ZIMRA",
+      "Short cash is traced to a shift and a person the same day, not written off at month end.",
+      "Dead stock gets spotted while it is still worth something.",
+      "Reordering runs off live cover, so you stop paying for panic buys.",
+      "Fiscal receipts issue from the sale itself, and ZIMRA records are clean without a second exercise.",
     ],
     proofMetrics: [
-      { value: "14 days", label: "Typical go-live for a single-branch seller" },
-      { value: "1 view", label: "Sales, stock, purchasing and receivables together" },
-      { value: "3–30 staff", label: "Where this setup fits best today" },
+      { value: "$29/mo", label: "Where one till and five staff accounts start" },
+      { value: "$0", label: "What adding another cashier costs, up to your seat ceiling" },
+      { value: "Offline", label: "Keeps selling through load-shedding, syncs after" },
     ],
     modules: ["Core platform", "Sell", "Stock", "Books", "Retail pack"],
   },
@@ -645,38 +700,66 @@ export const segments: MarketingSegment[] = [
     title: "Service providers",
     navTitle: "Service providers",
     who: "Cleaning, security, IT, logistics, plant hire, contractors, consultancies",
-    eyebrow: "For businesses that sell people, hours and equipment",
-    headline: "Bill every hour you worked, not every hour you remembered.",
+    eyebrow: "Cleaning, security, IT, logistics, plant hire, contractors",
+    headline: "Bill every hour you worked, not every hour someone remembered.",
     summary:
-      "Corelith turns contracts, schedules and site visits into records that invoice themselves, so recurring work stops leaking between the roster and the invoice book.",
+      "Contracts, rosters and site visits become records that turn themselves into invoices at month end. The work your team did on Tuesday reaches the bill, instead of getting lost between the site and the office.",
     audience:
-      "Cleaning and security companies, IT and facilities providers, transporters, plant hire, contractors and consultancies running recurring work across client sites.",
-    cta: "See the service setup",
+      "Cleaning and security companies, IT and facilities providers, transporters, plant hire yards, contractors and consultancies running recurring work across client sites.",
+    cta: "See it running a contract",
     whatsapp:
-      "Hi Corelith, I run a service business and would like to see the service provider setup.",
+      "Hi Corelith, I run a service business with staff on client sites. Where would this save me money?",
     icon: Work,
     deliverStep: {
       label: "Schedule and complete",
-      copy: "Work is assigned to a person, a site and a date. Completion is captured on the phone that did the work.",
+      copy: "Work is assigned to a person, a site and a date, and completion is captured on the phone that did the job, so there is a record before anyone has to remember.",
     },
     workflow: ["Enquiry", "Quote", "Contract", "Schedule work", "Confirm completion", "Invoice"],
     landingPains: [
+      "Extra work gets done on site and never reaches a bill.",
       "Recurring invoices are rebuilt by hand every single month.",
-      "Work gets done on site and never makes it onto a bill.",
-      "Nobody can prove attendance when a client disputes the month.",
+      "A client disputes attendance and you have nothing to show them.",
     ],
-    landingProof: { value: "0 rebuilds", label: "Recurring invoices raise themselves" },
+    sectionIntros: {
+      pains: {
+        eyebrow: "What it costs you now",
+        title: "The work is fine. The billing is where you lose.",
+        copy: "Service businesses rarely fail on delivery. They fail on the small stuff nobody wrote down: an extra visit, an extra shift, a rate that moved. It is invisible per job and painful per year.",
+      },
+      workflow: {
+        eyebrow: "How a month runs",
+        title: "From signed contract to money in the bank.",
+        copy: "The roster, the site confirmation and the invoice are the same record at three different points. Nobody rebuilds anything.",
+      },
+      capabilities: {
+        eyebrow: "What you actually get",
+        title: "Four things that turn work into revenue.",
+        copy: "Built for a business where the people earning your money are standing on someone else's property.",
+      },
+      outcomes: {
+        eyebrow: "What changes",
+        title: "What the first month should recover.",
+        copy: "Start with unbilled work. It is usually the first thing that pays for the subscription, and it is the number to watch hardest.",
+      },
+      commercials: {
+        eyebrow: "What it costs",
+        title: "You know the price before the proposal.",
+        copy: "Priced per site with staff accounts included up to your ceiling, so putting every supervisor on it costs you nothing. Pay annually and you pay for ten months.",
+      },
+    },
     seo: {
-      title: "Service business software in Zimbabwe",
+      title: "Software for service businesses in Zimbabwe",
       description:
-        "Corelith helps cleaning, security, IT, logistics, plant hire and contracting businesses manage contracts, schedules, site work, timesheets and recurring invoicing.",
+        "Bill every hour you worked. Corelith turns contracts, rosters and site visits into invoices for cleaning, security, IT, logistics and plant hire firms.",
       path: "/home/solutions/service-providers",
       keywords: [
         "service business software Zimbabwe",
         "contract management software Zimbabwe",
-        "field service software Zimbabwe",
-        "recurring invoicing software Zimbabwe",
         "security company software Zimbabwe",
+        "cleaning company software Zimbabwe",
+        "field service software Zimbabwe",
+        "recurring invoicing Zimbabwe",
+        "timesheet software Zimbabwe",
       ],
     },
     productVisual: {
@@ -700,43 +783,43 @@ export const segments: MarketingSegment[] = [
       ],
     },
     pains: [
-      "Contract terms live in a signed PDF, so billing depends on someone remembering the rate.",
-      "Work happens across client sites and only some of it reaches the invoice.",
-      "Rosters, timesheets and payroll are three separate exercises on the same facts.",
-      "Renewals arrive as a surprise instead of a pipeline.",
+      "A callout, an extra clean, an extra guard shift. The client got the value, the invoice went out light, and that gap repeats every month.",
+      "The contract rate lives in a signed PDF, so billing depends on somebody remembering what was agreed two years ago.",
+      "Rosters, timesheets and payroll are three separate exercises done on the same facts, and each one costs a day.",
+      "Renewals arrive as a surprise, which is how a contract you have serviced for three years leaves at the old rate or leaves altogether.",
     ],
     capabilities: [
       {
         title: "Contracts and renewals",
-        copy: "Clients, sites, rates, scope, start and end dates, with renewals surfacing before they lapse.",
+        copy: "Client, sites, rate, scope and dates in one record, with renewals surfacing early enough to reprice them instead of losing them.",
         icon: FileText,
       },
       {
         title: "Scheduling and dispatch",
-        copy: "Assign people and equipment to sites and dates, and confirm completion from a phone in the field.",
+        copy: "Assign people and equipment to a site and a date, and confirm the job from a phone in the field. It works with no signal and syncs later.",
         icon: Calendar,
       },
       {
         title: "Time and attendance",
-        copy: "Who was on site, for how long, approved by whom — the evidence behind the invoice and the payroll run.",
+        copy: "Who was on site, how long for, approved by whom. That is the evidence behind the invoice and the evidence behind the payroll run.",
         icon: Users,
       },
       {
-        title: "Recurring invoicing",
-        copy: "A billing run that reads the contract and the work actually done, then posts straight into the books.",
+        title: "Recurring billing",
+        copy: "A monthly run that reads the contract and the work actually done, raises the invoices and posts them into the books in one pass.",
         icon: ReceiptLong,
       },
     ],
     outcomes: [
-      "Every completed visit reaches an invoice",
-      "Monthly billing takes an hour instead of a week",
-      "Client disputes are answered with records, not arguments",
-      "Renewals get worked before they expire",
+      "Extra work reaches an invoice in the month it happened.",
+      "Monthly billing takes an hour instead of most of a week.",
+      "A disputed month is answered with a register, not an argument.",
+      "Renewals get repriced before they lapse.",
     ],
     proofMetrics: [
-      { value: "1 record", label: "Contract, roster, timesheet and invoice" },
-      { value: "Per site", label: "Billing that follows how you actually sell" },
-      { value: "Offline", label: "Site confirmation works without signal" },
+      { value: "$0", label: "What adding a supervisor or a cleaner costs you" },
+      { value: "Per site", label: "Priced by depots and offices, never by headcount" },
+      { value: "Offline", label: "Site sign-off works where there is no signal" },
     ],
     modules: ["Core platform", "Sell", "Work", "Books", "People", "CRM pack"],
   },
@@ -747,38 +830,66 @@ export const segments: MarketingSegment[] = [
     title: "Workshops",
     navTitle: "Workshops",
     who: "Garages, panel beaters, fitment centres, equipment repair, dealer service bays",
-    eyebrow: "For businesses that fix things for a living",
+    eyebrow: "Garages, panel beaters, fitment centres, equipment repair",
     headline: "Every part on the job card. Every hour on the invoice.",
     summary:
-      "Corelith runs the job from estimate to approval to parts issue to final invoice, so labour and parts stop disappearing between the bay and the front desk.",
+      "The job runs from estimate to approval to parts issue to invoice on one record, so labour and parts stop disappearing between the bay and the front desk. The bill is built from the work that was done, not from what somebody guessed at the end of it.",
     audience:
       "Service garages, panel beaters, fitment centres, plant and equipment repairers, dealership service bays and parts-and-service operators.",
-    cta: "See the workshop setup",
+    cta: "See it running a job card",
     whatsapp:
-      "Hi Corelith, I run a workshop and would like to see the workshop setup.",
+      "Hi Corelith, I run a workshop. I want to see what it does about parts and labour going missing.",
     icon: Wrench,
     deliverStep: {
       label: "Open the job card",
-      copy: "Labour hours and issued parts book against the job as they happen, so the invoice writes itself from the work.",
+      copy: "Labour hours and issued parts book against the job while the work is happening, so the invoice writes itself and nothing has to be reconstructed later.",
     },
     workflow: ["Booking", "Estimate", "Approval", "Job card", "Parts and labour", "Invoice"],
     landingPains: [
-      "Parts walk out of the store and never reach a job card.",
+      "Parts walk out of the store and never land on a job card.",
       "The customer approved a price on WhatsApp that nobody can find.",
       "You cannot say which jobs are stuck without walking the floor.",
     ],
-    landingProof: { value: "Every part", label: "Issued against a job, or not at all" },
+    sectionIntros: {
+      pains: {
+        eyebrow: "What it costs you now",
+        title: "The workshop is busy. The margin is thin. Those two facts are related.",
+        copy: "Nothing dramatic goes wrong in a garage. A part here, half an hour there, one price argument you lost. It only shows up when you compare what the bay produced with what the bank received.",
+      },
+      workflow: {
+        eyebrow: "How a job runs",
+        title: "Booking to invoice, without anything falling off the card.",
+        copy: "Six steps, one record. The estimate becomes the approval, the approval becomes the job, and the job becomes the bill.",
+      },
+      capabilities: {
+        eyebrow: "What you actually get",
+        title: "Four things that keep parts and hours on the bill.",
+        copy: "Built around the job card, because in a workshop the job card is where the money either lands or disappears.",
+      },
+      outcomes: {
+        eyebrow: "What changes",
+        title: "What the first month should stop.",
+        copy: "Parts leakage first. It is measurable, it is usually larger than owners expect, and it is the fastest thing to fix.",
+      },
+      commercials: {
+        eyebrow: "What it costs",
+        title: "Priced per workshop, not per technician.",
+        copy: "Put every technician, storeman and service adviser on it up to your seat ceiling and pay nothing extra. Pay for the year and you pay for ten months.",
+      },
+    },
     seo: {
-      title: "Workshop and garage management software in Zimbabwe",
+      title: "Workshop and garage job card software in Zimbabwe",
       description:
-        "Corelith gives workshops, garages, panel beaters and service bays job cards, estimates, approvals, parts issue, labour costing, service history and invoicing.",
+        "Every part on the job card, every hour on the invoice. Job cards, estimates, approvals, parts issue and costing for Zimbabwean workshops and garages.",
       path: "/home/solutions/workshops",
       keywords: [
         "workshop management software Zimbabwe",
         "garage job card software",
-        "vehicle service software Zimbabwe",
         "panel beater software Zimbabwe",
+        "vehicle service software Zimbabwe",
+        "fitment centre software",
         "parts and labour costing software",
+        "service history software Zimbabwe",
       ],
     },
     productVisual: {
@@ -802,43 +913,43 @@ export const segments: MarketingSegment[] = [
       ],
     },
     pains: [
-      "Parts leave the store on a promise and are never costed to the job.",
-      "Estimates and approvals happen in chats, then cannot be produced when the customer argues.",
-      "Labour is guessed at invoice time because nobody logged the hours.",
-      "Service history sits in a book, so repeat customers get treated like strangers.",
+      "A part leaves the store on a promise, and by invoice time nobody remembers whose job it went to. You paid for it either way.",
+      "Labour gets guessed at the front desk, and a guess is always rounded down, so every job comes out thinner than it should have.",
+      "An approval sits in a chat, so when the customer argues about the bill you either produce nothing or you discount.",
+      "Service history lives in a book, which means a customer who has spent three years with you gets treated like a stranger and priced like one.",
     ],
     capabilities: [
       {
         title: "Estimates and approvals",
-        copy: "Quote the job, send it, capture the customer's approval, and keep it attached to the record for good.",
+        copy: "Quote the job, send it, capture the yes, and keep it attached to the record for good. A dispute becomes a document instead of a discount.",
         icon: ClipboardList,
       },
       {
         title: "Job cards",
-        copy: "Bookings, bay and technician allocation, labour hours, status, checks and sign-off.",
+        copy: "Booking, bay, technician, hours, status and sign-off on one card the whole workshop reads without walking anywhere.",
         icon: Wrench,
       },
       {
-        title: "Parts and costing",
-        copy: "Parts stock, issue against a job, purchasing for backorders, and true cost against every invoice line.",
+        title: "Parts issue and true cost",
+        copy: "Parts stock, issued against a job or not issued at all, with purchasing for backorders and real cost sitting under every invoice line.",
         icon: Package,
       },
       {
-        title: "Customer and asset history",
-        copy: "Every vehicle or machine keeps its own file: work done, parts fitted, what it cost, what is due next.",
+        title: "Vehicle and machine history",
+        copy: "Every unit keeps its own file: what was done, what was fitted, what it cost and what is due next. That last one brings people back.",
         icon: History,
       },
     ],
     outcomes: [
-      "Parts leakage becomes visible and then stops",
-      "Approvals are on the record before work starts",
-      "Invoices match the work that was actually done",
-      "Service history brings customers back",
+      "Parts are costed to a job or they do not leave the store.",
+      "The approval exists before the spanner does.",
+      "Invoices match the work, so margin per job stops being a mystery.",
+      "Due services get chased, and repeat work stops depending on the customer remembering.",
     ],
     proofMetrics: [
-      { value: "1 job card", label: "Labour, parts, approval and invoice" },
-      { value: "6 steps", label: "Booking to invoice, ready before the demo" },
-      { value: "Per bay", label: "Live status without walking the floor" },
+      { value: "$29/mo", label: "Where a single-bay workshop starts" },
+      { value: "One job card", label: "Parts, hours, approval and invoice on the same record" },
+      { value: "30 days", label: "Scoped setup from workflow mapping to go-live" },
     ],
     modules: ["Core platform", "Sell", "Stock", "Work", "Books", "Workshop pack"],
   },
@@ -848,39 +959,67 @@ export const segments: MarketingSegment[] = [
     pricingSlug: "manufacturers",
     title: "Manufacturers",
     navTitle: "Manufacturers",
-    who: "Food processing, fabrication, packaging, furniture, chemicals, light assembly",
-    eyebrow: "For businesses that turn raw materials into orders",
-    headline: "Know what a unit costs you before you agree the price.",
+    who: "Food and beverage, fabrication, packaging, furniture, chemicals, assembly",
+    eyebrow: "Food and beverage, fabrication, packaging, furniture, assembly",
+    headline: "Know what a unit costs you before you agree a price.",
     summary:
-      "Corelith follows raw material into production and finished goods out to customers, so yield, wastage and true unit cost stop being an argument at month end.",
+      "Raw material goes into a run, output and wastage come out of it, and the true cost lands on the finished goods it produced. So you quote from a number instead of a feeling, and you find out about a bad run while it is still running.",
     audience:
       "Food and beverage processors, fabricators, packaging and printing works, furniture makers, chemical blenders and light assembly operations.",
-    cta: "See the production setup",
+    cta: "See it running a batch",
     whatsapp:
-      "Hi Corelith, I run a manufacturing or production business and would like to see the production setup.",
+      "Hi Corelith, I run a production business. I want to see how you get to a real cost per unit.",
     icon: Factory,
     deliverStep: {
       label: "Make the batch",
-      copy: "Raw material is consumed, output is booked, and the cost of the run lands on the finished goods it produced.",
+      copy: "Materials are issued against the run, output and wastage are booked as they happen, and the cost of the run settles onto the goods it produced.",
     },
     workflow: ["Order", "Plan the run", "Issue materials", "Produce", "Book output", "Dispatch and invoice"],
     landingPains: [
-      "Unit cost is a guess, so quoting is a gamble on your own margin.",
-      "Wastage and yield are only visible after stock-take.",
-      "Machine downtime is discussed but never actually recorded.",
+      "Unit cost is a guess, so every price you quote is a gamble on your own margin.",
+      "Yield and wastage only appear at stock-take, months too late.",
+      "Machine downtime gets discussed and never actually recorded.",
     ],
-    landingProof: { value: "Per batch", label: "Real cost, yield and wastage" },
+    sectionIntros: {
+      pains: {
+        eyebrow: "What it costs you now",
+        title: "You cannot price properly if you cannot cost properly.",
+        copy: "Most production businesses here are not short of orders. They are short of a defensible cost per unit, which means they win the wrong jobs at the wrong price and only discover it much later.",
+      },
+      workflow: {
+        eyebrow: "How a run works",
+        title: "Raw material in, finished goods out, cost attached to both.",
+        copy: "The run is the record. What goes in, what comes out, what was lost, and what the whole thing cost you.",
+      },
+      capabilities: {
+        eyebrow: "What you actually get",
+        title: "Four things that turn production into numbers.",
+        copy: "Enough to cost a batch properly without a consultant and without a plant-wide project.",
+      },
+      outcomes: {
+        eyebrow: "What changes",
+        title: "What the first quarter should settle.",
+        copy: "Yield and wastage stop being an argument at month end and start being something you watch daily, while there is still time to act.",
+      },
+      commercials: {
+        eyebrow: "What it costs",
+        title: "Priced by plant and store, not by how many people work there.",
+        copy: "Every operator, storeman and supervisor is included up to your seat ceiling. Pay annually and you pay for ten months. Setup is quoted separately against your actual lines.",
+      },
+    },
     seo: {
       title: "Manufacturing and production software in Zimbabwe",
       description:
-        "Corelith tracks raw materials, production runs, yield, wastage, finished goods, unit cost, maintenance and dispatch for Zimbabwean manufacturers.",
+        "Know what a unit costs before you quote it. Corelith tracks materials, runs, yield, wastage and unit cost for Zimbabwean manufacturers and processors.",
       path: "/home/solutions/manufacturers",
       keywords: [
         "manufacturing software Zimbabwe",
         "production management software Zimbabwe",
-        "raw material tracking software",
         "unit cost software Zimbabwe",
         "food processing software Zimbabwe",
+        "raw material tracking software",
+        "yield and wastage tracking",
+        "plant maintenance software Zimbabwe",
       ],
     },
     productVisual: {
@@ -904,43 +1043,43 @@ export const segments: MarketingSegment[] = [
       ],
     },
     pains: [
-      "Nobody can produce a defensible cost per unit, so pricing is set by feel.",
-      "Raw material issues are recorded on paper and reconciled long after the run.",
-      "Yield and wastage only appear at stock-take, when it is far too late to act.",
-      "Breakdowns and planned maintenance are not attached to the output they cost you.",
+      "You agree a price that feels about right, and find out at stock-take whether the run made money. That is a bet settled three months late.",
+      "Material issues are written on paper and reconciled long after the run, so a bad yield is a rumour rather than a number.",
+      "Wastage is normal until somebody measures it, and by the time anyone does, a season of it is already gone.",
+      "A line goes down and the cost of it is never attached to the output it took away, so maintenance keeps losing the argument for budget.",
     ],
     capabilities: [
       {
         title: "Materials and receiving",
-        copy: "Raw material stock, suppliers, purchase orders, receiving and reorder points across every store.",
+        copy: "Raw material stock across every store, with suppliers, purchase orders, receiving and reorder points that warn you before the line stops.",
         icon: Warehouse,
       },
       {
         title: "Production runs",
-        copy: "Plan a run, issue materials against it, book output and wastage, and close it with a real cost.",
+        copy: "Plan a run, issue against it, book output and wastage as they happen, then close it with a cost you can defend.",
         icon: Factory,
       },
       {
         title: "Cost and yield",
-        copy: "Cost per unit, yield per run and wastage by line — the numbers that decide whether an order is worth taking.",
+        copy: "Cost per unit, yield per run and wastage by line. These are the numbers that decide whether an order is worth taking at all.",
         icon: ChartLine,
       },
       {
         title: "Plant and maintenance",
-        copy: "Equipment register, planned maintenance, breakdowns and downtime tied to the output they interrupted.",
+        copy: "Equipment register, planned maintenance and breakdowns tied to the production they interrupted, so downtime finally has a price on it.",
         icon: Wrench,
       },
     ],
     outcomes: [
-      "A unit cost you can quote against with confidence",
-      "Wastage caught during the run, not at stock-take",
-      "Raw material cover visible before the line stops",
-      "Downtime measured against what it actually cost",
+      "You quote from a costed unit, and low-margin orders get refused instead of won.",
+      "Wastage is caught during the run, while it can still be corrected.",
+      "Raw material cover is visible before a stock-out idles a shift.",
+      "Downtime carries a number, so maintenance spend gets decided on evidence.",
     ],
     proofMetrics: [
-      { value: "Per run", label: "Materials in, output and wastage out" },
-      { value: "Live cost", label: "Costing that updates as the run does" },
-      { value: "Multi-store", label: "Raw, WIP and finished goods held apart" },
+      { value: "Per run", label: "Materials in, output and wastage out, costed" },
+      { value: "$189/mo", label: "Eight sites and 60 staff accounts on Scale" },
+      { value: "30 days", label: "From workflow mapping to your first costed run" },
     ],
     modules: ["Core platform", "Stock", "Work", "Books", "Maintenance pack"],
   },
@@ -950,32 +1089,58 @@ export const segments: MarketingSegment[] = [
     pricingSlug: "sales-teams",
     title: "Sales teams",
     navTitle: "Sales teams",
-    who: "Field sales, distributor reps, B2B account teams, dealership sales floors",
-    eyebrow: "For the people who start the loop",
-    headline: "A pipeline your reps actually update, because it pays them.",
+    who: "Field sales, distributor reps, B2B account teams, dealership floors",
+    eyebrow: "Field sales, distributor reps, account teams, dealership floors",
+    headline: "Quotes off real stock. Follow-ups that happen. Commission nobody argues about.",
     summary:
-      "Corelith puts leads, quotes, follow-ups and commission on the same rail as stock and invoicing, so a won deal becomes an order without anyone re-typing it.",
+      "Leads, quotes and follow-ups sit on the same rail as stock and invoicing, so a won deal becomes an order without anyone re-typing it. Reps stop promising goods you have already sold, and quiet deals stop being free money for your competitor.",
     audience:
-      "Field sales teams, distributor and agency reps, B2B account managers, dealership sales floors and any team carrying a target against real stock.",
-    cta: "See the sales setup",
+      "Field sales teams, distributor and agency reps, B2B account managers, dealership floors and any team carrying a target against real stock.",
+    cta: "See it running a pipeline",
     whatsapp:
-      "Hi Corelith, I run a sales team and would like to see the sales team setup.",
+      "Hi Corelith, I run a sales team. Show me how quotes, follow-ups and commission work.",
     icon: Megaphone,
     deliverStep: {
       label: "Win and hand over",
-      copy: "The won deal converts into an order with the stock already reserved, so nothing is re-keyed and nothing is promised twice.",
+      copy: "The won deal turns into an order with the stock already reserved against it, so nothing is re-keyed and nothing gets promised to two customers.",
     },
     workflow: ["Lead", "Qualify", "Quote", "Follow up", "Close", "Hand to fulfilment"],
     landingPains: [
       "The pipeline is a spreadsheet that is honest once a month.",
-      "Reps quote stock that was sold yesterday by someone else.",
-      "Commission is argued over instead of calculated.",
+      "Reps quote stock that someone else sold yesterday.",
+      "Commission gets argued over instead of calculated.",
     ],
-    landingProof: { value: "Live stock", label: "Behind every quote a rep sends" },
+    sectionIntros: {
+      pains: {
+        eyebrow: "What it costs you now",
+        title: "The deals you lose quietly cost more than the ones you lose loudly.",
+        copy: "A rejected quote at least tells you something. A quote nobody followed up just disappears, and it was revenue you already had in your hand.",
+      },
+      workflow: {
+        eyebrow: "How a deal runs",
+        title: "Lead to cash, without a handover that loses things.",
+        copy: "The quote, the order and the invoice are the same document at three points in its life. Fulfilment reads what the rep wrote, not a retyped version of it.",
+      },
+      capabilities: {
+        eyebrow: "What you actually get",
+        title: "Four things that make reps update it without being chased.",
+        copy: "Because a pipeline only stays honest when the rep gets something out of keeping it honest.",
+      },
+      outcomes: {
+        eyebrow: "What changes",
+        title: "What the first quarter should recover.",
+        copy: "Start with deals that went quiet. They are the cheapest revenue in the business, and they are already yours.",
+      },
+      commercials: {
+        eyebrow: "What it costs",
+        title: "Priced per site, so growing the team does not grow the bill.",
+        copy: "Add every rep up to your seat ceiling for nothing. Pay for the year and you pay for ten months. Setup is scoped and quoted before you commit.",
+      },
+    },
     seo: {
-      title: "Sales team and CRM software in Zimbabwe",
+      title: "Sales team CRM and quoting software in Zimbabwe",
       description:
-        "Corelith gives sales teams leads, pipeline, quotations off live stock, follow-up reminders, targets and commission, connected to invoicing and fulfilment.",
+        "Quote off live stock, chase every deal and pay commission from paid invoices. Corelith runs pipeline and quoting for Zimbabwean sales teams.",
       path: "/home/solutions/sales-teams",
       keywords: [
         "sales CRM Zimbabwe",
@@ -983,6 +1148,8 @@ export const segments: MarketingSegment[] = [
         "quotation software Zimbabwe",
         "field sales app Zimbabwe",
         "commission tracking software",
+        "distributor rep software Zimbabwe",
+        "B2B sales software Zimbabwe",
       ],
     },
     productVisual: {
@@ -1006,43 +1173,43 @@ export const segments: MarketingSegment[] = [
       ],
     },
     pains: [
-      "Leads live in personal phones, so a rep leaving takes the pipeline with them.",
-      "Quotes go out against stock that is already committed elsewhere.",
-      "Follow-ups depend on memory, and the ones that slip are the ones worth money.",
-      "Targets and commission are reconstructed at month end and disputed every time.",
+      "Leads live in personal phones, so when a rep resigns the pipeline resigns with them and walks to a competitor.",
+      "A quote goes out against stock already committed elsewhere, and you either disappoint the customer or buy in at a loss to save face.",
+      "Follow-ups depend on memory, and the ones that slip are always the big ones, because big deals take longer.",
+      "Targets and commission are rebuilt from scratch every month end, disputed every month end, and paid on invoices that were never collected.",
     ],
     capabilities: [
       {
         title: "Leads and pipeline",
-        copy: "Every enquiry captured with an owner, a value, a stage and a next action that is actually dated.",
+        copy: "Every enquiry with an owner, a value, a stage and a next action that carries a date. It belongs to the business, not to a phone.",
         icon: TrendingUp,
       },
       {
         title: "Quotes off live stock",
-        copy: "Price from real availability and real cost, send the document, and convert the accepted quote into an order.",
+        copy: "Price from real availability and real cost, send the document, and turn the accepted quote into an order without retyping a line.",
         icon: FileText,
       },
       {
-        title: "Follow-up discipline",
-        copy: "Reminders, call logs and ageing deals surfaced daily so nothing worth money goes quiet.",
+        title: "Follow-up that does not slip",
+        copy: "Reminders, call logs and ageing deals surfaced every morning, so quiet deals get chased while they are still worth chasing.",
         icon: Calendar,
       },
       {
         title: "Targets and commission",
-        copy: "Targets per rep, live attainment, and commission calculated from invoices that were actually paid.",
+        copy: "Target per rep, live attainment, and commission worked out from invoices that were actually paid. Calculated once, disputed never.",
         icon: Payments,
       },
     ],
     outcomes: [
-      "A pipeline that survives a rep resigning",
-      "Quotes that never oversell available stock",
-      "Follow-ups that happen on the day they are due",
-      "Commission calculated once, from paid invoices",
+      "The pipeline survives a resignation.",
+      "Quotes never oversell stock, so you stop paying to fix promises.",
+      "Deals get chased on the day they are due, not the week after they died.",
+      "Commission is paid off collected cash, which protects margin and ends the monthly argument.",
     ],
     proofMetrics: [
-      { value: "Lead to cash", label: "One rail, no re-keying at handover" },
-      { value: "Per rep", label: "Pipeline, attainment and commission" },
-      { value: "On a phone", label: "Built for reps who are not at a desk" },
+      { value: "$0", label: "What adding a rep costs, up to your seat ceiling" },
+      { value: "Live stock", label: "Behind every quote a rep sends" },
+      { value: "On a phone", label: "Built for people who are not at a desk" },
     ],
     modules: ["Core platform", "Sell", "Stock", "Books", "CRM pack"],
   },
@@ -1084,77 +1251,124 @@ export const getCanonicalSolutionSlug = getCanonicalSegmentSlug;
  * rather than an owner. Mixing them into the main funnel weakens both stories.
  */
 export const schoolsTrack = {
-  eyebrow: "A separate track for schools",
-  headline: "One system for admissions, fees, academics and parents.",
+  eyebrow: "Corelith for schools",
+  headline: "Collect the fees you are owed. Keep one record of every child.",
   summary:
-    "Corelith Schools connects the registrar, the bursar, the staff room and the parent on one record — priced per term against enrolment, and rolled out with the leadership team rather than sold over a checkout page.",
+    "Admissions, fees, academics, boarding and parents run off one student record instead of four departmental copies. Arrears become a list the bursar works daily rather than a shock at the end of term, and the head walks into a board meeting with the numbers already agreed.",
   audience:
-    "Private and mission schools, boarding schools, multi-campus groups, colleges and training institutions.",
-  cta: "See schools and pricing",
+    "Private and mission schools, boarding schools, colleges and multi-campus groups, where the head, the bursar and the board all need the same figures to say the same thing.",
+  cta: "Arrange a school consultation",
+  secondaryCta: "WhatsApp us",
   whatsapp:
     "Hi Corelith, I am from a school and would like to talk about Corelith Schools.",
   icon: Building2,
+  assurances: [
+    "From $249 per campus, per term",
+    "Unlimited staff and teacher accounts",
+    "Your records migrated before you open",
+  ],
   workflow: ["Application", "Admission", "Fee schedule", "Payment", "Academics", "Parent portal"],
+  sectionIntros: {
+    why: {
+      eyebrow: "Why schools are different",
+      title: "A school does not run on invoices and stock. It runs on a term.",
+      copy: "The money arrives three times a year. The decision goes through a board, not an owner. The records you keep answer to the ministry. So a system sold as a monthly subscription against an order book was never built for you.",
+    },
+    year: {
+      eyebrow: "The school year",
+      title: "Admitted once, read by everybody.",
+      copy: "The registrar admits a child, and from that moment the bursar, the class teacher and the parent are all reading the same record rather than keeping their own copy of it.",
+    },
+    included: {
+      eyebrow: "What is included",
+      title: "Everything the school office does, on one system.",
+      copy: "Admissions through to report cards, with the finance side connected rather than bolted on afterwards by someone with a spreadsheet.",
+    },
+    pricing: {
+      eyebrow: "Schools pricing",
+      title: "Per campus, per term, set by enrolment.",
+      copy: "Three terms a year, so each band covers roughly four months. Bands are flat, so growing inside yours never costs more, and every band carries unlimited staff and teacher accounts.",
+    },
+    addOns: {
+      eyebrow: "School add-ons",
+      title: "Transport, fiscalisation, branding and migration.",
+      copy: "Priced per term alongside your band. Data migration is the exception: one charge at the start of the rollout and nothing after it.",
+    },
+    outcomes: {
+      eyebrow: "What should change",
+      title: "What the first term is supposed to fix.",
+      copy: "Agreed with the head and the bursar before the rollout starts, then reviewed together at the end of the term. If collections have not moved, we will say so.",
+    },
+    faq: {
+      eyebrow: "From school leadership",
+      title: "The questions a board asks before it approves anything.",
+      copy: "Written for the meeting where somebody asks what this costs, what happens to our records, and what we do if it does not work.",
+    },
+  },
   pains: [
-    "Admissions, student records, fees and academics each live in a different department's file.",
-    "Parents phone the bursar for a balance that should be on their own screen.",
-    "Leadership cannot see finance, attendance and academics in one place before a board meeting.",
-    "Procurement and committees need a rollout plan, not a free trial link.",
+    "Fees are owed, but nobody can produce today's arrears figure without three departments and half a day, so chasing starts far too late in the term.",
+    "Admissions, student records, fees and academics live in four different files, and when they disagree the school defends the wrong number to a parent.",
+    "Parents ring the bursar for a balance that should be on their own screen, and the office loses hours a week to it.",
+    "The head walks into a board meeting with finance, attendance and results from three sources that were never reconciled with each other.",
   ],
   capabilities: [
     {
       title: "Admissions and student records",
-      copy: "Applications, offers, enrolment, guardians, classes, documents and the full student file in one place.",
+      copy: "Applications, offers, enrolment, guardians, classes, documents and the full student file in one place, so a child is captured once and never re-typed.",
       icon: ClipboardList,
     },
     {
       title: "Fees and finance",
-      copy: "Fee structures, bulk invoicing, receipts, arrears, waivers, statements and a bursar's report that reconciles.",
+      copy: "Fee structures, bulk invoicing, receipts, waivers, statements and an arrears list the bursar can work through daily instead of discovering at term end.",
       icon: Payments,
     },
     {
       title: "Academics",
-      copy: "Attendance registers, subjects, teachers, marks entry, moderation windows and published report cards.",
+      copy: "Attendance registers, subjects, teachers, marks entry, moderation windows and report cards that publish without a fortnight of collation.",
       icon: FileText,
     },
     {
       title: "Boarding and welfare",
-      copy: "Hostels, beds, leave, sanatorium and the day-to-day records a boarding school has to keep.",
+      copy: "Hostels, beds, leave, sanatorium and the day-to-day records a boarding school is expected to be able to produce on request.",
       icon: Building2,
     },
     {
-      title: "Portals",
-      copy: "Parent, student, teacher and staff access, each seeing exactly what their role should see.",
+      title: "Parent and teacher portals",
+      copy: "Parents check balances, statements and results on their own phone. That is a phone call the bursar's office does not have to take.",
       icon: Users,
     },
     {
-      title: "Leadership reporting",
-      copy: "Enrolment, collections, arrears, attendance and results in the shape a board actually asks for.",
+      title: "Reporting for the board",
+      copy: "Enrolment, collections, arrears, attendance and results in the shape a board actually asks for, ready before the meeting rather than during it.",
       icon: BarChart3,
     },
   ],
   outcomes: [
-    "One student record instead of four departmental copies",
-    "Fee collection and arrears visible daily, not at term end",
-    "Parents self-serve balances, statements and results",
-    "A rollout plan the board can approve",
+    "Arrears are visible from week one of term, so collection starts while parents still have the money.",
+    "One student record replaces four departmental copies, and the school stops defending figures it cannot back.",
+    "Parents self-serve balances, statements and results, which takes a day a week off the bursar's office.",
+    "Term-end reporting is a page the head opens, not a fortnight of collation before a board meeting.",
   ],
   faqs: [
     {
-      q: "Why are schools priced per term?",
-      a: "Because that is how a school budgets. Fees come in per term, so the software cost sits in the same cycle instead of arriving as a monthly debit against an account that only fills three times a year.",
+      q: "Why are you priced per term instead of per month?",
+      a: "Because that is how a school's money arrives. Fees come in three times a year, so a monthly debit hits an account that is empty for large parts of it. A term price sits inside the same budget line the board already approves, and there are three of them a year.",
     },
     {
-      q: "Can you migrate our current student and fee records?",
-      a: "Yes. Data migration is a scoped item on the schools track — we import students, guardians, classes, fee structures and outstanding balances so you open the new term with correct opening figures.",
+      q: "What happens to the records we already have?",
+      a: "They come with you. Data migration is a scoped, one-off item at $199: students, guardians, classes, fee structures and outstanding balances are imported so you open the new term with correct opening figures rather than a blank system and a backlog.",
     },
     {
-      q: "Do parents need to install anything?",
-      a: "No. The parent portal runs in a browser on any phone, and balances, statements and results are available without calling the bursar.",
+      q: "Our internet is unreliable and the power goes. Will registers and receipts still work?",
+      a: "Yes. Attendance capture and fee receipting keep working with no connection and sync once it returns. A school day should not stop because the line does.",
     },
     {
-      q: "What about multi-campus groups?",
-      a: "The Group band consolidates campuses under one set of books and one reporting line while each campus keeps its own registers, fee structures and staff.",
+      q: "Do parents have to install an application?",
+      a: "No. The parent portal opens in a browser on any phone. Balances, statements and results are there without anybody ringing the bursar, which is where most of the office's lost time goes.",
+    },
+    {
+      q: "We are a group with several campuses. Does each one keep its own registers?",
+      a: "Yes. Every campus keeps its own registers, fee structure and staff, while the group consolidates into one set of books and one reporting line. The Group band is quoted, and the per-student rate stays below the Premier band so growing never costs you more per head.",
     },
   ],
 } as const;
@@ -1168,9 +1382,9 @@ export const coreModules = [
     name: "Sell",
     icon: ReceiptLong,
     copy:
-      "Leads, quotations, orders, point of sale, invoices, receipts, customer accounts and statements.",
+      "Leads, quotes, orders, point of sale, invoices, receipts, customer accounts and statements.",
     connection:
-      "A sale writes to the customer record, reduces stock, books the margin and posts to the ledger in one action.",
+      "A sale writes to the customer, drops the stock, books the margin and posts to the ledger in one action, so your day's takings and your day's margin are the same number.",
     highlights: ["Quotes and orders", "Point of sale", "Invoices and receipts", "Customer statements"],
   },
   {
@@ -1179,16 +1393,16 @@ export const coreModules = [
     copy:
       "Products, suppliers, purchase orders, receiving, warehouses, transfers, counts and reorder points.",
     connection:
-      "Receiving updates on-hand quantities, average cost and the reorder signals purchasing works from.",
+      "Receiving updates what you hold, what it cost you and what needs ordering, so buying decisions come off live cover instead of memory.",
     highlights: ["Multi-store inventory", "Purchase orders", "Transfers and counts", "Reorder alerts"],
   },
   {
     name: "Work",
     icon: Wrench,
     copy:
-      "Job cards, production runs, scheduled service visits, equipment, maintenance and completion sign-off.",
+      "Job cards, production runs, service visits, equipment, maintenance and completion sign-off.",
     connection:
-      "Whatever you deliver — a job, a batch or a site visit — consumes stock and labour against one costed record.",
+      "Whatever you deliver consumes parts and hours against one costed record, so the invoice is built from the work rather than from a guess.",
     highlights: ["Job cards", "Production runs", "Scheduling", "Maintenance"],
   },
   {
@@ -1197,7 +1411,7 @@ export const coreModules = [
     copy:
       "Cash and bank, receivables, payables, expenses, VAT, fixed assets, multi-currency and financial statements.",
     connection:
-      "Sales and purchases post themselves, so the trial balance is a report rather than a reconstruction.",
+      "Sales and purchases post themselves, so the trial balance is a page you open rather than a year your accountant rebuilds.",
     highlights: ["Receivables and payables", "Banking", "VAT and fiscalisation", "Financial statements"],
   },
   {
@@ -1206,103 +1420,132 @@ export const coreModules = [
     copy:
       "Staff records, roles and permissions, attendance, approvals, payroll and per-user accountability.",
     connection:
-      "Every record carries who created, approved or changed it, so accountability does not depend on trust alone.",
+      "Every record carries who created, approved or changed it, so control does not rest on one trusted person staying honest and staying employed.",
     highlights: ["Roles and permissions", "Attendance", "Approvals", "Payroll"],
   },
 ];
 
 export const platformCapabilities = [
   {
-    title: "Works offline",
-    copy: "Sales, stock moves and attendance keep working through load-shedding and dead links, then sync when the connection returns.",
+    title: "It works when the power does not",
+    copy: "Sales, stock moves and attendance keep going through load-shedding and dead links, then sync the moment the connection returns. A closed till is lost revenue you never get back.",
     icon: WifiOff,
   },
   {
-    title: "Built for phones",
-    copy: "The people doing the work are on a phone in a yard, a bay or a client site — not at a desk. Every daily screen is built for that.",
+    title: "Built for a phone",
+    copy: "The people earning your money are in a yard, a bay or on a client site. Every daily screen is built for the device they are actually holding.",
     icon: Storefront,
   },
   {
     title: "ZIMRA fiscalisation",
-    copy: "Fiscal receipts and the FDMS integration are part of the product, not a third-party connector you have to maintain.",
+    copy: "Fiscal receipts and the FDMS link are part of the product. Not a third-party connector you pay for, maintain and get blamed for when it breaks.",
     icon: ShieldCheck,
   },
   {
-    title: "Multi-site and multi-currency",
-    copy: "Branches, warehouses and campuses roll up into one set of books, in USD and ZWG, without a separate consolidation exercise.",
+    title: "Many sites, two currencies",
+    copy: "Branches, warehouses and campuses roll into one set of books in USD and ZWG, without a month-end consolidation exercise done by hand.",
     icon: ArrowRightLeft,
   },
   {
-    title: "Roles that hold",
-    copy: "Approval limits, permission sets and an audit trail on every record, so control does not rest on one trusted person.",
+    title: "Roles that actually hold",
+    copy: "Approval limits, permission sets and an audit trail on every record. Discounts, write-offs and stock adjustments stop being anonymous.",
     icon: ShieldCheck,
   },
   {
-    title: "Reports on demand",
-    copy: "Margin, ageing, stock cover, yield and branch performance are pages you open, not files somebody has to build.",
+    title: "Answers, not report requests",
+    copy: "Margin, ageing, stock cover, yield and branch performance are pages you open. Nobody spends a weekend building them.",
     icon: BarChart3,
   },
 ];
 
 export const launchSprintSteps = [
   {
-    title: "Workflow diagnosis",
-    copy: "We map how orders, stock, jobs, invoices, payments and approvals move through your business today.",
+    title: "Map how you run today",
+    copy: "We walk through how orders, stock, jobs, invoices, payments and approvals actually move through your business, including the bits that only happen because one person remembers to do them.",
     icon: ClipboardList,
   },
   {
-    title: "Configuration",
-    copy: "The core platform, your industry pack, branches, roles and the first reports get set up around that map.",
+    title: "Configure it around that map",
+    copy: "The core platform, your industry pack, your sites, your roles and your approval limits are set up to match what we found, not a generic template.",
     icon: Dashboard,
   },
   {
-    title: "Data import",
-    copy: "Products, customers, suppliers, opening balances and opening stock loaded within an agreed scope.",
+    title: "Bring your data across",
+    copy: "Products, customers, suppliers, opening balances and opening stock loaded within an agreed scope, so day one starts from your real position.",
     icon: ArrowRightLeft,
   },
   {
-    title: "Team training",
-    copy: "The people who sell, receive, approve, work the jobs and read the reports are trained on their own data.",
+    title: "Train the people doing the work",
+    copy: "Cashiers, storemen, technicians, supervisors and whoever reads the reports get trained on your own data. Training on a demo account is how adoption dies.",
     icon: Users,
   },
   {
-    title: "Go live",
-    copy: "First invoices, first receipts, first job cards, first close of shift — with us on the line while it happens.",
+    title: "Go live with us on the line",
+    copy: "First invoices, first receipts, first job cards, first close of shift, with someone reachable while it is happening rather than the next working day.",
     icon: CheckCircle,
   },
   {
-    title: "Support and improve",
-    copy: "WhatsApp follow-up, adoption checks and a review of the first month's numbers against what we agreed.",
+    title: "Follow up and check it stuck",
+    copy: "WhatsApp follow-up through the first month, an adoption check, and a review of the first month's numbers against the targets we agreed at the start.",
     icon: LifeBuoy,
   },
 ];
 
+/** What has to be true before a rollout counts as finished. */
+export const launchSprintDone = [
+  "Products, customers, suppliers and opening balances loaded within the scope we agreed",
+  "Roles, permissions and approval limits set for the people actually doing the work",
+  "Real invoices, receipts, stock movements and job cards created on live data",
+  "The first weekly operating report opened and understood by the owner",
+  "A named channel for questions, agreed before anybody needs it",
+  "The next module identified only when there is a number saying it will pay for itself",
+];
+
+/** What the onboarding fee buys, shown on the pricing page. */
+export const onboardingCovers = [
+  "Mapping how orders, stock, jobs, invoices and approvals actually move through your business today",
+  "Configuring the platform, your industry pack, your sites and who is allowed to do what",
+  "Importing products, customers, suppliers, opening balances and opening stock",
+  "Training the people who will use it every day, on your own data",
+  "Standing with you through your first live day, first invoices and first cash-up",
+  "WhatsApp follow-up through the first month, then a review of the numbers against what we agreed",
+];
+
+/** A first rollout that pays for itself before it grows. */
+export const firstRollout = [
+  "The core platform, your sites, your people and what each of them is allowed to do",
+  "The one industry pack that matches how you deliver",
+  "Stock or job cards, whichever is bleeding hardest right now",
+  "Invoicing and receipts, fiscalised where ZIMRA requires it",
+  "The two or three reports you will open on a Monday morning",
+];
+
 export const pricingPrinciples = [
-  "The plan covers sites and capacity, never headcount.",
-  "Add every cashier, clerk, rep and technician you need up to your seat ceiling.",
-  "Onboarding is quoted separately because migration and training are real work.",
-  "Start with the one pack that fixes this month's problem.",
-  "Add branches, payroll, portals and finance depth when they pay for themselves.",
-  "Schools stay on their own per-term path.",
+  "The plan covers sites and capacity. It never counts heads.",
+  "Add every cashier, clerk, rep and technician you need up to your seat ceiling, at no extra cost.",
+  "Extra seats come in packs of five. Extra sites bill at your plan's per-site rate.",
+  "Pay for the year and you pay for ten months.",
+  "Onboarding is quoted separately, because migration and training are real work by real people.",
+  "Start with the one pack fixing this month's problem. Add depth when it pays for itself.",
 ];
 
 export const proofFrames = [
   {
-    title: "Money that reaches a bill",
+    title: "Work that reaches a bill",
     metric: "Nothing unbilled",
-    copy: "Work completed, parts issued and stock delivered that never made it onto an invoice. This is almost always where the system pays for itself first, and it is the number we ask you to watch hardest.",
+    copy: "Jobs completed, parts issued and stock delivered that never made it onto an invoice. This is usually where the money comes back first, and it is the number we ask you to watch hardest.",
     icon: Coins,
   },
   {
-    title: "What the shelf says vs what you say",
+    title: "What the shelf says against what you say",
     metric: "System matches shelf",
-    copy: "The gap between what the system thinks you hold and what a physical count actually finds. We measure it before go-live so the after number means something.",
+    copy: "The gap between what the system thinks you hold and what a physical count actually finds. We measure it before go-live so the number afterwards means something.",
     icon: PackageCheck,
   },
   {
-    title: "Time to a real answer",
+    title: "Time to a straight answer",
     metric: "Days to minutes",
-    copy: "How long it takes you to answer what you made this week. If that is still a spreadsheet exercise after rollout, the rollout did not work and we will say so.",
+    copy: "How long it takes you to answer what you made this week. If that is still a spreadsheet exercise a month after go-live, the rollout did not work and we will say so.",
     icon: BarChart3,
   },
 ];
@@ -1315,10 +1558,10 @@ export const launchTargets = [
 
 export const contactChannels = [
   {
-    title: "WhatsApp sales",
+    title: "WhatsApp",
     value: WHATSAPP_DISPLAY,
     icon: ClipboardList,
-    copy: "The fastest way to a practical conversation, a demo slot or a rollout question.",
+    copy: "Fastest answer on price, fit and whether this would actually help your business.",
     href: whatsappHref("Hi Corelith, I would like help finding the right setup."),
     external: true,
   },
@@ -1326,75 +1569,88 @@ export const contactChannels = [
     title: "Email",
     value: "hello@pagka.dev",
     icon: Mail,
-    copy: "Best for proposals, procurement, partnerships and longer implementation detail.",
+    copy: "Best for proposals, procurement, school committees and anything that needs to be forwarded.",
     href: "mailto:hello@pagka.dev",
     external: false,
   },
   {
-    title: "Tailored demo",
-    value: "Setup questionnaire",
+    title: "Set up a demo properly",
+    value: "A few setup questions",
     icon: Calendar,
-    copy: "Answer the setup questions first so the demo opens on your workflow, not a blank account.",
+    copy: "Answer them first and the demo opens on your workflow and your numbers instead of an empty account.",
     href: "/home/book-demo",
     external: false,
   },
 ];
 
+/** What makes a first reply worth reading. */
+export const contactChecklist = [
+  "What you sell or deliver, and what city you are in",
+  "How many sites, branches or yards you run",
+  "How many people would be using it",
+  "What you use today, including the books and the spreadsheets",
+  "Where you think money is going missing",
+  "When you would want it running",
+];
+
 export const foundingPartnerItems = [
   "Selected businesses only, across selling, service, workshop and production",
   "Discounted, scoped onboarding",
-  "Your rate held for the first 12 months",
-  "Workflow mapping directly with the product team",
+  "Your rate held for the first twelve months",
+  "Workflow mapping done directly with the people who build the product",
   "Data migration within a defined scope",
-  "Structured feedback sessions that shape the roadmap",
+  "Feedback sessions that change the roadmap, not a suggestion box",
   "Success targets agreed in writing before go-live",
-  "Case-study participation only after results, and only with your permission",
+  "Case-study participation only after results, and only if you say yes",
+];
+
+/** What we ask of a founding partner. Stated plainly, because it is a trade. */
+export const foundingPartnerQuestions = [
+  "Can you name the leak, and roughly what it is costing you a month?",
+  "Is there someone senior enough inside the business to own the rollout and make people use it?",
+  "Will you tell us plainly when something does not work, instead of quietly going back to the notebook?",
 ];
 
 export const faqs = [
   {
-    q: "Who is Corelith actually for?",
-    a: "Anyone whose money moves faster than their paperwork. Shops and bottle stores selling over a till, hardware and wholesale selling on account, service companies, workshops, manufacturers and sales teams. If you carry stock, run jobs or bill customers, you have a leak somewhere and this is built to find it.",
+    q: "I already have a POS. Why would I change?",
+    a: "You may not need to replace the till so much as connect it. A POS takes the money and tells nobody, so purchasing, costing and the books all find out later. Corelith runs the sale and everything the sale causes in one place, so the drawer, the shelf and the ledger agree by the end of the shift.",
   },
   {
-    q: "I run a bottle store, a kiosk, a till. I never quote or invoice anyone.",
-    a: "Then your trail is three steps instead of six, and honestly the money matters more, not less — everything protecting it happens in the second after the customer walks out. Stock drops as it sells, the fiscal receipt comes off the same action, and the shift cash-up shows you variance by till and by cashier before anybody goes home.",
+    q: "I run a bottle store. I do not invoice anyone.",
+    a: "Then you skip the quote, the order and the invoice, and you keep the part that protects your cash. Stock drops as it sells, the fiscal receipt comes off the same action, and the shift cash-up shows variance by till and by cashier before anybody goes home.",
   },
   {
-    q: "Do you charge per user?",
-    a: "No. Plans are priced per site with a generous seat ceiling. Adding a cashier, a clerk or a technician costs nothing until you pass that ceiling, which is the opposite of how the per-seat suites bill you.",
+    q: "What does this cost, and do you charge per user?",
+    a: "$29 a month for one site and five users, $79 for three sites and twenty, $189 for eight sites and sixty, $449 for twenty-five sites and unlimited users. Pay annually and you pay for ten months. There is no per-user charge until you pass your seat ceiling, so adding a cashier or a technician costs nothing. Onboarding is quoted separately once we have seen your workflow.",
   },
   {
-    q: "Is this an ERP?",
-    a: "It covers the same ground, but it does not arrive empty and it does not need a consultant to become useful. Your trade is configured before the demo, so you spend the first month getting value instead of getting set up.",
+    q: "My staff will not use it.",
+    a: "That is a fair worry, and it is usually a training and workflow problem rather than a software one. The daily screens are built for a phone in a yard or a bay, training happens on your own data during the Launch Sprint, and we check adoption during the first month instead of leaving you to it. If your team is still on the notebook after go-live, we have not finished the job.",
   },
   {
     q: "Does it work when the internet is down?",
-    a: "Yes. Sales, stock movements and attendance capture keep working offline and sync as soon as the connection returns. Load-shedding does not stop the shop.",
+    a: "Yes. Sales, stock movements and attendance keep working offline and sync as soon as the connection returns. Load-shedding stops the lights, not the shop.",
   },
   {
     q: "Do you handle ZIMRA fiscalisation?",
-    a: "Yes, the FDMS integration is built into the product. Fiscal receipts are issued from the same sale that moves your stock and posts to your books.",
+    a: "Yes, the FDMS integration is part of the product. The fiscal receipt is issued from the same sale that drops your stock and posts to your books, so there is no separate step for anyone to forget.",
   },
   {
-    q: "Can you import our existing data?",
-    a: "Yes. Products, customers, suppliers, opening balances and opening stock are loaded during the Launch Sprint within a scope we agree with you first.",
+    q: "Can you move our existing records across?",
+    a: "Yes. Products, customers, suppliers, opening stock and opening balances are loaded during the Launch Sprint within a scope we agree with you first, so you open on correct figures rather than starting the year twice.",
   },
   {
-    q: "Why is there a setup fee?",
-    a: "Because migration, configuration, training and go-live support are real work done by real people. Hiding it inside the subscription would either inflate your monthly price forever or guarantee a rollout nobody finishes — and an unfinished rollout saves you nothing.",
+    q: "Is my data safe?",
+    a: "Your business runs in its own workspace. Roles and permission limits decide who can see or change what, and every record carries who created, approved or changed it. You can export everything at any time, and it stays yours.",
   },
   {
-    q: "Do you offer a free trial?",
-    a: "A blank account proves very little for software like this. The path that works is a tailored demo built on your own workflow, then a scoped Launch Sprint with agreed success targets.",
+    q: "What happens if I stop paying?",
+    a: "Your data stays yours and exports at any time. Cancel within the first 30 days and you get your money back. After that, access runs to the end of the period you have paid for, and you take an export of your records with you.",
   },
   {
-    q: "How are schools different?",
-    a: "Schools do not run order-to-cash and do not buy monthly. They are priced per term against enrolment and rolled out with the leadership team, which is why they have their own page and their own pricing.",
-  },
-  {
-    q: "Why is WhatsApp everywhere on this site?",
-    a: "Because that is where Zimbabwean business actually happens. We use it for sales conversations, document collection, demo reminders and support follow-up, and the product is built knowing your customers use it too.",
+    q: "Can I try it before I commit?",
+    a: "A blank account tells you very little about software like this, because the value only shows up once your own stock, customers and prices are in it. What works is a demo running your own workflow, then a scoped Launch Sprint with targets agreed in writing, backed by the 30-day money-back guarantee.",
   },
 ];
 
@@ -1408,34 +1664,34 @@ export const setupQuestions = [
   "Locations",
   "People using the system",
   "Current tools",
-  "Biggest operational problem",
+  "Where the money seems to go",
   "Timeline",
   "Preferred channel",
 ];
 
 export const companyPrinciples = [
   {
-    title: "The rollout is part of the product",
+    title: "Nobody buys software. They buy the money back.",
     copy:
-      "The job is not finished when a login is created. It is finished when your team is using the system on a normal Tuesday without being reminded to.",
+      "A subscription is only worth paying if it returns more than it costs. One caught cash-up, one dead-stock order avoided, one job that finally got billed. That is the bar, and it is the number to hold us to.",
+    icon: Coins,
+  },
+  {
+    title: "Getting it live is the hard part",
+    copy:
+      "The job is not done when a login exists. It is done when your storeman uses it on a Tuesday without being reminded. Which is why rollout is scoped, priced and owned rather than left to hope.",
     icon: LifeBuoy,
   },
   {
-    title: "Industry readiness beats feature count",
+    title: "Fix one thing first",
     copy:
-      "A long feature list is easy to write and hard to use. What matters is whether the workflow on screen matches the one in your yard.",
-    icon: Factory,
-  },
-  {
-    title: "Start with one problem",
-    copy:
-      "Turn on the module that is costing you money this month. Add branches, payroll, portals and finance depth when the value is obvious.",
+      "Turn on the part costing you money this month and leave the rest alone. Businesses that switch on everything at once usually switch it all off again by March.",
     icon: TrendingUp,
   },
   {
-    title: "Local reality is a design constraint",
+    title: "Built here, answered here",
     copy:
-      "Load-shedding, patchy data, USD and ZWG side by side, WhatsApp-led communication and ZIMRA are not edge cases here. They are the brief.",
-    icon: ShieldCheck,
+      "The people who wrote it are in Harare and reachable on the same WhatsApp number your customers use. No time zone, no ticket queue, no partner in another country who has never seen a bottle store.",
+    icon: Building2,
   },
 ];
