@@ -85,7 +85,6 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
   return (
     <RecordListShell
       title="Companies"
-      description="Every organisation you sell to, with its people, sites and deals in one place."
       search={search}
       onSearchChange={(value) => {
         setSearch(value);

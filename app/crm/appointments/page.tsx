@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageChrome } from "@/components/layout/page-chrome";
 import { CrmAppointmentsContent } from "@/components/crm/crm-appointments-content";
 import { authOptions } from "@/lib/auth";
 
@@ -10,7 +10,7 @@ export default async function CrmAppointmentsPage() {
   if (!session?.user) redirect("/login");
   return (
     <CrmPage>
-      <PageHeading title="Site Visits" />
+      <PageChrome title="Site visits" />
       <CrmAppointmentsContent />
     </CrmPage>
   );

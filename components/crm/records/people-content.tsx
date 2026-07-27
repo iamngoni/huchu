@@ -79,7 +79,6 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
   return (
     <RecordListShell
       title="People"
-      description="Everyone you deal with, reusable across deals, companies and sites."
       search={search}
       onSearchChange={(value) => {
         setSearch(value);

@@ -823,3 +823,46 @@ export function commitCrmMerge(
     body: JSON.stringify({ loserId, choices, commit: true }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Sales documents: quotes, invoices, receipts.
+// ---------------------------------------------------------------------------
+
+export type CrmDocumentKind = "QUOTATION" | "INVOICE" | "RECEIPT";
+
+export type CrmDocumentRecord = {
+  id: string;
+  type: CrmDocumentKind;
+  version: number;
+  revisionNote: string | null;
+  supersedesId: string | null;
+  currency: string;
+  createdAt: string;
+  createdBy: { id: string; name: string | null } | null;
+  lead: { id: string; leadNo: string; title: string } | null;
+  deal: { id: string; dealNo: string; title: string } | null;
+  approvalStatus: string | null;
+  approvalToken: string | null;
+  /** From the accounting row, which is the source of truth for all of these. */
+  number: string | null;
+  status: string;
+  issuedAt: string;
+  dueAt: string | null;
+  customer: string | null;
+  total: number;
+  /** Invoices only — see the route, where `null` means "cannot be outstanding". */
+  balance: number | null;
+};
+
+export function fetchCrmDocuments(
+  params: {
+    type?: CrmDocumentKind;
+    q?: string;
+    leadId?: string;
+    dealId?: string;
+    page?: number;
+    limit?: number;
+  } = {},
+) {
+  return fetchJson<ListResponse<CrmDocumentRecord>>(`/api/v2/crm/documents${qs(params)}`);
+}

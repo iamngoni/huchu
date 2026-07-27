@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { Navbar } from "@/components/layout/navbar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { PageActionsProvider } from "@/components/layout/page-actions";
+import { PageChromeProvider } from "@/components/layout/page-chrome";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingProvider } from "@/components/onboarding/onboarding-provider";
 
@@ -37,7 +37,7 @@ export function AppShell({
   }
 
   return (
-    <PageActionsProvider>
+    <PageChromeProvider>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-surface-base md:m-2 md:h-[calc(100dvh-1rem)] md:min-h-[calc(100dvh-1rem)] md:rounded-xl md:border md:shadow-sm">
@@ -55,6 +55,6 @@ export function AppShell({
           </main>
         </SidebarInset>
       </SidebarProvider>
-    </PageActionsProvider>
+    </PageChromeProvider>
   );
 }

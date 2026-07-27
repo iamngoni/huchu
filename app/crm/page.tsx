@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageChrome } from "@/components/layout/page-chrome";
 import { CrmDashboardContent } from "@/components/crm/crm-dashboard-content";
 import { authOptions } from "@/lib/auth";
 
@@ -11,7 +11,7 @@ export default async function CrmDashboardPage() {
 
   return (
     <CrmPage>
-      <PageHeading title="CRM" />
+      <PageChrome title="CRM" />
       <CrmDashboardContent />
     </CrmPage>
   );

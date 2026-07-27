@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageChrome } from "@/components/layout/page-chrome";
 import { LeadsWorkspace } from "@/components/crm/leads/leads-workspace";
 import { parseLeadFiltersFromParams } from "@/lib/crm/views";
 import { authOptions } from "@/lib/auth";
@@ -25,10 +25,7 @@ export default async function CrmLeadsPage({ searchParams }: { searchParams: Sea
 
   return (
     <CrmPage>
-      <PageHeading
-        title="Leads & Pipeline"
-        description="Every enquiry in flight, and the stage it is sitting in."
-      />
+      <PageChrome title="Leads" />
       <LeadsWorkspace
         initialFilters={parseLeadFiltersFromParams(params)}
         initialView={view}
