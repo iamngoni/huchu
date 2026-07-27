@@ -2,10 +2,11 @@
  * How long a record is allowed to sit in a stage, measured in working hours.
  *
  * "Contact a new lead within 30 minutes" only means anything against a working
- * day. A lead that arrives at 16:55 on Friday has not been neglected by 09:10
- * on Monday — it has been open for four working minutes — and a clock that
- * counts wall time says the opposite, which trains people to ignore it. Every
- * target here is elapsed *working* time.
+ * day. A lead that arrives at 16:55 on Friday has not been neglected by 08:10
+ * on Monday — it has been open for fifteen working minutes, five on Friday and
+ * ten on Monday — while a clock counting wall time calls it two days old and
+ * screaming. That kind of clock trains people to ignore it. Every target here
+ * is elapsed *working* time.
  *
  * Deliberately pure and dependency-free so it can be unit-tested against
  * awkward cases: a target that starts outside hours, one that spans a weekend,
