@@ -1,0 +1,398 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { CrmLeadStage } from "@prisma/client";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronDown, X } from "@/lib/icons";
+import type { LeadViewFilters } from "@/lib/crm/views";
+import { cn } from "@/lib/utils";
+
+import {
+  CRM_CHANNEL_LABELS,
+  CRM_LEAD_CHANNELS,
+  CRM_LEAD_STAGES,
+  CRM_STAGE_LABELS,
+} from "./stage-config";
+
+export type LeadFilterOwner = { id: string; name: string | null };
+
+type MultiFilterProps = {
+  label: string;
+  options: Array<{ value: string; label: string }>;
+  selected: string[];
+  onChange: (next: string[]) => void;
+  extra?: { label: string; checked: boolean; onChange: (checked: boolean) => void };
+};
+
+function MultiFilter({ label, options, selected, onChange, extra }: MultiFilterProps) {
+  const activeCount = selected.length + (extra?.checked ? 1 : 0);
+
+  const toggle = (value: string) => {
+    onChange(
+      selected.includes(value)
+        ? selected.filter((entry) => entry !== value)
+        : [...selected, value],
+    );
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1.5">
+          {label}
+          {activeCount > 0 ? (
+            <Badge variant="secondary" className="px-1.5 py-0 text-[11px]">
+              {activeCount}
+            </Badge>
+          ) : null}
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-2">
+        <div className="max-h-72 space-y-0.5 overflow-y-auto">
+          {extra ? (
+            <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-[var(--surface-hover)]">
+              <Checkbox
+                checked={extra.checked}
+                onCheckedChange={(checked) => extra.onChange(checked === true)}
+              />
+              <span>{extra.label}</span>
+            </label>
+          ) : null}
+          {options.map((option) => (
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-[var(--surface-hover)]"
+            >
+              <Checkbox
+                checked={selected.includes(option.value)}
+                onCheckedChange={() => toggle(option.value)}
+              />
+              <span className="truncate">{option.label}</span>
+            </label>
+          ))}
+          {options.length === 0 ? (
+            <p className="px-2 py-1.5 text-sm text-[var(--text-muted)]">Nothing to filter by yet.</p>
+          ) : null}
+        </div>
+        {activeCount > 0 ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-1 w-full justify-center"
+            onClick={() => {
+              onChange([]);
+              extra?.onChange(false);
+            }}
+          >
+            Clear
+          </Button>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ValueRangeFilter({
+  valueMin,
+  valueMax,
+  onChange,
+}: {
+  valueMin?: number;
+  valueMax?: number;
+  onChange: (next: { valueMin?: number; valueMax?: number }) => void;
+}) {
+  const active = valueMin !== undefined || valueMax !== undefined;
+  const toNumber = (raw: string) => {
+    const trimmed = raw.trim();
+    if (trimmed === "") return undefined;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1.5">
+          Value
+          {active ? <Badge variant="secondary" className="px-1.5 py-0 text-[11px]">1</Badge> : null}
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 space-y-3 p-3">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="value-min" className="text-xs">
+              Min
+            </Label>
+            <Input
+              id="value-min"
+              inputMode="decimal"
+              className="font-mono"
+              defaultValue={valueMin ?? ""}
+              onBlur={(event) => onChange({ valueMin: toNumber(event.target.value), valueMax })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="value-max" className="text-xs">
+              Max
+            </Label>
+            <Input
+              id="value-max"
+              inputMode="decimal"
+              className="font-mono"
+              defaultValue={valueMax ?? ""}
+              onBlur={(event) => onChange({ valueMin, valueMax: toNumber(event.target.value) })}
+            />
+          </div>
+        </div>
+        {active ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-center"
+            onClick={() => onChange({ valueMin: undefined, valueMax: undefined })}
+          >
+            Clear
+          </Button>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function DateRangeFilter({
+  createdFrom,
+  createdTo,
+  onChange,
+}: {
+  createdFrom?: string;
+  createdTo?: string;
+  onChange: (next: { createdFrom?: string; createdTo?: string }) => void;
+}) {
+  const active = Boolean(createdFrom || createdTo);
+  const toIso = (raw: string, endOfDay: boolean) => {
+    if (!raw) return undefined;
+    const date = new Date(`${raw}T${endOfDay ? "23:59:59" : "00:00:00"}`);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+  };
+  const toInputValue = (iso?: string) => (iso ? iso.slice(0, 10) : "");
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1.5">
+          Created
+          {active ? <Badge variant="secondary" className="px-1.5 py-0 text-[11px]">1</Badge> : null}
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 space-y-3 p-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="created-from" className="text-xs">
+            From
+          </Label>
+          <Input
+            id="created-from"
+            type="date"
+            value={toInputValue(createdFrom)}
+            onChange={(event) =>
+              onChange({ createdFrom: toIso(event.target.value, false), createdTo })
+            }
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="created-to" className="text-xs">
+            To
+          </Label>
+          <Input
+            id="created-to"
+            type="date"
+            value={toInputValue(createdTo)}
+            onChange={(event) =>
+              onChange({ createdFrom, createdTo: toIso(event.target.value, true) })
+            }
+          />
+        </div>
+        {active ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-center"
+            onClick={() => onChange({ createdFrom: undefined, createdTo: undefined })}
+          >
+            Clear
+          </Button>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/**
+ * The workspace filter row. Emits the same serialisable shape that gets stored
+ * in a saved view, so "what I'm looking at" and "what I saved" are one object.
+ */
+export function LeadsFilters({
+  filters,
+  onChange,
+  owners,
+  sources,
+  className,
+}: {
+  filters: LeadViewFilters;
+  onChange: (next: LeadViewFilters) => void;
+  owners: LeadFilterOwner[];
+  sources: string[];
+  className?: string;
+}) {
+  const [searchDraft, setSearchDraft] = useState(filters.q ?? "");
+
+  // Keep the box in step when a saved view swaps the filters out from under it.
+  useEffect(() => {
+    setSearchDraft(filters.q ?? "");
+  }, [filters.q]);
+
+  // Debounce typing so the list doesn't refetch on every keystroke.
+  useEffect(() => {
+    const current = filters.q ?? "";
+    if (searchDraft === current) return;
+    const timer = setTimeout(() => {
+      onChange({ ...filters, q: searchDraft.trim() || undefined });
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchDraft]);
+
+  const patch = (next: Partial<LeadViewFilters>) => onChange({ ...filters, ...next });
+
+  const ownerOptions = useMemo(
+    () => owners.map((owner) => ({ value: owner.id, label: owner.name ?? "Unnamed" })),
+    [owners],
+  );
+  const stageOptions = useMemo(
+    () =>
+      CRM_LEAD_STAGES.map((stage: CrmLeadStage) => ({
+        value: stage,
+        label: CRM_STAGE_LABELS[stage],
+      })),
+    [],
+  );
+  const channelOptions = useMemo(
+    () =>
+      CRM_LEAD_CHANNELS.map((channel) => ({
+        value: channel,
+        label: CRM_CHANNEL_LABELS[channel] ?? channel,
+      })),
+    [],
+  );
+  const sourceOptions = useMemo(
+    () => sources.map((source) => ({ value: source, label: source })),
+    [sources],
+  );
+
+  const activeCount = [
+    filters.stages?.length,
+    filters.assignedToIds?.length,
+    filters.unassigned ? 1 : 0,
+    filters.mineOnly ? 1 : 0,
+    filters.channels?.length,
+    filters.sources?.length,
+    filters.valueMin !== undefined || filters.valueMax !== undefined ? 1 : 0,
+    filters.createdFrom || filters.createdTo ? 1 : 0,
+    filters.overdueOnly ? 1 : 0,
+    filters.q ? 1 : 0,
+  ].reduce<number>((sum, entry) => sum + (entry ?? 0), 0);
+
+  return (
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+      <Input
+        value={searchDraft}
+        onChange={(event) => setSearchDraft(event.target.value)}
+        placeholder="Search leads, contacts, clients…"
+        className="h-9 w-full sm:w-64"
+        aria-label="Search leads"
+      />
+
+      <MultiFilter
+        label="Stage"
+        options={stageOptions}
+        selected={filters.stages ?? []}
+        onChange={(next) =>
+          patch({ stages: next.length ? (next as CrmLeadStage[]) : undefined })
+        }
+      />
+
+      <MultiFilter
+        label="Owner"
+        options={ownerOptions}
+        selected={filters.assignedToIds ?? []}
+        onChange={(next) => patch({ assignedToIds: next.length ? next : undefined })}
+        extra={{
+          label: "Unassigned",
+          checked: Boolean(filters.unassigned),
+          onChange: (checked) => patch({ unassigned: checked || undefined }),
+        }}
+      />
+
+      <MultiFilter
+        label="Channel"
+        options={channelOptions}
+        selected={filters.channels ?? []}
+        onChange={(next) =>
+          patch({ channels: next.length ? (next as LeadViewFilters["channels"]) : undefined })
+        }
+      />
+
+      {sourceOptions.length > 0 ? (
+        <MultiFilter
+          label="Source"
+          options={sourceOptions}
+          selected={filters.sources ?? []}
+          onChange={(next) => patch({ sources: next.length ? next : undefined })}
+        />
+      ) : null}
+
+      <ValueRangeFilter
+        valueMin={filters.valueMin}
+        valueMax={filters.valueMax}
+        onChange={(next) => patch(next)}
+      />
+
+      <DateRangeFilter
+        createdFrom={filters.createdFrom}
+        createdTo={filters.createdTo}
+        onChange={(next) => patch(next)}
+      />
+
+      <Button
+        variant={filters.mineOnly ? "default" : "outline"}
+        size="sm"
+        onClick={() => patch({ mineOnly: filters.mineOnly ? undefined : true })}
+      >
+        My leads
+      </Button>
+
+      <Button
+        variant={filters.overdueOnly ? "default" : "outline"}
+        size="sm"
+        onClick={() => patch({ overdueOnly: filters.overdueOnly ? undefined : true })}
+      >
+        Overdue
+      </Button>
+
+      {activeCount > 0 ? (
+        <Button variant="ghost" size="sm" className="gap-1" onClick={() => onChange({})}>
+          <X className="h-3.5 w-3.5" />
+          Clear all
+        </Button>
+      ) : null}
+    </div>
+  );
+}

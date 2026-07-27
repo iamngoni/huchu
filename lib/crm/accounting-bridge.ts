@@ -12,9 +12,10 @@
  */
 import type { Prisma } from "@prisma/client";
 
+import { settleCrmRecordIfPaid } from "./accounting-hooks";
 import { prisma } from "@/lib/prisma";
 import { createJournalEntryFromSource } from "@/lib/accounting/posting";
-import { recalcSalesInvoiceBalance } from "@/lib/accounting/balances";
+import { reserveIdentifier } from "@/lib/id-generator";
 
 type Tx = Prisma.TransactionClient;
 
@@ -65,26 +66,6 @@ function computeTotals(lines: CrmDocumentLineInput[]): DocTotals {
   return { lines: computed, subTotal, taxTotal, total };
 }
 
-function pad2(v: number): string {
-  return String(v).padStart(2, "0");
-}
-
-async function generateDocNumber(
-  tx: Tx,
-  prefix: string,
-  exists: (candidate: string) => Promise<boolean>,
-): Promise<string> {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const now = new Date();
-    const datePart = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}`;
-    const timePart = `${pad2(now.getHours())}${pad2(now.getMinutes())}`;
-    const randomPart = Math.floor(100 + Math.random() * 900);
-    const candidate = `${prefix}-${datePart}-${timePart}-${randomPart}`;
-    if (!(await exists(candidate))) return candidate;
-  }
-  return `${prefix}-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-}
-
 /**
  * Ensure a CrmClient is linked to an accounting Customer, creating one if
  * needed and writing the link back onto the CrmClient. Returns the customerId.
@@ -127,13 +108,50 @@ export async function ensureAccountingCustomer(
   return customerId;
 }
 
-async function requireLeadWithClient(
+/** Which record a document is being raised against. */
+export type DocumentOwnerRef = { leadId: string; dealId?: undefined } | { dealId: string; leadId?: undefined };
+
+type DocumentOwner = {
+  kind: "lead" | "deal";
+  id: string;
+  clientId: string;
+  stage: string;
+  assignedToId: string | null;
+};
+
+/**
+ * Resolve the record a document belongs to. A document hangs off a lead before
+ * conversion and off the deal after it, and both need the same three things: a
+ * company to bill, an owner to notify, and to not be closed-lost already.
+ */
+async function requireDocumentOwner(
   tx: Tx,
   companyId: string,
-  leadId: string,
-): Promise<{ id: string; clientId: string; stage: string; assignedToId: string | null }> {
+  ref: DocumentOwnerRef,
+): Promise<DocumentOwner> {
+  if (ref.dealId) {
+    const deal = await tx.crmDeal.findFirst({
+      where: { id: ref.dealId, companyId },
+      select: { id: true, clientId: true, status: true, assignedToId: true },
+    });
+    if (!deal) throw new Error("Deal not found");
+    if (deal.status === "LOST") {
+      throw new Error("This deal is marked lost — reopen it before creating documents");
+    }
+    if (!deal.clientId) {
+      throw new Error("This deal has no company; attach one before quoting or invoicing");
+    }
+    return {
+      kind: "deal",
+      id: deal.id,
+      clientId: deal.clientId,
+      stage: deal.status,
+      assignedToId: deal.assignedToId,
+    };
+  }
+
   const lead = await tx.crmLead.findFirst({
-    where: { id: leadId, companyId },
+    where: { id: ref.leadId, companyId },
     select: { id: true, clientId: true, stage: true, assignedToId: true },
   });
   if (!lead) throw new Error("Lead not found");
@@ -143,7 +161,18 @@ async function requireLeadWithClient(
   if (!lead.clientId) {
     throw new Error("Lead has no client; attach or create a client before quoting/invoicing");
   }
-  return { id: lead.id, clientId: lead.clientId, stage: lead.stage, assignedToId: lead.assignedToId };
+  return {
+    kind: "lead",
+    id: lead.id,
+    clientId: lead.clientId,
+    stage: lead.stage,
+    assignedToId: lead.assignedToId,
+  };
+}
+
+/** The foreign key to file a document under, given its owner. */
+function ownerKey(owner: DocumentOwner): { leadId?: string; dealId?: string } {
+  return owner.kind === "deal" ? { dealId: owner.id } : { leadId: owner.id };
 }
 
 const STAGE_ORDER = [
@@ -162,28 +191,32 @@ function stageAtLeast(current: string, target: string): boolean {
     STAGE_ORDER.indexOf(target as (typeof STAGE_ORDER)[number]);
 }
 
-export type CreateQuotationInput = {
+export type CreateQuotationInput = DocumentOwnerRef & {
   companyId: string;
   userId: string;
-  leadId: string;
   lines: CrmDocumentLineInput[];
   currency?: string;
   validUntil?: Date | null;
   notes?: string | null;
+  /** The quote this one replaces, when it's a revision rather than a first go. */
+  supersedesId?: string | null;
+  /** Why the revision exists — "customer asked for the cheaper panel". */
+  revisionNote?: string | null;
 };
 
 export async function createQuotationForLead(input: CreateQuotationInput) {
   const currency = input.currency ?? "USD";
   return prisma.$transaction(async (tx) => {
-    const lead = await requireLeadWithClient(tx, input.companyId, input.leadId);
+    const owner = await requireDocumentOwner(tx, input.companyId, input as DocumentOwnerRef);
     const customerId = await ensureAccountingCustomer(tx, {
       companyId: input.companyId,
-      clientId: lead.clientId,
+      clientId: owner.clientId,
     });
     const totals = computeTotals(input.lines);
-    const quotationNumber = await generateDocNumber(tx, "QTN", async (candidate) =>
-      Boolean(await tx.salesQuotation.findFirst({ where: { quotationNumber: candidate }, select: { id: true } })),
-    );
+    const quotationNumber = await reserveIdentifier(tx, {
+      companyId: input.companyId,
+      entity: "SALES_QUOTATION",
+    });
 
     const quotation = await tx.salesQuotation.create({
       data: {
@@ -206,43 +239,75 @@ export async function createQuotationForLead(input: CreateQuotationInput) {
       select: { id: true, quotationNumber: true, total: true },
     });
 
+    // A revision continues the chain rather than starting a new one, so
+    // "what did we actually agree" stays answerable.
+    let version = 1;
+    if (input.supersedesId) {
+      const previous = await tx.crmLeadDocument.findFirst({
+        where: { id: input.supersedesId, companyId: input.companyId, type: "QUOTATION" },
+        select: { id: true, version: true },
+      });
+      if (!previous) throw new Error("The quote being revised doesn't exist");
+      version = previous.version + 1;
+    }
+
     const doc = await tx.crmLeadDocument.create({
       data: {
         companyId: input.companyId,
-        leadId: lead.id,
+        ...ownerKey(owner),
         type: "QUOTATION",
         quotationId: quotation.id,
         amount: totals.total,
         currency,
+        version,
+        supersedesId: input.supersedesId ?? undefined,
+        revisionNote: input.revisionNote ?? undefined,
         createdById: input.userId,
       },
       select: { id: true },
     });
 
+    // The quote it replaces stops being live: two open quotes for the same
+    // work is how a customer ends up holding the cheaper one.
+    if (input.supersedesId) {
+      const superseded = await tx.crmLeadDocument.findUnique({
+        where: { id: input.supersedesId },
+        select: { quotationId: true },
+      });
+      if (superseded?.quotationId) {
+        await tx.salesQuotation.update({
+          where: { id: superseded.quotationId },
+          data: { status: "VOIDED" },
+        });
+      }
+    }
+
     await tx.crmActivity.create({
       data: {
         companyId: input.companyId,
         type: "DOCUMENT_CREATED",
-        leadId: lead.id,
-        clientId: lead.clientId,
+        ...ownerKey(owner),
+        clientId: owner.clientId,
         subject: `Quotation ${quotation.quotationNumber} created`,
         metadata: { documentId: doc.id, quotationId: quotation.id },
         createdById: input.userId,
       },
     });
 
-    if (!stageAtLeast(lead.stage, "QUOTED")) {
-      await tx.crmLead.update({ where: { id: lead.id }, data: { stage: "QUOTED" } });
+    // Only a lead auto-advances: its stages are a fixed enum this module can
+    // reason about. A deal's stages are configurable per pipeline, so moving it
+    // is the user's call through the stage bar.
+    if (owner.kind === "lead" && !stageAtLeast(owner.stage, "QUOTED")) {
+      await tx.crmLead.update({ where: { id: owner.id }, data: { stage: "QUOTED" } });
     }
 
     return { leadDocumentId: doc.id, quotationId: quotation.id, quotationNumber: quotation.quotationNumber, total: totals.total };
   });
 }
 
-export type CreateInvoiceInput = {
+export type CreateInvoiceInput = DocumentOwnerRef & {
   companyId: string;
   userId: string;
-  leadId: string;
   lines?: CrmDocumentLineInput[];
   fromQuotationId?: string;
   currency?: string;
@@ -253,10 +318,10 @@ export type CreateInvoiceInput = {
 export async function createInvoiceForLead(input: CreateInvoiceInput) {
   const currency = input.currency ?? "USD";
   const result = await prisma.$transaction(async (tx) => {
-    const lead = await requireLeadWithClient(tx, input.companyId, input.leadId);
+    const owner = await requireDocumentOwner(tx, input.companyId, input as DocumentOwnerRef);
     const customerId = await ensureAccountingCustomer(tx, {
       companyId: input.companyId,
-      clientId: lead.clientId,
+      clientId: owner.clientId,
     });
 
     let lines = input.lines ?? [];
@@ -266,7 +331,7 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
       const linkedDoc = await tx.crmLeadDocument.findFirst({
         where: {
           companyId: input.companyId,
-          leadId: lead.id,
+          ...ownerKey(owner),
           type: "QUOTATION",
           quotationId: input.fromQuotationId,
         },
@@ -292,9 +357,10 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
     if (lines.length === 0) throw new Error("Invoice needs at least one line");
 
     const totals = computeTotals(lines);
-    const invoiceNumber = await generateDocNumber(tx, "INV", async (candidate) =>
-      Boolean(await tx.salesInvoice.findFirst({ where: { invoiceNumber: candidate }, select: { id: true } })),
-    );
+    const invoiceNumber = await reserveIdentifier(tx, {
+      companyId: input.companyId,
+      entity: "SALES_INVOICE",
+    });
     const invoiceDate = new Date();
 
     const invoice = await tx.salesInvoice.create({
@@ -321,7 +387,7 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
     const doc = await tx.crmLeadDocument.create({
       data: {
         companyId: input.companyId,
-        leadId: lead.id,
+        ...ownerKey(owner),
         type: "INVOICE",
         invoiceId: invoice.id,
         amount: totals.total,
@@ -335,16 +401,16 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
       data: {
         companyId: input.companyId,
         type: "DOCUMENT_CREATED",
-        leadId: lead.id,
-        clientId: lead.clientId,
+        ...ownerKey(owner),
+        clientId: owner.clientId,
         subject: `Invoice ${invoice.invoiceNumber} issued`,
         metadata: { documentId: doc.id, invoiceId: invoice.id },
         createdById: input.userId,
       },
     });
 
-    if (!stageAtLeast(lead.stage, "INVOICED")) {
-      await tx.crmLead.update({ where: { id: lead.id }, data: { stage: "INVOICED" } });
+    if (owner.kind === "lead" && !stageAtLeast(owner.stage, "INVOICED")) {
+      await tx.crmLead.update({ where: { id: owner.id }, data: { stage: "INVOICED" } });
     }
 
     // Post the AR journal inside the same transaction (idempotent). Posting
@@ -382,10 +448,9 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
   return result;
 }
 
-export type RecordReceiptInput = {
+export type RecordReceiptInput = DocumentOwnerRef & {
   companyId: string;
   userId: string;
-  leadId: string;
   invoiceDocumentId: string;
   amount: number;
   method: string;
@@ -396,9 +461,9 @@ export type RecordReceiptInput = {
 export async function recordReceiptForLead(input: RecordReceiptInput) {
   const receivedAt = input.receivedAt ?? new Date();
   const outcome = await prisma.$transaction(async (tx) => {
-    const lead = await requireLeadWithClient(tx, input.companyId, input.leadId);
+    const owner = await requireDocumentOwner(tx, input.companyId, input as DocumentOwnerRef);
     const invoiceDoc = await tx.crmLeadDocument.findFirst({
-      where: { id: input.invoiceDocumentId, companyId: input.companyId, leadId: lead.id, type: "INVOICE" },
+      where: { id: input.invoiceDocumentId, companyId: input.companyId, ...ownerKey(owner), type: "INVOICE" },
       select: { invoiceId: true },
     });
     if (!invoiceDoc?.invoiceId) throw new Error("Invoice document not found for this lead");
@@ -430,9 +495,10 @@ export async function recordReceiptForLead(input: RecordReceiptInput) {
       );
     }
 
-    const receiptNumber = await generateDocNumber(tx, "REC", async (candidate) =>
-      Boolean(await tx.salesReceipt.findFirst({ where: { receiptNumber: candidate }, select: { id: true } })),
-    );
+    const receiptNumber = await reserveIdentifier(tx, {
+      companyId: input.companyId,
+      entity: "SALES_RECEIPT",
+    });
 
     const receipt = await tx.salesReceipt.create({
       data: {
@@ -451,7 +517,7 @@ export async function recordReceiptForLead(input: RecordReceiptInput) {
     const doc = await tx.crmLeadDocument.create({
       data: {
         companyId: input.companyId,
-        leadId: lead.id,
+        ...ownerKey(owner),
         type: "RECEIPT",
         receiptId: receipt.id,
         amount: input.amount,
@@ -465,8 +531,8 @@ export async function recordReceiptForLead(input: RecordReceiptInput) {
       data: {
         companyId: input.companyId,
         type: "PAYMENT_RECORDED",
-        leadId: lead.id,
-        clientId: lead.clientId,
+        ...ownerKey(owner),
+        clientId: owner.clientId,
         subject: `Payment ${receipt.receiptNumber} recorded`,
         metadata: { documentId: doc.id, receiptId: receipt.id, amount: input.amount },
         createdById: input.userId,
@@ -495,18 +561,17 @@ export async function recordReceiptForLead(input: RecordReceiptInput) {
       );
     }
 
-    return { leadDocumentId: doc.id, receiptId: receipt.id, invoiceId: invoice.id, leadId: lead.id, clientId: lead.clientId };
+    return { leadDocumentId: doc.id, receiptId: receipt.id, invoiceId: invoice.id, ...ownerKey(owner), clientId: owner.clientId };
   });
 
-  // Recompute the invoice balance/status and flip the lead to WON if fully
-  // paid — both read committed rows so they run after the transaction.
-  const balance = await recalcSalesInvoiceBalance(outcome.invoiceId);
-  if (balance && "status" in balance && balance.status === "PAID") {
-    await prisma.crmLead.updateMany({
-      where: { id: outcome.leadId, companyId: input.companyId, stage: { not: "LOST" } },
-      data: { stage: "WON", wonAt: new Date() },
-    });
-  }
+  // Recompute the invoice balance and, once settled in full, close the record
+  // out as won. Shared with the Accounting-side receipt hook so a payment
+  // taken in either module settles a record identically.
+  await settleCrmRecordIfPaid(
+    input.companyId,
+    { leadId: outcome.leadId ?? null, dealId: outcome.dealId ?? null, clientId: outcome.clientId ?? null },
+    outcome.invoiceId,
+  );
 
   return outcome;
 }

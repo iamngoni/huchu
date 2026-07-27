@@ -13,6 +13,7 @@ import { NotificationType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { emitCrmNotification } from "@/lib/notifications";
+import { getDocumentBranding } from "@/lib/documents/branding-snapshot";
 
 type Tx = Prisma.TransactionClient;
 
@@ -45,6 +46,11 @@ export async function createOrRotateApproval(
   return token;
 }
 
+/**
+ * What a client sees at /a/[token]. Deliberately a hand-built projection
+ * rather than the raw record: this is served without a session, so only what
+ * belongs on the client's own copy of the document is included.
+ */
 export type PublicApprovalView = {
   companyName: string;
   documentType: "QUOTATION" | "INVOICE" | "RECEIPT";
@@ -52,7 +58,35 @@ export type PublicApprovalView = {
   number: string;
   currency: string;
   total: number;
-  lines: Array<{ description: string; quantity: number; unitPrice: number; lineTotal: number }>;
+  subTotal: number;
+  taxTotal: number;
+  issuedAt: string | null;
+  validUntil: string | null;
+  dueDate: string | null;
+  notes: string | null;
+  billedTo: string | null;
+  lines: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxRate: number;
+    lineTotal: number;
+  }>;
+  branding: {
+    logoUrl: string | null;
+    primaryColor: string | null;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    physicalAddress: string | null;
+    registrationNumber: string | null;
+    vatNumber: string | null;
+    bankName: string | null;
+    bankAccountName: string | null;
+    bankAccountNumber: string | null;
+    paymentTerms: string | null;
+    footerText: string | null;
+  };
   expired: boolean;
 };
 
@@ -77,8 +111,30 @@ export async function getApprovalByToken(token: string): Promise<PublicApprovalV
           type: true,
           currency: true,
           amount: true,
-          quotation: { select: { quotationNumber: true, lines: true } },
-          invoice: { select: { invoiceNumber: true, lines: true } },
+          quotation: {
+            select: {
+              quotationNumber: true,
+              quotationDate: true,
+              validUntil: true,
+              subTotal: true,
+              taxTotal: true,
+              notes: true,
+              lines: true,
+              customer: { select: { name: true } },
+            },
+          },
+          invoice: {
+            select: {
+              invoiceNumber: true,
+              invoiceDate: true,
+              dueDate: true,
+              subTotal: true,
+              taxTotal: true,
+              notes: true,
+              lines: true,
+              customer: { select: { name: true } },
+            },
+          },
         },
       },
     },
@@ -93,10 +149,7 @@ export async function getApprovalByToken(token: string): Promise<PublicApprovalV
       .catch(() => {});
   }
 
-  const company = await prisma.company.findUnique({
-    where: { id: approval.companyId },
-    select: { name: true },
-  });
+  const branding = await getDocumentBranding(approval.companyId);
 
   const doc = approval.leadDocument;
   const source = doc.quotation ?? doc.invoice;
@@ -111,17 +164,42 @@ export async function getApprovalByToken(token: string): Promise<PublicApprovalV
         description: l.description,
         quantity: l.quantity,
         unitPrice: l.unitPrice,
+        taxRate: l.taxRate ?? 0,
         lineTotal: l.lineTotal,
       }));
 
   return {
-    companyName: company?.name ?? "",
+    companyName: branding.displayName,
     documentType: doc.type,
     status: approval.status,
     number,
     currency: doc.currency,
     total: expired ? 0 : doc.amount,
+    subTotal: expired ? 0 : (source?.subTotal ?? 0),
+    taxTotal: expired ? 0 : (source?.taxTotal ?? 0),
+    issuedAt:
+      doc.quotation?.quotationDate?.toISOString() ?? doc.invoice?.invoiceDate?.toISOString() ?? null,
+    validUntil: doc.quotation?.validUntil?.toISOString() ?? null,
+    dueDate: doc.invoice?.dueDate?.toISOString() ?? null,
+    notes: expired ? null : (source?.notes ?? null),
+    billedTo: source?.customer?.name ?? null,
     lines,
+    branding: {
+      logoUrl: branding.logoUrl ?? null,
+      primaryColor: branding.primaryColor ?? null,
+      email: branding.email ?? null,
+      phone: branding.phone ?? null,
+      website: branding.website ?? null,
+      physicalAddress: branding.physicalAddress ?? null,
+      registrationNumber: branding.registrationNumber ?? null,
+      vatNumber: branding.vatNumber ?? null,
+      // Bank details only belong on a document the client has to pay.
+      bankName: doc.type === "INVOICE" ? (branding.bankName ?? null) : null,
+      bankAccountName: doc.type === "INVOICE" ? (branding.bankAccountName ?? null) : null,
+      bankAccountNumber: doc.type === "INVOICE" ? (branding.bankAccountNumber ?? null) : null,
+      paymentTerms: branding.paymentTerms ?? null,
+      footerText: branding.defaultFooterText ?? null,
+    },
     expired,
   };
 }
@@ -151,6 +229,7 @@ export async function respondToApproval(input: RespondInput): Promise<{ status: 
           type: true,
           quotationId: true,
           lead: { select: { id: true, clientId: true, assignedToId: true } },
+          deal: { select: { id: true, clientId: true, assignedToId: true } },
         },
       },
     },
@@ -190,20 +269,32 @@ export async function respondToApproval(input: RespondInput): Promise<{ status: 
       });
     }
 
+    // A document hangs off a deal once the lead has been converted, and off
+    // the lead before that. Log the response against whichever it has.
     const lead = approval.leadDocument.lead;
+    const deal = approval.leadDocument.deal;
+    const owner = deal ?? lead;
     await tx.crmActivity.create({
       data: {
         companyId: approval.companyId,
         type: input.action === "APPROVE" ? "DOCUMENT_APPROVED" : "DOCUMENT_DECLINED",
-        leadId: lead.id,
-        clientId: lead.clientId ?? undefined,
+        leadId: lead?.id,
+        dealId: deal?.id,
+        clientId: owner?.clientId ?? undefined,
         subject: `Document ${input.action === "APPROVE" ? "approved" : "declined"} by client${input.name ? ` (${input.name})` : ""}`,
         body: input.note ?? undefined,
         metadata: { leadDocumentId: approval.leadDocument.id },
       },
     });
 
-    return { companyId: approval.companyId, leadId: lead.id, assignedToId: lead.assignedToId, action: input.action, nextStatus };
+    return {
+      companyId: approval.companyId,
+      leadId: lead?.id ?? null,
+      dealId: deal?.id ?? null,
+      assignedToId: owner?.assignedToId ?? null,
+      action: input.action,
+      nextStatus,
+    };
   });
 
   if (result.assignedToId) {
@@ -213,8 +304,8 @@ export async function respondToApproval(input: RespondInput): Promise<{ status: 
       type: result.action === "APPROVE" ? NotificationType.CRM_DOCUMENT_APPROVED : NotificationType.CRM_DOCUMENT_DECLINED,
       title: result.action === "APPROVE" ? "Quote approved" : "Quote declined",
       summary: `A client ${result.action === "APPROVE" ? "approved" : "declined"} a document.`,
-      leadId: result.leadId,
-      viewPath: `/crm/leads/${result.leadId}`,
+      leadId: result.leadId ?? undefined,
+      viewPath: result.dealId ? `/crm/deals/${result.dealId}` : `/crm/leads/${result.leadId}`,
     });
   }
 

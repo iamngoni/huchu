@@ -512,6 +512,7 @@ export type UserNotificationPreferences = {
   webPushEnabled: boolean;
   hrEnabled: boolean;
   opsEnabled: boolean;
+  crmEnabled: boolean;
 };
 
 export type EmployeePayment = {
@@ -1907,7 +1908,10 @@ export async function fetchNotificationPreferences() {
 
 export async function updateNotificationPreferences(
   input: Partial<
-    Pick<UserNotificationPreferences, "inAppEnabled" | "webPushEnabled" | "hrEnabled" | "opsEnabled">
+    Pick<
+      UserNotificationPreferences,
+      "inAppEnabled" | "webPushEnabled" | "hrEnabled" | "opsEnabled" | "crmEnabled"
+    >
   >,
 ) {
   return fetchJson<UserNotificationPreferences>("/api/notifications/preferences", {
@@ -2920,6 +2924,9 @@ export type SalesInvoiceRecord = {
   customer: { id: string; name: string };
   lines: SalesInvoiceLineRecord[];
   fiscalReceipt?: { id: string; status: string; fiscalNumber?: string | null } | null;
+  /** Set when this invoice was raised from a quotation, usually a CRM one. */
+  quotationId?: string | null;
+  fromQuotation?: { id: string; quotationNumber: string } | null;
 };
 
 export type SalesReceiptRecord = {

@@ -18,16 +18,21 @@ function parseInlineBatchLimit() {
   return Math.max(1, Math.min(10, Math.floor(configured)));
 }
 
-function resolveFeatureKey(sourceKey: string): string | null {
-  if (sourceKey === "reports.shift") return "reports.shift";
-  if (sourceKey === "reports.attendance") return "reports.attendance";
-  if (sourceKey === "reports.plant") return "reports.plant";
-  if (sourceKey === "dashboard.executive-summary") return "reports.dashboard";
-  if (sourceKey === "accounting.sales.invoice") return "accounting.ar";
-  if (sourceKey === "accounting.sales.quotation") return "accounting.ar";
-  if (sourceKey === "accounting.sales.receipt") return "accounting.ar";
-  if (sourceKey === "accounting.sales.credit-note") return "accounting.ar";
-  return null;
+/**
+ * Feature keys that may authorise an export source. A tenant needs only ONE of
+ * them — sales documents are reachable from both accounting and the CRM, so a
+ * CRM-only tenant must be able to render the quotation it just created.
+ */
+function resolveFeatureKeys(sourceKey: string): string[] {
+  if (sourceKey === "reports.shift") return ["reports.shift"];
+  if (sourceKey === "reports.attendance") return ["reports.attendance"];
+  if (sourceKey === "reports.plant") return ["reports.plant"];
+  if (sourceKey === "dashboard.executive-summary") return ["reports.dashboard"];
+  if (sourceKey === "accounting.sales.invoice") return ["accounting.ar", "crm.documents"];
+  if (sourceKey === "accounting.sales.quotation") return ["accounting.ar", "crm.documents"];
+  if (sourceKey === "accounting.sales.receipt") return ["accounting.ar", "crm.documents"];
+  if (sourceKey === "accounting.sales.credit-note") return ["accounting.ar"];
+  return [];
 }
 
 const requestSchema = z.object({
@@ -53,11 +58,15 @@ export async function POST(request: NextRequest) {
     const input = requestSchema.parse(body);
     const typedInput = input as unknown as DocumentRenderRequest;
 
-    const featureKey = resolveFeatureKey(typedInput.sourceKey);
-    if (featureKey) {
-      const enabled = await hasFeature(session.user.companyId, featureKey);
-      if (!enabled) {
-        return errorResponse("Feature disabled for this export source", 403, { featureKey });
+    const featureKeys = resolveFeatureKeys(typedInput.sourceKey);
+    if (featureKeys.length > 0) {
+      const results = await Promise.all(
+        featureKeys.map((key) => hasFeature(session.user.companyId, key)),
+      );
+      if (!results.some(Boolean)) {
+        return errorResponse("Feature disabled for this export source", 403, {
+          featureKeys,
+        });
       }
     }
 

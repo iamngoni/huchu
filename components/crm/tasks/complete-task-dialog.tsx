@@ -1,0 +1,108 @@
+"use client";
+
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { CRM_TASK_OUTCOME_LABELS, outcomesForType } from "@/lib/crm/tasks";
+import type { CrmTaskRecord } from "@/lib/crm/crm-v2";
+import { cn } from "@/lib/utils";
+
+/**
+ * Completing a call or an email asks what happened.
+ *
+ * The whole point of typed tasks is that "we rang them twice and nobody
+ * picked up" ends up in the record rather than in somebody's memory, so the
+ * outcome is a required choice, not a free-text box people leave blank.
+ */
+export function CompleteTaskDialog({
+  task,
+  onOpenChange,
+  onConfirm,
+  isPending,
+}: {
+  task: CrmTaskRecord | null;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (input: { outcome: string; outcomeNotes: string | null }) => void;
+  isPending?: boolean;
+}) {
+  const [outcome, setOutcome] = useState<string>("");
+  const [notes, setNotes] = useState("");
+
+  // Clear as a new task arrives, during render rather than in an effect.
+  const [seededFor, setSeededFor] = useState<string | null>(task?.id ?? null);
+  if (task?.id !== seededFor) {
+    setSeededFor(task?.id ?? null);
+    setOutcome("");
+    setNotes("");
+  }
+
+  const outcomes = task ? outcomesForType(task.type) : [];
+
+  return (
+    <Dialog open={Boolean(task)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>How did it go?</DialogTitle>
+          <DialogDescription>{task?.title}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Outcome</Label>
+            <div className="flex flex-wrap gap-2">
+              {outcomes.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setOutcome(value)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                    outcome === value
+                      ? "border-[var(--border-strong)] bg-[var(--surface-inverse)] text-[var(--text-inverse)]"
+                      : "border-[var(--border-subtle)] hover:bg-[var(--surface-hover)]",
+                  )}
+                >
+                  {CRM_TASK_OUTCOME_LABELS[value]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="outcome-notes">Notes</Label>
+            <Textarea
+              id="outcome-notes"
+              rows={3}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Anything worth remembering next time"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={!outcome || isPending}
+            onClick={() => onConfirm({ outcome, outcomeNotes: notes.trim() || null })}
+          >
+            {isPending ? "Saving…" : "Complete task"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -3,8 +3,8 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { canEditAssignedRecord } from "@/lib/crm/scope";
-import { defaultProbabilityForStage } from "@/lib/crm/pipeline";
-import { crmLeadStageSchema } from "../../../_helpers";
+import { changeLeadStage, crmLeadStageSchema } from "@/lib/crm/pipeline";
+import { runAutomations } from "@/lib/crm/automation-runner";
 
 const bodySchema = z.object({
   stage: crmLeadStageSchema,
@@ -30,33 +30,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { stage, lostReason } = bodySchema.parse(await request.json());
     if (stage === existing.stage) return successResponse({ id, stage });
 
-    const now = new Date();
-    const updated = await prisma.$transaction(async (tx) => {
-      const lead = await tx.crmLead.update({
-        where: { id },
-        data: {
-          stage,
-          probability: defaultProbabilityForStage(stage),
-          // Terminal timestamps always reflect the current stage: entering a
-          // terminal stage stamps it and clears the opposing one; reopening to
-          // a non-terminal stage clears both (no contradictory wonAt+lostAt).
-          wonAt: stage === "WON" ? now : null,
-          lostAt: stage === "LOST" ? now : null,
-          lostReason: stage === "LOST" ? lostReason ?? null : null,
-        },
-      });
-      await tx.crmActivity.create({
-        data: {
-          companyId: session.user.companyId,
-          type: "STAGE_CHANGE",
-          leadId: id,
-          clientId: existing.clientId ?? undefined,
-          subject: `Stage changed ${existing.stage} → ${stage}`,
-          metadata: { fromStage: existing.stage, toStage: stage, lostReason },
-          createdById: session.user.id,
-        },
-      });
-      return lead;
+    const updated = await prisma.$transaction((tx) =>
+      changeLeadStage(tx, {
+        companyId: session.user.companyId,
+        userId: session.user.id,
+        lead: existing,
+        stage,
+        lostReason,
+      }),
+    );
+
+    await runAutomations({
+      companyId: session.user.companyId,
+      trigger: "LEAD_STAGE_CHANGED",
+      entity: "LEAD",
+      recordId: id,
+      record: updated as unknown as Record<string, unknown>,
+      stage,
+      actorId: session.user.id,
     });
 
     return successResponse(updated);

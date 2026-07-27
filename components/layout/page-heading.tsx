@@ -1,17 +1,41 @@
-import { cn } from "@/lib/utils"
+"use client";
+
+import type { ReactNode } from "react";
+import { PageHeader } from "@corelithzw/react";
+
+import { cn } from "@/lib/utils";
 
 type PageHeadingProps = {
-  title: string
-  description?: string
-  className?: string
-}
+  title: string;
+  description?: string;
+  className?: string;
+  /** The one primary call to action, per the DS page recipe. */
+  primaryAction?: ReactNode;
+  /** Up to two more, rendered left of the primary. */
+  secondaryActions?: ReactNode;
+};
 
-export function PageHeading(props: PageHeadingProps) {
-  const { title, className } = props;
-
+/**
+ * The page title block, on the design system's `PageHeader`.
+ *
+ * Used by 73 pages. It previously accepted a `description` and then never
+ * rendered it — every caller that passed one was writing into a void. The DS
+ * header has a `lede` slot, so those descriptions now actually appear.
+ */
+export function PageHeading({
+  title,
+  description,
+  className,
+  primaryAction,
+  secondaryActions,
+}: PageHeadingProps) {
   return (
-    <div className={cn("mb-5 space-y-1", className)}>
-      <h1 className="text-page-title text-foreground font-semibold tracking-[-0.01em]">{title}</h1>
-    </div>
-  )
+    <PageHeader
+      title={title}
+      lede={description}
+      primaryAction={primaryAction}
+      secondaryActions={secondaryActions}
+      className={cn("mb-5", className)}
+    />
+  );
 }

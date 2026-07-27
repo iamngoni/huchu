@@ -1,19 +1,11 @@
 import { z } from "zod";
 
 import type { AuthenticatedSession } from "@/lib/api-utils";
+import type { CollabRecord } from "@/lib/crm/collaboration";
 import { hasCrmFullAccess } from "@/lib/crm/scope";
 import { prisma } from "@/lib/prisma";
 
-export const crmLeadStageSchema = z.enum([
-  "NEW",
-  "CONTACTED",
-  "QUALIFIED",
-  "SITE_VISIT",
-  "QUOTED",
-  "INVOICED",
-  "WON",
-  "LOST",
-]);
+export { crmLeadStageSchema } from "@/lib/crm/pipeline";
 
 export const crmDocumentLineSchema = z.object({
   description: z.string().trim().min(1).max(300),
@@ -45,4 +37,30 @@ export async function isCompanyUser(
     select: { id: true },
   });
   return Boolean(user);
+}
+
+/**
+ * Confirm a record a comment or follow is aimed at exists inside this tenant.
+ * Without it, a caller could post a comment against another company's deal id
+ * and the row would sit there unreachable but real.
+ */
+export async function crmRecordExists(
+  companyId: string,
+  record: CollabRecord,
+): Promise<boolean> {
+  const where = { id: record.recordId, companyId };
+  switch (record.entity) {
+    case "LEAD":
+      return Boolean(await prisma.crmLead.findFirst({ where, select: { id: true } }));
+    case "DEAL":
+      return Boolean(await prisma.crmDeal.findFirst({ where, select: { id: true } }));
+    case "COMPANY":
+      return Boolean(await prisma.crmClient.findFirst({ where, select: { id: true } }));
+    case "PERSON":
+      return Boolean(await prisma.crmPerson.findFirst({ where, select: { id: true } }));
+    case "SITE":
+      return Boolean(await prisma.crmSite.findFirst({ where, select: { id: true } }));
+    default:
+      return false;
+  }
 }

@@ -175,12 +175,37 @@ model Company {
   crmActivities                 CrmActivity[]
   crmFollowUps                  CrmFollowUp[]
   crmAppointments               CrmAppointment[]
+  crmSiteVisitItems             CrmSiteVisitItem[]
+  crmSavedViews                 CrmSavedView[]
   crmIntakeForms                CrmIntakeForm[]
   crmIntakeSubmissions          CrmIntakeSubmission[]
   crmApiKeys                    CrmApiKey[]
   crmLeadSources                CrmLeadSource[]
   crmCommissionRules            CrmCommissionRule[]
   crmCommissionEntries          CrmCommissionEntry[]
+  crmPeople                     CrmPerson[]
+  crmPersonCompanies            CrmPersonCompany[]
+  crmSites                      CrmSite[]
+  crmDeals                      CrmDeal[]
+  crmDealContacts               CrmDealContact[]
+  crmPipelines                  CrmPipeline[]
+  crmPipelineStages             CrmPipelineStage[]
+  crmFieldDefinitions           CrmFieldDefinition[]
+  crmLists                      CrmList[]
+  crmListMembers                CrmListMember[]
+  crmTasks                      CrmTask[]
+  crmComments                   CrmComment[]
+  crmMentions                   CrmMention[]
+  crmFollowers                  CrmFollower[]
+  crmAutomations                CrmAutomation[]
+  crmAutomationRuns             CrmAutomationRun[]
+  crmDiscountApprovals          CrmDiscountApproval[]
+  crmCollectionNotes            CrmCollectionNote[]
+  crmWorkOrders                 CrmWorkOrder[]
+  crmWorkOrderItems             CrmWorkOrderItem[]
+  products                      Product[]
+  priceLists                    PriceList[]
+  productPrices                 ProductPrice[]
 
   @@index([tenantStatus])
   @@index([isProvisioned])
@@ -915,12 +940,36 @@ model User {
   crmFollowUpsCreated               CrmFollowUp[]                  @relation("CrmFollowUpCreatedBy")
   crmAppointmentsAssigned           CrmAppointment[]               @relation("CrmAppointmentAssignedTo")
   crmAppointmentsCreated            CrmAppointment[]               @relation("CrmAppointmentCreatedBy")
+  crmSavedViewsCreated              CrmSavedView[]                 @relation("CrmSavedViewCreatedBy")
   crmIntakeFormsCreated             CrmIntakeForm[]                @relation("CrmIntakeFormCreatedBy")
   crmIntakeFormsDefaultAssignee     CrmIntakeForm[]                @relation("CrmIntakeFormDefaultAssignee")
   crmApiKeysCreated                 CrmApiKey[]                    @relation("CrmApiKeyCreatedBy")
   crmCommissionRulesFor             CrmCommissionRule[]            @relation("CrmCommissionRuleUser")
   crmCommissionEntries              CrmCommissionEntry[]           @relation("CrmCommissionEntryRep")
   crmCommissionEntriesApproved      CrmCommissionEntry[]           @relation("CrmCommissionEntryApprovedBy")
+  crmPeopleAssigned                 CrmPerson[]                    @relation("CrmPersonAssignedTo")
+  crmPeopleCreated                  CrmPerson[]                    @relation("CrmPersonCreatedBy")
+  crmSitesCreated                   CrmSite[]                      @relation("CrmSiteCreatedBy")
+  crmDealsAssigned                  CrmDeal[]                      @relation("CrmDealAssignedTo")
+  crmDealsCreated                   CrmDeal[]                      @relation("CrmDealCreatedBy")
+  crmPipelinesCreated               CrmPipeline[]                  @relation("CrmPipelineCreatedBy")
+  crmFieldDefinitionsCreated        CrmFieldDefinition[]           @relation("CrmFieldDefinitionCreatedBy")
+  crmLeadsConverted                 CrmLead[]                      @relation("CrmLeadConvertedBy")
+  crmListsCreated                   CrmList[]                      @relation("CrmListCreatedBy")
+  crmListMembersAdded               CrmListMember[]                @relation("CrmListMemberAddedBy")
+  crmTasksAssigned                  CrmTask[]                      @relation("CrmTaskAssignedTo")
+  crmTasksCreated                   CrmTask[]                      @relation("CrmTaskCreatedBy")
+  crmCommentsCreated                CrmComment[]                   @relation("CrmCommentCreatedBy")
+  crmCommentsResolved               CrmComment[]                   @relation("CrmCommentResolvedBy")
+  crmMentions                       CrmMention[]                   @relation("CrmMentionUser")
+  crmFollowing                      CrmFollower[]                  @relation("CrmFollowerUser")
+  crmAutomationsCreated             CrmAutomation[]                @relation("CrmAutomationCreatedBy")
+  crmDiscountsRequested             CrmDiscountApproval[]          @relation("CrmDiscountRequestedBy")
+  crmDiscountsDecided               CrmDiscountApproval[]          @relation("CrmDiscountDecidedBy")
+  crmCollectionNotesCreated         CrmCollectionNote[]            @relation("CrmCollectionNoteCreatedBy")
+  crmWorkOrdersAssigned             CrmWorkOrder[]                 @relation("CrmWorkOrderAssignedTo")
+  crmWorkOrdersCreated              CrmWorkOrder[]                 @relation("CrmWorkOrderCreatedBy")
+  productsCreated                   Product[]                      @relation("ProductCreatedBy")
 
   @@index([companyId])
   @@index([email])
@@ -1469,6 +1518,7 @@ model UserNotificationPreference {
   webPushEnabled Boolean  @default(false)
   hrEnabled      Boolean  @default(true)
   opsEnabled     Boolean  @default(true)
+  crmEnabled     Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -1776,6 +1826,10 @@ enum NotificationType {
   CRM_DOCUMENT_APPROVED
   CRM_DOCUMENT_DECLINED
   CRM_FOLLOW_UP_DUE
+  CRM_TASK_ASSIGNED
+  CRM_TASK_DUE
+  CRM_MENTIONED
+  CRM_COMMENT_ADDED
 }
 
 enum NotificationSeverity {
@@ -1799,6 +1853,8 @@ enum NotificationEntityType {
   WORK_ORDER
   CRM_LEAD
   CRM_DOCUMENT
+  CRM_TASK
+  CRM_COMMENT
 }
 
 enum HrIncidentCategory {
@@ -3176,6 +3232,9 @@ model InventoryItem {
   minStock     Float?
   maxStock     Float?
   unitCost     Float?
+  /// The catalogue item this stock is of. Optional: plenty of stock (fuel,
+  /// consumables) is never sold and needs no catalogue entry at all.
+  productId    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3183,9 +3242,11 @@ model InventoryItem {
   site      Site            @relation(fields: [siteId], references: [id])
   location  StockLocation   @relation(fields: [locationId], references: [id])
   movements StockMovement[]
+  product   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@unique([siteId, itemCode])
   @@index([siteId])
+  @@index([productId])
 }
 
 enum MovementType {
@@ -3251,13 +3312,21 @@ model RetailCatalogItem {
   acquisitionMode String   @default("PURCHASE")
   imageUrl        String?
   status          String   @default("ACTIVE")
+  /// The shared catalogue item this listing sells. Optional so existing
+  /// listings keep working untouched. `unitPrice`/`taxPercent` above stay
+  /// authoritative for the till — offline POS reads them literally and must
+  /// not have to resolve a price list with no network.
+  productId       String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, catalogCode])
   @@unique([companyId, sku])
   @@index([companyId, siteId, status])
   @@index([inventoryItemId])
+  @@index([companyId, productId])
 }
 
 model RetailPromotion {
@@ -4209,6 +4278,9 @@ model SalesInvoice {
   notes         String?
   // Fiscal receipt relation is managed via FiscalReceipt.invoiceId
   fiscalStatus  FiscalReceiptStatus? @default(PENDING)
+  /// The quotation this invoice was raised from, when it was. The CRM reads
+  /// this to recognise its own work coming back from Accounting.
+  quotationId   String?
   createdById   String?
   issuedById    String?
   issuedAt      DateTime?
@@ -4226,6 +4298,8 @@ model SalesInvoice {
   crmLeadDocuments CrmLeadDocument[]  @relation("CrmLeadDocInvoice")
   createdBy        User?              @relation("SalesInvoiceCreatedBy", fields: [createdById], references: [id])
   issuedBy         User?              @relation("SalesInvoiceIssuedBy", fields: [issuedById], references: [id])
+
+  fromQuotation    SalesQuotation?    @relation("SalesInvoiceFromQuotation", fields: [quotationId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, status])
@@ -4276,6 +4350,7 @@ model SalesQuotation {
   createdBy        User?                @relation("SalesQuotationCreatedBy", fields: [createdById], references: [id])
   issuedBy         User?                @relation("SalesQuotationIssuedBy", fields: [issuedById], references: [id])
   crmLeadDocuments CrmLeadDocument[]    @relation("CrmLeadDocQuotation")
+  invoicesRaised   SalesInvoice[]       @relation("SalesInvoiceFromQuotation")
 
   @@unique([companyId, quotationNumber])
   @@index([companyId, status])
@@ -6280,40 +6355,85 @@ enum CrmCommissionEntryStatus {
   VOIDED
 }
 
+enum CrmViewType {
+  TABLE
+  BOARD
+  CALENDAR
+}
+
+/// The CRM company record — a customer organisation, supplier, partner or
+/// prospect. Named CrmClient for historical reasons: it predates the wider
+/// record set and already owns the link to the accounting Customer, so it is
+/// extended in place. The UI calls it "Company".
 model CrmClient {
-  id              String    @id @default(uuid())
-  companyId       String
-  clientNo        String
-  name            String
-  contactName     String?
-  email           String?
-  emailNormalized String?
-  phone           String?
-  phoneE164       String?
-  addressLine     String?
-  city            String?
-  country         String?
-  notes           String?
-  tags            String[]  @default([])
-  customerId      String?
-  assignedToId    String?
-  archivedAt      DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                 String              @id @default(uuid())
+  companyId          String
+  clientNo           String
+  name               String
+  tradingName        String?
+  companyType        CrmCompanyType      @default(CUSTOMER)
+  registrationNumber String?
+  taxNumber          String?
+  website            String?
+  /// Host part of `website`, used for duplicate detection on import.
+  websiteDomain      String?
+  industry           String?
+  contactName        String?
+  email              String?
+  emailNormalized    String?
+  phone              String?
+  phoneE164          String?
+  addressLine        String?
+  city               String?
+  country            String?
+  billingAddress     String?
+  accountStatus      CrmAccountStatus    @default(ACTIVE)
+  /// Simple hierarchy: this company sits under `parent` as a branch,
+  /// subsidiary or department. Not a corporate ownership model.
+  parentClientId     String?
+  parentRelation     CrmCompanyRelation?
+  notes              String?
+  tags               String[]            @default([])
+  customFields       Json?
+  customerId         String?
+  assignedToId       String?
+  lastContactedAt    DateTime?
+  archivedAt         DateTime?
+  /// Set when this record was merged away; reads redirect to the survivor.
+  mergedIntoId       String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   company           Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   customer          Customer?             @relation(fields: [customerId], references: [id])
   assignedTo        User?                 @relation("CrmClientAssignedTo", fields: [assignedToId], references: [id])
+  parent            CrmClient?            @relation("CrmClientHierarchy", fields: [parentClientId], references: [id], onDelete: SetNull)
+  children          CrmClient[]           @relation("CrmClientHierarchy")
+  mergedInto        CrmClient?            @relation("CrmClientMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom        CrmClient[]           @relation("CrmClientMerge")
   leads             CrmLead[]
   activities        CrmActivity[]
   followUps         CrmFollowUp[]
   appointments      CrmAppointment[]
   intakeSubmissions CrmIntakeSubmission[]
+  people            CrmPerson[]           @relation("CrmPersonPrimaryCompany")
+  tasks             CrmTask[]
+  comments          CrmComment[]
+  personLinks       CrmPersonCompany[]
+  deals             CrmDeal[]
+  sites             CrmSite[]
+
+  collectionNotes   CrmCollectionNote[]
+
+  workOrders     CrmWorkOrder[]
 
   @@unique([companyId, clientNo])
   @@index([companyId, emailNormalized])
   @@index([companyId, phoneE164])
   @@index([companyId, name])
+  @@index([companyId, websiteDomain])
+  @@index([companyId, parentClientId])
+  @@index([companyId, archivedAt])
 }
 
 model CrmLead {
@@ -6346,6 +6466,16 @@ model CrmLead {
   firstContactAt DateTime?
   wonAt          DateTime?
   lostAt         DateTime?
+  customFields   Json?
+  /// Transparent rule-based score; see lib/crm/lead-scoring.ts.
+  score          Int?
+  /// Set when the lead was qualified into a deal. A converted lead is
+  /// read-only history — the deal carries the work from then on.
+  convertedAt      DateTime?
+  convertedById    String?
+  convertedDealId  String?
+  convertedPersonId String?
+  convertedClientId String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -6359,6 +6489,11 @@ model CrmLead {
   documents         CrmLeadDocument[]
   intakeSubmissions CrmIntakeSubmission[]
   commissionEntries CrmCommissionEntry[]
+  convertedDeal     CrmDeal?              @relation("CrmLeadConvertedDeal", fields: [convertedDealId], references: [id], onDelete: SetNull)
+  convertedPerson   CrmPerson?            @relation("CrmLeadConvertedPerson", fields: [convertedPersonId], references: [id], onDelete: SetNull)
+  convertedBy       User?                 @relation("CrmLeadConvertedBy", fields: [convertedById], references: [id])
+  tasks             CrmTask[]
+  comments          CrmComment[]
 
   @@unique([companyId, leadNo])
   @@index([companyId, stage, updatedAt])
@@ -6373,29 +6508,45 @@ model CrmLead {
 model CrmLeadDocument {
   id          String          @id @default(uuid())
   companyId   String
-  leadId      String
+  leadId      String?
+  dealId      String?
   type        CrmDocumentType
   quotationId String?
   invoiceId   String?
   receiptId   String?
   amount      Float
   currency    String          @default("USD")
+  /// Quote revisions. v1 is the first thing sent; each later one supersedes
+  /// the last, and the chain is what makes "what did we actually agree" a
+  /// question with an answer.
+  version     Int             @default(1)
+  supersedesId String?
+  /// Why this revision exists — "customer asked for the cheaper panel".
+  revisionNote String?
   createdById String?
   createdAt   DateTime        @default(now())
 
+  supersedes  CrmLeadDocument?  @relation("CrmDocumentRevision", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy CrmLeadDocument[] @relation("CrmDocumentRevision")
   company           Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  lead              CrmLead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead              CrmLead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal              CrmDeal?             @relation(fields: [dealId], references: [id], onDelete: Cascade)
   quotation         SalesQuotation?      @relation("CrmLeadDocQuotation", fields: [quotationId], references: [id])
   invoice           SalesInvoice?        @relation("CrmLeadDocInvoice", fields: [invoiceId], references: [id])
   receipt           SalesReceipt?        @relation("CrmLeadDocReceipt", fields: [receiptId], references: [id])
   createdBy         User?                @relation("CrmLeadDocCreatedBy", fields: [createdById], references: [id])
   approval          CrmDocumentApproval?
   commissionEntries CrmCommissionEntry[]
+  discountApprovals CrmDiscountApproval[]
+  collectionNotes   CrmCollectionNote[]
+  workOrders        CrmWorkOrder[]
 
   @@unique([companyId, quotationId])
   @@unique([companyId, invoiceId])
   @@unique([companyId, receiptId])
   @@index([companyId, leadId, type])
+  @@index([companyId, dealId, type])
+  @@index([companyId, supersedesId])
 }
 
 model CrmDocumentApproval {
@@ -6424,6 +6575,8 @@ model CrmActivity {
   type        CrmActivityType
   leadId      String?
   clientId    String?
+  dealId      String?
+  personId    String?
   subject     String
   body        String?
   metadata    Json?
@@ -6434,6 +6587,8 @@ model CrmActivity {
   company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   lead      CrmLead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
   client    CrmClient? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  deal      CrmDeal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  person    CrmPerson? @relation(fields: [personId], references: [id], onDelete: Cascade)
   createdBy User?      @relation("CrmActivityCreatedBy", fields: [createdById], references: [id])
 
   @@index([companyId, leadId, occurredAt])
@@ -6449,6 +6604,7 @@ model CrmFollowUp {
   status        CrmFollowUpStatus @default(PENDING)
   leadId        String?
   clientId      String?
+  dealId        String?
   appointmentId String?
   assignedToId  String
   createdById   String?
@@ -6459,6 +6615,7 @@ model CrmFollowUp {
   company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   lead        CrmLead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   client      CrmClient?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  deal        CrmDeal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
   appointment CrmAppointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   assignedTo  User            @relation("CrmFollowUpAssignedTo", fields: [assignedToId], references: [id])
   createdBy   User?           @relation("CrmFollowUpCreatedBy", fields: [createdById], references: [id])
@@ -6475,6 +6632,8 @@ model CrmAppointment {
   title          String               @default("Site visit")
   leadId         String?
   clientId       String?
+  dealId         String?
+  siteId         String?
   assignedToId   String
   scheduledStart DateTime
   scheduledEnd   DateTime?
@@ -6486,16 +6645,80 @@ model CrmAppointment {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
-  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  lead       CrmLead?      @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  client     CrmClient?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  assignedTo User          @relation("CrmAppointmentAssignedTo", fields: [assignedToId], references: [id])
-  createdBy  User?         @relation("CrmAppointmentCreatedBy", fields: [createdById], references: [id])
+  // Site-visit report captured on site. `checklist` is an array of
+  // { key, label, checked, notes? }; `photos` an array of
+  // { url, fileName, contentType, size, kind, caption? }.
+  checklist         Json?
+  photos            Json?
+  siteConditions    String?
+  reportNotes       String?
+  reportCompletedAt DateTime?
+
+  company    Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead       CrmLead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client     CrmClient?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  deal       CrmDeal?           @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  site       CrmSite?           @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  assignedTo User               @relation("CrmAppointmentAssignedTo", fields: [assignedToId], references: [id])
+  createdBy  User?              @relation("CrmAppointmentCreatedBy", fields: [createdById], references: [id])
   followUps  CrmFollowUp[]
+  visitItems CrmSiteVisitItem[]
 
   @@unique([companyId, appointmentNo])
   @@index([companyId, assignedToId, scheduledStart])
   @@index([companyId, status, scheduledStart])
+}
+
+/// Measurements and specifications captured during a site visit. These convert
+/// directly into quotation lines via `visitItemsToQuotationLines`.
+model CrmSiteVisitItem {
+  id            String   @id @default(uuid())
+  companyId     String
+  appointmentId String
+  position      Int      @default(0)
+  category      String?
+  description   String
+  quantity      Float    @default(1)
+  unit          String?
+  widthMm       Float?
+  heightMm      Float?
+  depthMm       Float?
+  specNotes     String?
+  unitPrice     Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  appointment CrmAppointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, appointmentId, position])
+}
+
+/// A named, reusable set of lead filters + sort. Private to its creator unless
+/// `isShared`, in which case the whole company sees it.
+model CrmSavedView {
+  id          String      @id @default(uuid())
+  companyId   String
+  entity      String      @default("LEAD")
+  name        String
+  viewType    CrmViewType @default(TABLE)
+  filters     Json
+  sort        Json?
+  /// Column keys in the order they should appear. Null means the table's
+  /// own defaults, so an existing view keeps rendering as it did.
+  columns     Json?
+  /// Field key to group rows by, for board and grouped-table views.
+  groupBy     String?
+  isShared    Boolean     @default(false)
+  createdById String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("CrmSavedViewCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId, entity, isShared])
+  @@index([companyId, createdById])
 }
 
 model CrmIntakeForm {
@@ -6927,4 +7150,999 @@ model CameraAccessLog {
   @@index([cameraId])
   @@index([userId])
   @@index([startTime])
+}
+
+// ---------------------------------------------------------------------------
+// CRM core records: people, companies, deals, sites.
+//
+// CrmClient is the company record. It predates this model set and already
+// carries the link to the accounting Customer, so it is extended in place
+// rather than renamed — a rename under db:push would drop the table.
+// ---------------------------------------------------------------------------
+
+enum CrmCompanyType {
+  CUSTOMER
+  PROSPECT
+  SUPPLIER
+  PARTNER
+  OTHER
+}
+
+/// How a company sits under its parent. Deliberately not a corporate
+/// ownership model — users only need to say "this belongs under that".
+enum CrmCompanyRelation {
+  HEAD_OFFICE
+  BRANCH
+  SUBSIDIARY
+  DEPARTMENT
+}
+
+enum CrmAccountStatus {
+  ACTIVE
+  ON_HOLD
+  INACTIVE
+  BLACKLISTED
+}
+
+enum CrmContactType {
+  CUSTOMER
+  DECISION_MAKER
+  SITE_CONTACT
+  FINANCE_CONTACT
+  SUPPLIER_CONTACT
+  REFERRAL_PARTNER
+  OTHER
+}
+
+enum CrmPreferredChannel {
+  PHONE
+  EMAIL
+  WHATSAPP
+  SMS
+  IN_PERSON
+}
+
+/// A person's role on a specific deal. One person may hold several.
+enum CrmDealContactRole {
+  PRIMARY
+  DECISION_MAKER
+  FINANCE
+  SITE
+  TECHNICAL
+  INFLUENCER
+  REFERRER
+}
+
+/// Won and Lost are protected outcomes: stages are configurable, but every
+/// pipeline resolves to one of these three states.
+enum CrmDealStatus {
+  OPEN
+  WON
+  LOST
+}
+
+enum CrmForecastCategory {
+  PIPELINE
+  BEST_CASE
+  COMMIT
+  CLOSED
+}
+
+model CrmPerson {
+  id                 String               @id @default(uuid())
+  companyId          String
+  personNo           String
+  firstName          String
+  lastName           String?
+  /// Denormalised "First Last" for search and display ordering.
+  fullName           String
+  jobTitle           String?
+  email              String?
+  emailNormalized    String?
+  additionalEmails   String[]             @default([])
+  phone              String?
+  phoneE164          String?
+  additionalPhones   String[]             @default([])
+  contactType        CrmContactType       @default(CUSTOMER)
+  preferredChannel   CrmPreferredChannel?
+  addressLine        String?
+  city               String?
+  country            String?
+  notes              String?
+  tags               String[]             @default([])
+  /// Primary employer. Additional affiliations live in CrmPersonCompany.
+  clientId           String?
+  assignedToId       String?
+  /// Where this record came from: MANUAL, IMPORT, LEAD_CONVERSION, INTAKE_FORM.
+  sourceType         String               @default("MANUAL")
+  convertedFromLeadId String?
+  customFields       Json?
+  lastContactedAt    DateTime?
+  archivedAt         DateTime?
+  /// Set when this record was merged away; reads redirect to the survivor.
+  mergedIntoId       String?
+  createdById        String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  company        Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client         CrmClient?         @relation("CrmPersonPrimaryCompany", fields: [clientId], references: [id], onDelete: SetNull)
+  assignedTo     User?              @relation("CrmPersonAssignedTo", fields: [assignedToId], references: [id])
+  createdBy      User?              @relation("CrmPersonCreatedBy", fields: [createdById], references: [id])
+  mergedInto     CrmPerson?         @relation("CrmPersonMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom     CrmPerson[]        @relation("CrmPersonMerge")
+  companyLinks   CrmPersonCompany[]
+  dealContacts   CrmDealContact[]
+  dealsPrimaryOn CrmDeal[]          @relation("CrmDealPrimaryContact")
+  sitesPrimaryOn CrmSite[]          @relation("CrmSitePrimaryContact")
+  activities     CrmActivity[]
+  leadsConverted CrmLead[]          @relation("CrmLeadConvertedPerson")
+  tasks          CrmTask[]
+  comments       CrmComment[]
+
+  @@unique([companyId, personNo])
+  @@index([companyId, fullName])
+  @@index([companyId, emailNormalized])
+  @@index([companyId, phoneE164])
+  @@index([companyId, clientId])
+  @@index([companyId, assignedToId])
+  @@index([companyId, archivedAt])
+}
+
+/// Additional company affiliations beyond CrmPerson.clientId.
+model CrmPersonCompany {
+  id        String   @id @default(uuid())
+  companyId String
+  personId  String
+  clientId  String
+  jobTitle  String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  company Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  person  CrmPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+  client  CrmClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, clientId])
+  @@index([companyId, clientId])
+}
+
+model CrmSite {
+  id                 String   @id @default(uuid())
+  companyId          String
+  siteNo             String
+  name               String
+  clientId           String?
+  addressLine        String?
+  city               String?
+  country            String?
+  latitude           Float?
+  longitude          Float?
+  primaryContactId   String?
+  accessInstructions String?
+  siteConditions     String?
+  photos             Json?
+  notes              String?
+  tags               String[] @default([])
+  customFields       Json?
+  archivedAt         DateTime?
+  createdById        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client         CrmClient?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  primaryContact CrmPerson?       @relation("CrmSitePrimaryContact", fields: [primaryContactId], references: [id], onDelete: SetNull)
+  createdBy      User?            @relation("CrmSiteCreatedBy", fields: [createdById], references: [id])
+  deals          CrmDeal[]
+  appointments   CrmAppointment[]
+  tasks          CrmTask[]
+  comments       CrmComment[]
+
+  workOrders     CrmWorkOrder[]
+
+  @@unique([companyId, siteNo])
+  @@index([companyId, name])
+  @@index([companyId, clientId])
+  @@index([companyId, archivedAt])
+}
+
+/// A deal is the commercial opportunity: the record that carries pipeline
+/// stage, value, quotes, visits and payments. A lead is only the unqualified
+/// enquiry that may produce one.
+model CrmDeal {
+  id                String               @id @default(uuid())
+  companyId         String
+  dealNo            String
+  title             String
+  clientId          String?
+  primaryContactId  String?
+  siteId            String?
+  pipelineId        String
+  stageId           String
+  status            CrmDealStatus        @default(OPEN)
+  value             Float?
+  currency          String               @default("USD")
+  probability       Int?
+  forecastCategory  CrmForecastCategory  @default(PIPELINE)
+  expectedCloseDate DateTime?
+  assignedToId      String?
+  services          String[]             @default([])
+  source            String?
+  sourceChannel     CrmLeadChannel       @default(MANUAL)
+  lostReason        String?
+  customFields      Json?
+  /// Stamped on every stage move so "days in stage" needs no timeline scan.
+  stageEnteredAt    DateTime             @default(now())
+  wonAt             DateTime?
+  lostAt            DateTime?
+  convertedFromLeadId String?
+  archivedAt        DateTime?
+  createdById       String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client         CrmClient?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  primaryContact CrmPerson?        @relation("CrmDealPrimaryContact", fields: [primaryContactId], references: [id], onDelete: SetNull)
+  site           CrmSite?          @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  pipeline       CrmPipeline       @relation(fields: [pipelineId], references: [id])
+  stage          CrmPipelineStage  @relation(fields: [stageId], references: [id])
+  assignedTo     User?             @relation("CrmDealAssignedTo", fields: [assignedToId], references: [id])
+  createdBy      User?             @relation("CrmDealCreatedBy", fields: [createdById], references: [id])
+  contacts       CrmDealContact[]
+  activities     CrmActivity[]
+  followUps      CrmFollowUp[]
+  appointments   CrmAppointment[]
+  documents      CrmLeadDocument[]
+  leadsConverted CrmLead[]         @relation("CrmLeadConvertedDeal")
+  tasks             CrmTask[]
+  comments          CrmComment[]
+
+  workOrders     CrmWorkOrder[]
+
+  @@unique([companyId, dealNo])
+  @@index([companyId, stageId])
+  @@index([companyId, status, updatedAt])
+  @@index([companyId, assignedToId, status])
+  @@index([companyId, clientId])
+  @@index([companyId, expectedCloseDate])
+}
+
+model CrmDealContact {
+  id        String             @id @default(uuid())
+  companyId String
+  dealId    String
+  personId  String
+  role      CrmDealContactRole @default(PRIMARY)
+  notes     String?
+  createdAt DateTime           @default(now())
+
+  company Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  deal    CrmDeal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  person  CrmPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId, personId, role])
+  @@index([companyId, personId])
+}
+
+// ---------------------------------------------------------------------------
+// Configurable pipelines. Stages are data, not code — but every pipeline
+// still resolves to the three protected outcomes in CrmDealStatus.
+// ---------------------------------------------------------------------------
+
+model CrmPipeline {
+  id          String    @id @default(uuid())
+  companyId   String
+  name        String
+  description String?
+  /// The pipeline new deals land in when none is chosen.
+  isDefault   Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  position    Int       @default(0)
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?              @relation("CrmPipelineCreatedBy", fields: [createdById], references: [id])
+  stages    CrmPipelineStage[]
+  deals     CrmDeal[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+}
+
+model CrmPipelineStage {
+  id                String        @id @default(uuid())
+  companyId         String
+  pipelineId        String
+  name              String
+  position          Int           @default(0)
+  /// Which protected outcome entering this stage puts the deal in. Exactly
+  /// one WON and one LOST stage per pipeline; the rest are OPEN.
+  status            CrmDealStatus @default(OPEN)
+  probability       Int           @default(0)
+  colorToken        String?
+  /// Days a deal may sit here before it counts as stale. Null disables.
+  inactivityDays    Int?
+  /// Field keys that must be filled before a deal may leave this stage.
+  requiredFields    String[]      @default([])
+  /// Short "what should happen here" checklist shown on the deal.
+  checklist         Json?
+  requiresSiteVisit Boolean       @default(false)
+  requiresQuotation Boolean       @default(false)
+  archivedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  company  Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pipeline CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    CrmDeal[]
+
+  @@unique([pipelineId, name])
+  @@index([companyId, pipelineId, position])
+}
+
+// ---------------------------------------------------------------------------
+// Custom fields. Definitions are metadata; values live in a `customFields`
+// JSON column on each record, keyed by CrmFieldDefinition.key. That keeps
+// reads a single row fetch and avoids an EAV join on every list query.
+// ---------------------------------------------------------------------------
+
+enum CrmFieldEntity {
+  PERSON
+  COMPANY
+  LEAD
+  DEAL
+  SITE
+  WORK_ORDER
+}
+
+enum CrmFieldType {
+  SHORT_TEXT
+  LONG_TEXT
+  NUMBER
+  CURRENCY
+  PERCENT
+  DATE
+  DATETIME
+  CHECKBOX
+  SINGLE_SELECT
+  MULTI_SELECT
+  PHONE
+  EMAIL
+  URL
+  ADDRESS
+  USER
+  PERSON
+  COMPANY
+  SITE
+}
+
+model CrmFieldDefinition {
+  id           String         @id @default(uuid())
+  companyId    String
+  entity       CrmFieldEntity
+  /// Stable key used in the record's customFields JSON. Immutable once set.
+  key          String
+  label        String
+  description  String?
+  type         CrmFieldType
+  isRequired   Boolean        @default(false)
+  defaultValue Json?
+  /// Choices for SINGLE_SELECT / MULTI_SELECT: [{value,label,colorToken?}].
+  options      Json?
+  /// Grouping on the record page, e.g. "Qualification".
+  section      String?
+  position     Int            @default(0)
+  showInTable  Boolean        @default(false)
+  archivedAt   DateTime?
+  createdById  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("CrmFieldDefinitionCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([companyId, entity, key])
+  @@index([companyId, entity, archivedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Static lists: manual membership, as opposed to a saved view's filters.
+//
+// The distinction is deliberate and kept visible in the UI — a view shows
+// whatever matches, a list shows what someone put in it.
+// ---------------------------------------------------------------------------
+
+model CrmList {
+  id          String         @id @default(uuid())
+  companyId   String
+  entity      CrmFieldEntity
+  name        String
+  description String?
+  isShared    Boolean        @default(false)
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User             @relation("CrmListCreatedBy", fields: [createdById], references: [id])
+  members   CrmListMember[]
+
+  @@unique([companyId, entity, name])
+  @@index([companyId, entity])
+}
+
+model CrmListMember {
+  id        String   @id @default(uuid())
+  companyId String
+  listId    String
+  /// The record's id. Which table it points at is fixed by the list's entity,
+  /// so this is deliberately not a foreign key — one join table serves every
+  /// record type rather than one per type.
+  recordId  String
+  addedById String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  list    CrmList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  addedBy User?   @relation("CrmListMemberAddedBy", fields: [addedById], references: [id])
+
+  @@unique([listId, recordId])
+  @@index([companyId, recordId])
+}
+
+// ---------------------------------------------------------------------------
+// Tasks, collaboration and followers.
+//
+// CrmFollowUp remains as the lead/deal follow-up it always was; CrmTask is the
+// generic work item the spec asks for, with types, priority, outcomes and
+// simple recurrence.
+// ---------------------------------------------------------------------------
+
+enum CrmTaskType {
+  CALL
+  EMAIL
+  WHATSAPP
+  MEETING
+  VISIT_PREP
+  DOCUMENT_FOLLOW_UP
+  PAYMENT_FOLLOW_UP
+  GENERAL
+}
+
+enum CrmTaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum CrmTaskStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+/// What came of a task. Which outcomes apply depends on the task type — see
+/// lib/crm/tasks.ts.
+enum CrmTaskOutcome {
+  ANSWERED
+  NO_ANSWER
+  CALL_BACK_LATER
+  QUALIFIED
+  NOT_INTERESTED
+  REPLIED
+  NO_REPLY
+  ATTENDED
+  NO_SHOW
+  DONE
+}
+
+enum CrmRecurrence {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model CrmTask {
+  id           String          @id @default(uuid())
+  companyId    String
+  title        String
+  description  String?
+  type         CrmTaskType     @default(GENERAL)
+  priority     CrmTaskPriority @default(NORMAL)
+  status       CrmTaskStatus   @default(OPEN)
+  dueAt        DateTime
+  /// Null when the task is due on a day rather than at a time.
+  hasDueTime   Boolean         @default(false)
+  remindAt     DateTime?
+  outcome      CrmTaskOutcome?
+  outcomeNotes String?
+  completedAt  DateTime?
+  assignedToId String?
+  createdById  String?
+
+  // The record this task is about. Exactly one is set in practice, but the
+  // schema allows several so a task can be filed against a deal and its site.
+  leadId    String?
+  dealId    String?
+  clientId  String?
+  personId  String?
+  siteId    String?
+
+  recurrence         CrmRecurrence @default(NONE)
+  /// Every N periods, e.g. every 2 weeks. Ignored when recurrence is NONE.
+  recurrenceInterval Int           @default(1)
+  /// Set on the task that produced this one, so a chain stays traceable.
+  recurredFromId     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedTo   User?      @relation("CrmTaskAssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User?      @relation("CrmTaskCreatedBy", fields: [createdById], references: [id])
+  lead         CrmLead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         CrmDeal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  client       CrmClient? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  person       CrmPerson? @relation(fields: [personId], references: [id], onDelete: Cascade)
+  site         CrmSite?   @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  recurredFrom CrmTask?   @relation("CrmTaskRecurrence", fields: [recurredFromId], references: [id], onDelete: SetNull)
+  recurrences  CrmTask[]  @relation("CrmTaskRecurrence")
+
+  @@index([companyId, assignedToId, status, dueAt])
+  @@index([companyId, status, dueAt])
+  @@index([companyId, dealId])
+  @@index([companyId, leadId])
+}
+
+/// Internal collaboration, deliberately separate from the customer-facing
+/// activity timeline. A comment is something the team says to itself.
+model CrmComment {
+  id         String    @id @default(uuid())
+  companyId  String
+  body       String
+  /// Reply threading, one level deep. Threads of threads help nobody.
+  parentId   String?
+  isPinned   Boolean   @default(false)
+  resolvedAt DateTime?
+  resolvedById String?
+  editedAt   DateTime?
+
+  leadId   String?
+  dealId   String?
+  clientId String?
+  personId String?
+  siteId   String?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy  User            @relation("CrmCommentCreatedBy", fields: [createdById], references: [id])
+  resolvedBy User?           @relation("CrmCommentResolvedBy", fields: [resolvedById], references: [id])
+  parent     CrmComment?     @relation("CrmCommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    CrmComment[]    @relation("CrmCommentThread")
+  mentions   CrmMention[]
+  lead       CrmLead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal       CrmDeal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  client     CrmClient?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  person     CrmPerson?      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  site       CrmSite?        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, dealId, createdAt])
+  @@index([companyId, leadId, createdAt])
+  @@index([companyId, parentId])
+}
+
+model CrmMention {
+  id        String   @id @default(uuid())
+  companyId String
+  commentId String
+  userId    String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  company Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  comment CrmComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User       @relation("CrmMentionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([companyId, userId, readAt])
+}
+
+/// Following a record opts you into its notable updates — not every field edit.
+model CrmFollower {
+  id        String         @id @default(uuid())
+  companyId String
+  userId    String
+  entity    CrmFieldEntity
+  recordId  String
+  createdAt DateTime       @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation("CrmFollowerUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entity, recordId])
+  @@index([companyId, entity, recordId])
+}
+
+/// A rule that watches for something happening and does something about it.
+/// Triggers, conditions and actions are stored as JSON rather than columns
+/// because the shape changes as rules are added, and a migration per rule type
+/// is a tax nobody should pay for a settings screen.
+model CrmAutomation {
+  id          String              @id @default(uuid())
+  companyId   String
+  name        String
+  description String?
+  trigger     CrmAutomationTrigger
+  /// Trigger-specific settings, e.g. which stage, how many days of silence.
+  triggerConfig Json?
+  /// All must hold for the actions to run. Empty means "always".
+  conditions  Json?
+  /// Run in order. A failing action is logged and the rest still run.
+  actions     Json
+  isEnabled   Boolean             @default(true)
+  /// Bumped every time the rule fires, so a runaway rule is visible.
+  runCount    Int                 @default(0)
+  lastRunAt   DateTime?
+  createdById String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?              @relation("CrmAutomationCreatedBy", fields: [createdById], references: [id])
+  runs      CrmAutomationRun[]
+
+  @@index([companyId, trigger, isEnabled])
+}
+
+/// One firing of a rule. Kept so "why did this lead get assigned to me?" has an
+/// answer, and so a rule that is quietly failing is visible rather than
+/// mysterious.
+model CrmAutomationRun {
+  id           String   @id @default(uuid())
+  companyId    String
+  automationId String
+  /// What it fired on.
+  entity       CrmFieldEntity
+  recordId     String
+  status       CrmAutomationRunStatus @default(SUCCEEDED)
+  /// Per-action outcomes, and the message when one failed.
+  result       Json?
+  createdAt    DateTime @default(now())
+
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  automation CrmAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, automationId, createdAt])
+  @@index([companyId, entity, recordId])
+}
+
+enum CrmAutomationTrigger {
+  LEAD_CREATED
+  LEAD_STAGE_CHANGED
+  DEAL_CREATED
+  DEAL_STAGE_CHANGED
+  TASK_OVERDUE
+  RECORD_IDLE
+  DOCUMENT_APPROVED
+  PAYMENT_RECEIVED
+}
+
+enum CrmAutomationRunStatus {
+  SUCCEEDED
+  PARTIAL
+  FAILED
+}
+
+
+
+/// A discount a rep can't give on their own.
+///
+/// Kept as a request rather than a block: the rep builds the quote they think
+/// will win, and a manager says yes or no. Blocking outright just gets the
+/// discount hidden in the unit price.
+model CrmDiscountApproval {
+  id          String                    @id @default(uuid())
+  companyId   String
+  documentId  String
+  /// The discount asked for, as a percentage of the undiscounted total.
+  discountPercent Float
+  discountAmount  Float
+  reason      String?
+  status      CrmApprovalDecision       @default(PENDING)
+  requestedById String
+  decidedById String?
+  decidedAt   DateTime?
+  decisionNote String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  document    CrmLeadDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  requestedBy User            @relation("CrmDiscountRequestedBy", fields: [requestedById], references: [id])
+  decidedBy   User?           @relation("CrmDiscountDecidedBy", fields: [decidedById], references: [id])
+
+  @@index([companyId, status, createdAt])
+  @@index([companyId, documentId])
+}
+
+/// Chasing money that is late.
+///
+/// A promise to pay is the thing worth recording: "they said Friday" is what
+/// turns a chase list into a plan, and a broken promise is a stronger signal
+/// than another day of silence.
+model CrmCollectionNote {
+  id          String                @id @default(uuid())
+  companyId   String
+  documentId  String
+  invoiceId   String?
+  clientId    String?
+  outcome     CrmCollectionOutcome
+  /// When they said they would pay.
+  promisedAt  DateTime?
+  promisedAmount Float?
+  notes       String?
+  createdById String?
+  createdAt   DateTime              @default(now())
+
+  company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  document  CrmLeadDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  client    CrmClient?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy User?           @relation("CrmCollectionNoteCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId, documentId, createdAt])
+  @@index([companyId, promisedAt])
+}
+
+/// ============================================
+/// SHARED CATALOGUE — owned by Stock & Inventory
+/// ============================================
+///
+/// One catalogue for every module. Retail sells it over a counter, the CRM
+/// quotes it, a workshop puts it on a job card. Before this, each module was
+/// growing its own list of "things we sell", which meant the same pump had a
+/// different price depending on which screen you opened.
+///
+/// `Product` is the item master: what a thing *is*, company-wide.
+/// `InventoryItem` stays what it always was: how much of it is at one site.
+/// That separation is deliberate — a service has a Product and no stock at all,
+/// and a stocked product has one Product and one InventoryItem per site.
+model Product {
+  id          String        @id @default(uuid())
+  companyId   String
+  /// Code or SKU. Unique per company so imports and scanners agree.
+  code        String
+  name        String
+  description String?
+  kind        ProductKind   @default(GOODS)
+  category    String?
+  unit        UnitOfMeasure @default(EACH)
+  /// Free text when `unit` is OTHER, e.g. "per pallet".
+  unitLabel   String?
+  /// The fallback price, used when no price list has an entry for this item.
+  standardPrice Float       @default(0)
+  costPrice     Float?
+  defaultTaxRate Float      @default(0)
+  currency      String      @default("USD")
+  /// The most a seller may discount without approval. Null means no ceiling.
+  maxDiscountPercent Float?
+  imageUrl    String?
+  notes       String?
+  isActive    Boolean       @default(true)
+  archivedAt  DateTime?
+  /// Free-form per-module extras, so a module can carry a field the others
+  /// don't need without a migration that touches everyone.
+  attributes  Json?
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  company        Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy      User?               @relation("ProductCreatedBy", fields: [createdById], references: [id])
+  prices         ProductPrice[]
+  inventoryItems InventoryItem[]
+  retailListings RetailCatalogItem[]
+
+  @@unique([companyId, code])
+  @@index([companyId, isActive, kind])
+  @@index([companyId, category])
+}
+
+/// A named price list — Standard, Wholesale, Trade, VIP, or a region's own.
+/// Kept deliberately simple per the spec: a list holds a price per product,
+/// optionally from a minimum quantity. No formulas, no rule engine.
+model PriceList {
+  id          String        @id @default(uuid())
+  companyId   String
+  name        String
+  kind        PriceListKind @default(STANDARD)
+  /// Used when a customer or module asks for no list in particular.
+  isDefault   Boolean       @default(false)
+  /// Region-specific lists say which region they serve.
+  region      String?
+  currency    String        @default("USD")
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entries ProductPrice[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive, kind])
+}
+
+/// One product's price on one list. `minQuantity` gives simple volume breaks;
+/// the row with the highest minimum at or below the quantity ordered wins.
+model ProductPrice {
+  id          String   @id @default(uuid())
+  companyId   String
+  priceListId String
+  productId   String
+  minQuantity Float    @default(1)
+  unitPrice   Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  priceList PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([priceListId, productId, minQuantity])
+  @@index([companyId, productId])
+}
+
+enum ProductKind {
+  GOODS
+  SERVICE
+  LABOUR
+  MATERIAL
+  BUNDLE
+}
+
+/// The units the spec calls for, plus an escape hatch.
+enum UnitOfMeasure {
+  EACH
+  METRE
+  SQUARE_METRE
+  HOUR
+  DAY
+  PACKAGE
+  INSTALLATION
+  LITRE
+  KILOGRAM
+  OTHER
+}
+
+enum PriceListKind {
+  STANDARD
+  WHOLESALE
+  TRADE
+  VIP
+  REGIONAL
+}
+
+enum CrmApprovalDecision {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+enum CrmCollectionOutcome {
+  PROMISED_TO_PAY
+  DISPUTED
+  NO_ANSWER
+  PARTIAL_PAYMENT
+  PAID
+  ESCALATED
+}
+
+/// The job that follows a won deal: go to the site and do the work.
+///
+/// Deliberately not the maintenance `WorkOrder`, which is shaped around an
+/// equipment breakdown — it requires an equipmentId, tracks downtime windows
+/// and assigns an Employee technician. None of that describes installing what
+/// a customer just bought at their own address.
+model CrmWorkOrder {
+  id          String              @id @default(uuid())
+  companyId   String
+  workOrderNo String
+  title       String
+  description String?
+  status      CrmWorkOrderStatus  @default(DRAFT)
+  priority    CrmTaskPriority     @default(NORMAL)
+
+  dealId    String?
+  clientId  String?
+  siteId    String?
+  /// The quote whose lines became this job's checklist.
+  documentId String?
+
+  scheduledStart DateTime?
+  scheduledEnd   DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+
+  /// Whoever is answerable for the job. The rest of the crew are users too,
+  /// held as ids because a crew is assembled per job, not a standing team.
+  assignedToId String?
+  crewIds      String[]  @default([])
+
+  addressLine String?
+  accessNotes String?
+  contactName  String?
+  contactPhone String?
+
+  /// Signed off on site. A job with no signature is a job the customer can
+  /// still say never happened.
+  signedByName  String?
+  signatureUrl  String?
+  signedAt      DateTime?
+  /// Out of five, asked at the door while the work is fresh.
+  customerRating Int?
+  completionNotes String?
+  /// Before-and-after photographs, same shape as a site visit's.
+  photos       Json?
+  /// Why it stalled, when it did.
+  blockedReason String?
+
+  customFields Json?
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company    Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  deal       CrmDeal?           @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  client     CrmClient?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  site       CrmSite?           @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  document   CrmLeadDocument?   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  assignedTo User?              @relation("CrmWorkOrderAssignedTo", fields: [assignedToId], references: [id])
+  createdBy  User?              @relation("CrmWorkOrderCreatedBy", fields: [createdById], references: [id])
+  items      CrmWorkOrderItem[]
+
+  @@unique([companyId, workOrderNo])
+  @@index([companyId, status, scheduledStart])
+  @@index([companyId, assignedToId, status])
+  @@index([companyId, dealId])
+}
+
+/// One thing to do or install, usually lifted from the quote that was won.
+model CrmWorkOrderItem {
+  id          String   @id @default(uuid())
+  companyId   String
+  workOrderId String
+  position    Int      @default(0)
+  description String
+  quantity    Float    @default(1)
+  /// How much of it is actually done, so a part-finished job is visible as
+  /// part-finished rather than as either done or not started.
+  completedQuantity Float @default(0)
+  unit        String?
+  /// The shared catalogue item this line installs, when it came from one.
+  productId   String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  workOrder CrmWorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, workOrderId, position])
+}
+
+enum CrmWorkOrderStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
 }

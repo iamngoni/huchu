@@ -1,16 +1,9 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
-import { CrmClientsContent } from "@/components/crm/crm-clients-content";
-import { authOptions } from "@/lib/auth";
 
-export default async function CrmClientsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/login");
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading title="Clients" />
-      <CrmClientsContent />
-    </div>
-  );
+/**
+ * Clients became Companies when the CRM grew a full record set. Old links —
+ * bookmarks, notification deep-links, anything already sent out — still work.
+ */
+export default function CrmClientsPage() {
+  redirect("/crm/companies");
 }

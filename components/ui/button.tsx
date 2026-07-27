@@ -1,63 +1,112 @@
+"use client";
+
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
+import { Button as DsButton, type ButtonVariant } from "@corelithzw/react";
 
 import { cn } from "@/lib/utils";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--button-radius)] text-sm font-semibold tracking-[0.01em] shadow-none transition-[background-color,color,border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-default)] active:scale-[0.995] disabled:pointer-events-none disabled:opacity-70 disabled:shadow-none disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-0",
-  {
-    variants: {
-      variant: {
-        default:
-          "bg-[var(--action-primary-bg)] text-[var(--action-primary-fg)] shadow-[var(--button-shadow-rest)] hover:bg-[var(--action-primary-hover)] hover:shadow-[var(--button-shadow-hover)] active:bg-[var(--action-primary-pressed)] active:shadow-[var(--button-shadow-pressed)]",
-        destructive:
-          "bg-[var(--status-error-bg)] text-[var(--status-error-text)] shadow-none hover:bg-[var(--status-error-bg)]",
-        outline:
-          "border border-[var(--border-default)] text-foreground shadow-[var(--button-shadow-rest)] hover:border-[var(--border-strong)] hover:bg-[var(--action-outline-hover-bg)] hover:shadow-[var(--button-shadow-hover)] active:shadow-[var(--button-shadow-pressed)]",
-        secondary:
-          "bg-surface-muted text-secondary-fg shadow-[var(--button-shadow-rest)] hover:border-[var(--border-strong)]  hover:shadow-[var(--button-shadow-pressed)]",
-        ghost:
-          "border-transparent bg-button-ghost-hover-bg hover:bg-surface-muted text-foreground",
-        link: "border-transparent text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-[var(--button-height)] px-4",
-        sm: "h-8 gap-1.5 px-3 text-[13px]",
-        lg: "h-10 px-5",
-        icon: "h-[var(--button-height)] w-[var(--button-height)]",
-        "icon-sm": "h-8 w-8",
-        "icon-lg": "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
+/**
+ * Button — the design system's, behind this repo's older prop names.
+ *
+ * This is the highest-traffic primitive in the codebase (~212 files), so the
+ * local API is preserved exactly rather than migrated call site by call site:
+ *
+ *   - `variant` keeps its old values and maps onto the DS axis. The DS has no
+ *     separate `outline`; its `secondary` already carries the border.
+ *   - `size="icon"` has no DS equivalent, so it maps to `iconOnly`. Callers
+ *     already pass `aria-label` there, which `iconOnly` requires.
+ *   - `asChild` is kept as a local Radix Slot shim; the DS ships no Slot, and
+ *     three call sites render a link as a button.
+ *
+ * New code should import `Button` from `@corelithzw/react`.
+ */
+const VARIANT_MAP: Record<string, ButtonVariant> = {
+  default: "primary",
+  primary: "primary",
+  secondary: "secondary",
+  // The DS has no outline variant — secondary already carries the border.
+  outline: "secondary",
+  ghost: "ghost",
+  quiet: "quiet",
+  link: "link",
+  destructive: "destructive",
+  danger: "danger",
+};
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
-  const Comp = asChild ? Slot : "button";
+const SIZE_MAP: Record<string, "sm" | "md" | "lg"> = {
+  default: "md",
+  sm: "sm",
+  lg: "lg",
+  icon: "md",
+  "icon-sm": "sm",
+  "icon-lg": "lg",
+};
+
+export type ButtonProps = Omit<
+  React.ComponentProps<typeof DsButton>,
+  "variant" | "size" | "tone"
+> & {
+  variant?: keyof typeof VARIANT_MAP;
+  size?: keyof typeof SIZE_MAP;
+  asChild?: boolean;
+};
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className, variant = "default", size = "default", asChild, children, ...props },
+  ref,
+) {
+  const iconOnly = size === "icon" || size === "icon-sm" || size === "icon-lg";
+
+  if (asChild) {
+    // Slot renders the DS classes onto the caller's own element (usually a
+    // link). The DS Button is a real <button>, so it can't be the host here.
+    return (
+      <Slot
+        className={cn(
+          "btn",
+          variantClass(variant),
+          size !== "default" && `btn-${SIZE_MAP[size]}`,
+          iconOnly && "btn-icon",
+          className,
+        )}
+        {...(props as React.ComponentProps<typeof Slot>)}
+      >
+        {children}
+      </Slot>
+    );
+  }
 
   return (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+    <DsButton
+      ref={ref}
+      variant={VARIANT_MAP[variant] ?? "primary"}
+      size={SIZE_MAP[size] ?? "md"}
+      iconOnly={iconOnly || undefined}
+      className={cn(className)}
       {...props}
-    />
+    >
+      {children}
+    </DsButton>
   );
+});
+
+/**
+ * `danger` is a valid DS *prop* value but ships no `.btn-danger` class — the
+ * component resolves it to the destructive styling internally. The two paths
+ * below emit classes directly, so they have to do that resolution themselves.
+ */
+function variantClass(variant: keyof typeof VARIANT_MAP): string {
+  const resolved = VARIANT_MAP[variant] ?? "primary";
+  return `btn-${resolved === "danger" ? "destructive" : resolved}`;
+}
+
+/** Kept so `cn(buttonVariants({ variant }))` call sites still compile. */
+function buttonVariants({
+  variant = "default",
+  size = "default",
+}: { variant?: keyof typeof VARIANT_MAP; size?: keyof typeof SIZE_MAP } = {}) {
+  return cn("btn", variantClass(variant), size !== "default" && `btn-${SIZE_MAP[size]}`);
 }
 
 export { Button, buttonVariants };

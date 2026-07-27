@@ -1,0 +1,340 @@
+"use client";
+
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { Button, EmptyState } from "@corelithzw/react";
+import { ClientDate } from "@/components/ui/client-date";
+import { useToast } from "@/components/ui/use-toast";
+import { getApiErrorMessage } from "@/lib/api-client";
+import {
+  createCrmComment,
+  deleteCrmComment,
+  fetchCrmComments,
+  fetchCrmFollowers,
+  followCrmRecord,
+  unfollowCrmRecord,
+  updateCrmComment,
+  type CrmCommentRecord,
+} from "@/lib/crm/crm-v2";
+import type { CollabEntity } from "@/lib/crm/collaboration";
+import { segmentMentions } from "@/lib/crm/mentions";
+import { Bell, BellRing, Check, PushPin, Trash2 } from "@/lib/icons";
+import { cn } from "@/lib/utils";
+
+import { MentionTextarea } from "./mention-textarea";
+
+function initials(name: string | null, email: string): string {
+  const source = name?.trim() || email;
+  return source
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+/** Render stored mention markup as highlighted names. */
+function CommentBody({ body }: { body: string }) {
+  return (
+    <p className="whitespace-pre-wrap text-sm text-[var(--text-primary)]">
+      {segmentMentions(body).map((segment, index) =>
+        segment.kind === "mention" ? (
+          <span key={index} className="rounded bg-[var(--accent-subtle)] px-1 font-medium">
+            @{segment.text}
+          </span>
+        ) : (
+          <span key={index}>{segment.text}</span>
+        ),
+      )}
+    </p>
+  );
+}
+
+export function CommentThread({
+  entity,
+  recordId,
+  currentUserId,
+}: {
+  entity: CollabEntity;
+  recordId: string;
+  currentUserId?: string;
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [body, setBody] = useState("");
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+
+  const commentsKey = ["crm-comments", entity, recordId];
+  const followersKey = ["crm-followers", entity, recordId];
+
+  const { data, isLoading } = useQuery({
+    queryKey: commentsKey,
+    queryFn: () => fetchCrmComments(entity, recordId),
+  });
+  const { data: followerData } = useQuery({
+    queryKey: followersKey,
+    queryFn: () => fetchCrmFollowers(entity, recordId),
+  });
+
+  const comments = data?.data ?? [];
+  const followers = followerData?.data.followers ?? [];
+  const isFollowing = followerData?.data.isFollowing ?? false;
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: commentsKey });
+    queryClient.invalidateQueries({ queryKey: followersKey });
+  };
+
+  const post = useMutation({
+    mutationFn: (input: { body: string; parentId?: string | null }) =>
+      createCrmComment({ entity, recordId, ...input }),
+    onSuccess: (_result, input) => {
+      if (input.parentId) {
+        setReplyBody("");
+        setReplyTo(null);
+      } else {
+        setBody("");
+      }
+      refresh();
+    },
+    onError: (error) => toast({ title: getApiErrorMessage(error), variant: "destructive" }),
+  });
+
+  const mutate = useMutation({
+    mutationFn: (input: { id: string; isPinned?: boolean; resolved?: boolean }) =>
+      updateCrmComment(input.id, { isPinned: input.isPinned, resolved: input.resolved }),
+    onSuccess: refresh,
+    onError: (error) => toast({ title: getApiErrorMessage(error), variant: "destructive" }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteCrmComment(id),
+    onSuccess: () => {
+      toast({ title: "Comment deleted" });
+      refresh();
+    },
+    onError: (error) => toast({ title: getApiErrorMessage(error), variant: "destructive" }),
+  });
+
+  const toggleFollow = useMutation({
+    mutationFn: async () => {
+      if (isFollowing) await unfollowCrmRecord(entity, recordId);
+      else await followCrmRecord(entity, recordId);
+    },
+    onSuccess: () => {
+      toast({ title: isFollowing ? "You'll stop getting updates" : "You'll get updates here" });
+      refresh();
+    },
+    onError: (error) => toast({ title: getApiErrorMessage(error), variant: "destructive" }),
+  });
+
+  const renderComment = (comment: CrmCommentRecord, isReply = false) => {
+    const mine = comment.createdBy.id === currentUserId;
+    const resolved = Boolean(comment.resolvedAt);
+
+    return (
+      <div
+        key={comment.id}
+        className={cn(
+          "rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-3",
+          isReply ? "ml-8 border-l-2 border-l-[var(--border-strong)]" : "",
+          comment.isPinned ? "bg-[var(--surface-subtle)]" : "",
+          resolved ? "opacity-60" : "",
+        )}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-xs font-medium">
+              {initials(comment.createdBy.name, comment.createdBy.email)}
+            </span>
+            <div className="leading-tight">
+              <div className="text-sm font-medium">
+                {comment.createdBy.name ?? comment.createdBy.email}
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">
+                <ClientDate value={comment.createdAt} mode="datetime" />
+                {comment.editedAt ? " · edited" : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {comment.isPinned ? (
+              <PushPin className="size-4 text-[var(--text-muted)]" weight="fill" />
+            ) : null}
+            {!isReply ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => mutate.mutate({ id: comment.id, isPinned: !comment.isPinned })}
+              >
+                {comment.isPinned ? "Unpin" : "Pin"}
+              </Button>
+            ) : null}
+            {!isReply ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => mutate.mutate({ id: comment.id, resolved: !resolved })}
+              >
+                {resolved ? "Reopen" : "Resolve"}
+              </Button>
+            ) : null}
+            {mine ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label="Delete comment"
+                onClick={() => remove.mutate(comment.id)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-2">
+          <CommentBody body={comment.body} />
+        </div>
+
+        {resolved && comment.resolvedBy ? (
+          <div className="mt-2 flex items-center gap-1 text-xs text-[var(--text-muted)]">
+            <Check className="size-3.5" />
+            Resolved by {comment.resolvedBy.name ?? comment.resolvedBy.email}
+          </div>
+        ) : null}
+
+        {!isReply ? (
+          <div className="mt-2">
+            {replyTo === comment.id ? (
+              <div className="space-y-2">
+                <MentionTextarea
+                  value={replyBody}
+                  onChange={setReplyBody}
+                  rows={2}
+                  placeholder="Write a reply…"
+                  onSubmit={() =>
+                    replyBody.trim() &&
+                    post.mutate({ body: replyBody.trim(), parentId: comment.id })
+                  }
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!replyBody.trim() || post.isPending}
+                    onClick={() => post.mutate({ body: replyBody.trim(), parentId: comment.id })}
+                  >
+                    Reply
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setReplyTo(null);
+                      setReplyBody("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setReplyTo(comment.id);
+                  setReplyBody("");
+                }}
+              >
+                Reply
+              </Button>
+            )}
+          </div>
+        ) : null}
+
+        {comment.replies?.length ? (
+          <div className="mt-3 space-y-2">
+            {comment.replies.map((reply) => renderComment(reply, true))}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+          {followers.length ? (
+            <>
+              <span className="flex -space-x-2">
+                {followers.slice(0, 5).map((follower) => (
+                  <span
+                    key={follower.id}
+                    title={follower.user.name ?? follower.user.email}
+                    className="flex size-6 items-center justify-center rounded-full border border-[var(--surface-base)] bg-[var(--surface-subtle)] text-[10px] font-medium"
+                  >
+                    {initials(follower.user.name, follower.user.email)}
+                  </span>
+                ))}
+              </span>
+              <span>
+                {followers.length} {followers.length === 1 ? "follower" : "followers"}
+              </span>
+            </>
+          ) : (
+            <span>No one is following this record yet</span>
+          )}
+        </div>
+
+        <Button
+          type="button"
+          variant={isFollowing ? "secondary" : "ghost"}
+          size="sm"
+          disabled={toggleFollow.isPending}
+          onClick={() => toggleFollow.mutate()}
+        >
+          {isFollowing ? <BellRing className="mr-1.5 size-4" /> : <Bell className="mr-1.5 size-4" />}
+          {isFollowing ? "Following" : "Follow"}
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        <MentionTextarea
+          value={body}
+          onChange={setBody}
+          placeholder="Leave a note. Type @ to bring someone in."
+          onSubmit={() => body.trim() && post.mutate({ body: body.trim() })}
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-[var(--text-muted)]">⌘↵ to post</span>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!body.trim() || post.isPending}
+            onClick={() => post.mutate({ body: body.trim() })}
+          >
+            Comment
+          </Button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-[var(--text-muted)]">Loading comments…</p>
+      ) : comments.length === 0 ? (
+        <EmptyState title="Nothing has been said about this record yet" />
+      ) : (
+        <div className="space-y-2">{comments.map((comment) => renderComment(comment))}</div>
+      )}
+    </div>
+  );
+}

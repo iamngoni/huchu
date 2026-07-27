@@ -12,6 +12,8 @@ const bodySchema = z.object({
   currency: z.string().trim().max(10).optional(),
   validUntil: z.string().datetime().optional(),
   notes: z.string().trim().max(2000).optional(),
+  supersedesId: z.string().uuid().optional(),
+  revisionNote: z.string().trim().max(500).optional(),
   sendApproval: z.boolean().optional(),
   approvalExpiresInDays: z.number().int().min(1).max(90).optional(),
 });
@@ -41,6 +43,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       currency: data.currency,
       validUntil: data.validUntil ? new Date(data.validUntil) : null,
       notes: data.notes ?? null,
+      supersedesId: data.supersedesId ?? null,
+      revisionNote: data.revisionNote ?? null,
     });
 
     let approvalToken: string | undefined;

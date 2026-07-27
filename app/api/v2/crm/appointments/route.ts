@@ -14,6 +14,9 @@ const createSchema = z.object({
   scheduledStart: z.string().datetime(),
   scheduledEnd: z.string().datetime().nullable().optional(),
   location: z.string().trim().max(300).nullable().optional(),
+  // Carries the briefing written when the visit is booked; the report sheet
+  // later replaces it with what actually happened.
+  outcomeNotes: z.string().trim().max(2000).nullable().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -85,6 +88,7 @@ export async function POST(request: NextRequest) {
         scheduledStart: new Date(data.scheduledStart),
         scheduledEnd: data.scheduledEnd ? new Date(data.scheduledEnd) : undefined,
         location: data.location ?? undefined,
+        outcomeNotes: data.outcomeNotes ?? undefined,
         createdById: session.user.id,
       },
     });

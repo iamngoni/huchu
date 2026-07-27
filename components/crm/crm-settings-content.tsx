@@ -11,6 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { CRM_CHANNEL_LABELS, CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
+import { CustomFieldsPanel } from "@/components/crm/settings/custom-fields-panel";
+import { PipelinesPanel } from "@/components/crm/settings/pipelines-panel";
+import { PermissionsPanel } from "@/components/crm/settings/permissions-panel";
+import { AutomationsPanel } from "@/components/crm/settings/automations-panel";
+import { CataloguePanel } from "@/components/inventory/catalogue-panel";
 import type { CrmLeadChannel } from "@prisma/client";
 
 type ApiKey = {
@@ -364,14 +369,34 @@ function CommissionsPanel() {
 
 export function CrmSettingsContent() {
   return (
-    <Tabs defaultValue="keys">
+    <Tabs defaultValue="pipelines">
       <div className="scroll-rail max-w-full">
         <TabsList>
+          <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
+          <TabsTrigger value="fields">Custom Fields</TabsTrigger>
           <TabsTrigger value="keys">API Keys</TabsTrigger>
           <TabsTrigger value="sources">Lead Sources</TabsTrigger>
           <TabsTrigger value="commissions">Commissions</TabsTrigger>
+          <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
+          <TabsTrigger value="automations">Automations</TabsTrigger>
+          <TabsTrigger value="permissions">Permissions</TabsTrigger>
         </TabsList>
       </div>
+      <TabsContent value="catalogue">
+        <CataloguePanel />
+      </TabsContent>
+      <TabsContent value="automations">
+        <AutomationsPanel />
+      </TabsContent>
+      <TabsContent value="permissions">
+        <PermissionsPanel />
+      </TabsContent>
+      <TabsContent value="pipelines">
+        <PipelinesPanel />
+      </TabsContent>
+      <TabsContent value="fields">
+        <CustomFieldsPanel />
+      </TabsContent>
       <TabsContent value="keys">
         <ApiKeysPanel />
       </TabsContent>

@@ -62,6 +62,11 @@ function isHrEnabledForPreference(pref: UserNotificationPreference | undefined) 
   return pref.inAppEnabled && pref.hrEnabled
 }
 
+function isCrmEnabledForPreference(pref: UserNotificationPreference | undefined) {
+  if (!pref) return true
+  return pref.inAppEnabled && pref.crmEnabled
+}
+
 async function filterRecipientsForCategory(
   db: DbClient,
   input: { companyId: string; userIds: string[]; category: NotificationCategory },
@@ -87,9 +92,11 @@ async function filterRecipientsForCategory(
 
   return activeUserIds.filter((userId) => {
     const preference = preferenceByUserId.get(userId)
-    return input.category === "HR"
-      ? isHrEnabledForPreference(preference)
-      : isOpsEnabledForPreference(preference)
+    // Each category reads its own switch. CRM notices previously followed the
+    // ops switch, so turning ops off silently killed them too.
+    if (input.category === "HR") return isHrEnabledForPreference(preference)
+    if (input.category === "CRM") return isCrmEnabledForPreference(preference)
+    return isOpsEnabledForPreference(preference)
   })
 }
 
@@ -1325,6 +1332,14 @@ export async function emitCrmNotification(args: {
   title: string
   summary: string
   leadId?: string
+  /**
+   * What the notice is really about, when it isn't a lead. Tasks and comments
+   * hang off deals, people and companies just as often, and pointing every
+   * notice at a lead id it doesn't have makes the "open the record" action
+   * dead.
+   */
+  entityType?: NotificationEntityType
+  entityId?: string
   viewPath: string
   severity?: NotificationSeverity
 }): Promise<void> {
@@ -1340,8 +1355,8 @@ export async function emitCrmNotification(args: {
       category: "CRM",
       recipientIds,
       payload: { leadId: args.leadId, viewPath: args.viewPath },
-      entityType: NotificationEntityType.CRM_LEAD,
-      entityId: args.leadId,
+      entityType: args.entityType ?? NotificationEntityType.CRM_LEAD,
+      entityId: args.entityId ?? args.leadId,
       sourceAction: NotificationSourceAction.STATUS_CHANGE,
     })
   } catch (error) {

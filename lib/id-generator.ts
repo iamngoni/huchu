@@ -40,7 +40,14 @@ export type ReservableIdEntity =
   | "RETAIL_PROMOTION"
   | "CRM_CLIENT"
   | "CRM_LEAD"
-  | "CRM_APPOINTMENT";
+  | "CRM_APPOINTMENT"
+  | "CRM_PERSON"
+  | "CRM_WORK_ORDER"
+  | "CRM_DEAL"
+  | "CRM_SITE"
+  | "SALES_QUOTATION"
+  | "SALES_INVOICE"
+  | "SALES_RECEIPT";
 
 type EntityConfig = {
   prefix: string;
@@ -94,6 +101,14 @@ export const ID_ENTITY_CONFIG: Record<ReservableIdEntity, EntityConfig> = {
   CRM_CLIENT: { prefix: "CLI", requiresSiteId: false },
   CRM_LEAD: { prefix: "CRL", requiresSiteId: false },
   CRM_APPOINTMENT: { prefix: "SVT", requiresSiteId: false },
+  CRM_PERSON: { prefix: "PSN", requiresSiteId: false },
+  CRM_WORK_ORDER: { prefix: "CWO", requiresSiteId: false },
+  // DEAL is already taken by CAR_SALES_DEAL, so the CRM deal reads CRMD.
+  CRM_DEAL: { prefix: "CRMD", requiresSiteId: false },
+  CRM_SITE: { prefix: "CSITE", requiresSiteId: false },
+  SALES_QUOTATION: { prefix: "QTN", requiresSiteId: false },
+  SALES_INVOICE: { prefix: "INV", requiresSiteId: false },
+  SALES_RECEIPT: { prefix: "REC", requiresSiteId: false },
 };
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
@@ -414,6 +429,78 @@ async function findEntityMaxExistingCode(
         select: { promoCode: true },
       });
       return extractMaxFromCodes(records.map((record) => record.promoCode), prefix);
+    }
+    // CRM entities seed from existing rows so a lost IdSequence row cannot
+    // restart the counter at 0001 and collide with the unique constraint.
+    case "CRM_CLIENT": {
+      const records = await db.crmClient.findMany({
+        where: { companyId },
+        select: { clientNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.clientNo), prefix);
+    }
+    case "CRM_LEAD": {
+      const records = await db.crmLead.findMany({
+        where: { companyId },
+        select: { leadNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.leadNo), prefix);
+    }
+    case "CRM_APPOINTMENT": {
+      const records = await db.crmAppointment.findMany({
+        where: { companyId },
+        select: { appointmentNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.appointmentNo), prefix);
+    }
+    case "CRM_PERSON": {
+      const records = await db.crmPerson.findMany({
+        where: { companyId },
+        select: { personNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.personNo), prefix);
+    }
+    case "CRM_WORK_ORDER": {
+      const records = await db.crmWorkOrder.findMany({
+        where: { companyId },
+        select: { workOrderNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.workOrderNo), prefix);
+    }
+    case "CRM_DEAL": {
+      const records = await db.crmDeal.findMany({
+        where: { companyId },
+        select: { dealNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.dealNo), prefix);
+    }
+    case "CRM_SITE": {
+      const records = await db.crmSite.findMany({
+        where: { companyId },
+        select: { siteNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.siteNo), prefix);
+    }
+    case "SALES_QUOTATION": {
+      const records = await db.salesQuotation.findMany({
+        where: { companyId },
+        select: { quotationNumber: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.quotationNumber), prefix);
+    }
+    case "SALES_INVOICE": {
+      const records = await db.salesInvoice.findMany({
+        where: { companyId },
+        select: { invoiceNumber: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.invoiceNumber), prefix);
+    }
+    case "SALES_RECEIPT": {
+      const records = await db.salesReceipt.findMany({
+        where: { companyId },
+        select: { receiptNumber: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.receiptNumber), prefix);
     }
     default:
       return 0;

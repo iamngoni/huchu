@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import {
   errorResponse,
@@ -10,9 +9,18 @@ import {
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
-import { defaultProbabilityForStage } from "@/lib/crm/pipeline";
+import { crmLeadStageSchema, defaultProbabilityForStage } from "@/lib/crm/pipeline";
 import { deriveLeadChannel } from "@/lib/crm/sources";
-import { crmLeadStageSchema, isCompanyUser } from "../_helpers";
+import {
+  buildLeadOrderBy,
+  buildLeadWhere,
+  leadSortSchema,
+  parseLeadFiltersFromParams,
+} from "@/lib/crm/views";
+import { autoAssignLead } from "@/lib/crm/auto-assign";
+import { runAutomations } from "@/lib/crm/automation-runner";
+import { scoreLead } from "@/lib/crm/lead-scoring";
+import { isCompanyUser } from "../_helpers";
 
 const createLeadSchema = z.object({
   title: z.string().trim().max(200).nullable().optional(),
@@ -39,43 +47,62 @@ export async function GET(request: NextRequest) {
     const { session } = sessionResult;
 
     const { searchParams } = new URL(request.url);
-    const stage = searchParams.get("stage");
-    const assignedToId = searchParams.get("assignedToId");
-    const source = searchParams.get("source");
-    const channel = searchParams.get("channel");
-    const search = searchParams.get("q")?.trim();
     const { page, limit, skip } = getPaginationParams(request);
 
-    const where: Prisma.CrmLeadWhereInput = {
-      companyId: session.user.companyId,
-      ...(stage ? { stage: stage as Prisma.CrmLeadWhereInput["stage"] } : {}),
-      ...(assignedToId ? { assignedToId } : {}),
-      ...(source ? { source } : {}),
-      ...(channel ? { sourceChannel: channel as Prisma.CrmLeadWhereInput["sourceChannel"] } : {}),
-      ...(search
-        ? {
-            OR: [
-              { title: { contains: search, mode: "insensitive" } },
-              { leadNo: { contains: search, mode: "insensitive" } },
-              { contactName: { contains: search, mode: "insensitive" } },
-              { client: { name: { contains: search, mode: "insensitive" } } },
-            ],
-          }
+    // Legacy singular params (stage=, assignedToId=, source=, channel=) still
+    // work; they fold into the plural filter set the workspace now sends.
+    const filters = parseLeadFiltersFromParams(searchParams);
+    const legacyStage = searchParams.get("stage");
+    const legacyAssignee = searchParams.get("assignedToId");
+    const legacySource = searchParams.get("source");
+    const legacyChannel = searchParams.get("channel");
+    const merged = {
+      ...filters,
+      ...(legacyStage && !filters.stages
+        ? { stages: crmLeadStageSchema.array().parse([legacyStage]) }
+        : {}),
+      ...(legacyAssignee && !filters.assignedToIds ? { assignedToIds: [legacyAssignee] } : {}),
+      ...(legacySource && !filters.sources ? { sources: [legacySource] } : {}),
+      ...(legacyChannel && !filters.channels
+        ? { channels: [legacyChannel as NonNullable<typeof filters.channels>[number]] }
         : {}),
     };
+
+    const where = buildLeadWhere(session.user.companyId, merged, session.user.id);
+    const sortParsed = leadSortSchema.safeParse({
+      field: searchParams.get("sortField"),
+      direction: searchParams.get("sortDir"),
+    });
+    const orderBy = buildLeadOrderBy(sortParsed.success ? sortParsed.data : undefined);
 
     const [leads, total] = await Promise.all([
       prisma.crmLead.findMany({
         where,
-        include: { client: { select: { id: true, name: true } }, assignedTo: { select: { id: true, name: true } } },
-        orderBy: { updatedAt: "desc" },
+        include: {
+          client: { select: { id: true, name: true } },
+          assignedTo: { select: { id: true, name: true } },
+          // The next thing owed on this lead — surfaced in the table and on
+          // board cards so nothing quietly goes cold.
+          followUps: {
+            where: { status: "PENDING" },
+            orderBy: { dueAt: "asc" },
+            take: 1,
+            select: { id: true, title: true, dueAt: true },
+          },
+        },
+        orderBy,
         skip,
         take: limit,
       }),
       prisma.crmLead.count({ where }),
     ]);
 
-    return successResponse(paginationResponse(leads, total, page, limit));
+    const shaped = leads.map(({ followUps, ...lead }) => ({
+      ...lead,
+      nextFollowUp: followUps[0] ?? null,
+    }));
+
+    return successResponse(paginationResponse(shaped, total, page, limit));
   } catch (error) {
     console.error("[API] GET /api/v2/crm/leads error:", error);
     return errorResponse("Failed to fetch leads");
@@ -107,6 +134,29 @@ export async function POST(request: NextRequest) {
       entity: "CRM_LEAD",
     });
 
+    const sourceChannel = deriveLeadChannel({
+      explicitChannel: data.sourceChannel,
+      utmMedium: data.utmMedium,
+      utmSource: data.utmSource,
+      source: data.source,
+      origin: "MANUAL",
+    });
+
+    // A lead with nobody on it is a lead nobody works, so one gets picked when
+    // the caller didn't name anyone.
+    const assignment = data.assignedToId
+      ? null
+      : await autoAssignLead(session.user.companyId);
+
+    const score = scoreLead({
+      estimatedValue: data.estimatedValue,
+      contactEmail: data.contactEmail,
+      contactPhone: data.contactPhone,
+      clientId: data.clientId,
+      services: data.services,
+      sourceChannel,
+    });
+
     const lead = await prisma.crmLead.create({
       data: {
         companyId: session.user.companyId,
@@ -122,22 +172,28 @@ export async function POST(request: NextRequest) {
         currency: data.currency ?? "USD",
         services: data.services ?? [],
         source: data.source ?? undefined,
-        sourceChannel: deriveLeadChannel({
-          explicitChannel: data.sourceChannel,
-          utmMedium: data.utmMedium,
-          utmSource: data.utmSource,
-          source: data.source,
-          origin: "MANUAL",
-        }),
+        sourceChannel,
         utmSource: data.utmSource ?? undefined,
         utmMedium: data.utmMedium ?? undefined,
         utmCampaign: data.utmCampaign ?? undefined,
-        assignedToId: data.assignedToId ?? undefined,
+        assignedToId: data.assignedToId ?? assignment?.userId ?? undefined,
         createdById: session.user.id,
+        score: score.total,
       },
     });
 
-    return successResponse(lead, 201);
+    // Rules run after the lead exists and never fail the request that made it.
+    await runAutomations({
+      companyId: session.user.companyId,
+      trigger: "LEAD_CREATED",
+      entity: "LEAD",
+      recordId: lead.id,
+      record: lead as unknown as Record<string, unknown>,
+      stage: lead.stage,
+      actorId: session.user.id,
+    });
+
+    return successResponse({ ...lead, scoreBreakdown: score, assignment }, 201);
   } catch (error) {
     if (error instanceof z.ZodError) return errorResponse("Validation failed", 400, error.issues);
     console.error("[API] POST /api/v2/crm/leads error:", error);

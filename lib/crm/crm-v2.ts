@@ -3,7 +3,20 @@
  * Mirrors the lib/autos/autos-v2.ts pattern.
  */
 import { fetchJson } from "@/lib/api-client";
-import type { CrmLeadStage } from "@prisma/client";
+import type {
+  CrmLeadStage,
+  CrmRecurrence,
+  CrmTaskOutcome,
+  CrmTaskPriority,
+  CrmTaskStatus,
+  CrmTaskType,
+} from "@prisma/client";
+import type { CollabEntity } from "@/lib/crm/collaboration";
+import type { TaskQueue } from "@/lib/crm/tasks";
+import type { ImportEntity, ImportPlan } from "@/lib/crm/import";
+import type { FieldChoice, MergeFieldPlan } from "@/lib/crm/merge";
+import type { LeadSort, LeadViewFilters } from "@/lib/crm/views";
+import type { SiteVisitItemInput, SiteVisitReportInput } from "@/lib/crm/site-visits";
 
 export type CrmClientRecord = {
   id: string;
@@ -61,6 +74,92 @@ export type CrmAppointmentRecord = {
   status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
 };
 
+export type CrmLeadOwner = { id: string; name: string | null };
+
+export type CrmNextFollowUp = { id: string; title: string; dueAt: string };
+
+/** A lead as the table renders it: owner, client, and what's owed next. */
+export type CrmLeadListRecord = CrmLeadRecord & {
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  sourceChannel: string | null;
+  client: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  nextFollowUp: CrmNextFollowUp | null;
+};
+
+export type CrmBoardCard = {
+  id: string;
+  leadNo: string;
+  title: string | null;
+  stage: CrmLeadStage;
+  estimatedValue: number | null;
+  currency: string;
+  contactName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  stageEnteredAt: string;
+  client: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  nextFollowUp: CrmNextFollowUp | null;
+};
+
+export type CrmBoardColumn = {
+  stage: CrmLeadStage;
+  count: number;
+  totalValue: number;
+  hasMore: boolean;
+  leads: CrmBoardCard[];
+};
+
+export type CrmSavedViewRecord = {
+  id: string;
+  name: string;
+  entity: string;
+  viewType: "TABLE" | "BOARD";
+  filters: LeadViewFilters;
+  sort: LeadSort | null;
+  isShared: boolean;
+  createdById: string;
+  createdBy: CrmLeadOwner | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CrmVisitItemRecord = SiteVisitItemInput & {
+  id: string;
+  appointmentId: string;
+  position: number;
+};
+
+export type CrmVisitChecklistItem = {
+  key: string;
+  label: string;
+  checked: boolean;
+  notes?: string | null;
+};
+
+export type CrmVisitPhoto = {
+  url: string;
+  fileName?: string | null;
+  contentType?: string | null;
+  size?: number | null;
+  kind: "PHOTO" | "FILE";
+  caption?: string | null;
+};
+
+export type CrmVisitReportRecord = CrmAppointmentRecord & {
+  checklist: CrmVisitChecklistItem[] | null;
+  photos: CrmVisitPhoto[] | null;
+  siteConditions: string | null;
+  reportNotes: string | null;
+  outcomeNotes: string | null;
+  reportCompletedAt: string | null;
+  completedAt: string | null;
+  visitItems: CrmVisitItemRecord[];
+};
+
 type ListResponse<T> = { data: T[]; total?: number; page?: number; limit?: number };
 type Envelope<T> = { data: T };
 
@@ -74,8 +173,130 @@ function qs(params: Record<string, string | number | boolean | null | undefined>
   return s ? `?${s}` : "";
 }
 
-export function fetchCrmLeads(params: { stage?: string; assignedToId?: string; q?: string; page?: number } = {}) {
-  return fetchJson<ListResponse<CrmLeadRecord>>(`/api/v2/crm/leads${qs(params)}`);
+/**
+ * Flatten a filter set into query params. Arrays are comma-joined and booleans
+ * only sent when true, so a default view produces a clean URL.
+ */
+export function leadFiltersToParams(
+  filters: LeadViewFilters,
+): Record<string, string | number | boolean | undefined> {
+  return {
+    q: filters.q,
+    stages: filters.stages?.join(","),
+    assignedToIds: filters.assignedToIds?.join(","),
+    unassigned: filters.unassigned ? "1" : undefined,
+    mineOnly: filters.mineOnly ? "1" : undefined,
+    channels: filters.channels?.join(","),
+    sources: filters.sources?.join(","),
+    valueMin: filters.valueMin,
+    valueMax: filters.valueMax,
+    createdFrom: filters.createdFrom,
+    createdTo: filters.createdTo,
+    overdueOnly: filters.overdueOnly ? "1" : undefined,
+  };
+}
+
+export function fetchCrmLeads(
+  params: {
+    filters?: LeadViewFilters;
+    sort?: LeadSort;
+    page?: number;
+    limit?: number;
+  } = {},
+) {
+  const query = qs({
+    ...leadFiltersToParams(params.filters ?? {}),
+    sortField: params.sort?.field,
+    sortDir: params.sort?.direction,
+    page: params.page,
+    limit: params.limit,
+  });
+  return fetchJson<ListResponse<CrmLeadListRecord>>(`/api/v2/crm/leads${query}`);
+}
+
+export function fetchCrmLeadsBoard(filters: LeadViewFilters = {}) {
+  const query = qs(leadFiltersToParams(filters));
+  return fetchJson<Envelope<{ columns: CrmBoardColumn[]; cardsPerColumn: number }>>(
+    `/api/v2/crm/leads/board${query}`,
+  );
+}
+
+export type CrmBulkLeadAction =
+  | { action: "assign"; ids: string[]; assignedToId: string | null }
+  | { action: "stage"; ids: string[]; stage: CrmLeadStage; lostReason?: string };
+
+export function bulkUpdateCrmLeads(body: CrmBulkLeadAction) {
+  return fetchJson<
+    Envelope<{ updated: number; unchanged?: number; skipped: number; notFound: number }>
+  >(`/api/v2/crm/leads/bulk`, { method: "POST", body: JSON.stringify(body) });
+}
+
+export function fetchCrmSavedViews() {
+  return fetchJson<Envelope<{ data: CrmSavedViewRecord[] }>>(`/api/v2/crm/saved-views`);
+}
+
+export function createCrmSavedView(body: {
+  name: string;
+  viewType?: "TABLE" | "BOARD";
+  filters: LeadViewFilters;
+  sort?: LeadSort | null;
+  isShared?: boolean;
+}) {
+  return fetchJson<Envelope<CrmSavedViewRecord>>(`/api/v2/crm/saved-views`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateCrmSavedView(
+  id: string,
+  body: Partial<{
+    name: string;
+    viewType: "TABLE" | "BOARD";
+    filters: LeadViewFilters;
+    sort: LeadSort | null;
+    isShared: boolean;
+  }>,
+) {
+  return fetchJson<Envelope<CrmSavedViewRecord>>(`/api/v2/crm/saved-views/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteCrmSavedView(id: string) {
+  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/saved-views/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchCrmVisitReport(appointmentId: string) {
+  return fetchJson<Envelope<CrmVisitReportRecord>>(
+    `/api/v2/crm/appointments/${appointmentId}/report`,
+  );
+}
+
+export function saveCrmVisitReport(appointmentId: string, body: SiteVisitReportInput) {
+  return fetchJson<Envelope<CrmVisitReportRecord>>(
+    `/api/v2/crm/appointments/${appointmentId}/report`,
+    { method: "PUT", body: JSON.stringify(body) },
+  );
+}
+
+export function updateCrmFollowUp(
+  id: string,
+  body: Partial<{
+    status: "PENDING" | "COMPLETED" | "CANCELLED";
+    title: string;
+    notes: string | null;
+    dueAt: string;
+    assignedToId: string;
+  }>,
+) {
+  return fetchJson<Envelope<CrmFollowUpRecord>>(`/api/v2/crm/follow-ups/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
 }
 
 export function fetchCrmLead(id: string) {
@@ -117,4 +338,466 @@ export function fetchCrmAppointments(params: { from?: string; to?: string; assig
 
 export function fetchCrmInsightsSummary(params: { from?: string; to?: string } = {}) {
   return fetchJson<Envelope<Record<string, unknown>>>(`/api/v2/crm/insights/summary${qs(params)}`);
+}
+
+// ---------------------------------------------------------------------------
+// Core records: people, companies, deals, sites.
+// ---------------------------------------------------------------------------
+
+export type CrmPersonRecord = {
+  id: string;
+  personNo: string;
+  firstName: string;
+  lastName: string | null;
+  fullName: string;
+  jobTitle: string | null;
+  email: string | null;
+  phone: string | null;
+  contactType: string;
+  preferredChannel: string | null;
+  city: string | null;
+  tags: string[];
+  clientId: string | null;
+  client: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  customFields: Record<string, unknown> | null;
+  lastContactedAt: string | null;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { dealContacts: number };
+};
+
+export type CrmCompanyRecord = {
+  id: string;
+  clientNo: string;
+  name: string;
+  tradingName: string | null;
+  companyType: string;
+  registrationNumber: string | null;
+  taxNumber: string | null;
+  website: string | null;
+  industry: string | null;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  country: string | null;
+  billingAddress: string | null;
+  accountStatus: string;
+  parentClientId: string | null;
+  parentRelation: string | null;
+  parent: { id: string; name: string } | null;
+  tags: string[];
+  assignedTo: CrmLeadOwner | null;
+  customFields: Record<string, unknown> | null;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { people: number; deals: number; sites: number };
+};
+
+export type CrmDealStage = {
+  id: string;
+  name: string;
+  status: "OPEN" | "WON" | "LOST";
+  colorToken: string | null;
+  inactivityDays: number | null;
+};
+
+export type CrmDealRecord = {
+  id: string;
+  dealNo: string;
+  title: string;
+  status: "OPEN" | "WON" | "LOST";
+  value: number | null;
+  currency: string;
+  probability: number | null;
+  forecastCategory: string;
+  expectedCloseDate: string | null;
+  stageEnteredAt: string;
+  lostReason: string | null;
+  client: { id: string; name: string } | null;
+  primaryContact: { id: string; fullName: string } | null;
+  site: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  stage: CrmDealStage;
+  pipeline: { id: string; name: string };
+  nextFollowUp: CrmNextFollowUp | null;
+  customFields: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CrmSiteRecord = {
+  id: string;
+  siteNo: string;
+  name: string;
+  addressLine: string | null;
+  city: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  accessInstructions: string | null;
+  siteConditions: string | null;
+  tags: string[];
+  client: { id: string; name: string } | null;
+  primaryContact: { id: string; fullName: string; phone: string | null } | null;
+  customFields: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { deals: number; appointments: number };
+};
+
+export type CrmPipelineStageRecord = CrmDealStage & {
+  pipelineId: string;
+  position: number;
+  probability: number;
+  requiredFields: string[];
+  checklist: Array<{ key: string; label: string }> | null;
+  requiresSiteVisit: boolean;
+  requiresQuotation: boolean;
+};
+
+export type CrmPipelineRecord = {
+  id: string;
+  name: string;
+  description: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  position: number;
+  stages: CrmPipelineStageRecord[];
+  _count?: { deals: number };
+};
+
+export type CrmFieldDefinitionRecord = {
+  id: string;
+  entity: string;
+  key: string;
+  label: string;
+  description: string | null;
+  type: string;
+  isRequired: boolean;
+  defaultValue: unknown;
+  options: Array<{ value: string; label: string; colorToken?: string }> | null;
+  section: string | null;
+  position: number;
+  showInTable: boolean;
+  archivedAt: string | null;
+};
+
+/** Turn a filter object into query params, flattening arrays and custom fields. */
+export function recordFiltersToParams(
+  filters: Record<string, unknown>,
+): Record<string, string | number | boolean | undefined> {
+  const params: Record<string, string | number | boolean | undefined> = {};
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null || value === "") continue;
+    if (key === "customFields" && typeof value === "object") {
+      for (const [fieldKey, fieldValue] of Object.entries(value as Record<string, unknown>)) {
+        if (fieldValue === undefined || fieldValue === null || fieldValue === "") continue;
+        params[`cf.${fieldKey}`] = Array.isArray(fieldValue)
+          ? fieldValue.join(",")
+          : String(fieldValue);
+      }
+      continue;
+    }
+    if (Array.isArray(value)) {
+      if (value.length > 0) params[key] = value.join(",");
+      continue;
+    }
+    if (typeof value === "boolean") {
+      if (value) params[key] = "1";
+      continue;
+    }
+    params[key] = value as string | number;
+  }
+  return params;
+}
+
+export function fetchCrmPeople(
+  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+) {
+  return fetchJson<ListResponse<CrmPersonRecord>>(
+    `/api/v2/crm/people${qs({
+      ...recordFiltersToParams(params.filters ?? {}),
+      sortField: params.sort?.field,
+      sortDir: params.sort?.direction,
+      page: params.page,
+      limit: params.limit,
+    })}`,
+  );
+}
+
+export function fetchCrmCompanies(
+  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+) {
+  return fetchJson<ListResponse<CrmCompanyRecord>>(
+    `/api/v2/crm/companies${qs({
+      ...recordFiltersToParams(params.filters ?? {}),
+      sortField: params.sort?.field,
+      sortDir: params.sort?.direction,
+      page: params.page,
+      limit: params.limit,
+    })}`,
+  );
+}
+
+export function fetchCrmDeals(
+  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+) {
+  return fetchJson<ListResponse<CrmDealRecord>>(
+    `/api/v2/crm/deals${qs({
+      ...recordFiltersToParams(params.filters ?? {}),
+      sortField: params.sort?.field,
+      sortDir: params.sort?.direction,
+      page: params.page,
+      limit: params.limit,
+    })}`,
+  );
+}
+
+export function fetchCrmSites(
+  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+) {
+  return fetchJson<ListResponse<CrmSiteRecord>>(
+    `/api/v2/crm/sites${qs({
+      ...recordFiltersToParams(params.filters ?? {}),
+      sortField: params.sort?.field,
+      sortDir: params.sort?.direction,
+      page: params.page,
+      limit: params.limit,
+    })}`,
+  );
+}
+
+export function fetchCrmPipelines() {
+  return fetchJson<Envelope<{ data: CrmPipelineRecord[] }>>(`/api/v2/crm/pipelines`);
+}
+
+export function fetchCrmFieldDefinitions(entity?: string) {
+  return fetchJson<Envelope<{ data: CrmFieldDefinitionRecord[] }>>(
+    `/api/v2/crm/field-definitions${qs({ entity })}`,
+  );
+}
+
+export function moveCrmDealStage(
+  dealId: string,
+  body: { stageId: string; lostReason?: string; force?: boolean },
+) {
+  return fetchJson<Envelope<CrmDealRecord>>(`/api/v2/crm/deals/${dealId}/stage`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tasks and collaboration
+// ---------------------------------------------------------------------------
+
+export type CrmTaskRecord = {
+  id: string;
+  title: string;
+  description: string | null;
+  type: CrmTaskType;
+  priority: CrmTaskPriority;
+  status: CrmTaskStatus;
+  dueAt: string;
+  hasDueTime: boolean;
+  outcome: CrmTaskOutcome | null;
+  outcomeNotes: string | null;
+  completedAt: string | null;
+  assignedToId: string | null;
+  assignedTo?: { id: string; name: string | null } | null;
+  leadId: string | null;
+  dealId: string | null;
+  clientId: string | null;
+  personId: string | null;
+  siteId: string | null;
+  recurrence: CrmRecurrence;
+  recurrenceInterval: number;
+  lead?: { id: string; leadNo: string; title: string | null } | null;
+  deal?: { id: string; dealNo: string; title: string } | null;
+  client?: { id: string; name: string } | null;
+  person?: { id: string; fullName: string } | null;
+  createdAt: string;
+};
+
+export type CrmTaskRecordRef = {
+  leadId?: string;
+  dealId?: string;
+  clientId?: string;
+  personId?: string;
+  siteId?: string;
+};
+
+export function fetchCrmTasks(
+  params: { queue?: TaskQueue; page?: number; limit?: number } & CrmTaskRecordRef = {},
+) {
+  return fetchJson<ListResponse<CrmTaskRecord>>(
+    `/api/v2/crm/tasks${qs({
+      queue: params.queue,
+      page: params.page,
+      limit: params.limit,
+      leadId: params.leadId,
+      dealId: params.dealId,
+      clientId: params.clientId,
+      personId: params.personId,
+      siteId: params.siteId,
+    })}`,
+  );
+}
+
+export function createCrmTask(body: Record<string, unknown>) {
+  return fetchJson<Envelope<CrmTaskRecord>>(`/api/v2/crm/tasks`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateCrmTask(id: string, body: Record<string, unknown>) {
+  return fetchJson<
+    Envelope<CrmTaskRecord & { recurredTask: { id: string; dueAt: string } | null; suggestsFollowUp: boolean }>
+  >(`/api/v2/crm/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+}
+
+export function deleteCrmTask(id: string) {
+  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/tasks/${id}`, { method: "DELETE" });
+}
+
+export type CrmCommentAuthor = { id: string; name: string | null; email: string };
+
+export type CrmCommentRecord = {
+  id: string;
+  body: string;
+  parentId: string | null;
+  isPinned: boolean;
+  resolvedAt: string | null;
+  editedAt: string | null;
+  createdAt: string;
+  createdBy: CrmCommentAuthor;
+  resolvedBy?: CrmCommentAuthor | null;
+  mentions: { userId: string }[];
+  replies?: CrmCommentRecord[];
+};
+
+export function fetchCrmComments(entity: CollabEntity, recordId: string) {
+  return fetchJson<Envelope<CrmCommentRecord[]>>(
+    `/api/v2/crm/comments${qs({ entity, recordId })}`,
+  );
+}
+
+export function createCrmComment(body: {
+  entity: CollabEntity;
+  recordId: string;
+  body: string;
+  parentId?: string | null;
+}) {
+  return fetchJson<Envelope<CrmCommentRecord>>(`/api/v2/crm/comments`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateCrmComment(
+  id: string,
+  body: { body?: string; isPinned?: boolean; resolved?: boolean },
+) {
+  return fetchJson<Envelope<CrmCommentRecord>>(`/api/v2/crm/comments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteCrmComment(id: string) {
+  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/comments/${id}`, { method: "DELETE" });
+}
+
+export type CrmFollowerRecord = {
+  id: string;
+  userId: string;
+  user: CrmCommentAuthor;
+};
+
+export function fetchCrmFollowers(entity: CollabEntity, recordId: string) {
+  return fetchJson<Envelope<{ followers: CrmFollowerRecord[]; isFollowing: boolean }>>(
+    `/api/v2/crm/followers${qs({ entity, recordId })}`,
+  );
+}
+
+export function followCrmRecord(entity: CollabEntity, recordId: string, userId?: string) {
+  return fetchJson<Envelope<CrmFollowerRecord>>(`/api/v2/crm/followers`, {
+    method: "POST",
+    body: JSON.stringify({ entity, recordId, userId }),
+  });
+}
+
+export function unfollowCrmRecord(entity: CollabEntity, recordId: string, userId?: string) {
+  return fetchJson<Envelope<{ unfollowed: boolean }>>(
+    `/api/v2/crm/followers${qs({ entity, recordId, userId })}`,
+    { method: "DELETE" },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Import and merge
+// ---------------------------------------------------------------------------
+
+export type CrmImportPreview = ImportPlan & {
+  rowCount: number;
+  fields: { key: string; label: string; required?: boolean }[];
+};
+
+export function previewCrmImport(body: {
+  entity: ImportEntity;
+  mapping: Record<string, string>;
+  onDuplicate: "SKIP" | "UPDATE";
+  csv: string;
+}) {
+  return fetchJson<Envelope<CrmImportPreview>>(`/api/v2/crm/import`, {
+    method: "POST",
+    body: JSON.stringify({ ...body, commit: false }),
+  });
+}
+
+export function commitCrmImport(body: {
+  entity: ImportEntity;
+  mapping: Record<string, string>;
+  onDuplicate: "SKIP" | "UPDATE";
+  csv: string;
+}) {
+  return fetchJson<
+    Envelope<{
+      created: number;
+      updated: number;
+      failed: { line: number; message: string }[];
+      totals: { create: number; update: number; skip: number };
+    }>
+  >(`/api/v2/crm/import`, { method: "POST", body: JSON.stringify({ ...body, commit: true }) });
+}
+
+export type CrmMergePreview = {
+  survivor: { id: string; label: string; reference: string };
+  loser: { id: string; label: string; reference: string };
+  fields: MergeFieldPlan[];
+};
+
+export function previewCrmMerge(entity: "PERSON" | "COMPANY", survivorId: string, loserId: string) {
+  const base = entity === "PERSON" ? "people" : "companies";
+  return fetchJson<Envelope<CrmMergePreview>>(`/api/v2/crm/${base}/${survivorId}/merge`, {
+    method: "POST",
+    body: JSON.stringify({ loserId, commit: false }),
+  });
+}
+
+export function commitCrmMerge(
+  entity: "PERSON" | "COMPANY",
+  survivorId: string,
+  loserId: string,
+  choices: Record<string, FieldChoice>,
+) {
+  const base = entity === "PERSON" ? "people" : "companies";
+  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/${base}/${survivorId}/merge`, {
+    method: "POST",
+    body: JSON.stringify({ loserId, choices, commit: true }),
+  });
 }
