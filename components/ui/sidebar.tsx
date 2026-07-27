@@ -241,7 +241,7 @@ const SidebarGroup = React.forwardRef<
   <div
     ref={ref}
     data-sidebar="group"
-    className={cn("rounded-[18px] border border-transparent", className)}
+    className={cn("rounded-[8px]", className)}
     {...props}
   />
 ));
@@ -302,8 +302,14 @@ const SidebarMenuItem = React.forwardRef<
 ));
 SidebarMenuItem.displayName = "SidebarMenuItem";
 
+/**
+ * A sidebar row is navigation, not a control. It carries no outline and no
+ * shadow, and it does not shift on hover — hover and active are the same soft
+ * fill, separated by the weight of the label. This is the same contract as
+ * `.rail-item` in globals.css; the two surfaces should read identically.
+ */
 const sidebarMenuButtonVariants = cva(
-  "relative flex w-full items-center gap-2.5 rounded-[12px] border border-transparent px-2.5 py-2 text-[14px] font-medium text-sidebar-foreground/76 transition-[color,background-color,box-shadow,border-color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:translate-x-[1px] hover:bg-[var(--sidebar-accent)] hover:text-foreground hover:shadow-none data-[active=true]:border-[var(--edge-default)] data-[active=true]:border-px data-[active=true]:bg-[var(--action-secondary-bg)] data-[active=true]:text-foreground data-[active=true]:shadow-[inset_0_0_0_1px_var(--edge-default)] data-[collapsed=true]:mx-auto data-[collapsed=true]:h-10 data-[collapsed=true]:w-10 data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 data-[collapsed=true]:py-0 data-[collapsed=true]:[&_span]:hidden [&_svg]:shrink-0",
+  "relative flex w-full items-center gap-2.5 rounded-[8px] border-0 px-2.5 py-2 text-[14px] font-medium text-[var(--sidebar-item-fg-muted)] shadow-none transition-[color,background-color] duration-[var(--motion-duration-fast,120ms)] ease-[var(--motion-ease-standard,ease)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-item-hover-fg)] hover:shadow-none data-[active=true]:bg-[var(--sidebar-item-active-bg)] data-[active=true]:font-semibold data-[active=true]:text-[var(--sidebar-item-active-fg)] data-[collapsed=true]:mx-auto data-[collapsed=true]:h-10 data-[collapsed=true]:w-10 data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 data-[collapsed=true]:py-0 data-[collapsed=true]:[&_span]:hidden [&_svg]:shrink-0",
   {
     variants: {
       variant: {

@@ -55,15 +55,15 @@ export function AdminSidebar({
                   href={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "group flex min-h-11 items-center gap-3 rounded-[10px] border border-transparent px-3 py-2 text-[var(--sidebar-item-fg-muted)] transition-[background-color,color,transform,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] lg:min-h-10",
+                    "group flex min-h-11 items-center gap-3 rounded-[8px] px-3 py-2 text-[var(--sidebar-item-fg-muted)] transition-[background-color,color] duration-[var(--motion-duration-fast,120ms)] ease-[var(--motion-ease-standard,ease)] lg:min-h-10",
                     isActive
-                      ? "border-[var(--sidebar-item-active-border)] bg-[var(--sidebar-item-active-bg)] text-[var(--sidebar-item-active-fg)] shadow-[inset_0_0_0_1px_var(--sidebar-item-active-border)]"
-                      : "hover:translate-x-[1px] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-item-hover-fg)]",
+                      ? "bg-[var(--sidebar-item-active-bg)] text-[var(--sidebar-item-active-fg)]"
+                      : "hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-item-hover-fg)]",
                   )}
                 >
                   <div
                     className={cn(
-                      "flex shrink-0 items-center justify-center rounded-[10px] border border-transparent transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)]",
+                      "flex shrink-0 items-center justify-center transition-colors duration-[var(--motion-duration-fast,120ms)] ease-[var(--motion-ease-standard,ease)]",
                       isActive
                         ? "text-[var(--sidebar-item-active-fg)]"
                         : "text-[var(--sidebar-item-icon)]",

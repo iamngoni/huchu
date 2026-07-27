@@ -15,7 +15,7 @@ const TabsList = React.forwardRef<
     ref={ref}
     data-slot="tabs-list"
     className={cn(
-      "inline-flex h-9 items-center justify-center rounded-[12px] border border-[var(--border-default)] bg-muted p-1 text-muted-foreground shadow-none",
+      "inline-flex h-9 max-w-full items-center gap-1 overflow-x-auto rounded-[10px] bg-[var(--surface-muted)] p-1 text-[var(--text-muted)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       className,
     )}
     {...props}
@@ -34,10 +34,12 @@ const TabsTrigger = React.forwardRef<
     asChild={asChild}
     data-slot="tabs-trigger"
     className={cn(
-      "inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[10px] border border-transparent px-3 text-sm font-medium transition-[background-color,color,border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-default)]",
+      "inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[7px] px-3 text-[13px] font-medium transition-[background-color,color] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-default)]",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:ring-offset-0",
+      "hover:text-[var(--text-strong)]",
       "disabled:pointer-events-none disabled:opacity-50",
-      "data-[state=active]:border-[var(--border-default)] data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-[var(--button-shadow-rest)]",
+      "data-[state=active]:bg-[var(--surface)] data-[state=active]:font-semibold data-[state=active]:text-[var(--text-strong)] data-[state=active]:shadow-[var(--shadow-rest)]",
+      "[&_svg]:size-4 [&_svg]:shrink-0",
       className,
     )}
     {...props}

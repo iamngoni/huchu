@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 
@@ -13,7 +12,7 @@ import {
   Video,
   type LucideIcon,
 } from "@/lib/icons";
-import { cn } from "@/lib/utils";
+import { SectionTab, SectionTabs } from "@/components/ui/section-tabs";
 import { filterHrefItemsByEnabledFeatures } from "@/lib/platform/gating/nav-filter";
 import { getWorkspaceModulePresentation } from "@/lib/workspace-products";
 
@@ -85,40 +84,28 @@ export function CCTVShell({
         <Camera />
         <h1 className="font-semibold text-xl">{modulePresentation.title}</h1>
       </div>
-      <nav
-        aria-label="CCTV navigation"
-        className="border-b border-[var(--edge-subtle)]"
+      <SectionTabs
+        label="CCTV navigation"
+        className="flex-nowrap items-end justify-between gap-3 px-2"
       >
-        <div className="flex flex-wrap items-end justify-between gap-3 px-2">
-          <div className="flex flex-wrap gap-1">
-            {visibleTabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <Link
-                  key={tab.id}
-                  href={tab.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "inline-flex min-h-10 items-center justify-center gap-2 border-b-0 px-3 py-2 text-sm font-medium transition-all",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    isActive
-                      ? "border-primary border-b-2  text-primary"
-                      : "border-transparent bg-transparent text-muted-foreground hover:bg-[var(--surface-subtle)] hover:text-foreground",
-                  )}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-          {navActions ? (
-            <div className="flex flex-wrap items-center gap-2 py-1">
-              {navActions}
-            </div>
-          ) : null}
-        </div>
-      </nav>
+        <span className="flex flex-wrap items-end gap-0.5">
+          {visibleTabs.map((tab) => (
+            <SectionTab
+              key={tab.id}
+              to={tab.href}
+              active={activeTab === tab.id}
+              icon={<tab.icon aria-hidden="true" />}
+            >
+              {tab.label}
+            </SectionTab>
+          ))}
+        </span>
+        {navActions ? (
+          <span className="flex flex-wrap items-center gap-2 py-1">
+            {navActions}
+          </span>
+        ) : null}
+      </SectionTabs>
 
       {children}
     </div>
