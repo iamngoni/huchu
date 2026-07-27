@@ -8,12 +8,9 @@ import {
   SectionIntro,
   SiteChrome,
 } from "@/app/home/site-components";
-import { launchSprintSteps, seoPages } from "@/app/home/site-data";
+import { launchSprintDone, launchSprintSteps, seoPages } from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
-import {
-  LAUNCH_SPRINT_COPY,
-  LAUNCH_SPRINT_DAYS,
-} from "@/lib/marketing/pricing";
+import { LAUNCH_SPRINT_DAYS } from "@/lib/marketing/pricing";
 import {
   breadcrumbJsonLd,
   buildMarketingMetadata,
@@ -36,9 +33,9 @@ export default function ImplementationSupportPage() {
         ]}
       />
       <PageHero
-        eyebrow="Implementation and support"
-        title="The rollout is part of the product."
-        copy={`${LAUNCH_SPRINT_DAYS}-day Launch Sprint: ${LAUNCH_SPRINT_COPY}. This is how Corelith reduces the fear of lost data, disruption, staff resistance and abandoned support.`}
+        eyebrow="Getting it live"
+        title="Software nobody finished setting up saves you nothing."
+        copy={`Most systems that fail here did not fail technically. They were bought, half-configured, half-trained and quietly abandoned, and the money kept leaking the whole time. The Launch Sprint is ${LAUNCH_SPRINT_DAYS} days of scoped work that ends with your team using it on a normal Tuesday. It is quoted separately so you can see exactly what you are paying for.`}
       />
 
       <LaunchSprintSection />
@@ -46,19 +43,12 @@ export default function ImplementationSupportPage() {
       <section className={styles.band}>
         <div className={styles.section}>
           <SectionIntro
-            eyebrow="Success targets"
-            title="A Launch Sprint should end with operating proof, not a vague login."
-            copy="The first rollout is scoped around the workflows that make the customer ready to keep using the system weekly."
+            eyebrow="What done looks like"
+            title="A rollout ends with proof, not a login."
+            copy="These are agreed with you before the sprint starts. If they are not true at the end of it, the rollout is not finished, and we will say so rather than invoice and disappear."
           />
           <div className={styles.cardGrid2}>
-            {[
-              "Products, customers, suppliers or school records loaded within agreed scope",
-              "Roles and permissions configured for the people doing the work",
-              "First invoices, receipts, stock receipts, job cards or school fee records created",
-              "First weekly operating report reviewed with the owner or leadership team",
-              "Support channel agreed for follow-up questions and adoption issues",
-              "Next module or add-on identified only when it pays for itself",
-            ].map((target) => (
+            {launchSprintDone.map((target) => (
               <article key={target} className={styles.compactCard}>
                 <Check className={styles.cardIcon} weight="regular" />
                 <p className={styles.cardTitle}>{target}</p>
@@ -70,9 +60,9 @@ export default function ImplementationSupportPage() {
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Rollout steps"
-          title="Every step has a job."
-          copy="Implementation should feel practical, calm and accountable. The buyer should know what happens before money changes hands."
+          eyebrow="The 30-day Launch Sprint"
+          title="Six steps, in this order, with a person's name against each."
+          copy="You should know exactly what happens and when before any money changes hands. Nothing here is discovered halfway through."
         />
         <div className={styles.tableFrame}>
           <table className={styles.table}>
@@ -96,8 +86,8 @@ export default function ImplementationSupportPage() {
       </section>
 
       <CtaBand
-        title="Start with a setup questionnaire, not a blank account."
-        copy="Tell us your current tools, locations, data, workflow pressure and go-live timing so the rollout conversation is practical from the first call."
+        title="Ask us what a rollout would look like for you."
+        copy="Your current tools, your locations, the state of your data and when you would want to go live. That is enough for us to come back with a scope and a number instead of a brochure."
       />
     </SiteChrome>
   );

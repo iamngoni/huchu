@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { solutions } from "@/app/home/site-data";
+import { segments } from "@/app/home/site-data";
 import { absoluteUrl } from "@/lib/marketing/seo";
 
 /**
@@ -17,9 +17,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }> = [
     { path: "/", priority: 1, changeFrequency: "weekly" },
     { path: "/home", priority: 0.9, changeFrequency: "weekly" },
-    { path: "/home/pricing", priority: 0.9, changeFrequency: "weekly" },
-    { path: "/home/pricing/schools", priority: 0.8, changeFrequency: "monthly" },
     { path: "/home/products", priority: 0.9, changeFrequency: "weekly" },
+    { path: "/home/pricing", priority: 0.9, changeFrequency: "weekly" },
+    { path: "/home/schools", priority: 0.85, changeFrequency: "monthly" },
     { path: "/home/solutions", priority: 0.8, changeFrequency: "monthly" },
     { path: "/home/implementation-support", priority: 0.7, changeFrequency: "monthly" },
     { path: "/home/founding-partner", priority: 0.8, changeFrequency: "monthly" },
@@ -31,13 +31,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/home/terms", priority: 0.3, changeFrequency: "yearly" },
   ];
 
-  const solutionRoutes = solutions.map((solution, index) => ({
-    path: `/home/solutions/${solution.slug}`,
+  const segmentRoutes = segments.map((segment, index) => ({
+    path: `/home/solutions/${segment.slug}`,
     priority: index === 0 ? 0.9 : 0.75,
     changeFrequency: "monthly" as const,
   }));
 
-  return [...staticRoutes, ...solutionRoutes].map((route) => ({
+  return [...staticRoutes, ...segmentRoutes].map((route) => ({
     url: absoluteUrl(route.path),
     lastModified,
     changeFrequency: route.changeFrequency,

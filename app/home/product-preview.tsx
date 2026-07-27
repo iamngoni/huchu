@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { CheckCircle, TriangleAlert } from "@/lib/icons";
-import { solutions } from "@/app/home/site-data";
+import { segments } from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
 
 const toneIcon = {
@@ -13,20 +13,20 @@ const toneIcon = {
 };
 
 export function ProductPreview({
-  initialSlug = "commerce",
+  initialSlug = segments[0].slug,
   compact = false,
 }: {
   initialSlug?: string;
   compact?: boolean;
 }) {
   const [activeSlug, setActiveSlug] = useState(initialSlug);
-  const active = solutions.find((solution) => solution.slug === activeSlug) ?? solutions[0];
+  const active = segments.find((segment) => segment.slug === activeSlug) ?? segments[0];
   const visual = active.productVisual;
 
   return (
     <aside
       className={`${styles.productPreview} ${compact ? styles.productPreviewCompact : ""}`}
-      aria-label="Corelith product interface preview"
+      aria-label="Corelith interface preview"
     >
       <div className={styles.previewHeader}>
         <div>
@@ -36,22 +36,22 @@ export function ProductPreview({
         <span className={styles.statusPill}>{visual.status}</span>
       </div>
 
-      <div className={styles.previewTabs} role="tablist" aria-label="Product preview industry">
-        {solutions.map((solution) => {
-          const Icon = solution.icon;
-          const selected = solution.slug === active.slug;
+      <div className={styles.previewTabs} role="tablist" aria-label="Preview business type">
+        {segments.map((segment) => {
+          const Icon = segment.icon;
+          const selected = segment.slug === active.slug;
 
           return (
             <button
-              key={solution.slug}
+              key={segment.slug}
               type="button"
+              role="tab"
               aria-selected={selected}
               className={`${styles.previewTab} ${selected ? styles.previewTabActive : ""}`}
-              onClick={() => setActiveSlug(solution.slug)}
-              role="tab"
+              onClick={() => setActiveSlug(segment.slug)}
             >
               <Icon className={styles.icon} weight="regular" />
-              {solution.navTitle}
+              {segment.navTitle}
             </button>
           );
         })}

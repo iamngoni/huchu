@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 
 import {
   CtaBand,
-  FAQGrid,
+  FAQList,
   JsonLd,
   PageHero,
   SectionIntro,
   SiteChrome,
 } from "@/app/home/site-components";
-import { faqs, seoPages } from "@/app/home/site-data";
+import { faqs, schoolsTrack, seoPages } from "@/app/home/site-data";
 import styles from "@/app/home/marketing.module.css";
 import {
   breadcrumbJsonLd,
@@ -23,7 +23,7 @@ export default function FAQPage() {
     <SiteChrome>
       <JsonLd
         data={[
-          faqJsonLd(faqs),
+          faqJsonLd([...faqs, ...schoolsTrack.faqs]),
           breadcrumbJsonLd([
             { name: "Home", path: "/home" },
             { name: "FAQ", path: "/home/faq" },
@@ -31,18 +31,29 @@ export default function FAQPage() {
         ]}
       />
       <PageHero
-        eyebrow="FAQ"
-        title="Questions buyers should ask before a tailored demo."
-        copy="The serious questions are not about whether Corelith has many modules. They are about fit, price, implementation, migration, support and whether the first workflow will actually go live."
+        eyebrow="Questions"
+        title="Straight answers, including the ones that might rule us out."
+        copy="The useful questions are never about how many features exist. They are about what this costs, what it saves, what happens to the records you already have, and what the week after go-live actually looks like."
       />
 
       <section className={styles.section}>
         <SectionIntro
-          eyebrow="Answers"
-          title="Fit, pricing, rollout and support."
-          copy="These answers are intentionally direct because the website has to reduce risk before sales starts."
+          eyebrow="General"
+          title="Fit, price, rollout and what happens after."
+          copy="If one of these answers is a dealbreaker for your business, it is much cheaper to find out on this page than three weeks into a rollout."
         />
-        <FAQGrid />
+        <FAQList items={faqs} />
+      </section>
+
+      <section className={styles.band}>
+        <div className={styles.section}>
+          <SectionIntro
+            eyebrow="Schools"
+            title="Questions from heads, bursars and boards."
+            copy="Schools budget per term, decide by committee and answer to the ministry, so they get their own answers and their own page."
+          />
+          <FAQList items={[...schoolsTrack.faqs]} />
+        </div>
       </section>
 
       <CtaBand />
