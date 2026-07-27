@@ -84,6 +84,9 @@ export async function GET(request: NextRequest) {
           customer: true,
           lines: true,
           fiscalReceipt: true,
+          // Where an invoice came from a quote, say so — otherwise the link is
+          // recorded and never seen.
+          fromQuotation: { select: { id: true, quotationNumber: true } },
         },
         orderBy: [{ invoiceDate: "desc" }],
         skip,

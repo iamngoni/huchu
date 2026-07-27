@@ -315,6 +315,12 @@ export default function AccountingSalesPage() {
         <div>
           <div className="font-mono">{row.original.invoiceNumber}</div>
           <div className="text-xs text-muted-foreground">{row.original.customer?.name}</div>
+          {row.original.fromQuotation ? (
+            <div className="text-xs text-muted-foreground">
+              from{" "}
+              <span className="font-mono">{row.original.fromQuotation.quotationNumber}</span>
+            </div>
+          ) : null}
         </div>
       ),
       size: 112,

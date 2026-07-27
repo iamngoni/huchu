@@ -2,9 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Alert, Button, Input, PageHeader } from "@corelithzw/react";
 import { Plus } from "@/lib/icons";
 import { getApiErrorMessage } from "@/lib/api-client";
 
@@ -39,18 +37,15 @@ export function RecordListShell({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{title}</h1>
-          {description ? (
-            <p className="text-sm text-[var(--text-muted)]">{description}</p>
-          ) : null}
-        </div>
-        <Button size="sm" className="gap-1.5" onClick={onCreate}>
-          <Plus className="h-4 w-4" />
-          {createLabel}
-        </Button>
-      </div>
+      <PageHeader
+        title={title}
+        lede={description}
+        primaryAction={
+          <Button variant="primary" size="sm" startIcon={<Plus className="h-4 w-4" />} onClick={onCreate}>
+            {createLabel}
+          </Button>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <Input
@@ -64,9 +59,8 @@ export function RecordListShell({
       </div>
 
       {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Unable to load {title.toLowerCase()}</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
+        <Alert tone="danger" title={`Unable to load ${title.toLowerCase()}`}>
+          {getApiErrorMessage(error)}
         </Alert>
       ) : null}
 

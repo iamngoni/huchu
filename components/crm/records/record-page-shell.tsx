@@ -3,9 +3,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { PageHeader, Tabs, TabsContent, TabsList, TabsTrigger } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { StatusChip } from "@/components/ui/status-chip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,55 +67,54 @@ export function RecordPageShell({
 
   return (
     <div className="space-y-4">
-      <header className="space-y-3">
-        <Link href={backHref} className="text-sm text-[var(--text-muted)] hover:underline">
-          ← {backLabel}
-        </Link>
+      <Link href={backHref} className="text-sm text-[var(--text-muted)] hover:underline">
+        ← {backLabel}
+      </Link>
 
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold">{title}</h1>
-              {status ? <StatusChip status={status.status} label={status.label} /> : null}
-            </div>
-            {subtitle ? (
-              <div className="text-sm text-[var(--text-muted)]">
-                {reference ? <span className="font-mono">{reference}</span> : null}
-                {reference ? " · " : null}
-                {subtitle}
-              </div>
-            ) : null}
-          </div>
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            {title}
+            {status ? <StatusChip status={status.status} label={status.label} /> : null}
+          </span>
+        }
+        lede={
+          subtitle ? (
+            <>
+              {reference ? <span className="font-mono">{reference}</span> : null}
+              {reference ? " · " : null}
+              {subtitle}
+            </>
+          ) : undefined
+        }
+        primaryAction={primaryAction}
+        secondaryActions={
+          actions && actions.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="h-8 w-8 px-0" aria-label="More actions">
+                  <DotsThree className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {actions.map((action) => (
+                  <DropdownMenuItem
+                    key={action.label}
+                    onClick={action.onSelect}
+                    className={action.destructive ? "text-[var(--status-error-text)]" : undefined}
+                  >
+                    {action.icon}
+                    {action.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : undefined
+        }
+      />
 
-          <div className="flex flex-wrap items-center gap-2">
-            {primaryAction}
-            {actions && actions.length > 0 ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" className="h-8 w-8 px-0" aria-label="More actions">
-                    <DotsThree className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {actions.map((action) => (
-                    <DropdownMenuItem
-                      key={action.label}
-                      onClick={action.onSelect}
-                      className={action.destructive ? "text-[var(--status-error-text)]" : undefined}
-                    >
-                      {action.icon}
-                      {action.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
-          </div>
-        </div>
-      </header>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <div className={rail ? "detail-grid" : "min-w-0"}>
+        <div className="min-w-0 space-y-4">
           <Tabs value={activeTab} onValueChange={onTabChange}>
             <div className="scroll-rail max-w-full">
               <TabsList>
