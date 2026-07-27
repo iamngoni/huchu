@@ -7,7 +7,9 @@
  */
 import type { AuthenticatedSession } from "@/lib/auth-core/types";
 
-const CRM_FULL_ACCESS_ROLES = new Set(["SUPERADMIN", "MANAGER", "ADMIN"]);
+// Mirrors the UserRole enum: "ADMIN" is not a role this platform issues, so
+// listing it here only ever looked like it granted something.
+const CRM_FULL_ACCESS_ROLES = new Set(["SUPERADMIN", "MANAGER"]);
 
 export function hasCrmFullAccess(role: string | null | undefined): boolean {
   return CRM_FULL_ACCESS_ROLES.has(String(role ?? "").trim().toUpperCase());

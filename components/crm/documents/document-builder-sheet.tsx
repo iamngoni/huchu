@@ -21,98 +21,15 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { Plus, Trash2 } from "@/lib/icons";
 import type { CrmDocumentLineInput } from "@/lib/crm/accounting-bridge";
 
+import {
+  draftToLine,
+  emptyLine,
+  lineTotals,
+  round2,
+  toNumber,
+  type DocumentLineDraft,
+} from "./document-math";
 import { formatMoney } from "./document-types";
-
-export type DocumentLineDraft = {
-  description: string;
-  quantity: string;
-  unitPrice: string;
-  discountPercent: string;
-  taxRate: string;
-};
-
-function emptyLine(): DocumentLineDraft {
-  return { description: "", quantity: "1", unitPrice: "", discountPercent: "", taxRate: "" };
-}
-
-function toNumber(raw: string, fallback = 0): number {
-  const parsed = Number(raw.trim());
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-/**
- * Discount is applied to the unit price before the line is sent.
- *
- * The accounting line tables carry no discount column, and reshaping them
- * would mean touching journal posting. Folding the discount into the price and
- * noting it in the description keeps the maths correct and the client's copy
- * honest about what they were given.
- */
-export function draftToLine(
-  line: DocumentLineDraft,
-  documentDiscountPercent = 0,
-): CrmDocumentLineInput | null {
-  const description = line.description.trim();
-  const quantity = toNumber(line.quantity, 1);
-  if (!description || quantity <= 0) return null;
-
-  const listPrice = toNumber(line.unitPrice);
-  const lineDiscount = Math.min(Math.max(toNumber(line.discountPercent), 0), 100);
-  const docDiscount = Math.min(Math.max(documentDiscountPercent, 0), 100);
-  // Both discounts land on the unit price. A separate negative "discount" line
-  // would be rejected: the accounting line schema requires a non-negative unit
-  // price, and relaxing that would let a document total go negative.
-  const unitPrice = round2(listPrice * (1 - lineDiscount / 100) * (1 - docDiscount / 100));
-  const taxRate = line.taxRate.trim() ? toNumber(line.taxRate) : undefined;
-
-  const notes: string[] = [];
-  if (lineDiscount > 0) notes.push(`${lineDiscount}% discount`);
-  if (docDiscount > 0) notes.push(`${docDiscount}% document discount`);
-
-  return {
-    description: notes.length > 0 ? `${description} (${notes.join(", ")} applied)` : description,
-    quantity,
-    unitPrice,
-    ...(taxRate ? { taxRate } : {}),
-  };
-}
-
-export function lineTotals(lines: DocumentLineDraft[], documentDiscount: number) {
-  let listTotal = 0;
-  let subTotal = 0;
-  let taxTotal = 0;
-
-  for (const line of lines) {
-    const quantity = toNumber(line.quantity, 1);
-    const listPrice = toNumber(line.unitPrice);
-    const discount = Math.min(Math.max(toNumber(line.discountPercent), 0), 100);
-    const net = quantity * round2(listPrice * (1 - discount / 100));
-    listTotal += quantity * listPrice;
-    subTotal += net;
-    taxTotal += (net * toNumber(line.taxRate)) / 100;
-  }
-
-  const lineDiscount = round2(listTotal - subTotal);
-  const docDiscountAmount = round2((subTotal * Math.min(Math.max(documentDiscount, 0), 100)) / 100);
-  const netSubTotal = round2(subTotal - docDiscountAmount);
-  // Tax follows the discounted base, otherwise a document-level discount would
-  // quietly overcharge the client.
-  const scale = subTotal > 0 ? netSubTotal / subTotal : 1;
-  const netTax = round2(taxTotal * scale);
-
-  return {
-    listTotal: round2(listTotal),
-    lineDiscount,
-    subTotal: netSubTotal,
-    docDiscountAmount,
-    taxTotal: netTax,
-    total: round2(netSubTotal + netTax),
-  };
-}
 
 export function DocumentBuilderSheet({
   open,

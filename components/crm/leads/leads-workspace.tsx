@@ -29,12 +29,19 @@ const PAGE_SIZE = 50;
 
 type PendingLostBulk = { ids: string[]; done: () => void };
 
-export function LeadsWorkspace() {
+export function LeadsWorkspace({
+  initialFilters = {},
+  initialView = "TABLE",
+}: {
+  /** Parsed from the page's query string, so links like /crm/leads?stages=QUOTED land pre-filtered. */
+  initialFilters?: LeadViewFilters;
+  initialView?: "TABLE" | "BOARD";
+}) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [viewType, setViewType] = useState<"TABLE" | "BOARD">("TABLE");
-  const [filters, setFilters] = useState<LeadViewFilters>({});
+  const [viewType, setViewType] = useState<"TABLE" | "BOARD">(initialView);
+  const [filters, setFilters] = useState<LeadViewFilters>(initialFilters);
   const [sort, setSort] = useState<LeadSort>(DEFAULT_LEAD_SORT);
   const [page, setPage] = useState(1);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);

@@ -65,7 +65,7 @@ export function CrmDashboardContent() {
         <CardContent>
           <div className="flex flex-wrap gap-2">
             {(s?.funnel.stages ?? []).map((stage) => (
-              <Link key={stage.stage} href={`/crm/leads?stage=${stage.stage}`}>
+              <Link key={stage.stage} href={`/crm/leads?stages=${stage.stage}`}>
                 <Badge variant="outline" className="text-sm">
                   {CRM_STAGE_LABELS[stage.stage] ?? stage.label}: {stage.count}
                 </Badge>
@@ -76,8 +76,14 @@ export function CrmDashboardContent() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle>Overdue follow-ups</CardTitle>
+          <Link
+            href="/crm/leads?overdueOnly=1"
+            className="text-sm text-[var(--text-muted)] hover:underline"
+          >
+            See the leads →
+          </Link>
         </CardHeader>
         <CardContent>
           {overdue.data && overdue.data.length > 0 ? (
