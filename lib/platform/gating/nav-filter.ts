@@ -32,9 +32,17 @@ export function filterNavSectionsByEnabledFeatures(
     .filter((section) =>
       section.featureKey ? hasTokenFeature(enabledFeatures, section.featureKey) : true,
     )
-    .map((section) => ({
-      ...section,
-      items: filterHrefItemsByEnabledFeatures(section.items, enabledFeatures),
-    }))
+    .map((section) => {
+      const items = filterHrefItemsByEnabledFeatures(section.items, enabledFeatures);
+      if (!section.groups) return { ...section, items };
+      // A group label with nothing under it is worse than no label, so groups
+      // whose every item was gated away go with them.
+      const surviving = new Set(items.map((item) => item.group).filter(Boolean));
+      return {
+        ...section,
+        items,
+        groups: section.groups.filter((group) => surviving.has(group.id)),
+      };
+    })
     .filter((section) => section.items.length > 0);
 }

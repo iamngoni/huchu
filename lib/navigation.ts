@@ -55,6 +55,24 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   roles?: UserRole[];
+  /**
+   * Which group inside the section this belongs to. Items with no group render
+   * first and unlabelled, which keeps every existing section rendering exactly
+   * as it did.
+   */
+  group?: string;
+};
+
+/**
+ * A labelled band of related items inside a section.
+ *
+ * Only worth it once a section is long enough that a flat list stops being
+ * scannable — a sixteen-item CRM reads as inventory rather than navigation.
+ * A group whose items are all gated away disappears with them.
+ */
+export type NavGroup = {
+  id: string;
+  label: string;
 };
 
 export type NavSection = {
@@ -62,6 +80,8 @@ export type NavSection = {
   title: string;
   description?: string;
   featureKey?: string;
+  /** Declares group order and labels. Groups with no visible items are dropped. */
+  groups?: NavGroup[];
   items: NavItem[];
 };
 
@@ -310,27 +330,44 @@ export const navSections: NavSection[] = [
     title: "CRM",
     description: "Leads, clients, site visits, and sales pipeline",
     featureKey: "crm.core",
+    // Grouped the way the work runs: win it, know who you are dealing with, do
+    // the work, get paid, then learn from it. Sixteen links in one column was
+    // an inventory of pages rather than a route through the job.
+    groups: [
+      { id: "sell", label: "Selling" },
+      { id: "records", label: "Who we deal with" },
+      { id: "work", label: "Doing the work" },
+      { id: "money", label: "Getting paid" },
+      { id: "learn", label: "Understanding it" },
+      { id: "setup", label: "Setup" },
+    ],
     items: [
       { href: "/crm", icon: Dashboard, label: "Overview" },
-      { href: "/crm/leads", icon: Funnel, label: "Leads" },
-      { href: "/crm/deals", icon: Funnel, label: "Deals & Pipeline" },
-      { href: "/crm/people", icon: Users, label: "People" },
-      { href: "/crm/companies", icon: Building2, label: "Companies" },
-      { href: "/crm/sites", icon: MapPin, label: "Sites" },
-      { href: "/crm/appointments", icon: CalendarCheck, label: "Site Visits" },
-      { href: "/crm/tasks", icon: Checklist, label: "Tasks" },
-      { href: "/crm/follow-ups", icon: Checklist, label: "Follow-ups" },
-      { href: "/crm/forms", icon: NoteAdd, label: "Intake Forms" },
-      { href: "/crm/import", icon: Upload, label: "Import" },
-      { href: "/crm/insights", icon: BarChart3, label: "Insights" },
-      { href: "/crm/reports", icon: ChartLine, label: "Sales Reports" },
-      { href: "/crm/work-orders", icon: Wrench, label: "Jobs" },
-      { href: "/crm/collections", icon: ReceiptLong, label: "Collections" },
+
+      { href: "/crm/leads", icon: Funnel, label: "Leads", group: "sell" },
+      { href: "/crm/deals", icon: Funnel, label: "Deals", group: "sell" },
+      { href: "/crm/forms", icon: NoteAdd, label: "Intake forms", group: "sell" },
+
+      { href: "/crm/people", icon: Users, label: "People", group: "records" },
+      { href: "/crm/companies", icon: Building2, label: "Companies", group: "records" },
+      { href: "/crm/sites", icon: MapPin, label: "Sites", group: "records" },
+
+      { href: "/crm/follow-ups", icon: Checklist, label: "Follow-ups", group: "work" },
+      { href: "/crm/appointments", icon: CalendarCheck, label: "Site visits", group: "work" },
+      { href: "/crm/work-orders", icon: Wrench, label: "Jobs", group: "work" },
+
+      { href: "/crm/collections", icon: ReceiptLong, label: "Collections", group: "money" },
+
+      { href: "/crm/insights", icon: BarChart3, label: "Insights", group: "learn" },
+      { href: "/crm/reports", icon: ChartLine, label: "Sales reports", group: "learn" },
+
+      { href: "/crm/import", icon: Upload, label: "Import", group: "setup" },
       {
         href: "/crm/settings",
         icon: ManageAccounts,
-        label: "CRM Settings",
+        label: "CRM settings",
         roles: ["SUPERADMIN", "MANAGER"],
+        group: "setup",
       },
     ],
   },
