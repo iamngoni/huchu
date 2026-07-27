@@ -282,6 +282,7 @@ export const MailCheck = createPhosphorIcon(
 );
 export const ManageAccounts = createPhosphorIcon("UserGear", "ManageAccounts");
 export const Maximize2 = createPhosphorIcon("ArrowsOut", "Maximize2");
+export const MapPin = createPhosphorIcon("MapPin", "MapPin");
 export const Menu = createPhosphorIcon("List", "Menu");
 export const Mic = createPhosphorIcon("Microphone", "Mic");
 export const Minimize2 = createPhosphorIcon("CornersIn", "Minimize2");
@@ -304,6 +305,7 @@ export const Plus = createPhosphorIcon("Plus", "Plus");
 export const PlusCircle = createPhosphorIcon("PlusCircle", "PlusCircle");
 export const QrCode = createPhosphorIcon("QrCode", "QrCode");
 export const Radio = createPhosphorIcon("Radio", "Radio");
+export const Receipt = createPhosphorIcon("Receipt", "Receipt");
 export const ReceiptLong = createPhosphorIcon("Receipt", "ReceiptLong");
 export const Recycle = createPhosphorIcon("Recycle", "Recycle");
 export const RefreshCcw = createPhosphorIcon(

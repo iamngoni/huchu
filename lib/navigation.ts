@@ -1,5 +1,6 @@
 import {
   AddressBook,
+  MapPin,
   AlertCircle,
   ArrowDownward,
   ArrowUpward,
@@ -310,8 +311,11 @@ export const navSections: NavSection[] = [
     featureKey: "crm.core",
     items: [
       { href: "/crm", icon: Dashboard, label: "Overview" },
-      { href: "/crm/leads", icon: Funnel, label: "Leads & Pipeline" },
-      { href: "/crm/clients", icon: AddressBook, label: "Clients" },
+      { href: "/crm/leads", icon: Funnel, label: "Leads" },
+      { href: "/crm/deals", icon: Funnel, label: "Deals & Pipeline" },
+      { href: "/crm/people", icon: Users, label: "People" },
+      { href: "/crm/companies", icon: Building2, label: "Companies" },
+      { href: "/crm/sites", icon: MapPin, label: "Sites" },
       { href: "/crm/appointments", icon: CalendarCheck, label: "Site Visits" },
       { href: "/crm/follow-ups", icon: Checklist, label: "Follow-ups" },
       { href: "/crm/forms", icon: NoteAdd, label: "Intake Forms" },

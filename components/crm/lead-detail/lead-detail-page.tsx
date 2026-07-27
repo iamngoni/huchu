@@ -30,6 +30,7 @@ import {
   formatLeadValue,
   isOverdue,
 } from "@/components/crm/leads/stage-config";
+import { ConvertLeadSheet } from "@/components/crm/leads/convert-lead-sheet";
 import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits/visit-report-sheet";
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 
@@ -78,6 +79,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [reportFor, setReportFor] = useState<LeadAppointment | null>(null);
   const [pendingLost, setPendingLost] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
   const [quotationPrefill, setQuotationPrefill] = useState<CrmDocumentLineInput[] | undefined>();
   const [tab, setTab] = useState("timeline");
 
@@ -186,6 +188,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             </Button>
             <Button
               size="sm"
+              variant="outline"
               className="gap-1.5"
               disabled={!lead.clientId}
               title={lead.clientId ? undefined : "Attach a client before quoting"}
@@ -193,6 +196,12 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             >
               <FileText className="h-3.5 w-3.5" />
               Documents
+            </Button>
+            {/* Converting is the one thing a qualified lead exists to do, so it
+                is the primary action until it has been done. */}
+            <Button size="sm" className="gap-1.5" onClick={() => setConvertOpen(true)}>
+              <ArrowRight className="h-3.5 w-3.5" />
+              Convert to deal
             </Button>
           </div>
         </div>
@@ -412,6 +421,8 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
           });
         }}
       />
+
+      <ConvertLeadSheet open={convertOpen} onOpenChange={setConvertOpen} leadId={leadId} />
 
       <LostReasonDialog
         open={pendingLost}

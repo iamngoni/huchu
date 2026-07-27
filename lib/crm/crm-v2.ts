@@ -328,3 +328,253 @@ export function fetchCrmAppointments(params: { from?: string; to?: string; assig
 export function fetchCrmInsightsSummary(params: { from?: string; to?: string } = {}) {
   return fetchJson<Envelope<Record<string, unknown>>>(`/api/v2/crm/insights/summary${qs(params)}`);
 }
+
+// ---------------------------------------------------------------------------
+// Core records: people, companies, deals, sites.
+// ---------------------------------------------------------------------------
+
+export type CrmPersonRecord = {
+  id: string;
+  personNo: string;
+  firstName: string;
+  lastName: string | null;
+  fullName: string;
+  jobTitle: string | null;
+  email: string | null;
+  phone: string | null;
+  contactType: string;
+  preferredChannel: string | null;
+  city: string | null;
+  tags: string[];
+  clientId: string | null;
+  client: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  customFields: Record<string, unknown> | null;
+  lastContactedAt: string | null;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { dealContacts: number };
+};
+
+export type CrmCompanyRecord = {
+  id: string;
+  clientNo: string;
+  name: string;
+  tradingName: string | null;
+  companyType: string;
+  registrationNumber: string | null;
+  taxNumber: string | null;
+  website: string | null;
+  industry: string | null;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  country: string | null;
+  billingAddress: string | null;
+  accountStatus: string;
+  parentClientId: string | null;
+  parentRelation: string | null;
+  parent: { id: string; name: string } | null;
+  tags: string[];
+  assignedTo: CrmLeadOwner | null;
+  customFields: Record<string, unknown> | null;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { people: number; deals: number; sites: number };
+};
+
+export type CrmDealStage = {
+  id: string;
+  name: string;
+  status: "OPEN" | "WON" | "LOST";
+  colorToken: string | null;
+  inactivityDays: number | null;
+};
+
+export type CrmDealRecord = {
+  id: string;
+  dealNo: string;
+  title: string;
+  status: "OPEN" | "WON" | "LOST";
+  value: number | null;
+  currency: string;
+  probability: number | null;
+  forecastCategory: string;
+  expectedCloseDate: string | null;
+  stageEnteredAt: string;
+  lostReason: string | null;
+  client: { id: string; name: string } | null;
+  primaryContact: { id: string; fullName: string } | null;
+  site: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  stage: CrmDealStage;
+  pipeline: { id: string; name: string };
+  nextFollowUp: CrmNextFollowUp | null;
+  customFields: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CrmSiteRecord = {
+  id: string;
+  siteNo: string;
+  name: string;
+  addressLine: string | null;
+  city: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  accessInstructions: string | null;
+  siteConditions: string | null;
+  tags: string[];
+  client: { id: string; name: string } | null;
+  primaryContact: { id: string; fullName: string; phone: string | null } | null;
+  customFields: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { deals: number; appointments: number };
+};
+
+export type CrmPipelineStageRecord = CrmDealStage & {
+  pipelineId: string;
+  position: number;
+  probability: number;
+  requiredFields: string[];
+  checklist: Array<{ key: string; label: string }> | null;
+  requiresSiteVisit: boolean;
+  requiresQuotation: boolean;
+};
+
+export type CrmPipelineRecord = {
+  id: string;
+  name: string;
+  description: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  position: number;
+  stages: CrmPipelineStageRecord[];
+  _count?: { deals: number };
+};
+
+export type CrmFieldDefinitionRecord = {
+  id: string;
+  entity: string;
+  key: string;
+  label: string;
+  description: string | null;
+  type: string;
+  isRequired: boolean;
+  defaultValue: unknown;
+  options: Array<{ value: string; label: string; colorToken?: string }> | null;
+  section: string | null;
+  position: number;
+  showInTable: boolean;
+  archivedAt: string | null;
+};
+
+/** Turn a filter object into query params, flattening arrays and custom fields. */
+export function recordFiltersToParams(
+  filters: Record<string, unknown>,
+): Record<string, string | number | boolean | undefined> {
+  const params: Record<string, string | number | boolean | undefined> = {};
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null || value === "") continue;
+    if (key === "customFields" && typeof value === "object") {
+      for (const [fieldKey, fieldValue] of Object.entries(value as Record<string, unknown>)) {
+        if (fieldValue === undefined || fieldValue === null || fieldValue === "") continue;
+        params[`cf.${fieldKey}`] = Array.isArray(fieldValue)
+          ? fieldValue.join(",")
+          : String(fieldValue);
+      }
+      continue;
+    }
+    if (Array.isArray(value)) {
+      if (value.length > 0) params[key] = value.join(",");
+      continue;
+    }
+    if (typeof value === "boolean") {
+      if (value) params[key] = "1";
+      continue;
+    }
+    params[key] = value as string | number;
+  }
+  return params;
+}
+
+export function fetchCrmPeople(
+  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+) {
+  return fetchJson<ListResponse<CrmPersonRecord>>(
+    `/api/v2/crm/people${qs({
+      ...recordFiltersToParams(params.filters ?? {}),
+      sortField: params.sort?.field,
+      sortDir: params.sort?.direction,
+      page: params.page,
+      limit: params.limit,
+    })}`,
+  );
+}
+
+export function fetchCrmCompanies(
+  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+) {
+  return fetchJson<ListResponse<CrmCompanyRecord>>(
+    `/api/v2/crm/companies${qs({
+      ...recordFiltersToParams(params.filters ?? {}),
+      sortField: params.sort?.field,
+      sortDir: params.sort?.direction,
+      page: params.page,
+      limit: params.limit,
+    })}`,
+  );
+}
+
+export function fetchCrmDeals(
+  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+) {
+  return fetchJson<ListResponse<CrmDealRecord>>(
+    `/api/v2/crm/deals${qs({
+      ...recordFiltersToParams(params.filters ?? {}),
+      sortField: params.sort?.field,
+      sortDir: params.sort?.direction,
+      page: params.page,
+      limit: params.limit,
+    })}`,
+  );
+}
+
+export function fetchCrmSites(
+  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+) {
+  return fetchJson<ListResponse<CrmSiteRecord>>(
+    `/api/v2/crm/sites${qs({
+      ...recordFiltersToParams(params.filters ?? {}),
+      sortField: params.sort?.field,
+      sortDir: params.sort?.direction,
+      page: params.page,
+      limit: params.limit,
+    })}`,
+  );
+}
+
+export function fetchCrmPipelines() {
+  return fetchJson<Envelope<{ data: CrmPipelineRecord[] }>>(`/api/v2/crm/pipelines`);
+}
+
+export function fetchCrmFieldDefinitions(entity?: string) {
+  return fetchJson<Envelope<{ data: CrmFieldDefinitionRecord[] }>>(
+    `/api/v2/crm/field-definitions${qs({ entity })}`,
+  );
+}
+
+export function moveCrmDealStage(
+  dealId: string,
+  body: { stageId: string; lostReason?: string; force?: boolean },
+) {
+  return fetchJson<Envelope<CrmDealRecord>>(`/api/v2/crm/deals/${dealId}/stage`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
