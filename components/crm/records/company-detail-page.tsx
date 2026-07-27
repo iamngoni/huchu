@@ -107,7 +107,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
     queryFn: () => fetchCrmFieldDefinitions("COMPANY"),
   });
 
-  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data.data ?? [];
+  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
   const company = companyQuery.data?.data;
 
   if (companyQuery.isLoading) {

@@ -110,7 +110,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
     queryFn: () => fetchCrmFieldDefinitions("PERSON"),
   });
 
-  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data.data ?? [];
+  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
   const person = personQuery.data?.data;
 
   if (personQuery.isLoading) {

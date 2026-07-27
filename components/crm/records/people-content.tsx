@@ -40,7 +40,7 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
   });
 
   const rows = useMemo(() => peopleQuery.data?.data ?? [], [peopleQuery.data]);
-  const total = peopleQuery.data?.total ?? rows.length;
+  const total = peopleQuery.data?.pagination?.total ?? rows.length;
 
   const columns = useMemo<ColumnDef<CrmPersonRecord>[]>(
     () => [

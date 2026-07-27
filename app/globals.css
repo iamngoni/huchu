@@ -20,7 +20,18 @@
                so the app keeps the last word on `body` and friends.
 
    Utilities stay on top: a Tailwind class on a design-system component still
-   overrides the component's own CSS. */
+   overrides the component's own CSS.
+
+   This statement has to be the first `@layer` the browser sees. Layer order is
+   fixed by first appearance and unknown names are appended at the end, so when
+   frappe's theme was imported from `app/layout.tsx` ahead of this file it
+   established `theme, base, components, utilities` on its own and `corelith`
+   and `app` landed *after* `utilities`. Every Tailwind utility in the app then
+   lost to the design system's element resets — `button { padding: 0 }` beat
+   `px-2`, headings collapsed to body size, and segmented controls, menus and
+   comboboxes all rendered unstyled. `app/layout.tsx` imports this file first
+   for that reason; frappe's `@source` directive rules out pulling it in here
+   through `@import`, so import order is what holds the line. */
 @layer theme, base, corelith, app, components, utilities;
 
 /* Atkinson Hyperlegible — the design system's typeface, and the app's since the

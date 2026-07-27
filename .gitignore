@@ -49,3 +49,10 @@ next-env.d.ts
 .vercel
 .codex
 .claude
+
+# local-only scratch seed (not part of the repo)
+scripts/zz-local-seed.ts
+zz-probe.mjs
+zz-t.ts
+zz-probe2.mjs
+zz-probe3.mjs

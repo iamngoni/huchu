@@ -316,7 +316,7 @@ export function PipelinesPanel() {
     queryFn: () => fetchCrmPipelines(),
   });
 
-  const pipelines = pipelinesQuery.data?.data.data ?? [];
+  const pipelines = pipelinesQuery.data?.data ?? [];
 
   const create = useMutation({
     mutationFn: () =>

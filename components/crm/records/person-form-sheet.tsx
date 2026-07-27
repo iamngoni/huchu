@@ -144,7 +144,7 @@ export function PersonFormSheet({
     [companiesQuery.data],
   );
   const owners = teamQuery.data?.data ?? [];
-  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data.data ?? [];
+  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
 
   const buildBody = (force: boolean) => ({
     firstName: form.firstName.trim(),

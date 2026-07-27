@@ -79,7 +79,7 @@ export function LeadsWorkspace({
     [sourcesQuery.data],
   );
   const savedViews = useMemo<CrmSavedViewRecord[]>(
-    () => savedViewsQuery.data?.data.data ?? [],
+    () => savedViewsQuery.data?.data ?? [],
     [savedViewsQuery.data],
   );
 
@@ -134,7 +134,7 @@ export function LeadsWorkspace({
   );
 
   const leads = leadsQuery.data?.data ?? [];
-  const total = leadsQuery.data?.total ?? leads.length;
+  const total = leadsQuery.data?.pagination?.total ?? leads.length;
 
   return (
     <div className="space-y-4">

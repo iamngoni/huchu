@@ -162,7 +162,7 @@ export function CompanyFormSheet({
     [companiesQuery.data],
   );
   const owners = teamQuery.data?.data ?? [];
-  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data.data ?? [];
+  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
 
   const buildBody = (force: boolean) => ({
     name: form.name.trim(),

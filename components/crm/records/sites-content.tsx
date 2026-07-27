@@ -27,7 +27,7 @@ export function SitesContent({ openCreate = false }: { openCreate?: boolean }) {
   });
 
   const rows = useMemo(() => sitesQuery.data?.data ?? [], [sitesQuery.data]);
-  const total = sitesQuery.data?.total ?? rows.length;
+  const total = sitesQuery.data?.pagination?.total ?? rows.length;
 
   const columns = useMemo<ColumnDef<CrmSiteRecord>[]>(
     () => [

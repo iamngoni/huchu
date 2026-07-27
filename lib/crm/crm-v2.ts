@@ -160,7 +160,15 @@ export type CrmVisitReportRecord = CrmAppointmentRecord & {
   visitItems: CrmVisitItemRecord[];
 };
 
-type ListResponse<T> = { data: T[]; total?: number; page?: number; limit?: number };
+/**
+ * The shape every paginated CRM route actually returns. It used to be declared
+ * with a top-level `total`, which no route has ever sent — so `?? rows.length`
+ * fired on every list and each one reported a single page regardless of size.
+ */
+type ListResponse<T> = {
+  data: T[];
+  pagination?: { page: number; limit: number; total: number; pages: number; hasMore: boolean };
+};
 type Envelope<T> = { data: T };
 
 function qs(params: Record<string, string | number | boolean | null | undefined>): string {
@@ -232,7 +240,7 @@ export function bulkUpdateCrmLeads(body: CrmBulkLeadAction) {
 }
 
 export function fetchCrmSavedViews() {
-  return fetchJson<Envelope<{ data: CrmSavedViewRecord[] }>>(`/api/v2/crm/saved-views`);
+  return fetchJson<Envelope<CrmSavedViewRecord[]>>(`/api/v2/crm/saved-views`);
 }
 
 export function createCrmSavedView(body: {
@@ -571,11 +579,11 @@ export function fetchCrmSites(
 }
 
 export function fetchCrmPipelines() {
-  return fetchJson<Envelope<{ data: CrmPipelineRecord[] }>>(`/api/v2/crm/pipelines`);
+  return fetchJson<Envelope<CrmPipelineRecord[]>>(`/api/v2/crm/pipelines`);
 }
 
 export function fetchCrmFieldDefinitions(entity?: string) {
-  return fetchJson<Envelope<{ data: CrmFieldDefinitionRecord[] }>>(
+  return fetchJson<Envelope<CrmFieldDefinitionRecord[]>>(
     `/api/v2/crm/field-definitions${qs({ entity })}`,
   );
 }
