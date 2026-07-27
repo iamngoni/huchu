@@ -132,7 +132,10 @@ export function DealFormSheet({
 
   // Reset as the sheet opens, adjusting state during render rather than in an
   // effect so there is no flash of the previous deal's details.
-  const [wasOpen, setWasOpen] = useState(open);
+  // Starts at `false`, not `open`: a sheet that mounts already open would
+  // otherwise record itself as having always been open, the transition below
+  // would never fire, and the form would never seed.
+  const [wasOpen, setWasOpen] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
@@ -183,7 +186,7 @@ export function DealFormSheet({
 
   const save = useMutation({
     mutationFn: () =>
-      fetchJson<{ data: { id: string; dealNo: string } }>("/api/v2/crm/deals", {
+      fetchJson<{ id: string; dealNo: string }>("/api/v2/crm/deals", {
         method: "POST",
         body: JSON.stringify({
           title: form.title.trim(),
@@ -204,9 +207,9 @@ export function DealFormSheet({
       }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["crm", "deals"] });
-      toast({ title: "Deal created", description: result.data.dealNo });
+      toast({ title: "Deal created", description: result.dealNo });
       onOpenChange(false);
-      onCreated?.(result.data.id);
+      onCreated?.(result.id);
     },
     onError: (error) => setErrors([getApiErrorMessage(error)]),
   });

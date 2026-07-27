@@ -62,15 +62,15 @@ export function TaskList({
     onSuccess: (result) => {
       refresh();
       setCompleting(null);
-      if (result.data.recurredTask) {
+      if (result.recurredTask) {
         toast({
           title: "Task completed",
           description: "The next one is booked in.",
         });
-      } else if (result.data.suggestsFollowUp) {
+      } else if (result.suggestsFollowUp) {
         // The outcome says the conversation isn't over, so offer the next step
         // while the context is still in front of the person.
-        const source = tasks.find((task) => task.id === result.data.id) ?? null;
+        const source = tasks.find((task) => task.id === result.id) ?? null;
         setFollowUpFor(source);
       } else {
         toast({ title: "Task completed" });

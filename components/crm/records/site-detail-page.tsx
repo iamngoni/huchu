@@ -18,6 +18,7 @@ import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
+import { SiteFormSheet } from "./site-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 
 const VISIT_STATUS: Record<string, { label: string; status: CanonicalUiStatus }> = {
@@ -61,10 +62,11 @@ type SiteDetail = {
 export function SiteDetailPage({ siteId }: { siteId: string }) {
   const { data: session } = useSession();
   const [tab, setTab] = useState("visits");
+  const [editOpen, setEditOpen] = useState(false);
 
   const siteQuery = useQuery({
     queryKey: ["crm", "site", siteId],
-    queryFn: () => fetchJson<{ data: SiteDetail }>(`/api/v2/crm/sites/${siteId}`),
+    queryFn: () => fetchJson<SiteDetail>(`/api/v2/crm/sites/${siteId}`),
   });
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "SITE"],
@@ -72,7 +74,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
   });
 
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
-  const site = siteQuery.data?.data;
+  const site = siteQuery.data;
 
   if (siteQuery.isLoading) {
     return (
@@ -104,8 +106,10 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
       : null;
 
   return (
-    <RecordPageShell
+    <>
+      <RecordPageShell
       backHref="/crm/sites"
+      actions={[{ label: "Edit", onSelect: () => setEditOpen(true) }]}
       backLabel="All sites"
       title={site.name}
       reference={site.siteNo}
@@ -236,6 +240,30 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
           <CustomFieldDisplay definitions={definitions} values={site.customFields} />
         </>
       }
-    />
+      />
+
+      <SiteFormSheet
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        // The detail record holds related objects and numeric coordinates; the
+        // form holds ids and strings. Map rather than loosen the form's type.
+        record={{
+          id: site.id,
+          name: site.name,
+          clientId: site.client?.id ?? "",
+          addressLine: site.addressLine ?? "",
+          city: site.city ?? "",
+          country: site.country ?? "",
+          latitude: site.latitude === null ? "" : String(site.latitude),
+          longitude: site.longitude === null ? "" : String(site.longitude),
+          primaryContactId: site.primaryContact?.id ?? "",
+          accessInstructions: site.accessInstructions ?? "",
+          siteConditions: site.siteConditions ?? "",
+        }}
+        onSaved={() => siteQuery.refetch()}
+      />
+    </>
   );
 }
+
+

@@ -97,8 +97,8 @@ export function SavedViewsBar({
       setDraftName("");
       setDraftShared(false);
       refresh();
-      onSelectView({ id: result.data.id, filters: result.data.filters, sort: result.data.sort });
-      toast({ title: "View saved", description: `"${result.data.name}" is ready to reuse.` });
+      onSelectView({ id: result.id, filters: result.filters, sort: result.sort });
+      toast({ title: "View saved", description: `"${result.name}" is ready to reuse.` });
     },
     onError: failed("Could not save view"),
   });

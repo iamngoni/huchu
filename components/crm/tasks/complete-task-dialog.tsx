@@ -39,9 +39,17 @@ export function CompleteTaskDialog({
   const [notes, setNotes] = useState("");
 
   // Clear as a new task arrives, during render rather than in an effect.
-  const [seededFor, setSeededFor] = useState<string | null>(task?.id ?? null);
-  if (task?.id !== seededFor) {
-    setSeededFor(task?.id ?? null);
+  //
+  // Both sides have to be normalised. `task?.id` is `undefined` when there is
+  // no task while the state holds `null`, so comparing them directly is always
+  // unequal: the guard re-runs every render, sets the same value, and React
+  // gives up with "Too many re-renders". The dialog is mounted by TaskList
+  // whenever there are tasks to show, so this took down every page with a task
+  // on it — and only those, which is why an empty CRM looked fine.
+  const currentTaskId = task?.id ?? null;
+  const [seededFor, setSeededFor] = useState<string | null>(currentTaskId);
+  if (currentTaskId !== seededFor) {
+    setSeededFor(currentTaskId);
     setOutcome("");
     setNotes("");
   }

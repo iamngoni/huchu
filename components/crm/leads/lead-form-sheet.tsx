@@ -197,14 +197,14 @@ export function LeadFormSheet({
 
   const createClient = useMutation({
     mutationFn: (name: string) =>
-      fetchJson<{ data: ClientOption }>("/api/v2/crm/clients", {
+      fetchJson<ClientOption>("/api/v2/crm/clients", {
         method: "POST",
         body: JSON.stringify({ name }),
       }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["crm", "clients", "options"] });
-      setForm((prev) => ({ ...prev, clientId: result.data.id }));
-      toast({ title: "Client created", description: `${result.data.name} is now on file.` });
+      setForm((prev) => ({ ...prev, clientId: result.id }));
+      toast({ title: "Client created", description: `${result.name} is now on file.` });
     },
     onError: (error) =>
       toast({
@@ -231,7 +231,7 @@ export function LeadFormSheet({
         assignedToId: form.assignedToId || null,
       };
       if (isEdit) {
-        return fetchJson<{ data: { id: string } }>(`/api/v2/crm/leads/${initial?.id}`, {
+        return fetchJson<{ id: string }>(`/api/v2/crm/leads/${initial?.id}`, {
           method: "PATCH",
           body: JSON.stringify({
             ...body,
@@ -239,7 +239,7 @@ export function LeadFormSheet({
           }),
         });
       }
-      return fetchJson<{ data: { id: string } }>("/api/v2/crm/leads", {
+      return fetchJson<{ id: string }>("/api/v2/crm/leads", {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -250,7 +250,7 @@ export function LeadFormSheet({
       if (isEdit) queryClient.invalidateQueries({ queryKey: ["crm-lead", initial?.id] });
       toast({ title: isEdit ? "Lead updated" : "Lead created" });
       onOpenChange(false);
-      onSaved?.(result.data.id);
+      onSaved?.(result.id);
     },
     onError: (error) => setErrors([getApiErrorMessage(error)]),
   });

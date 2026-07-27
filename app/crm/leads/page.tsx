@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/layout/page-heading";
 import { LeadsWorkspace } from "@/components/crm/leads/leads-workspace";
@@ -23,7 +24,7 @@ export default async function CrmLeadsPage({ searchParams }: { searchParams: Sea
   const view = params.get("view") === "table" ? "TABLE" : "BOARD";
 
   return (
-    <div className="mx-auto w-full max-w-[110rem] space-y-6">
+    <CrmPage>
       <PageHeading
         title="Leads & Pipeline"
         description="Every enquiry in flight, and the stage it is sitting in."
@@ -32,6 +33,6 @@ export default async function CrmLeadsPage({ searchParams }: { searchParams: Sea
         initialFilters={parseLeadFiltersFromParams(params)}
         initialView={view}
       />
-    </div>
+    </CrmPage>
   );
 }

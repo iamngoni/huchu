@@ -27,6 +27,33 @@ import {
   isFlatLinkSection,
 } from "./sidebar-helpers";
 
+type NavBand = { id: string | null; label: string | null; items: NavItem[] };
+
+/**
+ * Split a section's items into its declared groups.
+ *
+ * Ungrouped items lead, unlabelled — so a section that declares no groups
+ * comes back as one anonymous band and renders exactly as it always has.
+ * Order follows `section.groups`, not the order items happen to appear in.
+ */
+function groupItems(section: WorkspaceNavSection): NavBand[] {
+  const groups = section.groups ?? [];
+  if (groups.length === 0) {
+    return [{ id: null, label: null, items: section.items }];
+  }
+
+  const ungrouped = section.items.filter((item) => !item.group);
+  const bands: NavBand[] = ungrouped.length
+    ? [{ id: null, label: null, items: ungrouped }]
+    : [];
+
+  for (const group of groups) {
+    const items = section.items.filter((item) => item.group === group.id);
+    if (items.length > 0) bands.push({ id: group.id, label: group.label, items });
+  }
+  return bands;
+}
+
 function SidebarNavLink({
   item,
   isActive,
@@ -174,13 +201,25 @@ function SidebarExpandableSection({
           <div className="overflow-hidden">
             <SidebarGroupContent className="mt-0 pl-4 pr-0.5">
               <SidebarMenu className="relative ml-2 gap-1 pl-2.5">
-                {section.items.map((item) => (
-                  <SidebarNavLink
-                    key={item.href}
-                    item={item}
-                    isActive={item.href === activeHref}
-                    className="h-10 rounded-[8px] px-2 text-[14px] lg:h-8"
-                  />
+                {groupItems(section).map((band) => (
+                  <React.Fragment key={band.id ?? "__ungrouped"}>
+                    {band.label ? (
+                      <li
+                        className="px-2 pb-0.5 pt-2 text-[11px] font-medium uppercase tracking-wide text-[var(--text-subtle)]"
+                        aria-hidden="true"
+                      >
+                        {band.label}
+                      </li>
+                    ) : null}
+                    {band.items.map((item) => (
+                      <SidebarNavLink
+                        key={item.href}
+                        item={item}
+                        isActive={item.href === activeHref}
+                        className="h-10 rounded-[8px] px-2 text-[14px] lg:h-8"
+                      />
+                    ))}
+                  </React.Fragment>
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>

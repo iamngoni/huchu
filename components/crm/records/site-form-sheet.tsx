@@ -55,17 +55,36 @@ const EMPTY: FormState = {
   notes: "",
 };
 
+/** The subset of a site this form can edit, as the detail page holds it. */
+export type SiteFormRecord = { id: string } & Partial<FormState>;
+
+/** Only the keys the form owns; anything else on the record is ignored. */
+function seedFrom(record: SiteFormRecord): Partial<FormState> {
+  const seed: Partial<FormState> = {};
+  for (const key of Object.keys(EMPTY) as (keyof FormState)[]) {
+    const value = record[key];
+    if (value !== undefined && value !== null) seed[key] = value as never;
+  }
+  return seed;
+}
+
 export function SiteFormSheet({
   open,
   onOpenChange,
   defaultClientId,
   onCreated,
+  record,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultClientId?: string;
   onCreated?: (siteId: string) => void;
+  /** Pass a record to edit it. Omit to create a new one. */
+  record?: SiteFormRecord | null;
+  onSaved?: () => void;
 }) {
+  const isEdit = Boolean(record?.id);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -74,11 +93,18 @@ export function SiteFormSheet({
 
   // Reset as the sheet opens, adjusting state during render rather than in an
   // effect so there is no flash of the previous record's details.
-  const [wasOpen, setWasOpen] = useState(open);
+  // Starts at `false`, not `open`: a sheet that mounts already open would
+  // otherwise record itself as having always been open, the transition below
+  // would never fire, and the form would never seed.
+  const [wasOpen, setWasOpen] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setForm({ ...EMPTY, clientId: defaultClientId ?? "" });
+      setForm(
+        record
+          ? { ...EMPTY, ...seedFrom(record) }
+          : { ...EMPTY, clientId: defaultClientId ?? "" },
+      );
       setCustomValues({});
       setErrors([]);
     }
@@ -125,8 +151,10 @@ export function SiteFormSheet({
 
   const save = useMutation({
     mutationFn: () =>
-      fetchJson<{ data: { id: string; name: string } }>("/api/v2/crm/sites", {
-        method: "POST",
+      fetchJson<{ id: string; name: string }>(
+        isEdit ? `/api/v2/crm/sites/${record?.id}` : "/api/v2/crm/sites",
+        {
+        method: isEdit ? "PATCH" : "POST",
         body: JSON.stringify({
           name: form.name.trim(),
           clientId: form.clientId || null,
@@ -144,9 +172,11 @@ export function SiteFormSheet({
       }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["crm", "sites"] });
-      toast({ title: "Site created", description: result.data.name });
+      if (isEdit) queryClient.invalidateQueries({ queryKey: ["crm", "site", record?.id] });
+      toast({ title: isEdit ? "Site saved" : "Site created", description: result.name });
       onOpenChange(false);
-      onCreated?.(result.data.id);
+      onSaved?.();
+      if (!isEdit) onCreated?.(result.id);
     },
     onError: (error) => setErrors([getApiErrorMessage(error)]),
   });
@@ -175,7 +205,7 @@ export function SiteFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent size="lg" className="w-full overflow-y-auto p-6">
         <SheetHeader>
-          <SheetTitle>New site</SheetTitle>
+          <SheetTitle>{isEdit ? "Edit site" : "New site"}</SheetTitle>
           <SheetDescription>
             A place your crew actually goes to. Whatever you record here is what they&apos;ll read
             on the way there.
@@ -199,7 +229,7 @@ export function SiteFormSheet({
                   Cancel
                 </Button>
                 <Button type="submit" disabled={save.isPending}>
-                  {save.isPending ? "Saving…" : "Create site"}
+                  {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create site"}
                 </Button>
               </>
             }

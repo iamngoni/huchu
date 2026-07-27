@@ -1,15 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 
-import { DataTable } from "@/components/ui/data-table";
-import { fetchCrmSites, type CrmSiteRecord } from "@/lib/crm/crm-v2";
+import { Button } from "@corelithzw/react";
+import { fetchCrmSites } from "@/lib/crm/crm-v2";
 import { useDebounced } from "@/hooks/use-debounced";
 
 import { SiteFormSheet } from "./site-form-sheet";
+import { RecordList, RecordListPager, type RecordListRow } from "./record-list";
 import { RecordListShell } from "./record-list-shell";
 
 const PAGE_SIZE = 50;
@@ -26,136 +25,65 @@ export function SitesContent({ openCreate = false }: { openCreate?: boolean }) {
     placeholderData: (previous) => previous,
   });
 
-  const rows = useMemo(() => sitesQuery.data?.data ?? [], [sitesQuery.data]);
-  const total = sitesQuery.data?.pagination?.total ?? rows.length;
+  const sites = useMemo(() => sitesQuery.data?.data ?? [], [sitesQuery.data]);
+  const total = sitesQuery.data?.pagination?.total ?? sites.length;
 
-  const columns = useMemo<ColumnDef<CrmSiteRecord>[]>(
-    () => [
-      {
-        id: "name",
-        header: "Site",
-        size: 220,
-        cell: ({ row }) => (
-          <Link href={`/crm/sites/${row.original.id}`} className="block min-w-0 hover:underline">
-            <div className="truncate font-medium">{row.original.name}</div>
-            <div className="truncate font-mono text-xs text-[var(--text-muted)]">
-              {row.original.siteNo}
-            </div>
-          </Link>
-        ),
-      },
-      {
-        id: "company",
-        header: "Company",
-        size: 200,
-        cell: ({ row }) =>
-          row.original.client ? (
-            <Link
-              href={`/crm/companies/${row.original.client.id}`}
-              className="truncate text-sm hover:underline"
-            >
-              {row.original.client.name}
-            </Link>
-          ) : (
-            <span className="text-sm text-[var(--text-muted)]">—</span>
-          ),
-      },
-      {
-        id: "address",
-        header: "Address",
-        size: 240,
-        cell: ({ row }) => (
-          <div className="min-w-0 text-sm">
-            <div className="truncate">{row.original.addressLine ?? "—"}</div>
-            <div className="truncate text-xs text-[var(--text-muted)]">
-              {row.original.city ?? ""}
-            </div>
-          </div>
-        ),
-      },
-      {
-        id: "contact",
-        header: "Contact",
-        size: 200,
-        cell: ({ row }) => (
-          <div className="min-w-0 text-sm">
-            <div className="truncate">{row.original.primaryContact?.fullName ?? "—"}</div>
-            <div className="truncate text-xs text-[var(--text-muted)]">
-              {row.original.primaryContact?.phone ?? ""}
-            </div>
-          </div>
-        ),
-      },
-      {
-        id: "deals",
-        header: "Deals",
-        size: 80,
-        cell: ({ row }) => (
-          <span className="font-mono text-sm">{row.original._count?.deals ?? 0}</span>
-        ),
-      },
-      {
-        id: "visits",
-        header: "Visits",
-        size: 80,
-        cell: ({ row }) => (
-          <span className="font-mono text-sm">{row.original._count?.appointments ?? 0}</span>
-        ),
-      },
-    ],
-    [],
+  const rows = useMemo<RecordListRow[]>(
+    () =>
+      sites.map((site) => ({
+        id: site.id,
+        href: `/crm/sites/${site.id}`,
+        title: site.name,
+        subtitle:
+          [
+            site.siteNo,
+            site.client?.name,
+            [site.addressLine, site.city, site.country].filter(Boolean).join(", "),
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        facts: [
+          { label: "Contact", value: site.primaryContact?.fullName ?? "—" },
+          { label: "Deals", value: site._count?.deals ?? 0, mono: true },
+          { label: "Visits", value: site._count?.appointments ?? 0, mono: true },
+        ],
+      })),
+    [sites],
   );
 
   return (
     <RecordListShell
       title="Sites"
-      description="Places where work happens — addresses, access notes and past measurements, entered once."
+      description="Where the work happens — addresses, access notes and who to ask for."
       search={search}
       onSearchChange={(value) => {
         setSearch(value);
         setPage(1);
       }}
-      searchPlaceholder="Search sites by name, address or city"
+      searchPlaceholder="Search sites by name, number or address"
       createLabel="New site"
       onCreate={() => setCreateOpen(true)}
       error={sitesQuery.error}
     >
-      <DataTable
-        // The shell above owns search; a second box in the table toolbar is the
-        // duplicate-control failure the cookbook's one-filter-pathway rule exists to stop.
-        features={{ globalFilter: false }}
-        data={rows}
-        columns={columns}
-        edgeToEdge
-        stickyHeader
-        queryState={{ mode: "paginated", page, pageSize: PAGE_SIZE }}
-        onQueryStateChange={(next) => {
-          if (next.page && next.page !== page) setPage(next.page);
-        }}
-        pagination={{
-          enabled: true,
-          server: true,
-          total,
-          totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-        }}
-        mobileCardRenderer={({ row }) => (
-          <Link
-            href={`/crm/sites/${row.id}`}
-            className="flex flex-col gap-1 rounded-[var(--card-radius)] border border-[var(--border)] p-3"
-          >
-            <span className="font-medium">{row.name}</span>
-            <span className="text-xs text-[var(--text-muted)]">
-              {[row.client?.name, row.city].filter(Boolean).join(" · ") || row.siteNo}
-            </span>
-            <span className="text-sm">{row.addressLine ?? ""}</span>
-          </Link>
-        )}
-        emptyState={
-          sitesQuery.isLoading
-            ? "Loading sites…"
-            : "No sites yet. Add the places you work at so nobody re-types an address."
+      <RecordList
+        rows={rows}
+        isLoading={sitesQuery.isLoading}
+        emptyTitle={debouncedSearch ? "No sites match that search" : "No sites yet"}
+        emptyBody={
+          debouncedSearch
+            ? undefined
+            : "A site is an address you keep going back to — add one and visits and deals can point at it."
+        }
+        emptyAction={
+          debouncedSearch ? undefined : (
+            <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+              Add the first site
+            </Button>
+          )
         }
       />
+
+      <RecordListPager page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
 
       <SiteFormSheet open={createOpen} onOpenChange={setCreateOpen} />
     </RecordListShell>

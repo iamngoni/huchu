@@ -78,9 +78,9 @@ export function CommentThread({
     queryFn: () => fetchCrmFollowers(entity, recordId),
   });
 
-  const comments = data?.data ?? [];
-  const followers = followerData?.data.followers ?? [];
-  const isFollowing = followerData?.data.isFollowing ?? false;
+  const comments = data ?? [];
+  const followers = followerData?.followers ?? [];
+  const isFollowing = followerData?.isFollowing ?? false;
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: commentsKey });

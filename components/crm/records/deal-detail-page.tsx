@@ -123,7 +123,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
 
   const dealQuery = useQuery({
     queryKey: ["crm", "deal", dealId],
-    queryFn: () => fetchJson<{ data: DealDetail }>(`/api/v2/crm/deals/${dealId}`),
+    queryFn: () => fetchJson<DealDetail>(`/api/v2/crm/deals/${dealId}`),
   });
   const teamQuery = useQuery({
     queryKey: ["crm", "team"],
@@ -136,7 +136,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
 
   const owners = useMemo(() => teamQuery.data?.data ?? [], [teamQuery.data]);
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
-  const deal = dealQuery.data?.data;
+  const deal = dealQuery.data;
 
   if (dealQuery.isLoading) {
     return (
