@@ -50,13 +50,6 @@ next-env.d.ts
 .codex
 .claude
 
-# local-only scratch seed (not part of the repo)
-scripts/zz-local-seed.ts
-zz-probe.mjs
-zz-t.ts
-zz-probe2.mjs
-zz-probe3.mjs
-zz-probe4.mjs
-zz-probe5.mjs
-zz-probe6.mjs
-zz-probe7.mjs
+# Local-only scratch: seeds and browser probes used while verifying a change.
+zz-*
+scripts/zz-*
