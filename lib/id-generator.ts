@@ -42,6 +42,7 @@ export type ReservableIdEntity =
   | "CRM_LEAD"
   | "CRM_APPOINTMENT"
   | "CRM_PERSON"
+  | "CRM_WORK_ORDER"
   | "CRM_DEAL"
   | "CRM_SITE"
   | "SALES_QUOTATION"
@@ -101,6 +102,7 @@ export const ID_ENTITY_CONFIG: Record<ReservableIdEntity, EntityConfig> = {
   CRM_LEAD: { prefix: "CRL", requiresSiteId: false },
   CRM_APPOINTMENT: { prefix: "SVT", requiresSiteId: false },
   CRM_PERSON: { prefix: "PSN", requiresSiteId: false },
+  CRM_WORK_ORDER: { prefix: "CWO", requiresSiteId: false },
   // DEAL is already taken by CAR_SALES_DEAL, so the CRM deal reads CRMD.
   CRM_DEAL: { prefix: "CRMD", requiresSiteId: false },
   CRM_SITE: { prefix: "CSITE", requiresSiteId: false },
@@ -457,6 +459,13 @@ async function findEntityMaxExistingCode(
         select: { personNo: true },
       });
       return extractMaxFromCodes(records.map((record) => record.personNo), prefix);
+    }
+    case "CRM_WORK_ORDER": {
+      const records = await db.crmWorkOrder.findMany({
+        where: { companyId },
+        select: { workOrderNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.workOrderNo), prefix);
     }
     case "CRM_DEAL": {
       const records = await db.crmDeal.findMany({

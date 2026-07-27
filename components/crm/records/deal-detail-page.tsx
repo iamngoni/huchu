@@ -31,6 +31,7 @@ import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
 import { isOverdue } from "@/components/crm/leads/stage-config";
 import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits/visit-report-sheet";
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
+import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { DealStageBar } from "./deal-stage-bar";
@@ -116,6 +117,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
 
   const [tab, setTab] = useState("timeline");
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [raiseJobOpen, setRaiseJobOpen] = useState(false);
   const [reportFor, setReportFor] = useState<LeadAppointment | null>(null);
   const [quotationPrefill, setQuotationPrefill] = useState<CrmDocumentLineInput[] | undefined>();
 
@@ -225,6 +227,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
         primaryAction={primaryAction}
         actions={[
           { label: "Schedule a site visit", onSelect: () => setScheduleOpen(true) },
+          { label: "Raise a job", onSelect: () => setRaiseJobOpen(true) },
           { label: "Open documents", onSelect: () => setTab("documents") },
         ]}
         activeTab={tab}
@@ -440,6 +443,22 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             description: `${lines.length} measured item${lines.length === 1 ? "" : "s"} carried into a new quotation.`,
           });
         }}
+      />
+
+      <RaiseJobSheet
+        open={raiseJobOpen}
+        onOpenChange={setRaiseJobOpen}
+        dealId={dealId}
+        clientId={deal.clientId}
+        siteId={deal.site?.id ?? null}
+        defaultTitle={deal.title}
+        quotationDocuments={deal.documents
+          .filter((doc) => doc.type === "QUOTATION" && doc.quotation)
+          .map((doc) => ({
+            id: doc.id,
+            label: `${doc.quotation!.quotationNumber}${doc.version > 1 ? ` (v${doc.version})` : ""}`,
+          }))}
+        currentUserId={currentUserId}
       />
     </>
   );
