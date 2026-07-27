@@ -1,0 +1,332 @@
+"use client";
+
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import { getApiErrorMessage } from "@/lib/api-client";
+import { guessMapping, parseCsv, type CsvTable } from "@/lib/crm/csv";
+import { IMPORT_FIELDS, type ImportEntity } from "@/lib/crm/import";
+import {
+  commitCrmImport,
+  previewCrmImport,
+  type CrmImportPreview,
+} from "@/lib/crm/crm-v2";
+import { cn } from "@/lib/utils";
+
+const ENTITY_LABELS: Record<ImportEntity, string> = {
+  PERSON: "People",
+  COMPANY: "Companies",
+  LEAD: "Leads",
+};
+
+const NONE = "__none__";
+
+/**
+ * Import in three steps: pick the file, say which column is which, look at
+ * what would happen. Nothing is written until the last button, because an
+ * import that writes first and reports afterwards leaves somebody reconciling
+ * four thousand rows by hand.
+ */
+export function ImportWizard() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [entity, setEntity] = useState<ImportEntity>("PERSON");
+  const [csv, setCsv] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [table, setTable] = useState<CsvTable | null>(null);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [onDuplicate, setOnDuplicate] = useState<"SKIP" | "UPDATE">("SKIP");
+  const [preview, setPreview] = useState<CrmImportPreview | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const readFile = async (file: File) => {
+    const text = await file.text();
+    const parsed = parseCsv(text);
+    if (parsed.headers.length === 0) {
+      setError("That file has no columns.");
+      return;
+    }
+    setError(null);
+    setCsv(text);
+    setFileName(file.name);
+    setTable(parsed);
+    setMapping(guessMapping(parsed.headers, IMPORT_FIELDS[entity]));
+    setPreview(null);
+  };
+
+  const changeEntity = (next: ImportEntity) => {
+    setEntity(next);
+    setPreview(null);
+    if (table) setMapping(guessMapping(table.headers, IMPORT_FIELDS[next]));
+  };
+
+  const dryRun = useMutation({
+    mutationFn: () => previewCrmImport({ entity, mapping, onDuplicate, csv }),
+    onSuccess: (result) => {
+      setPreview(result.data);
+      setError(null);
+    },
+    onError: (err) => setError(getApiErrorMessage(err)),
+  });
+
+  const commit = useMutation({
+    mutationFn: () => commitCrmImport({ entity, mapping, onDuplicate, csv }),
+    onSuccess: (result) => {
+      const { created, updated, failed } = result.data;
+      toast({
+        title: `Imported ${created + updated} record${created + updated === 1 ? "" : "s"}`,
+        description: failed.length ? `${failed.length} row(s) couldn't be saved.` : undefined,
+      });
+      queryClient.invalidateQueries({ queryKey: ["crm"] });
+      setPreview(null);
+      setTable(null);
+      setCsv("");
+      setFileName("");
+      if (failed.length) {
+        setError(
+          `Rows that failed: ${failed.map((row) => `${row.line} (${row.message})`).join("; ")}`,
+        );
+      }
+    },
+    onError: (err) => setError(getApiErrorMessage(err)),
+  });
+
+  const requiredMissing = IMPORT_FIELDS[entity]
+    .filter((field) => field.required && !mapping[field.key])
+    .map((field) => field.label);
+
+  return (
+    <div className="space-y-5">
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Import problem</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <section className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
+        <h2 className="text-sm font-semibold">1. What are you importing?</h2>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1.5">
+            <Label>Record type</Label>
+            <Select value={entity} onValueChange={(value) => changeEntity(value as ImportEntity)}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(ENTITY_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="import-file">CSV file</Label>
+            <input
+              id="import-file"
+              type="file"
+              accept=".csv,text/csv"
+              className="block text-sm file:mr-3 file:rounded-[var(--radius-sm)] file:border file:border-[var(--border)] file:bg-[var(--surface-subtle)] file:px-3 file:py-1.5 file:text-sm"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void readFile(file);
+              }}
+            />
+          </div>
+        </div>
+        {table ? (
+          <p className="text-sm text-[var(--text-muted)]">
+            {fileName} · {table.rows.length} row{table.rows.length === 1 ? "" : "s"} ·{" "}
+            {table.headers.length} column{table.headers.length === 1 ? "" : "s"}
+          </p>
+        ) : null}
+      </section>
+
+      {table ? (
+        <section className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
+          <h2 className="text-sm font-semibold">2. Which column is which?</h2>
+          <p className="text-sm text-[var(--text-muted)]">
+            Guessed from the headers. Change anything that looks wrong — a wrong
+            guess applied silently is worse than no guess at all.
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {IMPORT_FIELDS[entity].map((field) => (
+              <div key={field.key} className="space-y-1.5">
+                <Label>
+                  {field.label}
+                  {field.required ? " *" : ""}
+                </Label>
+                <Select
+                  value={mapping[field.key] ?? NONE}
+                  onValueChange={(value) =>
+                    setMapping((previous) => {
+                      const next = { ...previous };
+                      if (value === NONE) delete next[field.key];
+                      else next[field.key] = value;
+                      return next;
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Not imported" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Not imported</SelectItem>
+                    {table.headers.map((header) => (
+                      <SelectItem key={header} value={header}>
+                        {header}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>When a row matches something already here</Label>
+            <Select
+              value={onDuplicate}
+              onValueChange={(value) => setOnDuplicate(value as "SKIP" | "UPDATE")}
+            >
+              <SelectTrigger className="w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SKIP">Leave the existing record alone</SelectItem>
+                <SelectItem value="UPDATE">Update it with the file&apos;s values</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {requiredMissing.length ? (
+            <p className="text-sm text-[var(--status-error-text)]">
+              Still need a column for: {requiredMissing.join(", ")}
+            </p>
+          ) : null}
+
+          <Button
+            type="button"
+            disabled={requiredMissing.length > 0 || dryRun.isPending}
+            onClick={() => dryRun.mutate()}
+          >
+            {dryRun.isPending ? "Checking…" : "Check the file"}
+          </Button>
+        </section>
+      ) : null}
+
+      {preview ? (
+        <section className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
+          <h2 className="text-sm font-semibold">3. What will happen</h2>
+
+          <div className="flex flex-wrap gap-4">
+            {(
+              [
+                ["Create", preview.totals.create, ""],
+                ["Update", preview.totals.update, ""],
+                ["Skip", preview.totals.skip, "text-[var(--text-muted)]"],
+              ] as const
+            ).map(([label, count, tone]) => (
+              <div key={label}>
+                <p className={cn("font-mono text-2xl", tone)}>{count}</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          {preview.unmappedHeaders.length ? (
+            <Alert>
+              <AlertTitle>Columns not being imported</AlertTitle>
+              <AlertDescription>{preview.unmappedHeaders.join(", ")}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <div className="scroll-rail max-h-80 overflow-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)]">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-[var(--surface-subtle)] text-left">
+                <tr>
+                  <th className="px-2 py-1.5 font-medium">Row</th>
+                  <th className="px-2 py-1.5 font-medium">Action</th>
+                  <th className="px-2 py-1.5 font-medium">Record</th>
+                  <th className="px-2 py-1.5 font-medium">Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.rows.map((row) => (
+                  <tr key={row.line} className="border-t border-[var(--border-subtle)]">
+                    <td className="px-2 py-1.5 font-mono">{row.line}</td>
+                    <td
+                      className={cn(
+                        "px-2 py-1.5",
+                        row.action === "SKIP" ? "text-[var(--text-muted)]" : "",
+                      )}
+                    >
+                      {row.action === "CREATE"
+                        ? "Create"
+                        : row.action === "UPDATE"
+                          ? "Update"
+                          : "Skip"}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      {row.matchLabel ??
+                        row.values.name ??
+                        row.values.title ??
+                        [row.values.firstName, row.values.lastName].filter(Boolean).join(" ") ??
+                        "—"}
+                    </td>
+                    <td className="px-2 py-1.5 text-[var(--text-muted)]">
+                      {row.issues.map((issue) => issue.message).join("; ") ||
+                        (row.matchId ? "Already here" : "")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {preview.rowCount > preview.rows.length ? (
+            <p className="text-xs text-[var(--text-muted)]">
+              Showing the first {preview.rows.length} of {preview.rowCount} rows. All of them will
+              be imported.
+            </p>
+          ) : null}
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              disabled={
+                commit.isPending || preview.totals.create + preview.totals.update === 0
+              }
+              onClick={() => commit.mutate()}
+            >
+              {commit.isPending
+                ? "Importing…"
+                : `Import ${preview.totals.create + preview.totals.update} record${
+                    preview.totals.create + preview.totals.update === 1 ? "" : "s"
+                  }`}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setPreview(null)}>
+              Back to mapping
+            </Button>
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}

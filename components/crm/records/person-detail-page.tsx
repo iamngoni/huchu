@@ -20,6 +20,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { RecordHistoryTab } from "./record-history-tab";
+import { MergeDialog } from "./merge-dialog";
 
 const ROLE_LABELS: Record<string, string> = {
   PRIMARY: "Primary contact",
@@ -97,6 +98,7 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 export function PersonDetailPage({ personId }: { personId: string }) {
   const router = useRouter();
   const { data: session } = useSession();
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [tab, setTab] = useState("timeline");
 
   const personQuery = useQuery({
@@ -154,9 +156,11 @@ export function PersonDetailPage({ personId }: { personId: string }) {
     .join(" · ");
 
   return (
+    <>
     <RecordPageShell
       backHref="/crm/people"
       backLabel="All people"
+      actions={[{ label: "Merge a duplicate", onSelect: () => setMergeOpen(true) }]}
       title={person.fullName}
       reference={person.personNo}
       subtitle={subtitle}
@@ -267,5 +271,14 @@ export function PersonDetailPage({ personId }: { personId: string }) {
         </>
       }
     />
+
+    <MergeDialog
+      entity="PERSON"
+      survivorId={personId}
+      survivorLabel={person.fullName}
+      open={mergeOpen}
+      onOpenChange={setMergeOpen}
+    />
+    </>
   );
 }

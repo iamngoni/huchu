@@ -33,6 +33,7 @@ import {
   ShieldCheck,
   Server,
   Scale,
+  Upload,
   UserRound,
   Users,
   UserCheck,
@@ -320,6 +321,7 @@ export const navSections: NavSection[] = [
       { href: "/crm/tasks", icon: Checklist, label: "Tasks" },
       { href: "/crm/follow-ups", icon: Checklist, label: "Follow-ups" },
       { href: "/crm/forms", icon: NoteAdd, label: "Intake Forms" },
+      { href: "/crm/import", icon: Upload, label: "Import" },
       { href: "/crm/insights", icon: BarChart3, label: "Insights" },
       {
         href: "/crm/settings",

@@ -13,6 +13,8 @@ import type {
 } from "@prisma/client";
 import type { CollabEntity } from "@/lib/crm/collaboration";
 import type { TaskQueue } from "@/lib/crm/tasks";
+import type { ImportEntity, ImportPlan } from "@/lib/crm/import";
+import type { FieldChoice, MergeFieldPlan } from "@/lib/crm/merge";
 import type { LeadSort, LeadViewFilters } from "@/lib/crm/views";
 import type { SiteVisitItemInput, SiteVisitReportInput } from "@/lib/crm/site-visits";
 
@@ -734,4 +736,68 @@ export function unfollowCrmRecord(entity: CollabEntity, recordId: string, userId
     `/api/v2/crm/followers${qs({ entity, recordId, userId })}`,
     { method: "DELETE" },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Import and merge
+// ---------------------------------------------------------------------------
+
+export type CrmImportPreview = ImportPlan & {
+  rowCount: number;
+  fields: { key: string; label: string; required?: boolean }[];
+};
+
+export function previewCrmImport(body: {
+  entity: ImportEntity;
+  mapping: Record<string, string>;
+  onDuplicate: "SKIP" | "UPDATE";
+  csv: string;
+}) {
+  return fetchJson<Envelope<CrmImportPreview>>(`/api/v2/crm/import`, {
+    method: "POST",
+    body: JSON.stringify({ ...body, commit: false }),
+  });
+}
+
+export function commitCrmImport(body: {
+  entity: ImportEntity;
+  mapping: Record<string, string>;
+  onDuplicate: "SKIP" | "UPDATE";
+  csv: string;
+}) {
+  return fetchJson<
+    Envelope<{
+      created: number;
+      updated: number;
+      failed: { line: number; message: string }[];
+      totals: { create: number; update: number; skip: number };
+    }>
+  >(`/api/v2/crm/import`, { method: "POST", body: JSON.stringify({ ...body, commit: true }) });
+}
+
+export type CrmMergePreview = {
+  survivor: { id: string; label: string; reference: string };
+  loser: { id: string; label: string; reference: string };
+  fields: MergeFieldPlan[];
+};
+
+export function previewCrmMerge(entity: "PERSON" | "COMPANY", survivorId: string, loserId: string) {
+  const base = entity === "PERSON" ? "people" : "companies";
+  return fetchJson<Envelope<CrmMergePreview>>(`/api/v2/crm/${base}/${survivorId}/merge`, {
+    method: "POST",
+    body: JSON.stringify({ loserId, commit: false }),
+  });
+}
+
+export function commitCrmMerge(
+  entity: "PERSON" | "COMPANY",
+  survivorId: string,
+  loserId: string,
+  choices: Record<string, FieldChoice>,
+) {
+  const base = entity === "PERSON" ? "people" : "companies";
+  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/${base}/${survivorId}/merge`, {
+    method: "POST",
+    body: JSON.stringify({ loserId, choices, commit: true }),
+  });
 }

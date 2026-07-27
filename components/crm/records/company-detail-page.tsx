@@ -21,6 +21,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { RecordHistoryTab } from "./record-history-tab";
+import { MergeDialog } from "./merge-dialog";
 
 const ACCOUNT_STATUS_PRESENTATION: Record<string, { label: string; status: CanonicalUiStatus }> = {
   ACTIVE: { label: "Active", status: "passing" },
@@ -94,6 +95,7 @@ function TextRow({ label, value }: { label: string; value: string | null }) {
 export function CompanyDetailPage({ companyId }: { companyId: string }) {
   const router = useRouter();
   const { data: session } = useSession();
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [tab, setTab] = useState("people");
 
   const companyQuery = useQuery({
@@ -161,9 +163,11 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
   const hasHierarchy = Boolean(company.parent) || company.children.length > 0;
 
   return (
+    <>
     <RecordPageShell
       backHref="/crm/companies"
       backLabel="All companies"
+      actions={[{ label: "Merge a duplicate", onSelect: () => setMergeOpen(true) }]}
       title={company.name}
       reference={company.clientNo}
       status={ACCOUNT_STATUS_PRESENTATION[company.accountStatus] ?? null}
@@ -322,5 +326,14 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
         </>
       }
     />
+
+    <MergeDialog
+      entity="COMPANY"
+      survivorId={companyId}
+      survivorLabel={company.name}
+      open={mergeOpen}
+      onOpenChange={setMergeOpen}
+    />
+    </>
   );
 }
