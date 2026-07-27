@@ -10,6 +10,7 @@ const updatePreferenceSchema = z
     webPushEnabled: z.boolean().optional(),
     hrEnabled: z.boolean().optional(),
     opsEnabled: z.boolean().optional(),
+    crmEnabled: z.boolean().optional(),
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: "At least one preference field is required",
@@ -32,6 +33,7 @@ export async function GET(request: NextRequest) {
         webPushEnabled: false,
         hrEnabled: true,
         opsEnabled: true,
+        crmEnabled: true,
       },
     )
   } catch (error) {

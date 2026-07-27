@@ -193,6 +193,10 @@ model Company {
   crmFieldDefinitions           CrmFieldDefinition[]
   crmLists                      CrmList[]
   crmListMembers                CrmListMember[]
+  crmTasks                      CrmTask[]
+  crmComments                   CrmComment[]
+  crmMentions                   CrmMention[]
+  crmFollowers                  CrmFollower[]
 
   @@index([tenantStatus])
   @@index([isProvisioned])
@@ -944,6 +948,12 @@ model User {
   crmLeadsConverted                 CrmLead[]                      @relation("CrmLeadConvertedBy")
   crmListsCreated                   CrmList[]                      @relation("CrmListCreatedBy")
   crmListMembersAdded               CrmListMember[]                @relation("CrmListMemberAddedBy")
+  crmTasksAssigned                  CrmTask[]                      @relation("CrmTaskAssignedTo")
+  crmTasksCreated                   CrmTask[]                      @relation("CrmTaskCreatedBy")
+  crmCommentsCreated                CrmComment[]                   @relation("CrmCommentCreatedBy")
+  crmCommentsResolved               CrmComment[]                   @relation("CrmCommentResolvedBy")
+  crmMentions                       CrmMention[]                   @relation("CrmMentionUser")
+  crmFollowing                      CrmFollower[]                  @relation("CrmFollowerUser")
 
   @@index([companyId])
   @@index([email])
@@ -1492,6 +1502,7 @@ model UserNotificationPreference {
   webPushEnabled Boolean  @default(false)
   hrEnabled      Boolean  @default(true)
   opsEnabled     Boolean  @default(true)
+  crmEnabled     Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -1799,6 +1810,10 @@ enum NotificationType {
   CRM_DOCUMENT_APPROVED
   CRM_DOCUMENT_DECLINED
   CRM_FOLLOW_UP_DUE
+  CRM_TASK_ASSIGNED
+  CRM_TASK_DUE
+  CRM_MENTIONED
+  CRM_COMMENT_ADDED
 }
 
 enum NotificationSeverity {
@@ -1822,6 +1837,8 @@ enum NotificationEntityType {
   WORK_ORDER
   CRM_LEAD
   CRM_DOCUMENT
+  CRM_TASK
+  CRM_COMMENT
 }
 
 enum HrIncidentCategory {
@@ -6365,6 +6382,8 @@ model CrmClient {
   appointments      CrmAppointment[]
   intakeSubmissions CrmIntakeSubmission[]
   people            CrmPerson[]           @relation("CrmPersonPrimaryCompany")
+  tasks             CrmTask[]
+  comments          CrmComment[]
   personLinks       CrmPersonCompany[]
   deals             CrmDeal[]
   sites             CrmSite[]
@@ -6434,6 +6453,8 @@ model CrmLead {
   convertedDeal     CrmDeal?              @relation("CrmLeadConvertedDeal", fields: [convertedDealId], references: [id], onDelete: SetNull)
   convertedPerson   CrmPerson?            @relation("CrmLeadConvertedPerson", fields: [convertedPersonId], references: [id], onDelete: SetNull)
   convertedBy       User?                 @relation("CrmLeadConvertedBy", fields: [convertedById], references: [id])
+  tasks             CrmTask[]
+  comments          CrmComment[]
 
   @@unique([companyId, leadNo])
   @@index([companyId, stage, updatedAt])
@@ -7203,6 +7224,8 @@ model CrmPerson {
   sitesPrimaryOn CrmSite[]          @relation("CrmSitePrimaryContact")
   activities     CrmActivity[]
   leadsConverted CrmLead[]          @relation("CrmLeadConvertedPerson")
+  tasks          CrmTask[]
+  comments       CrmComment[]
 
   @@unique([companyId, personNo])
   @@index([companyId, fullName])
@@ -7260,6 +7283,8 @@ model CrmSite {
   createdBy      User?            @relation("CrmSiteCreatedBy", fields: [createdById], references: [id])
   deals          CrmDeal[]
   appointments   CrmAppointment[]
+  tasks          CrmTask[]
+  comments       CrmComment[]
 
   @@unique([companyId, siteNo])
   @@index([companyId, name])
@@ -7316,6 +7341,8 @@ model CrmDeal {
   appointments   CrmAppointment[]
   documents      CrmLeadDocument[]
   leadsConverted CrmLead[]         @relation("CrmLeadConvertedDeal")
+  tasks             CrmTask[]
+  comments          CrmComment[]
 
   @@unique([companyId, dealNo])
   @@index([companyId, stageId])
@@ -7508,4 +7535,182 @@ model CrmListMember {
 
   @@unique([listId, recordId])
   @@index([companyId, recordId])
+}
+
+// ---------------------------------------------------------------------------
+// Tasks, collaboration and followers.
+//
+// CrmFollowUp remains as the lead/deal follow-up it always was; CrmTask is the
+// generic work item the spec asks for, with types, priority, outcomes and
+// simple recurrence.
+// ---------------------------------------------------------------------------
+
+enum CrmTaskType {
+  CALL
+  EMAIL
+  WHATSAPP
+  MEETING
+  VISIT_PREP
+  DOCUMENT_FOLLOW_UP
+  PAYMENT_FOLLOW_UP
+  GENERAL
+}
+
+enum CrmTaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum CrmTaskStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+/// What came of a task. Which outcomes apply depends on the task type — see
+/// lib/crm/tasks.ts.
+enum CrmTaskOutcome {
+  ANSWERED
+  NO_ANSWER
+  CALL_BACK_LATER
+  QUALIFIED
+  NOT_INTERESTED
+  REPLIED
+  NO_REPLY
+  ATTENDED
+  NO_SHOW
+  DONE
+}
+
+enum CrmRecurrence {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model CrmTask {
+  id           String          @id @default(uuid())
+  companyId    String
+  title        String
+  description  String?
+  type         CrmTaskType     @default(GENERAL)
+  priority     CrmTaskPriority @default(NORMAL)
+  status       CrmTaskStatus   @default(OPEN)
+  dueAt        DateTime
+  /// Null when the task is due on a day rather than at a time.
+  hasDueTime   Boolean         @default(false)
+  remindAt     DateTime?
+  outcome      CrmTaskOutcome?
+  outcomeNotes String?
+  completedAt  DateTime?
+  assignedToId String?
+  createdById  String?
+
+  // The record this task is about. Exactly one is set in practice, but the
+  // schema allows several so a task can be filed against a deal and its site.
+  leadId    String?
+  dealId    String?
+  clientId  String?
+  personId  String?
+  siteId    String?
+
+  recurrence         CrmRecurrence @default(NONE)
+  /// Every N periods, e.g. every 2 weeks. Ignored when recurrence is NONE.
+  recurrenceInterval Int           @default(1)
+  /// Set on the task that produced this one, so a chain stays traceable.
+  recurredFromId     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedTo   User?      @relation("CrmTaskAssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User?      @relation("CrmTaskCreatedBy", fields: [createdById], references: [id])
+  lead         CrmLead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         CrmDeal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  client       CrmClient? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  person       CrmPerson? @relation(fields: [personId], references: [id], onDelete: Cascade)
+  site         CrmSite?   @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  recurredFrom CrmTask?   @relation("CrmTaskRecurrence", fields: [recurredFromId], references: [id], onDelete: SetNull)
+  recurrences  CrmTask[]  @relation("CrmTaskRecurrence")
+
+  @@index([companyId, assignedToId, status, dueAt])
+  @@index([companyId, status, dueAt])
+  @@index([companyId, dealId])
+  @@index([companyId, leadId])
+}
+
+/// Internal collaboration, deliberately separate from the customer-facing
+/// activity timeline. A comment is something the team says to itself.
+model CrmComment {
+  id         String    @id @default(uuid())
+  companyId  String
+  body       String
+  /// Reply threading, one level deep. Threads of threads help nobody.
+  parentId   String?
+  isPinned   Boolean   @default(false)
+  resolvedAt DateTime?
+  resolvedById String?
+  editedAt   DateTime?
+
+  leadId   String?
+  dealId   String?
+  clientId String?
+  personId String?
+  siteId   String?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy  User            @relation("CrmCommentCreatedBy", fields: [createdById], references: [id])
+  resolvedBy User?           @relation("CrmCommentResolvedBy", fields: [resolvedById], references: [id])
+  parent     CrmComment?     @relation("CrmCommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    CrmComment[]    @relation("CrmCommentThread")
+  mentions   CrmMention[]
+  lead       CrmLead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal       CrmDeal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  client     CrmClient?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  person     CrmPerson?      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  site       CrmSite?        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, dealId, createdAt])
+  @@index([companyId, leadId, createdAt])
+  @@index([companyId, parentId])
+}
+
+model CrmMention {
+  id        String   @id @default(uuid())
+  companyId String
+  commentId String
+  userId    String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  company Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  comment CrmComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User       @relation("CrmMentionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([companyId, userId, readAt])
+}
+
+/// Following a record opts you into its notable updates — not every field edit.
+model CrmFollower {
+  id        String         @id @default(uuid())
+  companyId String
+  userId    String
+  entity    CrmFieldEntity
+  recordId  String
+  createdAt DateTime       @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation("CrmFollowerUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entity, recordId])
+  @@index([companyId, entity, recordId])
 }

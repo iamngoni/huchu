@@ -14,7 +14,7 @@ import {
 
 type PreferenceKey = keyof Pick<
   UserNotificationPreferences,
-  "inAppEnabled" | "webPushEnabled" | "hrEnabled" | "opsEnabled"
+  "inAppEnabled" | "webPushEnabled" | "hrEnabled" | "opsEnabled" | "crmEnabled"
 >;
 
 const preferenceRows: Array<{
@@ -41,6 +41,11 @@ const preferenceRows: Array<{
     key: "opsEnabled",
     label: "Operations",
     description: "Receive incidents, permits, work orders, and operational alerts.",
+  },
+  {
+    key: "crmEnabled",
+    label: "Sales and CRM",
+    description: "Receive lead assignments, quote decisions, tasks, and mentions.",
   },
 ];
 

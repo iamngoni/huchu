@@ -512,6 +512,7 @@ export type UserNotificationPreferences = {
   webPushEnabled: boolean;
   hrEnabled: boolean;
   opsEnabled: boolean;
+  crmEnabled: boolean;
 };
 
 export type EmployeePayment = {
@@ -1907,7 +1908,10 @@ export async function fetchNotificationPreferences() {
 
 export async function updateNotificationPreferences(
   input: Partial<
-    Pick<UserNotificationPreferences, "inAppEnabled" | "webPushEnabled" | "hrEnabled" | "opsEnabled">
+    Pick<
+      UserNotificationPreferences,
+      "inAppEnabled" | "webPushEnabled" | "hrEnabled" | "opsEnabled" | "crmEnabled"
+    >
   >,
 ) {
   return fetchJson<UserNotificationPreferences>("/api/notifications/preferences", {
