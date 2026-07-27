@@ -1,57 +1,82 @@
 "use client";
 
 import * as React from "react";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import {
+  Tabs as DsTabs,
+  TabsContent as DsTabsContent,
+  TabsList as DsTabsList,
+  TabsTrigger as DsTabsTrigger,
+} from "@corelithzw/react";
 
 import { cn } from "@/lib/utils";
 
-const Tabs = TabsPrimitive.Root;
+/**
+ * Tabs — the design system's, behind this repo's Radix-shaped API.
+ *
+ * The DS primitive now ships real CSS for the four tab variants, so the long
+ * inline `bg-[var(--surface-muted)] … data-[state=active]:shadow-…` recipe the
+ * local copy carried is gone; `.stabs` / `.stab` say exactly the same thing.
+ *
+ * Deviations from a bare re-export, all deliberate:
+ *
+ *   - `variant` defaults to `segmented`, not the DS's `underline`. The four
+ *     call sites here were all styled as a pill strip on a muted track, which
+ *     is `.stabs`; defaulting to `underline` would silently restyle them.
+ *   - `TabsContent` keeps its hard-coded `mt-4`. Two call sites already pass
+ *     `mt-0` to opt out and rely on `cn()`'s tailwind-merge to win.
+ *   - `TabsList` keeps the horizontal-overflow escape hatch. One call site
+ *     renders eight triggers and the DS `.stabs` does not scroll on its own.
+ *   - `TabsContent` keeps its focus ring: the DS panel is `tabIndex={0}` but
+ *     draws no ring of its own.
+ *
+ * The DS trigger emits `data-state="active" | "inactive"` exactly as Radix did,
+ * so any `data-[state=active]:` utilities at call sites keep matching. `asChild`
+ * survives on the trigger. Radix's `dir` prop is not carried over — nothing
+ * here used it.
+ *
+ * New code should import `Tabs` from `@corelithzw/react`.
+ */
+export type TabsProps = React.ComponentProps<typeof DsTabs>;
+
+function Tabs({ variant = "segmented", ...props }: TabsProps) {
+  return <DsTabs variant={variant} {...props} />;
+}
+Tabs.displayName = "Tabs";
 
 const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+  React.ElementRef<typeof DsTabsList>,
+  React.ComponentPropsWithoutRef<typeof DsTabsList>
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
+  <DsTabsList
     ref={ref}
     data-slot="tabs-list"
     className={cn(
-      "inline-flex h-9 max-w-full items-center gap-1 overflow-x-auto rounded-[10px] bg-[var(--surface-muted)] p-1 text-[var(--text-muted)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+      "max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       className,
     )}
     {...props}
   />
 ));
-TabsList.displayName = TabsPrimitive.List.displayName;
+TabsList.displayName = "TabsList";
 
 const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> & {
-    asChild?: boolean;
-  }
->(({ className, asChild, ...props }, ref) => (
-  <TabsPrimitive.Trigger
+  React.ElementRef<typeof DsTabsTrigger>,
+  React.ComponentPropsWithoutRef<typeof DsTabsTrigger>
+>(({ className, ...props }, ref) => (
+  <DsTabsTrigger
     ref={ref}
-    asChild={asChild}
     data-slot="tabs-trigger"
-    className={cn(
-      "inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[7px] px-3 text-[13px] font-medium transition-[background-color,color] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-default)]",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:ring-offset-0",
-      "hover:text-[var(--text-strong)]",
-      "disabled:pointer-events-none disabled:opacity-50",
-      "data-[state=active]:bg-[var(--surface)] data-[state=active]:font-semibold data-[state=active]:text-[var(--text-strong)] data-[state=active]:shadow-[var(--shadow-rest)]",
-      "[&_svg]:size-4 [&_svg]:shrink-0",
-      className,
-    )}
+    className={cn(className)}
     {...props}
   />
 ));
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+TabsTrigger.displayName = "TabsTrigger";
 
 const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+  React.ElementRef<typeof DsTabsContent>,
+  React.ComponentPropsWithoutRef<typeof DsTabsContent>
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
+  <DsTabsContent
     ref={ref}
     data-slot="tabs-content"
     className={cn(
@@ -61,6 +86,6 @@ const TabsContent = React.forwardRef<
     {...props}
   />
 ));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
+TabsContent.displayName = "TabsContent";
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };

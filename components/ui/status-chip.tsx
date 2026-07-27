@@ -1,4 +1,4 @@
-import * as React from "react";
+"use client";
 
 import { cn } from "@/lib/utils";
 import {
@@ -31,19 +31,14 @@ export function StatusChip({
       data-status={presentation.status}
       data-tone={presentation.tone}
       className={cn("inline-flex", className)}
+      dot={showDot}
+      dotColor={tokenVar(presentation.tokens.border)}
       style={{
         color: tokenVar(presentation.tokens.text),
         backgroundColor: tokenVar(presentation.tokens.bg),
         borderColor: tokenVar(presentation.tokens.border),
       }}
     >
-      {showDot ? (
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{ backgroundColor: tokenVar(presentation.tokens.border) }}
-          aria-hidden="true"
-        />
-      ) : null}
       <span>{label ?? presentation.label}</span>
     </Badge>
   );

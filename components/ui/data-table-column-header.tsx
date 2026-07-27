@@ -2,41 +2,30 @@
 
 import type { Column } from "@tanstack/react-table";
 
-import { ArrowDownward, ArrowUpward } from "@/lib/icons";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+/**
+ * DataTableColumnHeader — the label inside a sortable `<th>`, and nothing else.
+ *
+ * The sort affordance moved onto the header cell itself: `.dtable thead
+ * th.sortable::after` draws the caret and `.asc` / `.desc` swap its direction,
+ * and `DataTable` puts the click / Enter / Space handler and `aria-sort` on the
+ * `<th>`. A nested ghost `Button` plus an `ArrowUpward` / `ArrowDownward` icon
+ * would now be a second, competing control inside an already-activatable cell,
+ * so both are gone.
+ *
+ * `column` is retained in the props so the signature survives (call sites pass
+ * it from `flexRender`), but nothing is read off it any more — TanStack's sort
+ * state reaches the DOM through the `<th>` in `data-table.tsx`.
+ */
 type DataTableColumnHeaderProps<TData, TValue> = {
   column: Column<TData, TValue>;
   title: string;
   className?: string;
 };
 
-export function DataTableColumnHeader<TData, TValue>({
-  column,
-  title,
-  className,
-}: DataTableColumnHeaderProps<TData, TValue>) {
-  if (!column.getCanSort()) {
-    return <div className={cn(className)}>{title}</div>;
-  }
-
-  const sorted = column.getIsSorted();
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className={cn("-ml-2 h-8 rounded-[10px] px-2.5 text-[var(--text-muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-strong)]", className)}
-      onClick={() => column.toggleSorting(sorted === "asc")}
-    >
-      <span>{title}</span>
-      {sorted === "asc" ? (
-        <ArrowUpward className="size-4" />
-      ) : sorted === "desc" ? (
-        <ArrowDownward className="size-4" />
-      ) : null}
-    </Button>
-  );
+export function DataTableColumnHeader<TData, TValue>(
+  props: DataTableColumnHeaderProps<TData, TValue>,
+) {
+  return <span className={cn(props.className)}>{props.title}</span>;
 }

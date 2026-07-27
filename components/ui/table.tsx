@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -12,6 +11,32 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+/**
+ * Table — the design system's `.dtable` recipe, behind this repo's compound
+ * markup and its built-in pagination.
+ *
+ * The DS ships a `DataTable` component, but it is fully controlled and takes a
+ * column shape incompatible with the `ColumnDef`s the 10 files importing this
+ * (and the 121 authoring columns against `data-table.tsx`) already write. So
+ * the composition stays local and only the chrome moves: the `<table>` carries
+ * `dtable data-table` and every section, row and cell hands its styling to the
+ * package's descendant rules instead of the `--table-*` Tailwind utilities that
+ * used to duplicate them.
+ *
+ * Two things here are deliberately *not* the design system's:
+ *
+ *   - The tablet width utilities on the `<table>` are driven by the public
+ *     `tabletScrollable` / `tabletMinTableWidth` props and produce layout
+ *     behaviour, not chrome, so they stay.
+ *   - `TableBody` silently slices `React.Children` when this component owns
+ *     pagination. Callers rely on passing every row and getting one page.
+ *
+ * Sticky headers come from `.dtable.sticky-head` on the table plus
+ * `--table-sticky-top`, so `<thead>` no longer positions itself.
+ *
+ * Every `data-slot` is load-bearing — `app/globals.css` keys
+ * `.table-rail > [data-slot="table"]` off it.
+ */
 export type TableMode = "all" | "paginated";
 
 type TableContextValue = {
@@ -95,62 +120,59 @@ function TablePaginationControls({
 }) {
   return (
     <div
-      className={cn(
-        "flex flex-wrap items-center gap-x-2 gap-y-2 border-y border-[var(--table-toolbar-border)] bg-[var(--table-toolbar-bg)] px-[var(--content-gutter-x)] py-2",
-        edgeToEdge && "table-edge-to-edge",
-        className,
-      )}
+      className={cn("p-pagination", edgeToEdge && "table-edge-to-edge", className)}
     >
       {mode === "paginated" ? (
-        <div className="ml-auto flex flex-wrap items-center gap-x-2 gap-y-2 text-xs text-[var(--text-muted)]">
-          <span>Rows per page</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(value) => {
-              setPageSize(Number(value));
-              setPage(1);
-            }}
-          >
-            <SelectTrigger
-              size="sm"
-              className="h-8 w-[88px] bg-[var(--surface-base)] shadow-none"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {pageSizeOptions.map((option) => (
-                <SelectItem key={option} value={String(option)}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="font-mono tabular-nums">
-            Page {page} of {pageCount}
+        <>
+          <span className="pg-count">
+            Page <strong>{page}</strong> of <strong>{pageCount}</strong>
           </span>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setPage(page - 1)}
-            disabled={page <= 1}
-          >
-            Previous
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setPage(page + 1)}
-            disabled={page >= pageCount}
-          >
-            Next
-          </Button>
-        </div>
+          <span className="pg-size">
+            Rows per page
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger size="sm" className="w-[88px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pageSizeOptions.map((option) => (
+                  <SelectItem key={option} value={String(option)}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </span>
+          <span className="pg-spacer" />
+          <div className="pg-nav">
+            <button
+              type="button"
+              onClick={() => setPage(page - 1)}
+              disabled={page <= 1}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage(page + 1)}
+              disabled={page >= pageCount}
+            >
+              Next
+            </button>
+          </div>
+        </>
       ) : (
-        <p className="ml-auto text-xs text-[var(--text-muted)]">
-          Showing all {rowCount.toLocaleString()} rows
-        </p>
+        <>
+          <span className="pg-spacer" />
+          <span className="pg-count">
+            Showing all <strong>{rowCount.toLocaleString()}</strong> rows
+          </span>
+        </>
       )}
     </div>
   );
@@ -347,7 +369,7 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(
 
           <div
             className={cn(
-              "table-rail overflow-hidden ",
+              "table-rail table-scroll overflow-hidden ",
               edgeToEdge && "table-edge-to-edge",
             )}
             data-tablet-scrollable={tabletScrollable ? "true" : "false"}
@@ -366,12 +388,20 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(
               ref={ref}
               data-slot="table"
               className={cn(
-                "w-full caption-bottom text-sm",
+                "dtable data-table",
+                stickyHeader && "sticky-head",
                 tabletScrollable &&
                   "md:max-lg:w-max md:max-lg:min-w-[var(--table-tablet-min-width)]",
                 className,
               )}
-              style={tableStyle}
+              style={
+                stickyHeader
+                  ? ({
+                      ...tableStyle,
+                      "--table-sticky-top": `${stickyHeaderOffset}px`,
+                    } as React.CSSProperties)
+                  : tableStyle
+              }
               {...props}
             />
           </div>
@@ -400,26 +430,16 @@ Table.displayName = "Table";
 const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.ComponentProps<"thead">
->(({ className, style, ...props }, ref) => {
-  const tableContext = React.useContext(TableContext);
-  const stickyHeader = tableContext?.stickyHeader ?? false;
-  const stickyHeaderOffset = tableContext?.stickyHeaderOffset ?? 0;
-
-  return (
-    <thead
-      ref={ref}
-      data-slot="table-header"
-      className={cn(
-        "bg-[var(--table-header-bg)] [&_tr]:bg-[var(--table-header-bg)] [&_tr]:text-[var(--table-header-text)] [&_tr]:shadow-[inset_0_-1px_0_0_var(--table-divider)]",
-        stickyHeader &&
-          "sticky z-20 supports-[backdrop-filter]:backdrop-blur-sm",
-        className,
-      )}
-      style={stickyHeader ? { ...style, top: stickyHeaderOffset } : style}
-      {...props}
-    />
-  );
-});
+>(({ className, ...props }, ref) => (
+  // `.dtable thead th` paints the header; pinning is `.dtable.sticky-head` on
+  // the <table>, set by `Table` from its own `stickyHeader` prop.
+  <thead
+    ref={ref}
+    data-slot="table-header"
+    className={cn(className)}
+    {...props}
+  />
+));
 TableHeader.displayName = "TableHeader";
 
 const TableBody = React.forwardRef<
@@ -447,13 +467,13 @@ const TableBody = React.forwardRef<
   }
 
   return (
+    // Hover and selection now come from `.dtable tbody tr:hover td` and
+    // `.dtable tbody tr.selected td`; `TableRow` derives `.selected` from
+    // `data-state`.
     <tbody
       ref={ref}
       data-slot="table-body"
-      className={cn(
-        "[&_tr:last-child]:border-0 [&_tr]:bg-[var(--table-row-bg)] [&_tr:nth-child(even)]:bg-[var(--table-row-bg-alt)] [&_tr:hover]:bg-[var(--table-row-hover-bg)] [&_tr[data-state=selected]]:bg-[var(--table-row-selected-bg)] [&_tr[data-state=selected]]:shadow-[inset_3px_0_0_0_var(--action-primary-bg)] [&_tr[data-state=selected]:hover]:bg-[var(--table-row-selected-bg)]",
-        className,
-      )}
+      className={cn(className)}
       {...props}
     >
       {visibleRows}
@@ -466,13 +486,11 @@ const TableFooter = React.forwardRef<
   HTMLTableSectionElement,
   React.ComponentProps<"tfoot">
 >(({ className, ...props }, ref) => (
+  // `.dtable tfoot td` carries the muted totals treatment.
   <tfoot
     ref={ref}
     data-slot="table-footer"
-    className={cn(
-      "border-t border-[var(--table-divider)] bg-[var(--surface-subtle)]/60 font-medium [&>tr]:last:border-b-0",
-      className,
-    )}
+    className={cn(className)}
     {...props}
   />
 ));
@@ -481,30 +499,34 @@ TableFooter.displayName = "TableFooter";
 const TableRow = React.forwardRef<
   HTMLTableRowElement,
   React.ComponentProps<"tr">
->(({ className, ...props }, ref) => (
-  <tr
-    ref={ref}
-    data-slot="table-row"
-    className={cn(
-      "border-b border-[var(--table-divider)] transition-colors duration-[var(--motion-duration-fast)]",
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  // The row border lives on `.dtable tbody td`. `data-state="selected"` is the
+  // repo-wide convention (Radix-era) and stays the input; `.selected` is what
+  // the design system reads.
+  const isSelected =
+    (props as { "data-state"?: string })["data-state"] === "selected";
+
+  return (
+    <tr
+      ref={ref}
+      data-slot="table-row"
+      className={cn(isSelected && "selected", className)}
+      {...props}
+    />
+  );
+});
 TableRow.displayName = "TableRow";
 
 const TableHead = React.forwardRef<
   HTMLTableCellElement,
   React.ComponentProps<"th">
 >(({ className, ...props }, ref) => (
+  // `.dtable thead th` owns the uppercase label, padding and rules. Callers add
+  // `num` (right-aligned) and `sortable` + `asc` / `desc` through `className`.
   <th
     ref={ref}
     data-slot="table-head"
-    className={cn(
-      "h-[var(--table-head-min-h)] border-b border-[var(--table-divider)] bg-[var(--table-header-bg)] px-[var(--table-gutter-x)] py-2 text-left align-middle text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--table-header-text)] [&:not(:first-child)]:border-l [&:has([role=checkbox])]:pr-0",
-      className,
-    )}
+    className={cn(className)}
     {...props}
   />
 ));
@@ -514,13 +536,12 @@ const TableCell = React.forwardRef<
   HTMLTableCellElement,
   React.ComponentProps<"td">
 >(({ className, ...props }, ref) => (
+  // `.dtable tbody td` owns padding, rule and alignment. Callers add `num`,
+  // `action`, `expander` or `detail` through `className`.
   <td
     ref={ref}
     data-slot="table-cell"
-    className={cn(
-      "min-h-[var(--table-row-min-h)] border-b border-[var(--table-divider)] px-[var(--table-gutter-x)] py-2.5 align-middle text-[13px] text-[var(--text-body)] [&:not(:first-child)]:border-l [&:has([role=checkbox])]:pr-0",
-      className,
-    )}
+    className={cn(className)}
     {...props}
   />
 ));

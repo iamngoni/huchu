@@ -1,21 +1,40 @@
+"use client";
+
 import * as React from "react";
+import { Input as DsInput } from "@corelithzw/react";
 
 import { cn } from "@/lib/utils";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+/**
+ * Input — the design system's, behind this repo's older shape.
+ *
+ * 163 files import this, so the local signature is preserved exactly: it stays
+ * `React.ComponentProps<"input">`, which means the native numeric `size`
+ * attribute keeps its meaning here. The DS redefines `size` as
+ * `'sm' | 'md' | 'lg'` and omits the native one from its props, so the cast
+ * below is what lets a numeric `size` still reach the underlying `<input>`.
+ *
+ * `data-slot="input"` is load-bearing — `app/themes/admin.css` targets
+ * `[data-portal="admin"] [data-slot="input"]` — so it is set explicitly.
+ *
+ * New code should import `Input` from `@corelithzw/react` and use its
+ * `leadingIcon` / `endIcon` / `prefix` / `suffix` / `label` props.
+ */
+export type InputProps = React.ComponentProps<"input">;
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(
+  { className, type, ...props },
+  ref,
+) {
   return (
-    <input
+    <DsInput
+      ref={ref}
       type={type}
       data-slot="input"
-      className={cn(
-        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex h-[var(--input-height)] w-full min-w-0 rounded-[var(--button-radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm shadow-none transition-[background-color,border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-default)] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60",
-        "focus-visible:border-[var(--focus-ring)] focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:ring-offset-0",
-        "hover:border-[var(--border-strong)] aria-invalid:border-destructive aria-invalid:ring-destructive/30",
-        className,
-      )}
-      {...props}
+      className={cn(className)}
+      {...(props as React.ComponentProps<typeof DsInput>)}
     />
   );
-}
+});
 
 export { Input };

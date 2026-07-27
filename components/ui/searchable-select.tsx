@@ -16,6 +16,19 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CheckIcon, ChevronDown, Plus } from "@/lib/icons";
 
+/**
+ * SearchableSelect — a Radix Popover wrapped around the local Command list.
+ *
+ * 28 files import this. The DS's own picker is a single component over an
+ * options array with no search slot, no "add new" affordance and no per-option
+ * avatar/badge/description, so the composition stays and only the styling
+ * moves: the wrapper is the DS `.field` stack, the label is `.field-label`, and
+ * every colour is a token. The dropdown itself inherits the DS `.menu` chrome
+ * through `components/ui/command.tsx`.
+ *
+ * `value` may be `""` or `undefined`; both mean "nothing selected" and both
+ * fall through `options.find` to `undefined`.
+ */
 export type SearchableOption = {
   value: string;
   label: string;
@@ -65,8 +78,8 @@ export function SearchableSelect({
   }, [options, query]);
 
   return (
-    <div className="space-y-2">
-      {label ? <label className="block text-sm font-semibold">{label}</label> : null}
+    <div className="field">
+      {label ? <label className="field-label">{label}</label> : null}
       <Popover
         open={open}
         onOpenChange={(next) => {
@@ -83,10 +96,16 @@ export function SearchableSelect({
             className="w-full justify-between"
             disabled={disabled}
           >
-            <span className={activeOption ? "text-foreground" : "text-muted-foreground"}>
+            <span
+              className={
+                activeOption
+                  ? "truncate text-[var(--text-strong)]"
+                  : "truncate text-[var(--text-subtle)]"
+              }
+            >
               {activeOption?.label ?? placeholder}
             </span>
-            <ChevronDown className="h-4 w-4 opacity-50" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -123,7 +142,9 @@ export function SearchableSelect({
                       ) : null}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="truncate font-semibold">{option.label}</span>
+                          <span className="truncate text-[var(--text-strong)] [font:var(--type-label-sm)]">
+                            {option.label}
+                          </span>
                           {option.meta ? (
                             <Badge
                               variant={option.badgeVariant ?? "secondary"}
@@ -134,18 +155,18 @@ export function SearchableSelect({
                           ) : null}
                         </div>
                         {option.description ? (
-                          <div className="truncate text-xs text-muted-foreground">
+                          <div className="truncate text-[var(--text-muted)] [font:var(--type-caption)]">
                             {option.description}
                           </div>
                         ) : null}
                         {option.disabledReason ? (
-                          <div className="truncate text-xs text-destructive">
+                          <div className="truncate text-[var(--tone-danger)] [font:var(--type-caption)]">
                             {option.disabledReason}
                           </div>
                         ) : null}
                       </div>
                       {value === option.value ? (
-                        <CheckIcon className="h-4 w-4 text-primary" />
+                        <CheckIcon className="h-4 w-4 shrink-0 text-[var(--brand)]" />
                       ) : null}
                     </CommandItem>
                   ))}

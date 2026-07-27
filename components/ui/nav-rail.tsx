@@ -2,66 +2,30 @@
 
 import * as React from "react";
 import Link from "next/link";
-
-import { cn } from "@/lib/utils";
+import {
+  NavRailItem as DsNavRailItem,
+} from "@corelithzw/react";
 
 /**
  * Vertical secondary navigation — the one rail every module shares.
  *
- * The visual contract lives in `app/styles/components.css` under `.nav-rail`
- * (aliased by the older `.settings-rail`): a quiet list of labels with a soft
- * fill for hover and active, no outline, no shadow, no link colour and no
- * underline. Anything that used to render this as a stack of `<Button>`s or as
- * bare `<Link>`s picking up the global anchor colour should render these
- * instead, so the rail in Accounting reads exactly like the rail in Settings.
+ * `NavRail` and `NavRailGroup` are the design system's, re-exported unchanged:
+ * same `.nav-rail` / `.group-label` markup, same `data-orientation` (including
+ * the `responsive` value `vertical-data-views.tsx` passes), same accessible
+ * `label` prop.
  *
- * Items are anchors when given a `to`, and real buttons when given `onClick` —
- * client-side view switchers should not be links.
+ * `NavRailItem` stays local for exactly one reason: the DS is framework-free,
+ * so it cannot know about `next/link`. This repo's item is a discriminated
+ * union — `{ to }` navigates, `{ onClick, disabled }` switches a client-side
+ * view — and the link half is bound here using the DS's `asChild`, which merges
+ * `.rail-item`, `aria-current` and the icon/count/trailing slots onto the
+ * `<Link>` itself. The button half is a straight pass-through.
+ *
+ * New code should import `NavRail` / `NavRailItem` from `@corelithzw/react` and
+ * supply its own anchor via `asChild`.
  */
-
-type NavRailProps = React.ComponentPropsWithoutRef<"nav"> & {
-  /** Accessible name for the rail, e.g. "Accounting category navigation". */
-  label: string;
-  /**
-   * `responsive` collapses the rail into a horizontally scrolling strip below
-   * the `lg` breakpoint instead of stacking full height on small screens.
-   */
-  orientation?: "vertical" | "responsive";
-};
-
-export function NavRail({
-  label,
-  orientation = "vertical",
-  className,
-  children,
-  ...props
-}: NavRailProps) {
-  return (
-    <nav
-      aria-label={label}
-      data-orientation={orientation}
-      className={cn("nav-rail", className)}
-      {...props}
-    >
-      {children}
-    </nav>
-  );
-}
-
-type NavRailGroupProps = {
-  /** Omit for an ungrouped rail — the label row is skipped entirely. */
-  label?: string;
-  children: React.ReactNode;
-};
-
-export function NavRailGroup({ label, children }: NavRailGroupProps) {
-  return (
-    <>
-      {label ? <div className="group-label">{label}</div> : null}
-      {children}
-    </>
-  );
-}
+export { NavRail, NavRailGroup } from "@corelithzw/react";
+export type { NavRailProps, NavRailGroupProps } from "@corelithzw/react";
 
 type NavRailItemBaseProps = {
   active?: boolean;
@@ -83,55 +47,23 @@ type NavRailItemProps = NavRailItemBaseProps &
     | { to?: never; onClick: () => void; disabled?: boolean }
   );
 
-export function NavRailItem({
-  to,
-  active,
-  icon,
-  count,
-  trailing,
-  className,
-  onClick,
-  disabled,
-  children,
-}: NavRailItemProps) {
-  const inner = (
-    <>
-      {icon ? (
-        <span className="rail-item-icon" aria-hidden="true">
-          {icon}
-        </span>
-      ) : null}
-      <span className="rail-item-label">{children}</span>
-      {typeof count === "number" ? (
-        <span className="rail-item-count">{count}</span>
-      ) : null}
-      {trailing ? <span className="rail-item-trailing">{trailing}</span> : null}
-    </>
-  );
-
-  const classes = cn("rail-item", active && "active", className);
+export function NavRailItem(props: NavRailItemProps) {
+  const { to, active, icon, count, trailing, className, children } = props;
+  const shared = { active, icon, count, trailing, className };
 
   if (to) {
+    // `asChild` hands the rail-item styling to the link element, so the anchor
+    // is the real navigation target rather than a div wrapping one.
     return (
-      <Link
-        href={to}
-        className={classes}
-        aria-current={active ? "page" : undefined}
-      >
-        {inner}
-      </Link>
+      <DsNavRailItem {...shared} asChild>
+        <Link href={to}>{children}</Link>
+      </DsNavRailItem>
     );
   }
 
   return (
-    <button
-      type="button"
-      className={classes}
-      onClick={onClick}
-      disabled={disabled}
-      aria-current={active ? "true" : undefined}
-    >
-      {inner}
-    </button>
+    <DsNavRailItem {...shared} onClick={props.onClick} disabled={props.disabled}>
+      {children}
+    </DsNavRailItem>
   );
 }

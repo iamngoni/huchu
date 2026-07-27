@@ -4,16 +4,27 @@ The DS primitives page says its 47 components "mirror the live `tate2301/huchu` 
 `components/ui/*` layer and the DS are **two implementations of the same intent**. Migration is
 convergence, not adoption from zero.
 
-> **Written against a newer API than the installed `@corelithzw/react@0.3.4`.** Several components named
-> below do not exist in 0.3.4: there is no `NavGroup`/`NavItem` (settings-rail nav is CSS-only —
-> `.settings-rail .rail-item`, wrapped locally in `components/ui/settings-rail.tsx`), `Card` has no compound
-> `.Header`/`.Title`/`.Body` slots (use the `title` / `subtitle` / `footer` props), `DataTable` sorts
-> client-side rather than being fully controlled (no `DataTableSortState`), `Button` uses
-> `startIcon`/`endIcon`/`iconOnly` rather than `icon`, `Select` takes `<option>` children rather than an
-> `options` array, and `AlertDialog` has no imperative `.confirm()` (see `components/ui/ds-confirm.tsx`).
-> Always check `node_modules/@corelithzw/react/dist/index.d.ts` before trusting a name here.
+> **Phase 1 is done — this table is now a record of what was decided, not a to-do list.**
+> Every file under `components/ui/` is a shim over `@corelithzw/react@0.4.0`. Import paths did not
+> change, so no call site under `app/` or `components/` was touched, and the Gold reviewer gate below
+> was never triggered.
 >
-> Token and style migration is complete — see `01-setup.md`. What remains is component API migration.
+> The `✖ no DS equivalent` verdicts below were resolved by **building the component into the package**
+> rather than keeping it local. `NavGroup`/`NavItem`, `Sidebar*`, `Separator`, `Collapsible`,
+> `SectionTabs`, `ClientDate`, `Label` and `FloatingActionButton` now all exist as React exports. See
+> the package CHANGELOG for the full 0.4.0 list.
+>
+> Still true, and still worth checking `dist/index.d.ts` before trusting: `Card` has no compound
+> `.Header`/`.Title`/`.Body` slots (use `title`/`subtitle`/`footer`, or the local compound shim),
+> `Button` uses `startIcon`/`endIcon`/`iconOnly` rather than `icon`, `Select` takes `<option>` children
+> rather than an `options` array, and `AlertDialog` has no imperative `.confirm()` (see
+> `components/ui/ds-confirm.tsx`).
+>
+> **Two standing decisions shape everything below.** `data-table.tsx` keeps `@tanstack/react-table`,
+> and the overlays keep Radix / Base-UI for positioning, focus trap and scroll lock. Both adopt DS
+> class names and tokens, so they *look* like the design system without changing behaviour. Do not
+> "finish the job" by swapping those engines out without re-reading the trade-offs at the end of this
+> file.
 
 ## Blast radius — measured, use it to sequence work
 

@@ -1,7 +1,15 @@
 # Corelith Design System — AI reference
 
 Audience: AI agents refactoring `tate2301/huchu` onto the Corelith DS. No human maintains this folder.
-Written against `@corelithzw/react@0.3.0`, installed in this repo. Site: <https://design.corelith.co.zw>.
+Written against `@corelithzw/react@0.4.0`. Site: <https://design.corelith.co.zw>.
+
+> **The package is currently linked from a checkout, not installed from npm.**
+> `pnpm-workspace.yaml` carries
+> `overrides: { '@corelithzw/react': link:../corelith-design-docs/packages/react }`,
+> so `node_modules/@corelithzw/react` is a symlink into that repo and edits
+> there land here immediately — but only after running its `pnpm build`, since
+> `dist/` is what this repo resolves. Swap the override back to a version range
+> once 0.4.0 is published.
 
 ## Source-of-truth order
 

@@ -6,6 +6,31 @@ import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
+/**
+ * AlertDialog — the design system's chrome on Radix's engine.
+ *
+ * Radix supplies the focus trap, scroll lock and the `role="alertdialog"`
+ * semantics the DS does not, so the engine stays and only the styling moves:
+ * the overlay renders `.modal-scrim`, the content `.modal-card`, the header
+ * `.modal-h` (which is what scopes `.t` on the title and `.s` on the
+ * description), and the footer `.modal-f`.
+ *
+ * Deviations, all forced by the existing markup:
+ *
+ *   - The DS's `.modal-b` is not used. This component has no body slot; the
+ *     description lives inside the header, so it takes `.s` — the DS's own
+ *     description class — instead.
+ *   - `.modal-h`/`.modal-f` bring their own padding (and the footer a rule and
+ *     a muted band). The content still owns its `p-6`, so those would double up
+ *     and the band would float inset from the card edges; local utilities
+ *     neutralise them.
+ *   - Sizing stays on the `data-size` utilities rather than the DS `size-*`
+ *     classes, so the two width steps this component ships keep their values.
+ *
+ * `AlertDialogAction`/`AlertDialogCancel` already route through the local
+ * `Button`, which is itself a DS shim. `AlertDialogMedia` has no DS
+ * counterpart and stays local.
+ */
 function AlertDialog({
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
@@ -36,7 +61,11 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-[var(--surface-overlay)] backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        // `fixed inset-0` restates what `.modal-scrim` already does, so the
+        // overlay does not depend on which of the package's two `.modal-scrim`
+        // rules lands last; `z-50` pins it to the app's overlay layer rather
+        // than the DS's own `z-index: 1100`.
+        "modal-scrim fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className
       )}
       {...props}
@@ -58,7 +87,7 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-5 rounded-[calc(var(--card-radius)+2px)] border border-[var(--border-default)] bg-popover p-6 text-popover-foreground shadow-[var(--shadow-popover)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[size=sm]:max-w-sm data-[size=default]:sm:max-w-lg",
+          "modal-card group/alert-dialog-content fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-5 overflow-y-auto p-6 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[size=sm]:max-w-sm data-[size=default]:sm:max-w-lg",
           className
         )}
         {...props}
@@ -75,7 +104,7 @@ function AlertDialogHeader({
     <div
       data-slot="alert-dialog-header"
       className={cn(
-        "grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
+        "modal-h grid grid-rows-[auto_1fr] place-items-center gap-1.5 p-0 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
         className
       )}
       {...props}
@@ -91,7 +120,7 @@ function AlertDialogFooter({
     <div
       data-slot="alert-dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
+        "modal-f flex-col-reverse border-0 bg-transparent p-0 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
         className
       )}
       {...props}
@@ -107,7 +136,7 @@ function AlertDialogTitle({
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
       className={cn(
-        "text-lg font-semibold tracking-[-0.02em] text-[var(--text-strong)] sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
+        "t sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
         className
       )}
       {...props}
@@ -122,7 +151,7 @@ function AlertDialogDescription({
   return (
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
-      className={cn("text-sm leading-6 text-[var(--text-muted)]", className)}
+      className={cn("s", className)}
       {...props}
     />
   )

@@ -1,177 +1,100 @@
-import * as React from "react"
+"use client";
 
-import type {
-  ToastProps,
-  ToastActionElement,
-} from "@/components/ui/toast"
+import * as React from "react";
+import { toast as dsToast, useToasts, type ToastTone } from "@corelithzw/react";
 
-const TOAST_LIMIT = 4
-const TOAST_REMOVE_DELAY = 1000 * 60 * 5
+import type { ToastProps, ToastActionElement } from "@/components/ui/toast";
+
+/**
+ * useToast — the design system's toast store, behind this repo's older shape.
+ *
+ * 134 files call `const { toast } = useToast()` and then `toast({ title,
+ * description, variant })`, so that object-argument signature is preserved
+ * exactly rather than migrated call site by call site. The DS takes
+ * `toast(title, { description, tone })` and returns a bare id string; this
+ * module does the translation in both directions.
+ *
+ * Behaviour that changes, deliberately:
+ *   - The old store closed a toast visually and only garbage-collected it five
+ *     minutes later. The DS drives both from one `duration` (default 5s), and
+ *     pauses the countdown while the pointer is over the toast.
+ *   - The stack renders oldest-first at the top rather than newest-first.
+ *
+ * New code should import `toast` from `@corelithzw/react` directly.
+ */
+const VARIANT_TO_TONE: Record<string, ToastTone> = {
+  default: "default",
+  success: "success",
+  warning: "warn",
+  destructive: "danger",
+};
 
 type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-}
+  id: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  action?: ToastActionElement;
+};
 
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST",
-} as const
-
-let count = 0
-
-function genId() {
-  count = (count + 1) % Number.MAX_VALUE
-  return count.toString()
-}
-
-type ActionType = typeof actionTypes
-
-type Action =
-  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
-  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
-  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
-  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
+type ToastInput = Omit<ToasterToast, "id">;
 
 interface State {
-  toasts: ToasterToast[]
+  toasts: ToasterToast[];
 }
 
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
-
-const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
-    dispatch({
-      type: "REMOVE_TOAST",
-      toastId,
-    })
-  }, TOAST_REMOVE_DELAY)
-
-  toastTimeouts.set(toastId, timeout)
+/**
+ * The DS action is data (`{ label, onClick }`); the local one was a React
+ * element. No call site in this repo passes one, but the shape is read off the
+ * element's props rather than dropped outright so anything that does keeps
+ * working.
+ */
+function toActionData(action: ToastActionElement | undefined) {
+  if (!React.isValidElement(action)) return undefined;
+  const props = action.props as { children?: React.ReactNode; onClick?: () => void };
+  if (typeof props.children !== "string" || !props.onClick) return undefined;
+  return { label: props.children, onClick: props.onClick };
 }
 
-export const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-      }
-
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map((toast) =>
-          toast.id === action.toast.id ? { ...toast, ...action.toast } : toast,
-        ),
-      }
-
-    case "DISMISS_TOAST": {
-      const { toastId } = action
-
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map((toast) =>
-          toast.id === toastId || toastId === undefined
-            ? {
-                ...toast,
-                open: false,
-              }
-            : toast,
-        ),
-      }
-    }
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return {
-          ...state,
-          toasts: [],
-        }
-      }
-      return {
-        ...state,
-        toasts: state.toasts.filter((toast) => toast.id !== action.toastId),
-      }
-  }
+function emit(id: string | undefined, { title, description, variant, action, duration }: ToastInput) {
+  return dsToast(title, {
+    id,
+    description,
+    tone: VARIANT_TO_TONE[variant ?? "default"] ?? "default",
+    action: toActionData(action),
+    ...(duration === undefined ? {} : { duration }),
+  });
 }
 
-const listeners: Array<(state: State) => void> = []
-let memoryState: State = { toasts: [] }
-
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach((listener) => {
-    listener(memoryState)
-  })
-}
-
-type ToastInput = Omit<ToasterToast, "id">
-
-function toast({ ...props }: ToastInput) {
-  const id = genId()
-
-  const update = (props: ToasterToast) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props, id },
-    })
-
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: (open) => {
-        if (!open) dismiss()
-      },
-    },
-  })
+function toast(props: ToastInput) {
+  const id = emit(undefined, props);
 
   return {
     id,
-    dismiss,
-    update,
-  }
+    dismiss: () => dsToast.dismiss(id),
+    // The DS store upserts when an id is reused, so an update is just a
+    // re-emit under the same id.
+    update: (next: ToasterToast) => emit(id, next),
+  };
 }
 
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
+function useToast(): State & {
+  toast: typeof toast;
+  dismiss: (toastId?: string) => void;
+} {
+  const entries = useToasts();
 
-  React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [])
+  const toasts = React.useMemo<ToasterToast[]>(
+    () =>
+      entries.map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        description: entry.description,
+        open: true,
+      })),
+    [entries],
+  );
 
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-  }
+  return { toasts, toast, dismiss: (toastId?: string) => dsToast.dismiss(toastId) };
 }
 
-export { useToast, toast }
+export { useToast, toast };

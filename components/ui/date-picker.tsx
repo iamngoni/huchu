@@ -13,6 +13,21 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+/**
+ * DatePicker — Radix Popover + the local Calendar, in design-system chrome.
+ *
+ * The DS has no date picker; `.daterange` styles a *trigger* and nothing else.
+ * The `DatePickerProps` union over `mode: "single" | "range" | "date-time"` is
+ * what makes `onChange` correctly typed as `(v?: Date)` vs `(v?: DateRange)` at
+ * each call site, so it stays a discriminated union rather than being flattened.
+ * `onChange(undefined)` is a real signal here — it is what the Clear button
+ * emits.
+ *
+ * The panel carries `.popover` for its header/footer descendant rules
+ * (`.pop-h`, `.ti`, `.pop-actions`); the surface `.popover` would otherwise
+ * draw is switched off, because `PopoverContent` already draws it and
+ * `.popover`'s 320px max-width would crush the two-month range grid.
+ */
 export type DatePickerMode = "single" | "range" | "date-time";
 
 type CommonProps = {
@@ -98,7 +113,7 @@ function DatePickerTrigger({
       type="button"
       variant="outline"
       className={cn(
-        "h-9 w-full min-w-[220px] justify-between rounded-[var(--button-radius)] bg-[var(--surface-base)] px-3 text-left text-[13px] font-medium text-[var(--text-strong)] shadow-none",
+        "h-9 w-full min-w-[220px] justify-between rounded-[var(--button-radius)] bg-[var(--surface)] px-3 text-left text-[var(--text-strong)] shadow-none [font:var(--type-label-sm)]",
         className,
       )}
       {...props}
@@ -204,7 +219,7 @@ export function DatePicker(props: DatePickerProps) {
         }
       }}
       numberOfMonths={2}
-      className="rounded-[18px] border border-[var(--border-default)] bg-[var(--surface-base)] shadow-none"
+      className="rounded-[var(--radius-2xl)] border border-[var(--border)] bg-[var(--surface)] shadow-none"
     />
   ) : (
     <Calendar
@@ -225,7 +240,7 @@ export function DatePicker(props: DatePickerProps) {
         }
       }}
       numberOfMonths={1}
-      className="rounded-[18px] border border-[var(--border-default)] bg-[var(--surface-base)] shadow-none"
+      className="rounded-[var(--radius-2xl)] border border-[var(--border)] bg-[var(--surface)] shadow-none"
     />
   );
 
@@ -245,13 +260,16 @@ export function DatePicker(props: DatePickerProps) {
           sideOffset={sideOffset}
           className={cn("w-auto p-0", contentClassName)}
         >
-          <div className="space-y-0 overflow-hidden rounded-[18px] bg-[var(--surface-base)]">
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--border-default)] px-4 py-3">
+          {/* `.popover` scopes `.pop-h` / `.ti` / `.pop-actions`; its own
+              surface and 320px cap are cleared — PopoverContent already draws
+              the surface, and the range mode renders two months side by side. */}
+          <div className="popover max-w-none overflow-hidden rounded-[var(--card-radius)] border-0 p-0 shadow-none">
+            <div className="pop-h mb-0 items-start gap-3 border-b border-[var(--border)] px-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-[var(--text-strong)]">
+                <p className="ti">
                   {mode === "range" ? "Select date range" : mode === "date-time" ? "Select date and time" : "Select date"}
                 </p>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-[var(--text-muted)] [font:var(--type-caption)]">
                   {mode === "range"
                     ? "Choose a start and end date."
                     : mode === "date-time"
@@ -271,8 +289,8 @@ export function DatePicker(props: DatePickerProps) {
                 <Separator />
                 <div className="space-y-3 px-4 py-4">
                   <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_140px]">
-                    <div className="grid gap-2 rounded-[14px] border border-[var(--border-default)] bg-[var(--surface-subtle)] px-3 py-2.5 sm:grid-cols-2">
-                      <p className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)] sm:col-span-2">
+                    <div className="grid gap-2 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2.5 sm:grid-cols-2">
+                      <p className="mb-1 flex items-center gap-2 tracking-[0.16em] text-[var(--text-muted)] uppercase [font:var(--type-eyebrow)] sm:col-span-2">
                         <Clock3 className="h-3.5 w-3.5" />
                         Time
                       </p>
@@ -303,14 +321,14 @@ export function DatePicker(props: DatePickerProps) {
                         </Select>
                       </div>
                     </div>
-                    <div className="rounded-[14px] border border-[var(--border-default)] bg-[var(--surface-subtle)] px-3 py-2.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Preview</p>
-                      <p className="mt-2 font-mono text-sm text-[var(--text-strong)]">
+                    <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2.5">
+                      <p className="tracking-[0.16em] text-[var(--text-muted)] uppercase [font:var(--type-eyebrow)]">Preview</p>
+                      <p className="mt-2 text-[var(--text-strong)] [font:var(--type-mono)]">
                         {pendingDate ? formatDateTime(combineDateAndTime(pendingDate, timeValue)) : "Pick a date"}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="pop-actions items-center">
                     <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                       Cancel
                     </Button>
@@ -321,7 +339,7 @@ export function DatePicker(props: DatePickerProps) {
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-end gap-2 border-t border-[var(--border-default)] px-4 py-3">
+              <div className="pop-actions mt-0 items-center border-t border-[var(--border)] px-4 py-3">
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                   Close
                 </Button>

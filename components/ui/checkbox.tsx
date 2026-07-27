@@ -1,28 +1,59 @@
 "use client";
 
 import * as React from "react";
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
+import type * as CheckboxPrimitive from "@radix-ui/react-checkbox";
+import { Checkbox as DsCheckbox } from "@corelithzw/react";
 
-import { Check } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
-const Checkbox = React.forwardRef<
-  React.ElementRef<typeof CheckboxPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <CheckboxPrimitive.Root
-    ref={ref}
-    className={cn(
-      "peer h-4 w-4 shrink-0 rounded-[6px] border border-[var(--border-default)] bg-[var(--surface-base)] text-[var(--action-primary-bg)] shadow-none transition-[background-color,border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-default)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-[var(--action-primary-bg)] data-[state=checked]:bg-[var(--action-primary-bg)] data-[state=checked]:text-[var(--action-primary-fg)] data-[state=indeterminate]:border-[var(--action-primary-bg)] data-[state=indeterminate]:bg-[var(--action-primary-bg)] data-[state=indeterminate]:text-[var(--action-primary-fg)]",
-      className,
-    )}
-    {...props}
-  >
-    <CheckboxPrimitive.Indicator className={cn("flex items-center justify-center text-current")}>
-      <Check className="h-3 w-3" weight="bold" />
-    </CheckboxPrimitive.Indicator>
-  </CheckboxPrimitive.Root>
-));
-Checkbox.displayName = CheckboxPrimitive.Root.displayName;
+/**
+ * Checkbox — the design system's, behind the Radix prop names.
+ *
+ * The exported prop type stays Radix's so the ~41 `onCheckedChange` call sites
+ * and anything spreading a Radix-shaped object keep compiling. Two translations
+ * happen here:
+ *
+ *   - Radix models the third state as `checked="indeterminate"`; the DS takes a
+ *     separate `indeterminate` boolean alongside a real `checked`.
+ *   - Radix reports changes through `onCheckedChange(checked)`; the DS is a
+ *     native input, so the change is read off the event.
+ *
+ * The rendered element changes from `<button role="checkbox">` to a real
+ * `<input type="checkbox">`. `data-state` is emitted anyway so existing
+ * `data-[state=checked]:` utilities at call sites still match, and `ref` now
+ * points at the input.
+ */
+export type CheckboxProps = Omit<
+  React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>,
+  "asChild"
+>;
+
+const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
+  { className, checked, defaultChecked, onCheckedChange, onChange, ...props },
+  ref,
+) {
+  const indeterminate = checked === "indeterminate";
+  const state = indeterminate ? "indeterminate" : checked ? "checked" : "unchecked";
+
+  return (
+    <DsCheckbox
+      ref={ref}
+      className={cn(className)}
+      data-state={state}
+      indeterminate={indeterminate}
+      checked={checked === undefined ? undefined : checked === true}
+      defaultChecked={defaultChecked === undefined ? undefined : defaultChecked === true}
+      onChange={(event) => {
+        // `onChange` is inherited from the Radix prop type, which types its
+        // host as a <button>; the host is really an <input>. The cast reconciles
+        // the two element types — the handler receives the actual DOM event, so
+        // the only thing it loses is a compile-time claim that was already false.
+        onChange?.(event as unknown as React.FormEvent<HTMLButtonElement>);
+        onCheckedChange?.(event.currentTarget.checked);
+      }}
+      {...(props as React.ComponentProps<typeof DsCheckbox>)}
+    />
+  );
+});
 
 export { Checkbox };

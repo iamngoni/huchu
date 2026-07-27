@@ -48,8 +48,26 @@ import {
   runDocumentExport,
   type DocumentExportFormat,
 } from "@/lib/documents/export-client";
-import { ChevronDown, ChevronRight } from "@/lib/icons";
+import { ChevronDown, ChevronRight, Search } from "@/lib/icons";
 import { cn } from "@/lib/utils";
+
+/**
+ * DataTable — TanStack's table engine wearing the design system's `.dtable`.
+ *
+ * The DS ships its own `DataTable`, but it is fully controlled, does not sort,
+ * and takes a column shape incompatible with `ColumnDef`. 103 files import this
+ * one and 121 author `ColumnDef` columns against it, so the engine, the props
+ * and `columnDef.meta` (whose `exportValue` the export path reads) are all
+ * untouched — only the chrome moved onto DS class names.
+ *
+ * Load-bearing conventions kept as they were:
+ *   - a column whose id is `actions`/`action`, or whose header string is
+ *     "Actions", is excluded from the export payload and the column-toggle
+ *     menu (`isActionColumnDefinition`). Its cell now also gets `.action`.
+ *   - the header is a real `<th>` again: the sort caret is
+ *     `.dtable thead th.sortable::after`, so the cell itself carries the click,
+ *     the Enter/Space handler and `aria-sort` rather than a nested button.
+ */
 
 type DataTableMode = "all" | "paginated";
 
@@ -296,6 +314,24 @@ function isActionColumnDefinition<TData, TValue>(
   const normalizedId = id.trim().toLowerCase();
   if (normalizedId === "actions" || normalizedId === "action") return true;
   return isActionColumnHeader((columnDef as { header?: unknown }).header);
+}
+
+/**
+ * `.num` right-aligns a column and sets tabular figures. Nothing in the repo
+ * declares alignment on the column — call sites reach for a `text-right` inside
+ * their own `cell` renderer — so this is an opt-in read off `columnDef.meta`
+ * rather than a guess. `meta` is forwarded to TanStack untouched either way.
+ */
+type ColumnLayoutMeta = {
+  align?: "left" | "center" | "right";
+  numeric?: boolean;
+};
+
+function isNumericColumnDefinition<TData, TValue>(
+  columnDef: ColumnDef<TData, TValue>,
+): boolean {
+  const meta = (columnDef as { meta?: ColumnLayoutMeta }).meta;
+  return meta?.numeric === true || meta?.align === "right";
 }
 
 function getNestedValue(source: unknown, path: string): unknown {
@@ -1124,7 +1160,7 @@ export function DataTable<TData, TValue>({
       {showTopToolbar ? (
         <div
           className={cn(
-            "flex min-h-[2.75rem] flex-wrap items-center gap-x-2 gap-y-2 border-y border-[var(--datatable-toolbar-border)] bg-[var(--datatable-toolbar-bg)] px-[var(--content-gutter-x)] py-2 supports-[backdrop-filter]:backdrop-blur-sm",
+            "data-toolbar dt-toolbar",
             edgeToEdge && "table-edge-to-edge",
           )}
         >
@@ -1136,20 +1172,26 @@ export function DataTable<TData, TValue>({
                 applySearch(searchDraft);
               }}
             >
-              <Input
-                value={searchDraft}
-                onChange={(event) => {
-                  setSearchDraft(event.target.value);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && searchBehavior === "submit") {
-                    event.preventDefault();
-                    applySearch(searchDraft);
-                  }
-                }}
-                placeholder={searchPlaceholder}
-                className="h-[var(--control-height-sm)] min-w-0 flex-1 bg-[var(--surface-elevated)] shadow-none lg:w-[260px] lg:flex-none"
-              />
+              {/* `.search-input`/`.search-l` style the raw <input> inside them,
+                  and reserve the left gutter the `[data-icon]` sits in. */}
+              <div className="search-input search-l">
+                <span data-icon aria-hidden="true">
+                  <Search className="size-4" />
+                </span>
+                <Input
+                  value={searchDraft}
+                  onChange={(event) => {
+                    setSearchDraft(event.target.value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && searchBehavior === "submit") {
+                      event.preventDefault();
+                      applySearch(searchDraft);
+                    }
+                  }}
+                  placeholder={searchPlaceholder}
+                />
+              </div>
               <Button type="submit" size="sm" className="min-w-[78px]">
                 {searchSubmitLabel}
               </Button>
@@ -1185,7 +1227,9 @@ export function DataTable<TData, TValue>({
             </DropdownMenu>
           ) : null}
           {exportEnabled ? (
-            <div className="ml-auto flex items-center gap-2">
+            <>
+              {/* `.dt-toolbar > .spacer` is the design system's `ml-auto`. */}
+              <span className="spacer" />
               <ExportMenu
                 label="Export"
                 formats={exportFormats}
@@ -1193,7 +1237,7 @@ export function DataTable<TData, TValue>({
                 exportingFormat={exportingFormat}
                 onExport={handleExport}
               />
-            </div>
+            </>
           ) : null}
         </div>
       ) : null}
@@ -1273,19 +1317,55 @@ export function DataTable<TData, TValue>({
                     {expansion?.expandColumn?.header ?? null}
                   </TableHead>
                 ) : null}
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={getColumnWidthStyle(header.column.columnDef)}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort();
+                  const sorted = header.column.getIsSorted();
+                  const toggleSort = () =>
+                    header.column.toggleSorting(sorted === "asc");
+
+                  return (
+                    <TableHead
+                      key={header.id}
+                      className={cn(
+                        isNumericColumnDefinition(header.column.columnDef) &&
+                          "num",
+                        canSort && "sortable",
+                        sorted === "asc" && "asc",
+                        sorted === "desc" && "desc",
+                      )}
+                      style={getColumnWidthStyle(header.column.columnDef)}
+                      aria-sort={
+                        !canSort
+                          ? undefined
+                          : sorted === "asc"
+                            ? "ascending"
+                            : sorted === "desc"
+                              ? "descending"
+                              : "none"
+                      }
+                      tabIndex={canSort ? 0 : undefined}
+                      onClick={canSort ? toggleSort : undefined}
+                      onKeyDown={
+                        canSort
+                          ? (event) => {
+                              if (event.key !== "Enter" && event.key !== " ") {
+                                return;
+                              }
+                              event.preventDefault();
+                              toggleSort();
+                            }
+                          : undefined
+                      }
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -1301,14 +1381,13 @@ export function DataTable<TData, TValue>({
                   <React.Fragment key={row.id}>
                     <TableRow
                       data-state={row.getIsSelected() ? "selected" : undefined}
+                      className={cn(
+                        expansionEnabled && isExpanded && "expanded",
+                      )}
                     >
                       {rowSelectionEnabled ? (
                         <TableCell
-                          className={cn(
-                            "w-11 px-2 align-top",
-                            row.getIsSelected() &&
-                              "bg-[var(--table-row-selected-bg)]",
-                          )}
+                          className="w-11 px-2 align-top"
                           style={{ width: 44, minWidth: 44, maxWidth: 44 }}
                         >
                           <SelectionCheckbox
@@ -1321,17 +1400,12 @@ export function DataTable<TData, TValue>({
                       ) : null}
                       {expansionEnabled ? (
                         <TableCell
-                          className={cn(
-                            "w-10 pl-2 align-top",
-                            expandColumnWidthClassName,
-                          )}
+                          className={cn("expander", expandColumnWidthClassName)}
                         >
                           {canExpand ? (
-                            <Button
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground shadow-none hover:bg-[var(--button-ghost-hover-bg)]"
+                              className="more"
                               onClick={() =>
                                 toggleRowExpansion(row.original, row.index)
                               }
@@ -1345,7 +1419,7 @@ export function DataTable<TData, TValue>({
                               ) : (
                                 <ChevronRight className="size-4" />
                               )}
-                            </Button>
+                            </button>
                           ) : null}
                         </TableCell>
                       ) : null}
@@ -1373,6 +1447,12 @@ export function DataTable<TData, TValue>({
                           return (
                             <TableCell
                               key={cell.id}
+                              className={cn(
+                                isActionCell && "action",
+                                isNumericColumnDefinition(
+                                  cell.column.columnDef,
+                                ) && "num",
+                              )}
                               style={getColumnWidthStyle(cell.column.columnDef)}
                             >
                               {isActionCell ? (
@@ -1408,7 +1488,7 @@ export function DataTable<TData, TValue>({
                       >
                         <TableCell
                           colSpan={totalColumnCount}
-                          className="bg-[var(--datatable-expanded-bg)] py-0"
+                          className="detail"
                         >
                           {expansion?.renderExpandedContent({
                             row: row.original,
@@ -1431,11 +1511,12 @@ export function DataTable<TData, TValue>({
               })
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={totalColumnCount}
-                  className="bg-[var(--datatable-empty-bg)] py-9 text-center text-muted-foreground"
-                >
-                  {emptyState ?? noResultsText}
+                <TableCell colSpan={totalColumnCount}>
+                  {/* `.empty-state` styles by descendant, so a caller-supplied
+                      node keeps its own markup and only inherits the frame. */}
+                  <div className="empty-state">
+                    {emptyState ?? <h3>{noResultsText}</h3>}
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -1445,50 +1526,46 @@ export function DataTable<TData, TValue>({
 
       {showBottomPagination ? (
         <div
-          className={cn(
-            "flex min-h-[2.75rem] flex-wrap items-center justify-end gap-x-2 gap-y-2 border-y border-[var(--datatable-toolbar-border)] bg-[var(--datatable-toolbar-bg)] px-[var(--content-gutter-x)] py-2 text-xs text-muted-foreground supports-[backdrop-filter]:backdrop-blur-sm",
-            edgeToEdge && "table-edge-to-edge",
-          )}
+          className={cn("p-pagination", edgeToEdge && "table-edge-to-edge")}
         >
-          <span>Rows per page</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(value) => setPaginationState(1, Number(value))}
-          >
-            <SelectTrigger
-              size="sm"
-              className="w-[86px] bg-[var(--surface-base)]"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="font-mono tabular-nums">
-            Page {Math.max(page, 1)} of {Math.max(totalPages, 1)}
+          <span className="pg-count">
+            Page <strong>{Math.max(page, 1)}</strong> of{" "}
+            <strong>{Math.max(totalPages, 1)}</strong>
           </span>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setPaginationState(page - 1, pageSize)}
-            disabled={page <= 1}
-          >
-            Previous
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setPaginationState(page + 1, pageSize)}
-            disabled={page >= totalPages}
-          >
-            Next
-          </Button>
+          <span className="pg-size">
+            Rows per page
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => setPaginationState(1, Number(value))}
+            >
+              <SelectTrigger size="sm" className="w-[86px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </span>
+          <span className="pg-spacer" />
+          <div className="pg-nav">
+            <button
+              type="button"
+              onClick={() => setPaginationState(page - 1, pageSize)}
+              disabled={page <= 1}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaginationState(page + 1, pageSize)}
+              disabled={page >= totalPages}
+            >
+              Next
+            </button>
+          </div>
         </div>
       ) : null}
 
