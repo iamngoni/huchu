@@ -1,7 +1,7 @@
 import { ACCOUNTING_OPERATIONS_SECTIONS, ACCOUNTING_TABS } from "@/lib/accounting/tab-config";
 import { filterAccountingTabsByFeatures } from "@/lib/accounting/visibility";
-import type { NavItem, NavSection } from "@/lib/navigation";
-import { getNavSectionsForRole } from "@/lib/navigation";
+import type { NavGroup, NavItem, NavSection } from "@/lib/navigation";
+import { getNavSectionsForRole, navSections } from "@/lib/navigation";
 import { normalizeFeatureKey } from "@/lib/platform/gating/catalog-utils";
 import { filterNavSectionsByEnabledFeatures } from "@/lib/platform/gating/nav-filter";
 import { getPrimaryQuickActions } from "@/lib/primary-actions";
@@ -77,6 +77,12 @@ type WorkspaceModuleDefinition = {
   label: string;
   homeHref: string | null;
   getItems: (context: WorkspaceBuildContext) => NavItem[];
+  /**
+   * The section's semantic groups, when it declares any. Carried through here
+   * because the sidebar assembles its own sections from module items and would
+   * otherwise drop the grouping the navigation model defines.
+   */
+  getGroups?: (context: WorkspaceBuildContext) => NavGroup[] | undefined;
 };
 
 type WorkspaceProfileSectionSpec = {
@@ -147,6 +153,9 @@ function createSectionModule(args: {
     homeHref: args.homeHref,
     getItems(context) {
       return context.navSectionById.get(args.sectionId)?.items ?? [];
+    },
+    getGroups(context) {
+      return context.navSectionById.get(args.sectionId)?.groups;
     },
   };
 }
@@ -625,6 +634,25 @@ function collectSectionHrefs(sections: WorkspaceNavSection[]): Set<string> {
   return new Set(sections.flatMap((section) => section.items.map((item) => item.href)));
 }
 
+/**
+ * The groups a module's own nav section declares.
+ *
+ * The sidebar reassembles sections from module items, which loses everything on
+ * the section but its items. Module ids and section ids line up for every
+ * `createSectionModule` module, so reading the declaration back is enough.
+ */
+function declaredGroups(moduleId: WorkspaceModuleId): NavGroup[] | undefined {
+  // Last match, not first: two sections share the id "crm" (the retail customer
+  // directory and the CRM module proper), and `navSectionById` — the map the
+  // module reads its items from — is built from this array, so a later entry
+  // wins there. Taking the first here would read groups off the other section.
+  let found: NavGroup[] | undefined;
+  for (const section of navSections) {
+    if (section.id === moduleId) found = section.groups;
+  }
+  return found;
+}
+
 function buildModuleSection(
   moduleId: WorkspaceModuleId,
   visibleModules: Map<WorkspaceModuleId, NavItem[]>,
@@ -634,9 +662,14 @@ function buildModuleSection(
   const items = (visibleModules.get(moduleId) ?? []).filter((item) => !excludedHrefs?.has(item.href));
   if (items.length === 0) return null;
 
+  // Drop any group left with nothing in it after gating and exclusions.
+  const present = new Set(items.map((item) => item.group).filter(Boolean));
+  const groups = declaredGroups(moduleId)?.filter((group) => present.has(group.id));
+
   return {
     id: moduleId,
     title: WORKSPACE_MODULES[moduleId].label,
+    ...(groups && groups.length > 0 ? { groups } : {}),
     items,
     workspaceGroup,
   };

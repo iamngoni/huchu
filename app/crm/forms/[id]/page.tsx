@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 import { CrmFormBuilderContent } from "@/components/crm/crm-form-builder-content";
 import { authOptions } from "@/lib/auth";
@@ -8,8 +9,8 @@ export default async function CrmFormBuilderPage({ params }: { params: Promise<{
   if (!session?.user) redirect("/login");
   const { id } = await params;
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
+    <CrmPage width="detail">
       <CrmFormBuilderContent formId={id} />
-    </div>
+    </CrmPage>
   );
 }

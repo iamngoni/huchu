@@ -30,6 +30,7 @@
 ## Design System & UX Playbook (Required)
 - For every implementation, read `docs/design-system/README.md` first, then read the relevant files in `docs/design-system/` before changing code. These docs contain the canonical design-system setup, tokens, components, composition patterns, rules, reference URLs, and repo migration guidance.
 - Follow `docs/ux/platform-ux-playbook.md` for all UX/UI changes.
+- `docs/design-system/08-cookbook-patterns.md` carries the distilled cookbook recipes — dashboards, kanban, filterable tables, command palette, grouped lists, save bar, and the table→cards rule for mobile. Read it before building any of those shapes; it saves fetching the site.
 - Treat design-system and playbook rules as default system behavior unless a task explicitly overrides them.
 - Key non-negotiables:
   - One table per active view; use vertical tabs for multi-table contexts.

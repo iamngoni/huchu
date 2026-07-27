@@ -60,7 +60,8 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
   });
 
   const rows = useMemo(() => dealsQuery.data?.data ?? [], [dealsQuery.data]);
-  const total = dealsQuery.data?.total ?? rows.length;
+  const total = dealsQuery.data?.pagination?.total ?? rows.length;
+  const pipelineCount = pipelinesQuery.data?.data.length ?? 0;
 
   const columns = useMemo<ColumnDef<CrmDealRecord>[]>(
     () => [
@@ -198,14 +199,16 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
           />
           <Button asChild size="sm" variant="outline">
             <Link href="/crm/settings?tab=pipelines">
-              {pipelinesQuery.data?.data.data.length ?? 0} pipeline
-              {(pipelinesQuery.data?.data.data.length ?? 0) === 1 ? "" : "s"}
+              {pipelineCount} pipeline{pipelineCount === 1 ? "" : "s"}
             </Link>
           </Button>
         </>
       }
     >
       <DataTable
+        // The shell above owns search; a second box in the table toolbar is the
+        // duplicate-control failure the cookbook's one-filter-pathway rule exists to stop.
+        features={{ globalFilter: false }}
         data={rows}
         columns={columns}
         edgeToEdge

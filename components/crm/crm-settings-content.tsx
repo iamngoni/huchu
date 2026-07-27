@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -8,13 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { CRM_CHANNEL_LABELS, CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
 import { CustomFieldsPanel } from "@/components/crm/settings/custom-fields-panel";
 import { PipelinesPanel } from "@/components/crm/settings/pipelines-panel";
 import { PermissionsPanel } from "@/components/crm/settings/permissions-panel";
 import { AutomationsPanel } from "@/components/crm/settings/automations-panel";
+import { NavRail, NavRailItem } from "@/components/ui/nav-rail";
 import { CataloguePanel } from "@/components/inventory/catalogue-panel";
 import type { CrmLeadChannel } from "@prisma/client";
 
@@ -367,45 +369,111 @@ function CommissionsPanel() {
   );
 }
 
+/**
+ * CRM settings, on the settings shell rather than a tab strip.
+ *
+ * Eight tabs in a scrolling strip is the shape the pattern exists to replace:
+ * the rail is the map and the content is one page deep, so you can see every
+ * section at once instead of discovering them by scrolling sideways. The
+ * active section lives in the URL, so a link to Pipelines opens Pipelines.
+ *
+ * Each panel saves inline. There is deliberately no sticky unsaved bar —
+ * settings are individually committed, not a form you submit.
+ */
+
+type SettingsSection = {
+  id: string;
+  label: string;
+  description: string;
+  render: () => ReactNode;
+};
+
+const SECTIONS: SettingsSection[] = [
+  {
+    id: "pipelines",
+    label: "Pipelines",
+    description: "The stages a deal moves through, and what each one requires.",
+    render: () => <PipelinesPanel />,
+  },
+  {
+    id: "fields",
+    label: "Custom fields",
+    description: "Extra fields for your business, on the form and the record page.",
+    render: () => <CustomFieldsPanel />,
+  },
+  {
+    id: "sources",
+    label: "Lead sources",
+    description: "Where enquiries come from, so attribution has something to count.",
+    render: () => <LeadSourcesPanel />,
+  },
+  {
+    id: "catalogue",
+    label: "Catalogue",
+    description: "What the business sells — shared with Stock & Inventory and Retail.",
+    render: () => <CataloguePanel />,
+  },
+  {
+    id: "automations",
+    label: "Automations",
+    description: "Small rules that do the obvious thing when something changes.",
+    render: () => <AutomationsPanel />,
+  },
+  {
+    id: "commissions",
+    label: "Commissions",
+    description: "Who earns what, and at which thresholds.",
+    render: () => <CommissionsPanel />,
+  },
+  {
+    id: "permissions",
+    label: "Permissions",
+    description: "What each CRM role can see and change.",
+    render: () => <PermissionsPanel />,
+  },
+  {
+    id: "keys",
+    label: "API keys",
+    description: "Credentials for webhook and intake-form integrations.",
+    render: () => <ApiKeysPanel />,
+  },
+];
+
 export function CrmSettingsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("tab");
+  const active = SECTIONS.find((section) => section.id === requested) ?? SECTIONS[0];
+
+  const select = (id: string) => {
+    // Replace rather than push: flipping between settings sections is not
+    // navigation you want to walk back through one at a time.
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", id);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
   return (
-    <Tabs defaultValue="pipelines">
-      <div className="scroll-rail max-w-full">
-        <TabsList>
-          <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
-          <TabsTrigger value="fields">Custom Fields</TabsTrigger>
-          <TabsTrigger value="keys">API Keys</TabsTrigger>
-          <TabsTrigger value="sources">Lead Sources</TabsTrigger>
-          <TabsTrigger value="commissions">Commissions</TabsTrigger>
-          <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
-          <TabsTrigger value="automations">Automations</TabsTrigger>
-          <TabsTrigger value="permissions">Permissions</TabsTrigger>
-        </TabsList>
-      </div>
-      <TabsContent value="catalogue">
-        <CataloguePanel />
-      </TabsContent>
-      <TabsContent value="automations">
-        <AutomationsPanel />
-      </TabsContent>
-      <TabsContent value="permissions">
-        <PermissionsPanel />
-      </TabsContent>
-      <TabsContent value="pipelines">
-        <PipelinesPanel />
-      </TabsContent>
-      <TabsContent value="fields">
-        <CustomFieldsPanel />
-      </TabsContent>
-      <TabsContent value="keys">
-        <ApiKeysPanel />
-      </TabsContent>
-      <TabsContent value="sources">
-        <LeadSourcesPanel />
-      </TabsContent>
-      <TabsContent value="commissions">
-        <CommissionsPanel />
-      </TabsContent>
-    </Tabs>
+    <div className="settings-layout">
+      <NavRail label="CRM settings sections" orientation="responsive">
+        {SECTIONS.map((section) => (
+          <NavRailItem
+            key={section.id}
+            active={section.id === active.id}
+            onClick={() => select(section.id)}
+          >
+            {section.label}
+          </NavRailItem>
+        ))}
+      </NavRail>
+
+      <section className="min-w-0 space-y-4">
+        <header>
+          <h2 className="text-base font-semibold text-[var(--text-strong)]">{active.label}</h2>
+          <p className="text-sm text-[var(--text-muted)]">{active.description}</p>
+        </header>
+        {active.render()}
+      </section>
+    </div>
   );
 }

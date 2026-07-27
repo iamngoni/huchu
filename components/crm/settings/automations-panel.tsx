@@ -75,10 +75,10 @@ export function AutomationsPanel() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["crm-automations"],
-    queryFn: () => fetchJson<{ data: { data: AutomationRecord[] } }>("/api/v2/crm/automations"),
+    queryFn: () => fetchJson<{ data: AutomationRecord[] }>("/api/v2/crm/automations"),
   });
 
-  const rules = data?.data.data ?? [];
+  const rules = data?.data ?? [];
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["crm-automations"] });
 
   const toggle = useMutation({
@@ -227,7 +227,10 @@ function AutomationFormSheet({
   const [actions, setActions] = useState<AutomationAction[]>([defaultAction("CREATE_TASK")]);
   const [errors, setErrors] = useState<string[]>([]);
 
-  const [wasOpen, setWasOpen] = useState(open);
+  // Starts at `false`, not `open`: a sheet that mounts already open would
+  // otherwise record itself as having always been open, the transition below
+  // would never fire, and the form would never seed.
+  const [wasOpen, setWasOpen] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {

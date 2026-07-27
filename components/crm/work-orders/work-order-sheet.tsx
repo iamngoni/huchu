@@ -111,10 +111,10 @@ export function WorkOrderSheet({
   const { data, isLoading } = useQuery({
     queryKey: ["crm-work-order", workOrderId],
     enabled: Boolean(workOrderId),
-    queryFn: () => fetchJson<{ data: WorkOrderRecord }>(`/api/v2/crm/work-orders/${workOrderId}`),
+    queryFn: () => fetchJson<WorkOrderRecord>(`/api/v2/crm/work-orders/${workOrderId}`),
   });
 
-  const order = data?.data;
+  const order = data;
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["crm-work-orders"] });
@@ -123,14 +123,14 @@ export function WorkOrderSheet({
 
   const update = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
-      fetchJson<{ data: WorkOrderRecord }>(`/api/v2/crm/work-orders/${workOrderId}`, {
+      fetchJson<WorkOrderRecord>(`/api/v2/crm/work-orders/${workOrderId}`, {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
     onSuccess: (result) => {
       setBlockers([]);
       setError(null);
-      toast({ title: `Job is now ${WORK_ORDER_STATUS_LABELS[result.data.status].toLowerCase()}` });
+      toast({ title: `Job is now ${WORK_ORDER_STATUS_LABELS[result.status].toLowerCase()}` });
       refresh();
     },
     onError: (err: unknown) => {

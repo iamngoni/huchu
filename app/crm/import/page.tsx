@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 
 import { PageHeading } from "@/components/layout/page-heading";
@@ -14,12 +15,12 @@ export default async function CrmImportPage() {
   if (!hasCrmFullAccess(session.user.role)) redirect("/crm");
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
+    <CrmPage width="narrow">
       <PageHeading
         title="Import"
         description="Bring people, companies or leads in from a spreadsheet."
       />
       <ImportWizard />
-    </div>
+    </CrmPage>
   );
 }

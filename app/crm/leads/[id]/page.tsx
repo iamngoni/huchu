@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 import { LeadDetailPage } from "@/components/crm/lead-detail/lead-detail-page";
 import { authOptions } from "@/lib/auth";
@@ -8,8 +9,8 @@ export default async function CrmLeadDetailPage({ params }: { params: Promise<{ 
   if (!session?.user) redirect("/login");
   const { id } = await params;
   return (
-    <div className="mx-auto w-full max-w-[100rem]">
+    <CrmPage width="detail">
       <LeadDetailPage leadId={id} />
-    </div>
+    </CrmPage>
   );
 }

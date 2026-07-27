@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 
 import { SitesContent } from "@/components/crm/records/sites-content";
@@ -11,8 +12,8 @@ export default async function CrmSitesPage({ searchParams }: { searchParams: Sea
   if (!session?.user) redirect("/login");
   const params = await searchParams;
   return (
-    <div className="mx-auto w-full max-w-[110rem]">
+    <CrmPage>
       <SitesContent openCreate={params.new === "1"} />
-    </div>
+    </CrmPage>
   );
 }

@@ -19,6 +19,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
+import { PersonFormSheet } from "./person-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
 
@@ -54,7 +55,12 @@ type PersonDetail = {
   id: string;
   personNo: string;
   fullName: string;
+  firstName: string;
+  lastName: string | null;
   jobTitle: string | null;
+  addressLine: string | null;
+  city: string | null;
+  notes: string | null;
   email: string | null;
   phone: string | null;
   contactType: string;
@@ -99,19 +105,20 @@ export function PersonDetailPage({ personId }: { personId: string }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [tab, setTab] = useState("timeline");
 
   const personQuery = useQuery({
     queryKey: ["crm", "person", personId],
-    queryFn: () => fetchJson<{ data: PersonDetail }>(`/api/v2/crm/people/${personId}`),
+    queryFn: () => fetchJson<PersonDetail>(`/api/v2/crm/people/${personId}`),
   });
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "PERSON"],
     queryFn: () => fetchCrmFieldDefinitions("PERSON"),
   });
 
-  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data.data ?? [];
-  const person = personQuery.data?.data;
+  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
+  const person = personQuery.data;
 
   if (personQuery.isLoading) {
     return (
@@ -270,6 +277,26 @@ export function PersonDetailPage({ personId }: { personId: string }) {
           <CustomFieldDisplay definitions={definitions} values={person.customFields} />
         </>
       }
+    />
+
+    <PersonFormSheet
+      open={editOpen}
+      onOpenChange={setEditOpen}
+      record={{
+        id: person.id,
+        firstName: person.firstName,
+        lastName: person.lastName ?? "",
+        jobTitle: person.jobTitle ?? "",
+        email: person.email ?? "",
+        phone: person.phone ?? "",
+        contactType: person.contactType,
+        addressLine: person.addressLine ?? "",
+        city: person.city ?? "",
+        notes: person.notes ?? "",
+        clientId: person.client?.id ?? "",
+        assignedToId: person.assignedTo?.id ?? "",
+      }}
+      onSaved={() => personQuery.refetch()}
     />
 
     <MergeDialog

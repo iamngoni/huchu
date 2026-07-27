@@ -133,11 +133,11 @@ export function ConvertLeadSheet({
 
   const prepQuery = useQuery({
     queryKey: ["crm", "lead-convert", leadId],
-    queryFn: () => fetchJson<{ data: ConvertPayload }>(`/api/v2/crm/leads/${leadId}/convert`),
+    queryFn: () => fetchJson<ConvertPayload>(`/api/v2/crm/leads/${leadId}/convert`),
     enabled: open,
   });
 
-  const prep = prepQuery.data?.data;
+  const prep = prepQuery.data;
 
   // Seed the form from the preparation payload the first time it arrives,
   // adjusting state during render so the fields are already filled on the
@@ -156,7 +156,7 @@ export function ConvertLeadSheet({
 
   const convert = useMutation({
     mutationFn: () =>
-      fetchJson<{ data: { dealId: string; dealNo: string } }>(
+      fetchJson<{ dealId: string; dealNo: string }>(
         `/api/v2/crm/leads/${leadId}/convert`,
         {
           method: "POST",
@@ -176,10 +176,10 @@ export function ConvertLeadSheet({
       queryClient.invalidateQueries({ queryKey: ["crm", "deals"] });
       toast({
         title: "Lead converted",
-        description: `Deal ${result.data.dealNo} is ready.`,
+        description: `Deal ${result.dealNo} is ready.`,
       });
       onOpenChange(false);
-      router.push(`/crm/deals/${result.data.dealId}`);
+      router.push(`/crm/deals/${result.dealId}`);
     },
     onError: (error) => setErrors([getApiErrorMessage(error)]),
   });

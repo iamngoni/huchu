@@ -46,7 +46,10 @@ export function LostReasonDialog({
   const [reason, setReason] = useState("");
   // Clear the box each time the dialog opens, adjusting state during render
   // rather than in an effect so there's no flash of the previous reason.
-  const [wasOpen, setWasOpen] = useState(open);
+  // Starts at `false`, not `open`: a sheet that mounts already open would
+  // otherwise record itself as having always been open, the transition below
+  // would never fire, and the form would never seed.
+  const [wasOpen, setWasOpen] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) setReason("");

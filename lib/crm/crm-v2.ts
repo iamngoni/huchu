@@ -160,7 +160,27 @@ export type CrmVisitReportRecord = CrmAppointmentRecord & {
   visitItems: CrmVisitItemRecord[];
 };
 
-type ListResponse<T> = { data: T[]; total?: number; page?: number; limit?: number };
+/**
+ * The shape every paginated CRM route actually returns. It used to be declared
+ * with a top-level `total`, which no route has ever sent — so `?? rows.length`
+ * fired on every list and each one reported a single page regardless of size.
+ */
+type ListResponse<T> = {
+  data: T[];
+  pagination?: { page: number; limit: number; total: number; pages: number; hasMore: boolean };
+};
+/**
+ * `{ data: T }` — and only for the handful of list GETs that literally call
+ * `successResponse({ data: rows })`.
+ *
+ * `successResponse(x)` sends `x` as the body; it adds no envelope of its own.
+ * Every `[id]` route, every POST and every PATCH in the CRM answers with the
+ * record or result itself, so wrapping those in `Envelope` describes a shape
+ * that never arrives — and because the declaration is a lie the compiler
+ * accepts, the failure surfaces as `undefined` at runtime: a detail page that
+ * says "not found", a toast naming nothing, a callback handed no id. Check the
+ * route before reaching for this type.
+ */
 type Envelope<T> = { data: T };
 
 function qs(params: Record<string, string | number | boolean | null | undefined>): string {
@@ -216,7 +236,9 @@ export function fetchCrmLeads(
 
 export function fetchCrmLeadsBoard(filters: LeadViewFilters = {}) {
   const query = qs(leadFiltersToParams(filters));
-  return fetchJson<Envelope<{ columns: CrmBoardColumn[]; cardsPerColumn: number }>>(
+  // The route answers `{ columns, cardsPerColumn }` — no envelope. Declaring
+  // one here is what made the board throw the moment it was switched to.
+  return fetchJson<{ columns: CrmBoardColumn[]; cardsPerColumn: number }>(
     `/api/v2/crm/leads/board${query}`,
   );
 }
@@ -227,12 +249,12 @@ export type CrmBulkLeadAction =
 
 export function bulkUpdateCrmLeads(body: CrmBulkLeadAction) {
   return fetchJson<
-    Envelope<{ updated: number; unchanged?: number; skipped: number; notFound: number }>
+    { updated: number; unchanged?: number; skipped: number; notFound: number }
   >(`/api/v2/crm/leads/bulk`, { method: "POST", body: JSON.stringify(body) });
 }
 
 export function fetchCrmSavedViews() {
-  return fetchJson<Envelope<{ data: CrmSavedViewRecord[] }>>(`/api/v2/crm/saved-views`);
+  return fetchJson<Envelope<CrmSavedViewRecord[]>>(`/api/v2/crm/saved-views`);
 }
 
 export function createCrmSavedView(body: {
@@ -242,7 +264,7 @@ export function createCrmSavedView(body: {
   sort?: LeadSort | null;
   isShared?: boolean;
 }) {
-  return fetchJson<Envelope<CrmSavedViewRecord>>(`/api/v2/crm/saved-views`, {
+  return fetchJson<CrmSavedViewRecord>(`/api/v2/crm/saved-views`, {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -258,26 +280,26 @@ export function updateCrmSavedView(
     isShared: boolean;
   }>,
 ) {
-  return fetchJson<Envelope<CrmSavedViewRecord>>(`/api/v2/crm/saved-views/${id}`, {
+  return fetchJson<CrmSavedViewRecord>(`/api/v2/crm/saved-views/${id}`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });
 }
 
 export function deleteCrmSavedView(id: string) {
-  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/saved-views/${id}`, {
+  return fetchJson<{ id: string }>(`/api/v2/crm/saved-views/${id}`, {
     method: "DELETE",
   });
 }
 
 export function fetchCrmVisitReport(appointmentId: string) {
-  return fetchJson<Envelope<CrmVisitReportRecord>>(
+  return fetchJson<CrmVisitReportRecord>(
     `/api/v2/crm/appointments/${appointmentId}/report`,
   );
 }
 
 export function saveCrmVisitReport(appointmentId: string, body: SiteVisitReportInput) {
-  return fetchJson<Envelope<CrmVisitReportRecord>>(
+  return fetchJson<CrmVisitReportRecord>(
     `/api/v2/crm/appointments/${appointmentId}/report`,
     { method: "PUT", body: JSON.stringify(body) },
   );
@@ -293,25 +315,25 @@ export function updateCrmFollowUp(
     assignedToId: string;
   }>,
 ) {
-  return fetchJson<Envelope<CrmFollowUpRecord>>(`/api/v2/crm/follow-ups/${id}`, {
+  return fetchJson<CrmFollowUpRecord>(`/api/v2/crm/follow-ups/${id}`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });
 }
 
 export function fetchCrmLead(id: string) {
-  return fetchJson<Envelope<CrmLeadRecord & Record<string, unknown>>>(`/api/v2/crm/leads/${id}`);
+  return fetchJson<CrmLeadRecord & Record<string, unknown>>(`/api/v2/crm/leads/${id}`);
 }
 
 export function createCrmLead(body: Partial<CrmLeadRecord> & { title?: string }) {
-  return fetchJson<Envelope<CrmLeadRecord>>(`/api/v2/crm/leads`, {
+  return fetchJson<CrmLeadRecord>(`/api/v2/crm/leads`, {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
 export function updateCrmLeadStage(id: string, stage: CrmLeadStage, lostReason?: string) {
-  return fetchJson<Envelope<CrmLeadRecord>>(`/api/v2/crm/leads/${id}/stage`, {
+  return fetchJson<CrmLeadRecord>(`/api/v2/crm/leads/${id}/stage`, {
     method: "POST",
     body: JSON.stringify({ stage, lostReason }),
   });
@@ -322,7 +344,7 @@ export function fetchCrmClients(params: { q?: string; page?: number } = {}) {
 }
 
 export function createCrmClient(body: Partial<CrmClientRecord> & { name: string }) {
-  return fetchJson<Envelope<CrmClientRecord>>(`/api/v2/crm/clients`, {
+  return fetchJson<CrmClientRecord>(`/api/v2/crm/clients`, {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -337,7 +359,7 @@ export function fetchCrmAppointments(params: { from?: string; to?: string; assig
 }
 
 export function fetchCrmInsightsSummary(params: { from?: string; to?: string } = {}) {
-  return fetchJson<Envelope<Record<string, unknown>>>(`/api/v2/crm/insights/summary${qs(params)}`);
+  return fetchJson<Record<string, unknown>>(`/api/v2/crm/insights/summary${qs(params)}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -571,11 +593,11 @@ export function fetchCrmSites(
 }
 
 export function fetchCrmPipelines() {
-  return fetchJson<Envelope<{ data: CrmPipelineRecord[] }>>(`/api/v2/crm/pipelines`);
+  return fetchJson<Envelope<CrmPipelineRecord[]>>(`/api/v2/crm/pipelines`);
 }
 
 export function fetchCrmFieldDefinitions(entity?: string) {
-  return fetchJson<Envelope<{ data: CrmFieldDefinitionRecord[] }>>(
+  return fetchJson<Envelope<CrmFieldDefinitionRecord[]>>(
     `/api/v2/crm/field-definitions${qs({ entity })}`,
   );
 }
@@ -584,7 +606,7 @@ export function moveCrmDealStage(
   dealId: string,
   body: { stageId: string; lostReason?: string; force?: boolean },
 ) {
-  return fetchJson<Envelope<CrmDealRecord>>(`/api/v2/crm/deals/${dealId}/stage`, {
+  return fetchJson<CrmDealRecord>(`/api/v2/crm/deals/${dealId}/stage`, {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -648,7 +670,7 @@ export function fetchCrmTasks(
 }
 
 export function createCrmTask(body: Record<string, unknown>) {
-  return fetchJson<Envelope<CrmTaskRecord>>(`/api/v2/crm/tasks`, {
+  return fetchJson<CrmTaskRecord>(`/api/v2/crm/tasks`, {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -656,12 +678,12 @@ export function createCrmTask(body: Record<string, unknown>) {
 
 export function updateCrmTask(id: string, body: Record<string, unknown>) {
   return fetchJson<
-    Envelope<CrmTaskRecord & { recurredTask: { id: string; dueAt: string } | null; suggestsFollowUp: boolean }>
+    CrmTaskRecord & { recurredTask: { id: string; dueAt: string } | null; suggestsFollowUp: boolean }
   >(`/api/v2/crm/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) });
 }
 
 export function deleteCrmTask(id: string) {
-  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/tasks/${id}`, { method: "DELETE" });
+  return fetchJson<{ id: string }>(`/api/v2/crm/tasks/${id}`, { method: "DELETE" });
 }
 
 export type CrmCommentAuthor = { id: string; name: string | null; email: string };
@@ -681,7 +703,7 @@ export type CrmCommentRecord = {
 };
 
 export function fetchCrmComments(entity: CollabEntity, recordId: string) {
-  return fetchJson<Envelope<CrmCommentRecord[]>>(
+  return fetchJson<CrmCommentRecord[]>(
     `/api/v2/crm/comments${qs({ entity, recordId })}`,
   );
 }
@@ -692,7 +714,7 @@ export function createCrmComment(body: {
   body: string;
   parentId?: string | null;
 }) {
-  return fetchJson<Envelope<CrmCommentRecord>>(`/api/v2/crm/comments`, {
+  return fetchJson<CrmCommentRecord>(`/api/v2/crm/comments`, {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -702,14 +724,14 @@ export function updateCrmComment(
   id: string,
   body: { body?: string; isPinned?: boolean; resolved?: boolean },
 ) {
-  return fetchJson<Envelope<CrmCommentRecord>>(`/api/v2/crm/comments/${id}`, {
+  return fetchJson<CrmCommentRecord>(`/api/v2/crm/comments/${id}`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });
 }
 
 export function deleteCrmComment(id: string) {
-  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/comments/${id}`, { method: "DELETE" });
+  return fetchJson<{ id: string }>(`/api/v2/crm/comments/${id}`, { method: "DELETE" });
 }
 
 export type CrmFollowerRecord = {
@@ -719,20 +741,20 @@ export type CrmFollowerRecord = {
 };
 
 export function fetchCrmFollowers(entity: CollabEntity, recordId: string) {
-  return fetchJson<Envelope<{ followers: CrmFollowerRecord[]; isFollowing: boolean }>>(
+  return fetchJson<{ followers: CrmFollowerRecord[]; isFollowing: boolean }>(
     `/api/v2/crm/followers${qs({ entity, recordId })}`,
   );
 }
 
 export function followCrmRecord(entity: CollabEntity, recordId: string, userId?: string) {
-  return fetchJson<Envelope<CrmFollowerRecord>>(`/api/v2/crm/followers`, {
+  return fetchJson<CrmFollowerRecord>(`/api/v2/crm/followers`, {
     method: "POST",
     body: JSON.stringify({ entity, recordId, userId }),
   });
 }
 
 export function unfollowCrmRecord(entity: CollabEntity, recordId: string, userId?: string) {
-  return fetchJson<Envelope<{ unfollowed: boolean }>>(
+  return fetchJson<{ unfollowed: boolean }>(
     `/api/v2/crm/followers${qs({ entity, recordId, userId })}`,
     { method: "DELETE" },
   );
@@ -753,7 +775,7 @@ export function previewCrmImport(body: {
   onDuplicate: "SKIP" | "UPDATE";
   csv: string;
 }) {
-  return fetchJson<Envelope<CrmImportPreview>>(`/api/v2/crm/import`, {
+  return fetchJson<CrmImportPreview>(`/api/v2/crm/import`, {
     method: "POST",
     body: JSON.stringify({ ...body, commit: false }),
   });
@@ -766,12 +788,12 @@ export function commitCrmImport(body: {
   csv: string;
 }) {
   return fetchJson<
-    Envelope<{
+    {
       created: number;
       updated: number;
       failed: { line: number; message: string }[];
       totals: { create: number; update: number; skip: number };
-    }>
+    }
   >(`/api/v2/crm/import`, { method: "POST", body: JSON.stringify({ ...body, commit: true }) });
 }
 
@@ -783,7 +805,7 @@ export type CrmMergePreview = {
 
 export function previewCrmMerge(entity: "PERSON" | "COMPANY", survivorId: string, loserId: string) {
   const base = entity === "PERSON" ? "people" : "companies";
-  return fetchJson<Envelope<CrmMergePreview>>(`/api/v2/crm/${base}/${survivorId}/merge`, {
+  return fetchJson<CrmMergePreview>(`/api/v2/crm/${base}/${survivorId}/merge`, {
     method: "POST",
     body: JSON.stringify({ loserId, commit: false }),
   });
@@ -796,7 +818,7 @@ export function commitCrmMerge(
   choices: Record<string, FieldChoice>,
 ) {
   const base = entity === "PERSON" ? "people" : "companies";
-  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/${base}/${survivorId}/merge`, {
+  return fetchJson<{ id: string }>(`/api/v2/crm/${base}/${survivorId}/merge`, {
     method: "POST",
     body: JSON.stringify({ loserId, choices, commit: true }),
   });

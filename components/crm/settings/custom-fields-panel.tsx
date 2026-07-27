@@ -64,7 +64,7 @@ export function CustomFieldsPanel() {
   });
 
   const definitions: CrmFieldDefinitionRecord[] = useMemo(
-    () => fieldsQuery.data?.data.data ?? [],
+    () => fieldsQuery.data?.data ?? [],
     [fieldsQuery.data],
   );
 

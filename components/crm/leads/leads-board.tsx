@@ -107,12 +107,9 @@ export function LeadsBoard({ filters }: { filters: LeadViewFilters }) {
     }) => updateCrmLeadStage(leadId, stage, lostReason),
     onMutate: async ({ leadId, stage }) => {
       await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<{ data: BoardData }>(queryKey);
+      const previous = queryClient.getQueryData<BoardData>(queryKey);
       if (previous) {
-        queryClient.setQueryData(queryKey, {
-          ...previous,
-          data: moveCardInCache(previous.data, leadId, stage),
-        });
+        queryClient.setQueryData(queryKey, moveCardInCache(previous, leadId, stage));
       }
       return { previous };
     },
@@ -133,7 +130,7 @@ export function LeadsBoard({ filters }: { filters: LeadViewFilters }) {
     },
   });
 
-  const columns = boardQuery.data?.data.columns ?? [];
+  const columns = boardQuery.data?.columns ?? [];
 
   const resolveDropStage = (overId: string): CrmLeadStage | null => {
     if (overId.startsWith("column:")) return overId.slice("column:".length) as CrmLeadStage;

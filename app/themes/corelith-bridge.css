@@ -26,6 +26,19 @@
    nothing is redeclared here and the package's values stand.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* The same layer order `app/globals.css` declares, repeated here because this
+   file is a separate stylesheet entry and the bundler is free to emit it first.
+   Cascade layer order is fixed by *first appearance* in the document: whichever
+   sheet lands first sets it, and names it does not mention are appended at the
+   end. When this file went out without the declaration it established
+   `theme, base, components, utilities`, so `corelith` and `app` — unknown at
+   that point — were appended *after* `utilities`. That inverted the whole
+   system: the package's `button { padding: 0 }` reset started beating `px-2`,
+   its element styles beat every Tailwind override on the page, and headings,
+   segmented controls, menus and comboboxes all lost their app-side styling.
+   Declaring the order identically in both entries makes it order-independent. */
+@layer theme, base, corelith, app, components, utilities;
+
 :root {
   color-scheme: light;
 

@@ -1,18 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 
-import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/ui/data-table";
+import { Badge, Button } from "@corelithzw/react";
 import { StatusChip } from "@/components/ui/status-chip";
-import { fetchCrmCompanies, type CrmCompanyRecord } from "@/lib/crm/crm-v2";
+import { fetchCrmCompanies } from "@/lib/crm/crm-v2";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 import { useDebounced } from "@/hooks/use-debounced";
 
 import { CompanyFormSheet } from "./company-form-sheet";
+import { RecordList, RecordListPager, type RecordListRow } from "./record-list";
 import { RecordListShell } from "./record-list-shell";
 
 const PAGE_SIZE = 50;
@@ -47,108 +45,47 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
 
   const companiesQuery = useQuery({
     queryKey: ["crm", "companies", debouncedSearch, page],
-    queryFn: () =>
-      fetchCrmCompanies({ filters: { q: debouncedSearch }, page, limit: PAGE_SIZE }),
+    queryFn: () => fetchCrmCompanies({ filters: { q: debouncedSearch }, page, limit: PAGE_SIZE }),
     placeholderData: (previous) => previous,
   });
 
-  const rows = useMemo(() => companiesQuery.data?.data ?? [], [companiesQuery.data]);
-  const total = companiesQuery.data?.total ?? rows.length;
+  const companies = useMemo(() => companiesQuery.data?.data ?? [], [companiesQuery.data]);
+  const total = companiesQuery.data?.pagination?.total ?? companies.length;
 
-  const columns = useMemo<ColumnDef<CrmCompanyRecord>[]>(
-    () => [
-      {
-        id: "name",
-        header: "Company",
-        size: 240,
-        cell: ({ row }) => (
-          <Link
-            href={`/crm/companies/${row.original.id}`}
-            className="block min-w-0 hover:underline"
-          >
-            <div className="truncate font-medium">{row.original.name}</div>
-            <div className="truncate text-xs text-[var(--text-muted)]">
-              {[row.original.clientNo, row.original.tradingName].filter(Boolean).join(" · ")}
-            </div>
-          </Link>
+  const rows = useMemo<RecordListRow[]>(
+    () =>
+      companies.map((company) => ({
+        id: company.id,
+        href: `/crm/companies/${company.id}`,
+        title: company.name,
+        subtitle:
+          [company.clientNo, [company.city, company.country].filter(Boolean).join(", ")]
+            .filter(Boolean)
+            .join(" · "),
+        status: (
+          <>
+            <StatusChip
+              status={ACCOUNT_STATUS_PRESENTATION[company.accountStatus] ?? "pending"}
+              label={ACCOUNT_STATUS_LABELS[company.accountStatus] ?? company.accountStatus}
+            />
+            <Badge tone="neutral" size="sm">
+              {COMPANY_TYPE_LABELS[company.companyType] ?? company.companyType}
+            </Badge>
+          </>
         ),
-      },
-      {
-        id: "type",
-        header: "Type",
-        size: 130,
-        cell: ({ row }) => (
-          <Badge variant="outline">
-            {COMPANY_TYPE_LABELS[row.original.companyType] ?? row.original.companyType}
-          </Badge>
-        ),
-      },
-      {
-        id: "contact",
-        header: "Contact",
-        size: 220,
-        cell: ({ row }) => (
-          <div className="min-w-0 text-sm">
-            <div className="truncate">{row.original.email ?? "—"}</div>
-            <div className="truncate text-xs text-[var(--text-muted)]">
-              {row.original.phone ?? ""}
-            </div>
-          </div>
-        ),
-      },
-      {
-        id: "location",
-        header: "Location",
-        size: 180,
-        cell: ({ row }) => (
-          <span className="truncate text-sm">
-            {[row.original.city, row.original.country].filter(Boolean).join(", ") || "—"}
-          </span>
-        ),
-      },
-      {
-        id: "people",
-        header: "People",
-        size: 80,
-        cell: ({ row }) => (
-          <span className="font-mono text-sm">{row.original._count?.people ?? 0}</span>
-        ),
-      },
-      {
-        id: "deals",
-        header: "Deals",
-        size: 80,
-        cell: ({ row }) => (
-          <span className="font-mono text-sm">{row.original._count?.deals ?? 0}</span>
-        ),
-      },
-      {
-        id: "status",
-        header: "Status",
-        size: 140,
-        cell: ({ row }) => (
-          <StatusChip
-            status={ACCOUNT_STATUS_PRESENTATION[row.original.accountStatus] ?? "pending"}
-            label={ACCOUNT_STATUS_LABELS[row.original.accountStatus] ?? row.original.accountStatus}
-          />
-        ),
-      },
-      {
-        id: "owner",
-        header: "Owner",
-        size: 150,
-        cell: ({ row }) => (
-          <span className="truncate text-sm">{row.original.assignedTo?.name ?? "Unassigned"}</span>
-        ),
-      },
-    ],
-    [],
+        facts: [
+          { label: "People", value: company._count?.people ?? 0, mono: true },
+          { label: "Deals", value: company._count?.deals ?? 0, mono: true },
+          { label: "Owner", value: company.assignedTo?.name ?? "Unassigned" },
+        ],
+      })),
+    [companies],
   );
 
   return (
     <RecordListShell
       title="Companies"
-      description="Customer organisations, suppliers and partners."
+      description="Every organisation you sell to, with its people, sites and deals in one place."
       search={search}
       onSearchChange={(value) => {
         setSearch(value);
@@ -159,41 +96,23 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
       onCreate={() => setCreateOpen(true)}
       error={companiesQuery.error}
     >
-      <DataTable
-        data={rows}
-        columns={columns}
-        edgeToEdge
-        stickyHeader
-        queryState={{ mode: "paginated", page, pageSize: PAGE_SIZE }}
-        onQueryStateChange={(next) => {
-          if (next.page && next.page !== page) setPage(next.page);
-        }}
-        pagination={{
-          enabled: true,
-          server: true,
-          total,
-          totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-        }}
-        mobileCardRenderer={({ row }) => (
-          <Link
-            href={`/crm/companies/${row.id}`}
-            className="flex flex-col gap-1 rounded-[var(--card-radius)] border border-[var(--border)] p-3"
-          >
-            <span className="font-medium">{row.name}</span>
-            <span className="text-xs text-[var(--text-muted)]">
-              {[row.clientNo, [row.city, row.country].filter(Boolean).join(", ")]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
-            <span className="text-sm">{row.email ?? row.phone ?? ""}</span>
-          </Link>
-        )}
-        emptyState={
-          companiesQuery.isLoading
-            ? "Loading companies…"
-            : "No companies yet. Add one, or convert a lead."
+      <RecordList
+        rows={rows}
+        isLoading={companiesQuery.isLoading}
+        emptyTitle={debouncedSearch ? "No companies match that search" : "No companies yet"}
+        emptyBody={
+          debouncedSearch ? undefined : "Add one, or convert a lead and its company comes with it."
+        }
+        emptyAction={
+          debouncedSearch ? undefined : (
+            <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+              Add the first company
+            </Button>
+          )
         }
       />
+
+      <RecordListPager page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
 
       <CompanyFormSheet open={createOpen} onOpenChange={setCreateOpen} />
     </RecordListShell>

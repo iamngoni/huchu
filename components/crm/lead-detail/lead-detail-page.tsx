@@ -87,7 +87,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
 
   const leadQuery = useQuery({
     queryKey: ["crm-lead", leadId],
-    queryFn: () => fetchJson<{ data: LeadDetail }>(`/api/v2/crm/leads/${leadId}`),
+    queryFn: () => fetchJson<LeadDetail>(`/api/v2/crm/leads/${leadId}`),
   });
 
   const teamQuery = useQuery({
@@ -96,7 +96,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
   });
 
   const owners = useMemo(() => teamQuery.data?.data ?? [], [teamQuery.data]);
-  const lead = leadQuery.data?.data;
+  const lead = leadQuery.data;
 
   const changeStage = useMutation({
     mutationFn: ({ stage, lostReason }: { stage: CrmLeadStage; lostReason?: string }) =>
