@@ -64,7 +64,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
 
   const siteQuery = useQuery({
     queryKey: ["crm", "site", siteId],
-    queryFn: () => fetchJson<{ data: SiteDetail }>(`/api/v2/crm/sites/${siteId}`),
+    queryFn: () => fetchJson<SiteDetail>(`/api/v2/crm/sites/${siteId}`),
   });
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "SITE"],
@@ -72,7 +72,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
   });
 
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
-  const site = siteQuery.data?.data;
+  const site = siteQuery.data;
 
   if (siteQuery.isLoading) {
     return (

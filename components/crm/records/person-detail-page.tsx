@@ -103,7 +103,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
 
   const personQuery = useQuery({
     queryKey: ["crm", "person", personId],
-    queryFn: () => fetchJson<{ data: PersonDetail }>(`/api/v2/crm/people/${personId}`),
+    queryFn: () => fetchJson<PersonDetail>(`/api/v2/crm/people/${personId}`),
   });
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "PERSON"],
@@ -111,7 +111,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
   });
 
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
-  const person = personQuery.data?.data;
+  const person = personQuery.data;
 
   if (personQuery.isLoading) {
     return (

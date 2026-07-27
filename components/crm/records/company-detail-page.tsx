@@ -100,7 +100,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
 
   const companyQuery = useQuery({
     queryKey: ["crm", "company", companyId],
-    queryFn: () => fetchJson<{ data: CompanyDetail }>(`/api/v2/crm/companies/${companyId}`),
+    queryFn: () => fetchJson<CompanyDetail>(`/api/v2/crm/companies/${companyId}`),
   });
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "COMPANY"],
@@ -108,7 +108,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
   });
 
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
-  const company = companyQuery.data?.data;
+  const company = companyQuery.data;
 
   if (companyQuery.isLoading) {
     return (

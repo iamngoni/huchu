@@ -185,9 +185,13 @@ function ChaseDialog({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const [seededFor, setSeededFor] = useState<string | null>(row?.documentId ?? null);
-  if (row?.documentId !== seededFor) {
-    setSeededFor(row?.documentId ?? null);
+  // Normalise before comparing: `row?.documentId` is `undefined` with no row
+  // while the state holds `null`, and an un-normalised guard never converges —
+  // it re-runs every render and React aborts with "Too many re-renders".
+  const currentDocumentId = row?.documentId ?? null;
+  const [seededFor, setSeededFor] = useState<string | null>(currentDocumentId);
+  if (currentDocumentId !== seededFor) {
+    setSeededFor(currentDocumentId);
     setOutcome("NO_ANSWER");
     setPromisedAt("");
     setNotes("");
