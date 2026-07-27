@@ -3,7 +3,16 @@
  * Mirrors the lib/autos/autos-v2.ts pattern.
  */
 import { fetchJson } from "@/lib/api-client";
-import type { CrmLeadStage } from "@prisma/client";
+import type {
+  CrmLeadStage,
+  CrmRecurrence,
+  CrmTaskOutcome,
+  CrmTaskPriority,
+  CrmTaskStatus,
+  CrmTaskType,
+} from "@prisma/client";
+import type { CollabEntity } from "@/lib/crm/collaboration";
+import type { TaskQueue } from "@/lib/crm/tasks";
 import type { LeadSort, LeadViewFilters } from "@/lib/crm/views";
 import type { SiteVisitItemInput, SiteVisitReportInput } from "@/lib/crm/site-visits";
 
@@ -577,4 +586,152 @@ export function moveCrmDealStage(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Tasks and collaboration
+// ---------------------------------------------------------------------------
+
+export type CrmTaskRecord = {
+  id: string;
+  title: string;
+  description: string | null;
+  type: CrmTaskType;
+  priority: CrmTaskPriority;
+  status: CrmTaskStatus;
+  dueAt: string;
+  hasDueTime: boolean;
+  outcome: CrmTaskOutcome | null;
+  outcomeNotes: string | null;
+  completedAt: string | null;
+  assignedToId: string | null;
+  assignedTo?: { id: string; name: string | null } | null;
+  leadId: string | null;
+  dealId: string | null;
+  clientId: string | null;
+  personId: string | null;
+  siteId: string | null;
+  recurrence: CrmRecurrence;
+  recurrenceInterval: number;
+  lead?: { id: string; leadNo: string; title: string | null } | null;
+  deal?: { id: string; dealNo: string; title: string } | null;
+  client?: { id: string; name: string } | null;
+  person?: { id: string; fullName: string } | null;
+  createdAt: string;
+};
+
+export type CrmTaskRecordRef = {
+  leadId?: string;
+  dealId?: string;
+  clientId?: string;
+  personId?: string;
+  siteId?: string;
+};
+
+export function fetchCrmTasks(
+  params: { queue?: TaskQueue; page?: number; limit?: number } & CrmTaskRecordRef = {},
+) {
+  return fetchJson<ListResponse<CrmTaskRecord>>(
+    `/api/v2/crm/tasks${qs({
+      queue: params.queue,
+      page: params.page,
+      limit: params.limit,
+      leadId: params.leadId,
+      dealId: params.dealId,
+      clientId: params.clientId,
+      personId: params.personId,
+      siteId: params.siteId,
+    })}`,
+  );
+}
+
+export function createCrmTask(body: Record<string, unknown>) {
+  return fetchJson<Envelope<CrmTaskRecord>>(`/api/v2/crm/tasks`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateCrmTask(id: string, body: Record<string, unknown>) {
+  return fetchJson<
+    Envelope<CrmTaskRecord & { recurredTask: { id: string; dueAt: string } | null; suggestsFollowUp: boolean }>
+  >(`/api/v2/crm/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+}
+
+export function deleteCrmTask(id: string) {
+  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/tasks/${id}`, { method: "DELETE" });
+}
+
+export type CrmCommentAuthor = { id: string; name: string | null; email: string };
+
+export type CrmCommentRecord = {
+  id: string;
+  body: string;
+  parentId: string | null;
+  isPinned: boolean;
+  resolvedAt: string | null;
+  editedAt: string | null;
+  createdAt: string;
+  createdBy: CrmCommentAuthor;
+  resolvedBy?: CrmCommentAuthor | null;
+  mentions: { userId: string }[];
+  replies?: CrmCommentRecord[];
+};
+
+export function fetchCrmComments(entity: CollabEntity, recordId: string) {
+  return fetchJson<Envelope<CrmCommentRecord[]>>(
+    `/api/v2/crm/comments${qs({ entity, recordId })}`,
+  );
+}
+
+export function createCrmComment(body: {
+  entity: CollabEntity;
+  recordId: string;
+  body: string;
+  parentId?: string | null;
+}) {
+  return fetchJson<Envelope<CrmCommentRecord>>(`/api/v2/crm/comments`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateCrmComment(
+  id: string,
+  body: { body?: string; isPinned?: boolean; resolved?: boolean },
+) {
+  return fetchJson<Envelope<CrmCommentRecord>>(`/api/v2/crm/comments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteCrmComment(id: string) {
+  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/comments/${id}`, { method: "DELETE" });
+}
+
+export type CrmFollowerRecord = {
+  id: string;
+  userId: string;
+  user: CrmCommentAuthor;
+};
+
+export function fetchCrmFollowers(entity: CollabEntity, recordId: string) {
+  return fetchJson<Envelope<{ followers: CrmFollowerRecord[]; isFollowing: boolean }>>(
+    `/api/v2/crm/followers${qs({ entity, recordId })}`,
+  );
+}
+
+export function followCrmRecord(entity: CollabEntity, recordId: string, userId?: string) {
+  return fetchJson<Envelope<CrmFollowerRecord>>(`/api/v2/crm/followers`, {
+    method: "POST",
+    body: JSON.stringify({ entity, recordId, userId }),
+  });
+}
+
+export function unfollowCrmRecord(entity: CollabEntity, recordId: string, userId?: string) {
+  return fetchJson<Envelope<{ unfollowed: boolean }>>(
+    `/api/v2/crm/followers${qs({ entity, recordId, userId })}`,
+    { method: "DELETE" },
+  );
 }

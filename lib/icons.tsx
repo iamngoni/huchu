@@ -392,3 +392,6 @@ export const Assessment = createPhosphorIcon(
 );
 export const Calculate = createPhosphorIcon("Calculator", "Calculate");
 export const DomainAdd = createPhosphorIcon("Buildings", "DomainAdd");
+export const ChatCircle = createPhosphorIcon("ChatCircle", "ChatCircle");
+export const PushPin = createPhosphorIcon("PushPin", "PushPin");
+export const Repeat = createPhosphorIcon("Repeat", "Repeat");

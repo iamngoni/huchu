@@ -38,8 +38,9 @@ import { ActivityComposer } from "./activity-composer";
 import { ActivityTimeline } from "./activity-timeline";
 import { AttributesPanel } from "./attributes-panel";
 import { StageProgress } from "./stage-progress";
-import { TasksTab } from "./tasks-tab";
 import { VisitsTab } from "./visits-tab";
+import { CommentThread } from "@/components/crm/collaboration/comment-thread";
+import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import type { LeadAppointment, LeadDetail } from "./lead-types";
 
 /** Measurements captured on site, shaped into quotation lines for the builder. */
@@ -234,12 +235,8 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
                 <TabsTrigger value="visits">
                   Visits{lead.appointments.length > 0 ? ` (${lead.appointments.length})` : ""}
                 </TabsTrigger>
-                <TabsTrigger value="tasks">
-                  Tasks
-                  {lead.followUps.filter((task) => task.status === "PENDING").length > 0
-                    ? ` (${lead.followUps.filter((task) => task.status === "PENDING").length})`
-                    : ""}
-                </TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="comments">Comments</TabsTrigger>
               </TabsList>
             </div>
 
@@ -267,12 +264,11 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             </TabsContent>
 
             <TabsContent value="tasks" className="pt-4">
-              <TasksTab
-                target={{ kind: "lead", id: leadId }}
-                followUps={lead.followUps}
-                owners={owners}
-                currentUserId={currentUserId}
-              />
+              <RecordTasksTab record={{ leadId }} currentUserId={currentUserId} />
+            </TabsContent>
+
+            <TabsContent value="comments" className="pt-4">
+              <CommentThread entity="LEAD" recordId={leadId} currentUserId={currentUserId} />
             </TabsContent>
           </Tabs>
         </div>

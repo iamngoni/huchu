@@ -317,6 +317,7 @@ export const navSections: NavSection[] = [
       { href: "/crm/companies", icon: Building2, label: "Companies" },
       { href: "/crm/sites", icon: MapPin, label: "Sites" },
       { href: "/crm/appointments", icon: CalendarCheck, label: "Site Visits" },
+      { href: "/crm/tasks", icon: Checklist, label: "Tasks" },
       { href: "/crm/follow-ups", icon: Checklist, label: "Follow-ups" },
       { href: "/crm/forms", icon: NoteAdd, label: "Intake Forms" },
       { href: "/crm/insights", icon: BarChart3, label: "Insights" },

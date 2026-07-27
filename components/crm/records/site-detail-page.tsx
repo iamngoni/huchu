@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ClientDate } from "@/components/ui/client-date";
@@ -12,6 +13,8 @@ import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/c
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
+import { CommentThread } from "@/components/crm/collaboration/comment-thread";
+import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
@@ -56,6 +59,7 @@ type SiteDetail = {
 };
 
 export function SiteDetailPage({ siteId }: { siteId: string }) {
+  const { data: session } = useSession();
   const [tab, setTab] = useState("visits");
 
   const siteQuery = useQuery({
@@ -161,6 +165,18 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
                 meta: deal.value !== null ? formatMoney(deal.value, deal.currency) : undefined,
               })}
             />
+          ),
+        },
+        {
+          value: "tasks",
+          label: "Tasks",
+          content: <RecordTasksTab record={{ siteId }} currentUserId={session?.user?.id} />,
+        },
+        {
+          value: "comments",
+          label: "Comments",
+          content: (
+            <CommentThread entity="SITE" recordId={siteId} currentUserId={session?.user?.id} />
           ),
         },
         {

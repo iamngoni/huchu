@@ -120,6 +120,8 @@ export const completeTaskSchema = z.object({
 });
 
 export type TaskQueue =
+  /** Everything on the record, open or done — what a record page's tab wants. */
+  | "ALL"
   | "MINE"
   | "TODAY"
   | "OVERDUE"
@@ -129,6 +131,7 @@ export type TaskQueue =
   | "UNASSIGNED";
 
 export const TASK_QUEUE_LABELS: Record<TaskQueue, string> = {
+  ALL: "All",
   MINE: "My tasks",
   TODAY: "Today",
   OVERDUE: "Overdue",
@@ -160,6 +163,8 @@ export function taskQueueWhere(
   const base: Prisma.CrmTaskWhereInput = { companyId: params.companyId };
 
   switch (queue) {
+    case "ALL":
+      return base;
     case "MINE":
       return { ...base, assignedToId: params.userId, status: "OPEN" };
     case "TODAY":

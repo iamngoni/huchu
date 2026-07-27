@@ -21,9 +21,10 @@ import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 import { DocumentList } from "@/components/crm/documents/document-list";
 import { formatMoney, invoiceOutstanding } from "@/components/crm/documents/document-types";
 import type { LeadDocument } from "@/components/crm/documents/document-types";
+import { CommentThread } from "@/components/crm/collaboration/comment-thread";
+import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityComposer } from "@/components/crm/lead-detail/activity-composer";
 import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline";
-import { TasksTab } from "@/components/crm/lead-detail/tasks-tab";
 import { VisitsTab } from "@/components/crm/lead-detail/visits-tab";
 import type { LeadActivity, LeadAppointment, LeadFollowUp } from "@/components/crm/lead-detail/lead-types";
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
@@ -269,15 +270,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
           {
             value: "tasks",
             label: "Tasks",
-            count: openTasks.length,
-            content: (
-              <TasksTab
-                target={{ kind: "deal", id: dealId }}
-                followUps={deal.followUps}
-                owners={owners}
-                currentUserId={currentUserId}
-              />
-            ),
+            content: <RecordTasksTab record={{ dealId }} currentUserId={currentUserId} />,
           },
           {
             value: "people",
@@ -297,6 +290,13 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                   meta: contact.person.phone ?? undefined,
                 })}
               />
+            ),
+          },
+          {
+            value: "comments",
+            label: "Comments",
+            content: (
+              <CommentThread entity="DEAL" recordId={dealId} currentUserId={currentUserId} />
             ),
           },
           {

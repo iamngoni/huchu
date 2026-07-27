@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,8 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
+import { CommentThread } from "@/components/crm/collaboration/comment-thread";
+import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
@@ -93,6 +96,7 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 
 export function PersonDetailPage({ personId }: { personId: string }) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [tab, setTab] = useState("timeline");
 
   const personQuery = useQuery({
@@ -184,6 +188,24 @@ export function PersonDetailPage({ personId }: { personId: string }) {
                     ? formatMoney(contact.deal.value, contact.deal.currency)
                     : undefined,
               })}
+            />
+          ),
+        },
+        {
+          value: "tasks",
+          label: "Tasks",
+          content: (
+            <RecordTasksTab record={{ personId }} currentUserId={session?.user?.id} />
+          ),
+        },
+        {
+          value: "comments",
+          label: "Comments",
+          content: (
+            <CommentThread
+              entity="PERSON"
+              recordId={personId}
+              currentUserId={session?.user?.id}
             />
           ),
         },

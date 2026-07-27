@@ -13,6 +13,7 @@ import { createTaskSchema, taskQueueWhere, type TaskQueue } from "@/lib/crm/task
 import { isCompanyUser } from "../_helpers";
 
 const QUEUES: TaskQueue[] = [
+  "ALL",
   "MINE",
   "TODAY",
   "OVERDUE",
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
       ...(searchParams.get("leadId") ? { leadId: searchParams.get("leadId")! } : {}),
       ...(searchParams.get("clientId") ? { clientId: searchParams.get("clientId")! } : {}),
       ...(searchParams.get("personId") ? { personId: searchParams.get("personId")! } : {}),
+      ...(searchParams.get("siteId") ? { siteId: searchParams.get("siteId")! } : {}),
     };
 
     const [tasks, total] = await Promise.all([

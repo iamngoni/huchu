@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +13,8 @@ import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/c
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
+import { CommentThread } from "@/components/crm/collaboration/comment-thread";
+import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
@@ -90,6 +93,7 @@ function TextRow({ label, value }: { label: string; value: string | null }) {
 
 export function CompanyDetailPage({ companyId }: { companyId: string }) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [tab, setTab] = useState("people");
 
   const companyQuery = useQuery({
@@ -221,6 +225,24 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
           value: "timeline",
           label: "Timeline",
           content: <ActivityTimeline activities={company.activities} />,
+        },
+        {
+          value: "tasks",
+          label: "Tasks",
+          content: (
+            <RecordTasksTab record={{ clientId: companyId }} currentUserId={session?.user?.id} />
+          ),
+        },
+        {
+          value: "comments",
+          label: "Comments",
+          content: (
+            <CommentThread
+              entity="COMPANY"
+              recordId={companyId}
+              currentUserId={session?.user?.id}
+            />
+          ),
         },
         {
           value: "history",
