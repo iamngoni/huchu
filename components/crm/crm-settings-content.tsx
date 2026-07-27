@@ -14,6 +14,7 @@ import { CRM_CHANNEL_LABELS, CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
 import { CustomFieldsPanel } from "@/components/crm/settings/custom-fields-panel";
 import { PipelinesPanel } from "@/components/crm/settings/pipelines-panel";
 import { PermissionsPanel } from "@/components/crm/settings/permissions-panel";
+import { AutomationsPanel } from "@/components/crm/settings/automations-panel";
 import type { CrmLeadChannel } from "@prisma/client";
 
 type ApiKey = {
@@ -375,9 +376,13 @@ export function CrmSettingsContent() {
           <TabsTrigger value="keys">API Keys</TabsTrigger>
           <TabsTrigger value="sources">Lead Sources</TabsTrigger>
           <TabsTrigger value="commissions">Commissions</TabsTrigger>
+          <TabsTrigger value="automations">Automations</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
         </TabsList>
       </div>
+      <TabsContent value="automations">
+        <AutomationsPanel />
+      </TabsContent>
       <TabsContent value="permissions">
         <PermissionsPanel />
       </TabsContent>

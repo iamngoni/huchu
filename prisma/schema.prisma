@@ -197,6 +197,8 @@ model Company {
   crmComments                   CrmComment[]
   crmMentions                   CrmMention[]
   crmFollowers                  CrmFollower[]
+  crmAutomations                CrmAutomation[]
+  crmAutomationRuns             CrmAutomationRun[]
 
   @@index([tenantStatus])
   @@index([isProvisioned])
@@ -954,6 +956,7 @@ model User {
   crmCommentsResolved               CrmComment[]                   @relation("CrmCommentResolvedBy")
   crmMentions                       CrmMention[]                   @relation("CrmMentionUser")
   crmFollowing                      CrmFollower[]                  @relation("CrmFollowerUser")
+  crmAutomationsCreated             CrmAutomation[]                @relation("CrmAutomationCreatedBy")
 
   @@index([companyId])
   @@index([email])
@@ -7713,4 +7716,74 @@ model CrmFollower {
 
   @@unique([userId, entity, recordId])
   @@index([companyId, entity, recordId])
+}
+
+/// A rule that watches for something happening and does something about it.
+/// Triggers, conditions and actions are stored as JSON rather than columns
+/// because the shape changes as rules are added, and a migration per rule type
+/// is a tax nobody should pay for a settings screen.
+model CrmAutomation {
+  id          String              @id @default(uuid())
+  companyId   String
+  name        String
+  description String?
+  trigger     CrmAutomationTrigger
+  /// Trigger-specific settings, e.g. which stage, how many days of silence.
+  triggerConfig Json?
+  /// All must hold for the actions to run. Empty means "always".
+  conditions  Json?
+  /// Run in order. A failing action is logged and the rest still run.
+  actions     Json
+  isEnabled   Boolean             @default(true)
+  /// Bumped every time the rule fires, so a runaway rule is visible.
+  runCount    Int                 @default(0)
+  lastRunAt   DateTime?
+  createdById String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?              @relation("CrmAutomationCreatedBy", fields: [createdById], references: [id])
+  runs      CrmAutomationRun[]
+
+  @@index([companyId, trigger, isEnabled])
+}
+
+/// One firing of a rule. Kept so "why did this lead get assigned to me?" has an
+/// answer, and so a rule that is quietly failing is visible rather than
+/// mysterious.
+model CrmAutomationRun {
+  id           String   @id @default(uuid())
+  companyId    String
+  automationId String
+  /// What it fired on.
+  entity       CrmFieldEntity
+  recordId     String
+  status       CrmAutomationRunStatus @default(SUCCEEDED)
+  /// Per-action outcomes, and the message when one failed.
+  result       Json?
+  createdAt    DateTime @default(now())
+
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  automation CrmAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, automationId, createdAt])
+  @@index([companyId, entity, recordId])
+}
+
+enum CrmAutomationTrigger {
+  LEAD_CREATED
+  LEAD_STAGE_CHANGED
+  DEAL_CREATED
+  DEAL_STAGE_CHANGED
+  TASK_OVERDUE
+  RECORD_IDLE
+  DOCUMENT_APPROVED
+  PAYMENT_RECEIVED
+}
+
+enum CrmAutomationRunStatus {
+  SUCCEEDED
+  PARTIAL
+  FAILED
 }

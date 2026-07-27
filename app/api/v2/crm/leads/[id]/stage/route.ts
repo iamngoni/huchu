@@ -4,6 +4,7 @@ import { errorResponse, successResponse, validateSession } from "@/lib/api-utils
 import { prisma } from "@/lib/prisma";
 import { canEditAssignedRecord } from "@/lib/crm/scope";
 import { changeLeadStage, crmLeadStageSchema } from "@/lib/crm/pipeline";
+import { runAutomations } from "@/lib/crm/automation-runner";
 
 const bodySchema = z.object({
   stage: crmLeadStageSchema,
@@ -38,6 +39,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         lostReason,
       }),
     );
+
+    await runAutomations({
+      companyId: session.user.companyId,
+      trigger: "LEAD_STAGE_CHANGED",
+      entity: "LEAD",
+      recordId: id,
+      record: updated as unknown as Record<string, unknown>,
+      stage,
+      actorId: session.user.id,
+    });
 
     return successResponse(updated);
   } catch (error) {

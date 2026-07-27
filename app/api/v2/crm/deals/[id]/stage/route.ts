@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { runAutomations } from "@/lib/crm/automation-runner";
 import { canEditAssignedRecord } from "@/lib/crm/scope";
 import { missingRequiredFields } from "@/lib/crm/pipelines";
 import { fieldLabel } from "@/lib/crm/history";
@@ -121,6 +122,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
 
       return result;
+    });
+
+    await runAutomations({
+      companyId: session.user.companyId,
+      trigger: "DEAL_STAGE_CHANGED",
+      entity: "DEAL",
+      recordId: id,
+      record: updated as unknown as Record<string, unknown>,
+      stage: stage.name,
+      actorId: session.user.id,
     });
 
     return successResponse(updated);

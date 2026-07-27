@@ -323,6 +323,7 @@ export const navSections: NavSection[] = [
       { href: "/crm/forms", icon: NoteAdd, label: "Intake Forms" },
       { href: "/crm/import", icon: Upload, label: "Import" },
       { href: "/crm/insights", icon: BarChart3, label: "Insights" },
+      { href: "/crm/reports", icon: ChartLine, label: "Sales Reports" },
       {
         href: "/crm/settings",
         icon: ManageAccounts,

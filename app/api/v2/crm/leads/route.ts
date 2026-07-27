@@ -18,6 +18,7 @@ import {
   parseLeadFiltersFromParams,
 } from "@/lib/crm/views";
 import { autoAssignLead } from "@/lib/crm/auto-assign";
+import { runAutomations } from "@/lib/crm/automation-runner";
 import { scoreLead } from "@/lib/crm/lead-scoring";
 import { isCompanyUser } from "../_helpers";
 
@@ -179,6 +180,17 @@ export async function POST(request: NextRequest) {
         createdById: session.user.id,
         score: score.total,
       },
+    });
+
+    // Rules run after the lead exists and never fail the request that made it.
+    await runAutomations({
+      companyId: session.user.companyId,
+      trigger: "LEAD_CREATED",
+      entity: "LEAD",
+      recordId: lead.id,
+      record: lead as unknown as Record<string, unknown>,
+      stage: lead.stage,
+      actorId: session.user.id,
     });
 
     return successResponse({ ...lead, scoreBreakdown: score, assignment }, 201);
