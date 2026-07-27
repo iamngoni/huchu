@@ -271,7 +271,7 @@ export function buildCustomFieldValues(
   definitions: FieldDefinition[],
   submitted: Record<string, unknown> | null | undefined,
   options: { partial?: boolean } = {},
-): { values: Record<string, unknown>; errors: string[] } {
+): { values: Prisma.InputJsonObject; errors: string[] } {
   const values: Record<string, unknown> = {};
   const errors: string[] = [];
   const input = submitted ?? {};
@@ -290,7 +290,7 @@ export function buildCustomFieldValues(
     if (result.value !== null) values[definition.key] = result.value;
   }
 
-  return { values, errors };
+  return { values: values as Prisma.InputJsonObject, errors };
 }
 
 /**

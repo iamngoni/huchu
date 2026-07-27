@@ -154,6 +154,10 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/scrap-metal", featureKey: "scrap-metal.home" },
 
   { scope: "page", prefix: "/crm/leads", featureKey: "crm.leads" },
+  { scope: "page", prefix: "/crm/deals", featureKey: "crm.leads" },
+  { scope: "page", prefix: "/crm/people", featureKey: "crm.clients" },
+  { scope: "page", prefix: "/crm/companies", featureKey: "crm.clients" },
+  { scope: "page", prefix: "/crm/sites", featureKey: "crm.appointments" },
   { scope: "page", prefix: "/crm/clients", featureKey: "crm.clients" },
   { scope: "page", prefix: "/crm/appointments", featureKey: "crm.appointments" },
   { scope: "page", prefix: "/crm/follow-ups", featureKey: "crm.core" },
@@ -413,6 +417,12 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/crm/appointments", featureKey: "crm.appointments" },
   { scope: "api", prefix: "/api/v2/crm/follow-ups", featureKey: "crm.core" },
   { scope: "api", prefix: "/api/v2/crm/leads", featureKey: "crm.leads" },
+  { scope: "api", prefix: "/api/v2/crm/deals", featureKey: "crm.leads" },
+  { scope: "api", prefix: "/api/v2/crm/people", featureKey: "crm.clients" },
+  { scope: "api", prefix: "/api/v2/crm/companies", featureKey: "crm.clients" },
+  { scope: "api", prefix: "/api/v2/crm/sites", featureKey: "crm.appointments" },
+  { scope: "api", prefix: "/api/v2/crm/pipelines", featureKey: "crm.settings" },
+  { scope: "api", prefix: "/api/v2/crm/field-definitions", featureKey: "crm.settings" },
   { scope: "api", prefix: "/api/v2/crm/uploads", featureKey: "crm.core" },
   { scope: "api", prefix: "/api/v2/crm", featureKey: "crm.core" },
 
