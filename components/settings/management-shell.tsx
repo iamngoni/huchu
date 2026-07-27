@@ -59,7 +59,7 @@ export function ManagementShell({
   const areaLabel = getAreaLabel(area);
 
   return (
-    <div className="settings-layout w-full">
+    <div className="settings-layout container mx-auto w-full">
       <aside className="settings-rail" aria-label="Management navigation">
         <NavGroup label="Settings">
           {visibleModules.map((module) => {

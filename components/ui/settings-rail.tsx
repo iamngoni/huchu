@@ -1,21 +1,21 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 
-import { cn } from "@/lib/utils";
+import { NavRailGroup, NavRailItem } from "@/components/ui/nav-rail";
 
 /**
  * Settings-rail navigation.
  *
- * `@corelithzw/react` ships the CSS for this surface — `.settings-rail`,
- * `.group-label`, `.rail-item` and `.rail-item.active` — but exports no React
- * component for it (there is no `NavGroup`/`NavItem` in the package; see the
- * export list in `dist/index.d.ts`). Rather than forking a design-system
- * component, these two render the package's markup contract directly, so the
- * styling still comes entirely from the package.
+ * This is now a thin alias over `components/ui/nav-rail.tsx`, which owns the
+ * markup contract (`.rail-item`, `.group-label`) that `.settings-rail` and
+ * `.nav-rail` share. Settings and Preferences keep calling `NavGroup`/`NavItem`
+ * because that is the design system's nav API naming; every other module uses
+ * `NavRail`/`NavRailItem` directly.
  *
- * Drop these in favour of the real exports if a future release ships them.
+ * `@corelithzw/react` still exports no React component for this surface (there
+ * is no `NavGroup`/`NavItem` in `dist/index.d.ts`), only the CSS — drop this
+ * file in favour of the real exports if a future release ships them.
  */
 
 type NavGroupProps = {
@@ -24,12 +24,7 @@ type NavGroupProps = {
 };
 
 export function NavGroup({ label, children }: NavGroupProps) {
-  return (
-    <>
-      <div className="group-label">{label}</div>
-      {children}
-    </>
-  );
+  return <NavRailGroup label={label}>{children}</NavRailGroup>;
 }
 
 type NavItemProps = {
@@ -42,15 +37,8 @@ type NavItemProps = {
 
 export function NavItem({ to, active, icon, children }: NavItemProps) {
   return (
-    <Link
-      href={to}
-      className={cn("rail-item", active && "active")}
-      aria-current={active ? "page" : undefined}
-    >
-      {icon ? (
-        <span className="mr-2 inline-flex shrink-0 items-center">{icon}</span>
-      ) : null}
+    <NavRailItem to={to} active={active} icon={icon}>
       {children}
-    </Link>
+    </NavRailItem>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { NavRail, NavRailItem } from "@/components/ui/nav-rail";
 import {
   Dashboard,
   TableRows,
@@ -55,12 +55,11 @@ export function ImportTabRail({
   exceptionCount?: number;
 }) {
   return (
-    <nav
-      aria-label="Import sections"
-      className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-[--border] bg-[--surface-base] p-2"
+    <NavRail
+      label="Import sections"
+      className="w-44 shrink-0 border-r border-[--border] bg-[--surface-base] p-2"
     >
       {TABS.map(({ id, label, icon: Icon }) => {
-        const isActive = id === active;
         const badgeCount =
           id === "ledger" && anomalyCount && anomalyCount > 0
             ? anomalyCount
@@ -69,41 +68,26 @@ export function ImportTabRail({
               : null;
 
         return (
-          <button
+          <NavRailItem
             key={id}
-            type="button"
+            active={id === active}
             onClick={() => onChange(id)}
-            aria-current={isActive ? "page" : undefined}
-            className={cn(
-              // Base: shadcn button-like sizing + typography from the design system
-              "group relative flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-              isActive
-                ? // Active: solid surface + primary text + a left accent bar so
-                  // the selection is unmissable across both light and dark
-                  // themes (the previous border-r approach was easy to miss).
-                  "bg-[--action-secondary-bg] text-[--action-primary-bg] shadow-[inset_2px_0_0_0_var(--action-primary-bg)]"
-                : "text-[--text-muted] hover:bg-[--surface-muted] hover:text-[--text-strong]",
-            )}
+            icon={<Icon className="size-4" />}
+            trailing={
+              badgeCount ? (
+                <Badge
+                  variant={id === "exceptions" ? "destructive" : "warning"}
+                  className="h-4 min-w-[1rem] justify-center px-1 text-[10px] tabular-nums"
+                >
+                  {badgeCount > 99 ? "99+" : badgeCount}
+                </Badge>
+              ) : null
+            }
           >
-            <Icon
-              className={cn(
-                "h-4 w-4 shrink-0",
-                isActive ? "" : "text-[--text-subtle] group-hover:text-[--text-muted]",
-              )}
-            />
-            <span className="flex-1 truncate">{label}</span>
-            {badgeCount ? (
-              <Badge
-                variant={id === "exceptions" ? "destructive" : "warning"}
-                className="h-4 min-w-[1rem] justify-center px-1 text-[10px] tabular-nums"
-              >
-                {badgeCount > 99 ? "99+" : badgeCount}
-              </Badge>
-            ) : null}
-          </button>
+            {label}
+          </NavRailItem>
         );
       })}
-    </nav>
+    </NavRail>
   );
 }

@@ -87,7 +87,7 @@ export function PreferencesShell({
   );
 
   return (
-    <div className="settings-layout w-full">
+    <div className="settings-layout container mx-auto w-full">
       <aside className="settings-rail" aria-label="Preferences navigation">
         <NavGroup label="Account">
           {renderNavItems(accountItems, pathname)}
