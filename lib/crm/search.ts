@@ -12,6 +12,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { normalizePhoneE164 } from "@/lib/crm/phone";
+import { PRODUCT_KIND_LABELS, UNIT_LABELS } from "@/lib/inventory/catalogue";
 
 type Tx = Prisma.TransactionClient;
 
@@ -23,7 +24,9 @@ export type SearchResultType =
   | "SITE"
   | "QUOTATION"
   | "INVOICE"
-  | "RECEIPT";
+  | "RECEIPT"
+  | "PRODUCT"
+  | "CUSTOMER";
 
 export type SearchResult = {
   type: SearchResultType;
@@ -45,6 +48,8 @@ export const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
   QUOTATION: "Quotations",
   INVOICE: "Invoices",
   RECEIPT: "Receipts",
+  PRODUCT: "Catalogue",
+  CUSTOMER: "Accounts",
 };
 
 /** Order groups appear in: the records people look for most, first. */
@@ -54,9 +59,11 @@ export const SEARCH_TYPE_ORDER: SearchResultType[] = [
   "COMPANY",
   "LEAD",
   "SITE",
+  "PRODUCT",
   "QUOTATION",
   "INVOICE",
   "RECEIPT",
+  "CUSTOMER",
 ];
 
 const PER_TYPE_LIMIT = 5;
@@ -71,8 +78,13 @@ function pluralise(count: number, singular: string): string {
 }
 
 /**
- * Search across the CRM. Every query is tenant-scoped; the caller supplies the
- * companyId and no result can cross that boundary.
+ * Search across the workspace. Every query is tenant-scoped; the caller
+ * supplies the companyId and no result can cross that boundary.
+ *
+ * Deliberately not CRM-only. Someone typing a product code is looking for the
+ * item in the shared catalogue whether they are quoting from the CRM, ringing
+ * it up in Retail or costing a work order — and someone typing a customer name
+ * should find the accounting account as readily as the CRM company.
  */
 export async function searchCrm(
   db: Tx,
@@ -86,7 +98,18 @@ export async function searchCrm(
   const phoneE164 = normalizePhoneE164(query);
   const companyId = input.companyId;
 
-  const [people, companies, leads, deals, sites, quotations, invoices, receipts] =
+  const [
+    people,
+    companies,
+    leads,
+    deals,
+    sites,
+    quotations,
+    invoices,
+    receipts,
+    products,
+    customers,
+  ] =
     await Promise.all([
       db.crmPerson.findMany({
         where: {
@@ -245,6 +268,28 @@ export async function searchCrm(
         },
         take,
       }),
+
+      // The shared catalogue — the same rows Retail lists and the CRM quotes.
+      db.product.findMany({
+        where: {
+          companyId,
+          archivedAt: null,
+          OR: [{ name: contains }, { code: contains }, { description: contains }],
+        },
+        select: { id: true, code: true, name: true, kind: true, unit: true, isActive: true },
+        take,
+      }),
+
+      // Accounting customers. A CRM company and an accounting account are two
+      // records for one relationship, and people search for either by name.
+      db.customer.findMany({
+        where: {
+          companyId,
+          OR: [{ name: contains }, { email: contains }, { contactName: contains }],
+        },
+        select: { id: true, name: true, email: true, contactName: true },
+        take,
+      }),
     ]);
 
   const results: SearchResult[] = [];
@@ -358,6 +403,36 @@ export async function searchCrm(
       title: doc.receipt?.receiptNumber ?? "Receipt",
       subtitle: `${doc.currency} ${doc.amount.toLocaleString()}`,
       href: documentHref(doc),
+    });
+  }
+
+  for (const product of products) {
+    results.push({
+      type: "PRODUCT",
+      id: product.id,
+      reference: product.code,
+      title: product.name,
+      subtitle: [
+        PRODUCT_KIND_LABELS[product.kind],
+        `per ${UNIT_LABELS[product.unit]}`,
+        product.isActive ? null : "archived",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      href: `/stores/catalogue?product=${product.id}`,
+    });
+  }
+
+  for (const customer of customers) {
+    results.push({
+      type: "CUSTOMER",
+      id: customer.id,
+      reference: null,
+      title: customer.name,
+      subtitle: [customer.contactName, customer.email].filter(Boolean).join(" · ") || null,
+      // The accounting account has no page of its own; its sales history is
+      // the useful destination.
+      href: `/accounting/sales?customerId=${customer.id}`,
     });
   }
 

@@ -141,6 +141,9 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
       error={peopleQuery.error}
     >
       <DataTable
+        // The shell above owns search; a second box in the table toolbar is the
+        // duplicate-control failure the cookbook's one-filter-pathway rule exists to stop.
+        features={{ globalFilter: false }}
         data={rows}
         columns={columns}
         edgeToEdge
