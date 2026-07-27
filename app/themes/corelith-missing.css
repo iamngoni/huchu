@@ -20,7 +20,18 @@
                   `.is-loading`
      Card         `.card-actions`, `.card-tone-*`
      DataToolbar  `.data-toolbar-filters`, `.data-toolbar-actions`
-     Tabs         `.tabs-trigger`
+     Tabs         every class the component emits. `Tabs` renders
+                  `.utabs/.stabs/.ptabs/.vtabs` with `.utab/.stab/.ptab/.vtab`
+                  triggers, and *none* of those eight names exists in the
+                  bundle or in the docs site's own components.css — the
+                  component's class names outran its CSS. The stylesheet does
+                  carry `.under-tabs`, `.seg-tabs` and `.iconstrip`, which are
+                  what p-tabs.html says the three variants look like, so the
+                  rules below reproduce those against the names the component
+                  actually emits.
+     KpiGrid      every `.kpi-cell*` child — the executive KPI row rendered as
+                  a column of naked numbers
+     RowCard      `.b-row-card-title`, `.b-row-card-sub`
 
    Written to the package's own conventions: tokens only — no colour, size,
    radius, shadow or duration literal — and the same selector shapes the
@@ -354,30 +365,285 @@
   flex-wrap: nowrap;
 }
 
-/* ── Tabs trigger ────────────────────────────────────────────────────────── */
+/* ── Tabs ───────────────────────────────────────────────────────────────────
+   div[role=tablist].{utabs|stabs|ptabs|vtabs} > button.{utab|stab|ptab|vtab}
+   The active trigger carries `.current`, `aria-selected="true"` and
+   `data-state="active"`; all three are matched so the styling holds however
+   the trigger is rendered, including through `asChild`.
 
-.tabs-trigger {
+   Heights follow p-tabs.html: 40px underline, 36 segmented, 32 pill.        */
+
+/* Underline — the default, and the one that belongs above page content. */
+.utabs {
+  display: flex;
+  gap: var(--space-6);
+  border-bottom: 1px solid var(--border);
+  padding: 0 var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.utabs::-webkit-scrollbar {
+  display: none;
+}
+
+.utab {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0 var(--space-3);
-  min-height: var(--space-8);
+  min-height: 40px;
+  padding: 0;
   border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   background: transparent;
-  border-radius: var(--radius-md);
-  font: var(--type-label);
+  font: 500 14px/1 var(--font-sans);
   color: var(--text-muted);
   white-space: nowrap;
   cursor: pointer;
 }
 
-.tabs-trigger:hover {
+.utab:hover {
   color: var(--text-strong);
 }
 
-.tabs-trigger[aria-selected="true"],
-.tabs-trigger[data-state="active"] {
+.utab.current,
+.utab[aria-selected="true"],
+.utab[data-state="active"] {
+  color: var(--text-strong);
+  border-bottom-color: var(--brand);
+}
+
+/* Segmented — a control, not a header. Sits on the muted surface. */
+.stabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-muted);
+  border-radius: var(--radius-lg);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.stabs::-webkit-scrollbar {
+  display: none;
+}
+
+.stab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  font: 500 13px/1 var(--font-sans);
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.stab:hover {
+  color: var(--text-strong);
+}
+
+.stab.current,
+.stab[aria-selected="true"],
+.stab[data-state="active"] {
   background: var(--surface);
   color: var(--text-strong);
-  box-shadow: var(--shadow-rest);
+  box-shadow: var(--shadow-inset-soft);
+}
+
+/* Pill — the compact one, for a filter row rather than page navigation. */
+.ptabs {
+  display: inline-flex;
+  gap: var(--space-2);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ptabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ptab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font: 500 13px/1 var(--font-sans);
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ptab:hover {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+}
+
+.ptab.current,
+.ptab[aria-selected="true"],
+.ptab[data-state="active"] {
+  background: var(--brand-soft);
+  border-color: var(--brand-100);
+  color: var(--brand-strong);
+}
+
+/* Vertical — a rail beside the content, same quiet-list rule as .nav-rail. */
+.vtabs {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.vtab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  font: 500 14px/1.2 var(--font-sans);
+  color: var(--text-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.vtab:hover {
+  background: var(--surface-muted);
+  color: var(--text-strong);
+}
+
+.vtab.current,
+.vtab[aria-selected="true"],
+.vtab[data-state="active"] {
+  background: var(--surface-muted);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+/* ── KpiGrid ────────────────────────────────────────────────────────────────
+   div.kpi-grid.kpi-grid-{n} > div.kpi-item > div.kpi-cell
+     > (div.kpi-cell-h > span.kpi-cell-lbl + span.kpi-cell-chev)
+     > div.kpi-cell-val
+     > div.kpi-cell-foot > (span.kpi-cell-delta[.tone-*] + span.kpi-cell-spark)
+
+   `.kpi-grid` itself is styled by the package; only the cell internals are
+   missing, which left the executive KPI row as a column of naked numbers.   */
+
+.kpi-item {
+  min-width: 0;
+}
+
+.kpi-cell {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  min-width: 0;
+}
+
+/* The whole cell is the target when it links somewhere. */
+a.kpi-cell:hover,
+button.kpi-cell:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+}
+
+.kpi-cell-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.kpi-cell-lbl {
+  font: var(--type-eyebrow);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpi-cell-chev {
+  flex: none;
+  display: inline-flex;
+  color: var(--text-subtle);
+}
+
+.kpi-cell-val {
+  font: var(--type-display-sm);
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-cell-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--space-5);
+}
+
+.kpi-cell-delta {
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-cell-delta.tone-success {
+  color: var(--tone-success);
+}
+
+.kpi-cell-delta.tone-warn {
+  color: var(--tone-warn);
+}
+
+.kpi-cell-delta.tone-danger {
+  color: var(--tone-danger);
+}
+
+.kpi-cell-spark {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-subtle);
+}
+
+/* ── RowCard title/subtitle ─────────────────────────────────────────────────
+   `.b-row-card` is styled by the package but these two children are not, so
+   the title and its subtitle rendered at the same weight and ran together.  */
+
+.b-row-card-title {
+  font: var(--type-label);
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.b-row-card-sub {
+  font: var(--type-body-sm);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

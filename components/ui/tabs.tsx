@@ -1,66 +1,62 @@
 "use client";
 
 import * as React from "react";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import {
+  Tabs as DsTabs,
+  TabsContent as DsTabsContent,
+  TabsList as DsTabsList,
+  TabsTrigger as DsTabsTrigger,
+} from "@corelithzw/react";
 
 import { cn } from "@/lib/utils";
 
-const Tabs = TabsPrimitive.Root;
+/**
+ * Tabs — a shim onto the design system's Tabs primitive.
+ *
+ * This used to be Radix plus a wall of Tailwind, which meant every tab strip
+ * in the app was a second opinion on what a tab looks like. The design system
+ * exports the real thing — roving tabindex, arrow-key cycling, Home/End, and
+ * the four documented variants — so this file only keeps the prop names the
+ * existing call sites already pass.
+ *
+ * One difference worth knowing: the DS primitive is `variant`-driven and
+ * defaults to `underline`. The local component always drew the segmented look,
+ * so `segmented` is the default here and existing screens keep their shape.
+ * Pass `variant="underline"` for page-level navigation — that is what the
+ * design system intends above page content.
+ */
+
+type DsVariant = "underline" | "segmented" | "pill" | "vertical";
+
+/** The DS root is a plain function component, so there is no ref to forward. */
+function Tabs({ variant = "segmented", ...props }: React.ComponentProps<typeof DsTabs>) {
+  return <DsTabs variant={variant as DsVariant} {...props} />;
+}
 
 const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    data-slot="tabs-list"
-    className={cn(
-      "inline-flex h-9 max-w-full items-center gap-1 overflow-x-auto rounded-[10px] bg-[var(--surface-muted)] p-1 text-[var(--text-muted)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-      className,
-    )}
-    {...props}
-  />
-));
-TabsList.displayName = TabsPrimitive.List.displayName;
+  React.ComponentRef<typeof DsTabsList>,
+  React.ComponentPropsWithoutRef<typeof DsTabsList>
+>(function TabsList({ className, ...props }, ref) {
+  return <DsTabsList ref={ref} className={cn(className)} data-slot="tabs-list" {...props} />;
+});
+TabsList.displayName = "TabsList";
 
 const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> & {
-    asChild?: boolean;
-  }
->(({ className, asChild, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    asChild={asChild}
-    data-slot="tabs-trigger"
-    className={cn(
-      "inline-flex h-7 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[7px] px-3 text-[13px] font-medium transition-[background-color,color] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-default)]",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:ring-offset-0",
-      "hover:text-[var(--text-strong)]",
-      "disabled:pointer-events-none disabled:opacity-50",
-      "data-[state=active]:bg-[var(--surface)] data-[state=active]:font-semibold data-[state=active]:text-[var(--text-strong)] data-[state=active]:shadow-[var(--shadow-rest)]",
-      "[&_svg]:size-4 [&_svg]:shrink-0",
-      className,
-    )}
-    {...props}
-  />
-));
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+  React.ComponentRef<typeof DsTabsTrigger>,
+  React.ComponentPropsWithoutRef<typeof DsTabsTrigger>
+>(function TabsTrigger({ className, ...props }, ref) {
+  return <DsTabsTrigger ref={ref} className={cn(className)} {...props} />;
+});
+TabsTrigger.displayName = "TabsTrigger";
 
 const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    data-slot="tabs-content"
-    className={cn(
-      "mt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--focus-ring-offset)]",
-      className,
-    )}
-    {...props}
-  />
-));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
+  React.ComponentRef<typeof DsTabsContent>,
+  React.ComponentPropsWithoutRef<typeof DsTabsContent>
+>(function TabsContent({ className, ...props }, ref) {
+  return (
+    <DsTabsContent ref={ref} className={cn("mt-4", className)} data-slot="tabs-content" {...props} />
+  );
+});
+TabsContent.displayName = "TabsContent";
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };
