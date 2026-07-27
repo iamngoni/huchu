@@ -1,4 +1,5 @@
 import type { CrmLeadStage } from "@prisma/client";
+import type { LeadScore } from "@/lib/crm/lead-scoring";
 
 import type { LeadDocument } from "@/components/crm/documents/document-types";
 
@@ -73,4 +74,5 @@ export type LeadDetail = {
   followUps: LeadFollowUp[];
   appointments: LeadAppointment[];
   intakeSubmissions: LeadIntakeSubmission[];
+  scoreBreakdown?: LeadScore;
 };

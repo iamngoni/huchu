@@ -17,6 +17,8 @@ import {
   leadSortSchema,
   parseLeadFiltersFromParams,
 } from "@/lib/crm/views";
+import { autoAssignLead } from "@/lib/crm/auto-assign";
+import { scoreLead } from "@/lib/crm/lead-scoring";
 import { isCompanyUser } from "../_helpers";
 
 const createLeadSchema = z.object({
@@ -131,6 +133,29 @@ export async function POST(request: NextRequest) {
       entity: "CRM_LEAD",
     });
 
+    const sourceChannel = deriveLeadChannel({
+      explicitChannel: data.sourceChannel,
+      utmMedium: data.utmMedium,
+      utmSource: data.utmSource,
+      source: data.source,
+      origin: "MANUAL",
+    });
+
+    // A lead with nobody on it is a lead nobody works, so one gets picked when
+    // the caller didn't name anyone.
+    const assignment = data.assignedToId
+      ? null
+      : await autoAssignLead(session.user.companyId);
+
+    const score = scoreLead({
+      estimatedValue: data.estimatedValue,
+      contactEmail: data.contactEmail,
+      contactPhone: data.contactPhone,
+      clientId: data.clientId,
+      services: data.services,
+      sourceChannel,
+    });
+
     const lead = await prisma.crmLead.create({
       data: {
         companyId: session.user.companyId,
@@ -146,22 +171,17 @@ export async function POST(request: NextRequest) {
         currency: data.currency ?? "USD",
         services: data.services ?? [],
         source: data.source ?? undefined,
-        sourceChannel: deriveLeadChannel({
-          explicitChannel: data.sourceChannel,
-          utmMedium: data.utmMedium,
-          utmSource: data.utmSource,
-          source: data.source,
-          origin: "MANUAL",
-        }),
+        sourceChannel,
         utmSource: data.utmSource ?? undefined,
         utmMedium: data.utmMedium ?? undefined,
         utmCampaign: data.utmCampaign ?? undefined,
-        assignedToId: data.assignedToId ?? undefined,
+        assignedToId: data.assignedToId ?? assignment?.userId ?? undefined,
         createdById: session.user.id,
+        score: score.total,
       },
     });
 
-    return successResponse(lead, 201);
+    return successResponse({ ...lead, scoreBreakdown: score, assignment }, 201);
   } catch (error) {
     if (error instanceof z.ZodError) return errorResponse("Validation failed", 400, error.issues);
     console.error("[API] POST /api/v2/crm/leads error:", error);

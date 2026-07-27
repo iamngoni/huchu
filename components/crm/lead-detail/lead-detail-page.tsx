@@ -39,6 +39,7 @@ import { ActivityTimeline } from "./activity-timeline";
 import { AttributesPanel } from "./attributes-panel";
 import { StageProgress } from "./stage-progress";
 import { VisitsTab } from "./visits-tab";
+import { LeadScoreCard } from "./lead-score-card";
 import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import type { LeadAppointment, LeadDetail } from "./lead-types";
@@ -282,6 +283,12 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
               {lead.probability ?? 0}% likely · {CRM_STAGE_LABELS[lead.stage]}
             </p>
           </RailSection>
+
+          {lead.scoreBreakdown ? (
+            <RailSection title="Score">
+              <LeadScoreCard score={lead.scoreBreakdown} />
+            </RailSection>
+          ) : null}
 
           {nextTask ? (
             <RailSection title="Next task">

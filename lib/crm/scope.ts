@@ -5,11 +5,19 @@
  * SALES_REP may only *edit* records assigned to them (and may claim
  * unassigned ones). Managers/admins edit everything.
  */
+import type { UserRole } from "@prisma/client";
+
 import type { AuthenticatedSession } from "@/lib/auth-core/types";
 
 // Mirrors the UserRole enum: "ADMIN" is not a role this platform issues, so
 // listing it here only ever looked like it granted something.
 const CRM_FULL_ACCESS_ROLES = new Set(["SUPERADMIN", "MANAGER"]);
+
+/**
+ * Roles that can own a lead. Auto-assignment only ever hands work to somebody
+ * whose job it is — a bursar with a login shouldn't wake up owning a pipeline.
+ */
+export const CRM_ROLES: UserRole[] = ["SUPERADMIN", "MANAGER", "SALES_REP", "SALES_EXEC"];
 
 export function hasCrmFullAccess(role: string | null | undefined): boolean {
   return CRM_FULL_ACCESS_ROLES.has(String(role ?? "").trim().toUpperCase());

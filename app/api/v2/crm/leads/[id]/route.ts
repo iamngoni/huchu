@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
+import { scoreLead } from "@/lib/crm/lead-scoring";
 import { prisma } from "@/lib/prisma";
 import { canEditAssignedRecord } from "@/lib/crm/scope";
 import { crmLeadChannelSchema } from "@/lib/crm/views";
@@ -71,7 +72,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       },
     });
     if (!lead) return errorResponse("Lead not found", 404);
-    return successResponse(lead);
+
+    // Scored on read from what is actually on the record, so the number can
+    // never drift from the reasons shown next to it.
+    const scoreBreakdown = scoreLead({
+      estimatedValue: lead.estimatedValue,
+      contactEmail: lead.contactEmail,
+      contactPhone: lead.contactPhone,
+      clientId: lead.clientId,
+      services: lead.services,
+      sourceChannel: lead.sourceChannel,
+      createdAt: lead.createdAt,
+      firstContactAt: lead.firstContactAt,
+      activityCount: lead.activities.filter((activity) => activity.type !== "SYSTEM").length,
+      appointmentCount: lead.appointments.length,
+      documentCount: lead.documents.length,
+    });
+
+    return successResponse({ ...lead, scoreBreakdown });
   } catch (error) {
     console.error("[API] GET /api/v2/crm/leads/[id] error:", error);
     return errorResponse("Failed to fetch lead");
