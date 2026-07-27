@@ -236,6 +236,42 @@ function DateRangeFilter({
 }
 
 /**
+ * Stage, on its own.
+ *
+ * It sits in the top row beside the saved views rather than down in the filter
+ * row, because on the board it is not a filter so much as which columns exist
+ * — and that belongs next to the thing that says which slice of the pipeline
+ * you are looking at.
+ */
+export function LeadStageFilter({
+  filters,
+  onChange,
+}: {
+  filters: LeadViewFilters;
+  onChange: (next: LeadViewFilters) => void;
+}) {
+  const stageOptions = useMemo(
+    () =>
+      CRM_LEAD_STAGES.map((stage: CrmLeadStage) => ({
+        value: stage,
+        label: CRM_STAGE_LABELS[stage],
+      })),
+    [],
+  );
+
+  return (
+    <MultiFilter
+      label="Stage"
+      options={stageOptions}
+      selected={filters.stages ?? []}
+      onChange={(next) =>
+        onChange({ ...filters, stages: next.length ? (next as CrmLeadStage[]) : undefined })
+      }
+    />
+  );
+}
+
+/**
  * The workspace filter row. Emits the same serialisable shape that gets stored
  * in a saved view, so "what I'm looking at" and "what I saved" are one object.
  */
@@ -276,14 +312,6 @@ export function LeadsFilters({
     () => owners.map((owner) => ({ value: owner.id, label: owner.name ?? "Unnamed" })),
     [owners],
   );
-  const stageOptions = useMemo(
-    () =>
-      CRM_LEAD_STAGES.map((stage: CrmLeadStage) => ({
-        value: stage,
-        label: CRM_STAGE_LABELS[stage],
-      })),
-    [],
-  );
   const channelOptions = useMemo(
     () =>
       CRM_LEAD_CHANNELS.map((channel) => ({
@@ -318,15 +346,6 @@ export function LeadsFilters({
         placeholder="Search leads, contacts, clients…"
         className="h-9 w-full sm:w-64"
         aria-label="Search leads"
-      />
-
-      <MultiFilter
-        label="Stage"
-        options={stageOptions}
-        selected={filters.stages ?? []}
-        onChange={(next) =>
-          patch({ stages: next.length ? (next as CrmLeadStage[]) : undefined })
-        }
       />
 
       <MultiFilter

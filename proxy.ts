@@ -24,14 +24,14 @@ import {
   landingPathForRole,
 } from "@/lib/auth-core/role-routes";
 import { getPosHostForCompany, isCashierRole, isPublicPosPath } from "@/lib/retail/pos-host";
+import { PUBLIC_BASE_PATHS } from "@/lib/public-routes";
 
 const ACCESS_BLOCKED_PATH = "/access-blocked";
 const LOGIN_PATH = "/login";
 const MARKETING_BASE_PATH = "/home";
-// Public, unauthenticated CRM pages: intake form (/f/[token]) and document
-// approval (/a/[token]). Shared over WhatsApp etc., so they bypass tenant/host
-// and auth gating entirely — the token is the capability.
-const CRM_PUBLIC_BASE_PATHS = ["/f", "/a"];
+// Shared with the app shell, which has to make the same call about whether to
+// draw authenticated chrome. See lib/public-routes.
+const CRM_PUBLIC_BASE_PATHS = PUBLIC_BASE_PATHS;
 const ADMIN_BASE_PATH = "/admin";
 const ADMIN_LOGIN_PATH = `${ADMIN_BASE_PATH}/login`;
 const ADMIN_INTERNAL_BASE_PATH = "/portal/admin";

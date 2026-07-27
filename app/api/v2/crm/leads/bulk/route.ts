@@ -33,7 +33,19 @@ export async function POST(request: NextRequest) {
 
     const leads = await prisma.crmLead.findMany({
       where: { id: { in: body.ids }, companyId: session.user.companyId },
-      select: { id: true, stage: true, assignedToId: true, clientId: true },
+      select: {
+        id: true,
+        stage: true,
+        assignedToId: true,
+        clientId: true,
+        // Same fields the single-lead route selects: a bulk stage move
+        // promotes to a deal exactly as a drag on the board does.
+        convertedDealId: true,
+        leadNo: true,
+        title: true,
+        estimatedValue: true,
+        currency: true,
+      },
     });
 
     // A rep may only act on their own (or unclaimed) leads. Rather than failing

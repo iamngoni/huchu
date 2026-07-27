@@ -8,7 +8,12 @@ import { fetchCrmPeople } from "@/lib/crm/crm-v2";
 import { useDebounced } from "@/hooks/use-debounced";
 
 import { PersonFormSheet } from "./person-form-sheet";
-import { RecordList, RecordListPager, type RecordListRow } from "./record-list";
+import { RecordListPager, type RecordListRow } from "./record-list";
+import {
+  GroupedRecordList,
+  bucketByLetter,
+  type RecordListSection,
+} from "./record-list-groups";
 import { RecordListShell } from "./record-list-shell";
 
 const PAGE_SIZE = 50;
@@ -76,10 +81,23 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
     [people],
   );
 
+  // A directory is scanned by name, so it gets the grouped-by-section recipe:
+  // one heading per letter, and a jump strip once the page is long enough for
+  // scrolling to it to be work. A search result is ranked by relevance, not
+  // alphabet, so it stays a flat list.
+  const sections = useMemo<RecordListSection[]>(
+    () =>
+      bucketByLetter(rows, (row) => String(row.title ?? "")).map((bucket) => ({
+        id: bucket.id,
+        label: bucket.label,
+        rows: bucket.items,
+      })),
+    [rows],
+  );
+
   return (
     <RecordListShell
       title="People"
-      description="Everyone you deal with, reusable across deals, companies and sites."
       search={search}
       onSearchChange={(value) => {
         setSearch(value);
@@ -90,8 +108,9 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
       onCreate={() => setCreateOpen(true)}
       error={peopleQuery.error}
     >
-      <RecordList
-        rows={rows}
+      <GroupedRecordList
+        sections={debouncedSearch ? [{ id: "results", label: "Results", rows }] : sections}
+        showJumpStrip={!debouncedSearch && rows.length >= 30}
         isLoading={peopleQuery.isLoading}
         emptyTitle={debouncedSearch ? "No people match that search" : "No people yet"}
         emptyBody={

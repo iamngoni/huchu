@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
+import { Building2 } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
@@ -172,6 +173,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
   return (
     <>
     <RecordPageShell
+      icon={Building2}
       backHref="/crm/companies"
       backLabel="All companies"
       actions={[

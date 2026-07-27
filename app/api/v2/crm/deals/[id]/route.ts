@@ -54,7 +54,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           },
         },
         contacts: { include: { person: true } },
-        activities: { orderBy: { occurredAt: "desc" }, take: 100 },
+        activities: {
+          orderBy: { occurredAt: "desc" },
+          take: 100,
+          // The history feed names who did it; without this every
+          // entry reads as though it happened by itself.
+          include: { createdBy: { select: { id: true, name: true } } },
+        },
         followUps: { orderBy: { dueAt: "asc" } },
         appointments: { orderBy: { scheduledStart: "desc" } },
         documents: {

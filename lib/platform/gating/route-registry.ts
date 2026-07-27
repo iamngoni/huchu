@@ -38,6 +38,12 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
 
   { scope: "page", prefix: "/stores/movements", featureKey: "stores.movements" },
   { scope: "page", prefix: "/stores/inventory", featureKey: "stores.inventory" },
+  { scope: "page", prefix: "/stores/locations", featureKey: "stores.inventory" },
+  // The catalogue and its prices are what the business sells, not what it
+  // holds — gated with the stock module they live in, not with the CRM that
+  // happens to quote from them.
+  { scope: "page", prefix: "/stores/catalogue", featureKey: "stores.inventory" },
+  { scope: "page", prefix: "/stores/price-lists", featureKey: "stores.inventory" },
   { scope: "page", prefix: "/stores/issue", featureKey: "stores.issue" },
   { scope: "page", prefix: "/stores/receive", featureKey: "stores.receive" },
   { scope: "page", prefix: "/stores/fuel", featureKey: "stores.fuel-ledger" },
@@ -167,6 +173,10 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/crm/insights", featureKey: "crm.insights" },
   { scope: "page", prefix: "/crm/reports", featureKey: "crm.insights" },
   { scope: "page", prefix: "/crm/collections", featureKey: "crm.documents" },
+  { scope: "page", prefix: "/crm/quotes", featureKey: "crm.documents" },
+  { scope: "page", prefix: "/crm/invoices", featureKey: "crm.documents" },
+  { scope: "page", prefix: "/crm/receipts", featureKey: "crm.documents" },
+  { scope: "page", prefix: "/crm/reps", featureKey: "crm.core" },
   { scope: "page", prefix: "/crm/work-orders", featureKey: "crm.core" },
   { scope: "page", prefix: "/crm/settings", featureKey: "crm.settings" },
   { scope: "page", prefix: "/crm", featureKey: "crm.core" },
@@ -424,6 +434,8 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/crm/reports", featureKey: "crm.insights" },
   { scope: "api", prefix: "/api/v2/crm/automations", featureKey: "crm.settings" },
   { scope: "api", prefix: "/api/v2/crm/collections", featureKey: "crm.documents" },
+  { scope: "api", prefix: "/api/v2/crm/documents", featureKey: "crm.documents" },
+  { scope: "api", prefix: "/api/v2/crm/reps", featureKey: "crm.core" },
   { scope: "api", prefix: "/api/v2/crm/work-orders", featureKey: "crm.core" },
   { scope: "api", prefix: "/api/v2/crm/discount-approvals", featureKey: "crm.documents" },
   { scope: "api", prefix: "/api/v2/crm/clients", featureKey: "crm.clients" },

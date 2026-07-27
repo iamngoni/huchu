@@ -54,7 +54,6 @@ export function SitesContent({ openCreate = false }: { openCreate?: boolean }) {
   return (
     <RecordListShell
       title="Sites"
-      description="Where the work happens — addresses, access notes and who to ask for."
       search={search}
       onSearchChange={(value) => {
         setSearch(value);

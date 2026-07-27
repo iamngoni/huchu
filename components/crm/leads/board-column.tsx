@@ -32,8 +32,10 @@ export function BoardColumn({
       ref={setNodeRef}
       className={cn(
         "flex w-72 shrink-0 flex-col rounded-[var(--card-radius)] border border-[var(--border)]",
+        "transition-colors duration-[var(--motion-duration-fast,120ms)]",
         COLUMN_TONE[column.stage] ?? "bg-[var(--surface-muted)]/30",
-        isOver && "border-[var(--action-primary-bg)] ring-1 ring-[var(--action-primary-bg)]",
+        isOver &&
+          "border-[var(--action-primary-bg)] bg-[var(--action-primary-bg)]/[0.06] ring-1 ring-[var(--action-primary-bg)]",
       )}
     >
       <header className="flex items-baseline justify-between gap-2 border-b border-[var(--border)] px-3 py-2.5">
@@ -59,7 +61,14 @@ export function BoardColumn({
         </SortableContext>
 
         {column.leads.length === 0 ? (
-          <p className="px-1 py-4 text-center text-xs text-[var(--text-muted)]">
+          <p
+            className={cn(
+              "rounded-[var(--radius-md)] border border-dashed border-[var(--border)] px-1 py-6 text-center text-xs transition-colors",
+              isOver
+                ? "border-[var(--action-primary-bg)] text-[var(--action-primary-bg)]"
+                : "text-[var(--text-muted)]",
+            )}
+          >
             Drop a lead here
           </p>
         ) : null}

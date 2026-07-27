@@ -103,6 +103,11 @@ export type CrmBoardCard = {
   client: { id: string; name: string } | null;
   assignedTo: CrmLeadOwner | null;
   nextFollowUp: CrmNextFollowUp | null;
+  /**
+   * Set once the enquiry has been promoted. Past Contacted the card is a deal
+   * — it says so and opens the deal, not the lead it grew out of.
+   */
+  deal: { id: string; dealNo: string; value: number | null } | null;
 };
 
 export type CrmBoardColumn = {
@@ -653,13 +658,20 @@ export type CrmTaskRecordRef = {
 };
 
 export function fetchCrmTasks(
-  params: { queue?: TaskQueue; page?: number; limit?: number } & CrmTaskRecordRef = {},
+  params: {
+    queue?: TaskQueue;
+    page?: number;
+    limit?: number;
+    /** A user id, or "none" for unassigned. */
+    assignedToId?: string;
+  } & CrmTaskRecordRef = {},
 ) {
   return fetchJson<ListResponse<CrmTaskRecord>>(
     `/api/v2/crm/tasks${qs({
       queue: params.queue,
       page: params.page,
       limit: params.limit,
+      assignedToId: params.assignedToId,
       leadId: params.leadId,
       dealId: params.dealId,
       clientId: params.clientId,
@@ -822,4 +834,147 @@ export function commitCrmMerge(
     method: "POST",
     body: JSON.stringify({ loserId, choices, commit: true }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Sales documents: quotes, invoices, receipts.
+// ---------------------------------------------------------------------------
+
+export type CrmDocumentKind = "QUOTATION" | "INVOICE" | "RECEIPT";
+
+export type CrmDocumentRecord = {
+  id: string;
+  type: CrmDocumentKind;
+  version: number;
+  revisionNote: string | null;
+  supersedesId: string | null;
+  currency: string;
+  createdAt: string;
+  createdBy: { id: string; name: string | null } | null;
+  lead: { id: string; leadNo: string; title: string } | null;
+  deal: { id: string; dealNo: string; title: string } | null;
+  approvalStatus: string | null;
+  approvalToken: string | null;
+  /** From the accounting row, which is the source of truth for all of these. */
+  number: string | null;
+  status: string;
+  issuedAt: string;
+  dueAt: string | null;
+  customer: string | null;
+  total: number;
+  /** Invoices only — see the route, where `null` means "cannot be outstanding". */
+  balance: number | null;
+};
+
+export function fetchCrmDocuments(
+  params: {
+    type?: CrmDocumentKind;
+    q?: string;
+    leadId?: string;
+    dealId?: string;
+    page?: number;
+    limit?: number;
+  } = {},
+) {
+  return fetchJson<ListResponse<CrmDocumentRecord>>(`/api/v2/crm/documents${qs(params)}`);
+}
+
+// ---------------------------------------------------------------------------
+// Sales reps.
+// ---------------------------------------------------------------------------
+
+export type CrmRepPerformance = {
+  repId: string;
+  name: string;
+  leads: number;
+  quotes: number;
+  won: number;
+  /** Already a percentage, 0–100 — not a fraction. */
+  winRate: number;
+  invoicedAmount: number;
+  collectedAmount: number;
+  avgResponseHours: number | null;
+};
+
+export type CrmRepSummary = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+  joinedAt: string;
+  openLeads: number;
+  openLeadValue: number;
+  openDeals: number;
+  openDealValue: number;
+  openTasks: number;
+  /** Null when the viewer is not entitled to this rep's numbers. */
+  performance: CrmRepPerformance | null;
+};
+
+export function fetchCrmReps(params: { range?: string } = {}) {
+  return fetchJson<{ data: CrmRepSummary[]; range: string; canSeeEveryone: boolean }>(
+    `/api/v2/crm/reps${qs(params)}`,
+  );
+}
+
+export type CrmRepDetail = {
+  rep: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    role: string;
+    isActive: boolean;
+    createdAt: string;
+  };
+  canSeeNumbers: boolean;
+  range: string;
+  performance: CrmRepPerformance | null;
+  closed: { won: number; lost: number };
+  leads: Array<{
+    id: string;
+    leadNo: string;
+    title: string;
+    stage: string;
+    estimatedValue: number | null;
+    currency: string;
+    updatedAt: string;
+    client: { id: string; name: string } | null;
+  }>;
+  deals: Array<{
+    id: string;
+    dealNo: string;
+    title: string;
+    value: number | null;
+    currency: string;
+    expectedCloseDate: string | null;
+    updatedAt: string;
+    stage: { id: string; name: string };
+    client: { id: string; name: string } | null;
+  }>;
+  tasks: Array<{
+    id: string;
+    title: string;
+    type: string;
+    priority: string;
+    dueAt: string;
+    leadId: string | null;
+    dealId: string | null;
+    clientId: string | null;
+  }>;
+  activities: Array<{
+    id: string;
+    type: string;
+    subject: string;
+    body: string | null;
+    occurredAt: string;
+    lead: { id: string; title: string } | null;
+    deal: { id: string; title: string } | null;
+    client: { id: string; name: string } | null;
+  }>;
+  documents: Array<{ type: string; amount: number; currency: string; createdAt: string }>;
+};
+
+export function fetchCrmRep(repId: string, params: { range?: string } = {}) {
+  return fetchJson<CrmRepDetail>(`/api/v2/crm/reps/${repId}${qs(params)}`);
 }

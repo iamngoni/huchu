@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageChrome } from "@/components/layout/page-chrome";
 import { CrmInsightsContent } from "@/components/crm/crm-insights-content";
 import { authOptions } from "@/lib/auth";
 
@@ -10,7 +10,7 @@ export default async function CrmInsightsPage() {
   if (!session?.user) redirect("/login");
   return (
     <CrmPage>
-      <PageHeading title="CRM Insights" />
+      <PageChrome title="Insights" />
       <CrmInsightsContent />
     </CrmPage>
   );

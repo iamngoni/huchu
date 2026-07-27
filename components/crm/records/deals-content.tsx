@@ -170,7 +170,6 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
   return (
     <RecordListShell
       title="Deals"
-      description="Every live opportunity, and what has to happen next on it."
       search={search}
       onSearchChange={(value) => {
         setSearch(value);

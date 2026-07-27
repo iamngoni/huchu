@@ -46,6 +46,13 @@ export async function GET(request: NextRequest) {
       ...(searchParams.get("clientId") ? { clientId: searchParams.get("clientId")! } : {}),
       ...(searchParams.get("personId") ? { personId: searchParams.get("personId")! } : {}),
       ...(searchParams.get("siteId") ? { siteId: searchParams.get("siteId")! } : {}),
+      // The register view filters by owner. `MINE` already pins the owner, so
+      // this only ever narrows a queue that does not.
+      ...(searchParams.get("assignedToId")
+        ? searchParams.get("assignedToId") === "none"
+          ? { assignedToId: null }
+          : { assignedToId: searchParams.get("assignedToId")! }
+        : {}),
     };
 
     const [tasks, total] = await Promise.all([

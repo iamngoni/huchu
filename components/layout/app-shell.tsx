@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 
 import { Navbar } from "@/components/layout/navbar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { PageActionsProvider } from "@/components/layout/page-actions";
+import { PageChromeProvider } from "@/components/layout/page-chrome";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingProvider } from "@/components/onboarding/onboarding-provider";
+import { isPublicPath } from "@/lib/public-routes";
 
 export function AppShell({
   children,
@@ -29,15 +30,20 @@ export function AppShell({
     hostPortalPath === "/portal/teacher" ||
     hostPortalPath === "/portal/pos";
   const isAdminRoute = pathname.startsWith("/admin");
+  // A quote link, an intake form, a site brief: opened by a customer or a
+  // courier who has no account here. Wrapping those in the workspace sidebar
+  // showed them a navigation they cannot use and a tenant name that is none of
+  // their business.
+  const isPublicRoute = isPublicPath(pathname);
   const isCctvRoute = pathname.startsWith("/cctv");
   const isScrapRoute = pathname.startsWith("/scrap-metal");
 
-  if (isAuthRoute || isMarketingRoute || isPortalRoute || isAdminRoute) {
+  if (isAuthRoute || isMarketingRoute || isPortalRoute || isAdminRoute || isPublicRoute) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
   return (
-    <PageActionsProvider>
+    <PageChromeProvider>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-surface-base md:m-2 md:h-[calc(100dvh-1rem)] md:min-h-[calc(100dvh-1rem)] md:rounded-xl md:border md:shadow-sm">
@@ -55,6 +61,6 @@ export function AppShell({
           </main>
         </SidebarInset>
       </SidebarProvider>
-    </PageActionsProvider>
+    </PageChromeProvider>
   );
 }

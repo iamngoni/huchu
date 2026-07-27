@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageChrome } from "@/components/layout/page-chrome";
 import { CrmFormsContent } from "@/components/crm/crm-forms-content";
 import { authOptions } from "@/lib/auth";
 
@@ -10,7 +10,7 @@ export default async function CrmFormsPage() {
   if (!session?.user) redirect("/login");
   return (
     <CrmPage>
-      <PageHeading title="Intake Forms" />
+      <PageChrome title="Intake forms" />
       <CrmFormsContent />
     </CrmPage>
   );

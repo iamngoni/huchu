@@ -66,12 +66,16 @@ export function DocumentList({
 
   const shareApproval = useMutation({
     mutationFn: (docId: string) =>
-      fetchJson<{ data: { token: string; path: string } }>(
+      // `{ token, path }`, bare. `successResponse` adds no envelope of its
+      // own, and declaring one here is why sharing a quote produced a link
+      // ending in `/undefined` — a lie the compiler accepted, surfacing only
+      // when a customer clicked it.
+      fetchJson<{ token: string; path: string }>(
         `${basePath}/documents/${docId}/approval`,
         { method: "POST", body: JSON.stringify({}) },
       ),
     onSuccess: async (result) => {
-      const url = `${window.location.origin}${result.data.path}`;
+      const url = `${window.location.origin}${result.path}`;
       try {
         await navigator.clipboard?.writeText(url);
         toast({ title: "Approval link copied", description: url });

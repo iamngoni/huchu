@@ -18,6 +18,8 @@ import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { Users } from "@/lib/icons";
+
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { PersonFormSheet } from "./person-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
@@ -165,6 +167,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
   return (
     <>
     <RecordPageShell
+      icon={Users}
       backHref="/crm/people"
       backLabel="All people"
       actions={[{ label: "Merge a duplicate", onSelect: () => setMergeOpen(true) }]}

@@ -56,7 +56,11 @@ describe("role source consistency", () => {
 
     expect(sorted(ROLES)).toEqual(prismaRoles);
     expect(sorted(USER_ROLES)).toEqual(prismaRoles);
-    expect(new Set(USER_MANAGEMENT_ROLES).has("SUPERADMIN")).toBe(false);
+    // Widened deliberately: `USER_MANAGEMENT_ROLES` excludes SUPERADMIN at the
+    // type level, so `Set<T>.has` refuses the argument — and the assertion is
+    // guarding the runtime value against drift, which is exactly the case the
+    // type cannot cover.
+    expect(new Set<string>(USER_MANAGEMENT_ROLES).has("SUPERADMIN")).toBe(false);
     expect(sorted(USER_MANAGEMENT_ROLES)).toEqual(
       prismaRoles.filter((role) => role !== "SUPERADMIN"),
     );

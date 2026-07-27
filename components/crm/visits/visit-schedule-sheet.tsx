@@ -43,22 +43,38 @@ function addHours(local: string, hours: number): string {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
+/**
+ * What the visit is about. Every field is optional and any combination is
+ * allowed — a visit can be booked against a lead, a deal, a company, a site,
+ * or nothing at all when somebody just needs to go and look.
+ *
+ * This replaced a single required `leadId`, which the deal page satisfied by
+ * passing its deal id. That is a valid uuid, so it sailed through validation
+ * and died on a foreign key: every visit booked from a deal failed.
+ */
+export type VisitSubject = {
+  leadId?: string | null;
+  dealId?: string | null;
+  clientId?: string | null;
+  siteId?: string | null;
+};
+
 export function VisitScheduleSheet({
   open,
   onOpenChange,
-  leadId,
-  clientId,
+  subject,
   defaultLocation,
   owners,
   currentUserId,
+  onScheduled,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  leadId: string;
-  clientId: string | null;
+  subject: VisitSubject;
   defaultLocation?: string | null;
   owners: LeadFilterOwner[];
   currentUserId?: string;
+  onScheduled?: () => void;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -88,8 +104,10 @@ export function VisitScheduleSheet({
       fetchJson<{ data: { id: string } }>("/api/v2/crm/appointments", {
         method: "POST",
         body: JSON.stringify({
-          leadId,
-          clientId: clientId ?? undefined,
+          leadId: subject.leadId ?? undefined,
+          dealId: subject.dealId ?? undefined,
+          clientId: subject.clientId ?? undefined,
+          siteId: subject.siteId ?? undefined,
           title: title.trim() || "Site visit",
           scheduledStart: new Date(start).toISOString(),
           scheduledEnd: end ? new Date(end).toISOString() : undefined,
@@ -99,9 +117,15 @@ export function VisitScheduleSheet({
         }),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["crm-lead", leadId] });
+      if (subject.leadId) {
+        queryClient.invalidateQueries({ queryKey: ["crm-lead", subject.leadId] });
+      }
+      if (subject.dealId) {
+        queryClient.invalidateQueries({ queryKey: ["crm-deal", subject.dealId] });
+      }
       queryClient.invalidateQueries({ queryKey: ["crm", "appointments"] });
       toast({ title: "Site visit scheduled" });
+      onScheduled?.();
       onOpenChange(false);
     },
     onError: (error) => setErrors([getApiErrorMessage(error)]),

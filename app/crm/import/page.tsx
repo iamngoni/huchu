@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageChrome } from "@/components/layout/page-chrome";
 import { ImportWizard } from "@/components/crm/import/import-wizard";
 import { authOptions } from "@/lib/auth";
 import { hasCrmFullAccess } from "@/lib/crm/scope";
@@ -16,10 +16,7 @@ export default async function CrmImportPage() {
 
   return (
     <CrmPage width="narrow">
-      <PageHeading
-        title="Import"
-        description="Bring people, companies or leads in from a spreadsheet."
-      />
+      <PageChrome title="Import" />
       <ImportWizard />
     </CrmPage>
   );

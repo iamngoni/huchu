@@ -9,7 +9,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { Plus } from "@/lib/icons";
+import { Funnel, Plus } from "@/lib/icons";
+import { PageChrome } from "@/components/layout/page-chrome";
 import {
   bulkUpdateCrmLeads,
   fetchCrmLeads,
@@ -19,7 +20,7 @@ import {
 import { DEFAULT_LEAD_SORT, type LeadSort, type LeadViewFilters } from "@/lib/crm/views";
 
 import { LeadsBoard } from "./leads-board";
-import { LeadsFilters, type LeadFilterOwner } from "./leads-filters";
+import { LeadsFilters, LeadStageFilter, type LeadFilterOwner } from "./leads-filters";
 import { LeadsTable } from "./leads-table";
 import { LeadFormSheet } from "./lead-form-sheet";
 import { LostReasonDialog } from "./lost-reason-dialog";
@@ -136,35 +137,53 @@ export function LeadsWorkspace({
   const leads = leadsQuery.data?.data ?? [];
   const total = leadsQuery.data?.pagination?.total ?? leads.length;
 
+  const newLeadAction = useMemo(
+    () => (
+      <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+        <Plus className="h-4 w-4" />
+        New lead
+      </Button>
+    ),
+    [],
+  );
+
   return (
-    <div className="space-y-4">
+    // A column that fills the scroll area, so the board underneath can be told
+    // to take whatever height is left rather than sizing to its tallest column.
+    <div className="flex min-h-[calc(100dvh-8rem)] flex-col gap-4">
+      <PageChrome title="Leads" icon={Funnel}>
+        {newLeadAction}
+      </PageChrome>
+
+      {/* Which slice of the pipeline, and how you want to look at it. Stage
+          rides with the saved views because on the board it decides which
+          columns exist at all — that is not the same kind of control as
+          "leads worth over $5,000". */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <SavedViewsBar
-          views={savedViews}
-          filters={filters}
-          sort={sort}
-          activeViewId={activeViewId}
-          onSelectView={(view) => {
-            setActiveViewId(view.id);
-            setFilters(view.filters);
-            if (view.sort) setSort(view.sort);
-            setPage(1);
-          }}
-        />
-        <div className="flex items-center gap-2">
-          <SegmentedControl
-            value={viewType}
-            onValueChange={(value) => setViewType(value as "TABLE" | "BOARD")}
-            options={[
-              { value: "TABLE", label: "Table" },
-              { value: "BOARD", label: "Board" },
-            ]}
+        <div className="flex flex-wrap items-center gap-2">
+          <SavedViewsBar
+            views={savedViews}
+            filters={filters}
+            sort={sort}
+            activeViewId={activeViewId}
+            onSelectView={(view) => {
+              setActiveViewId(view.id);
+              setFilters(view.filters);
+              if (view.sort) setSort(view.sort);
+              setPage(1);
+            }}
           />
-          <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
-            New lead
-          </Button>
+          <LeadStageFilter filters={filters} onChange={applyFilters} />
         </div>
+
+        <SegmentedControl
+          value={viewType}
+          onValueChange={(value) => setViewType(value as "TABLE" | "BOARD")}
+          options={[
+            { value: "TABLE", label: "Table" },
+            { value: "BOARD", label: "Board" },
+          ]}
+        />
       </div>
 
       <LeadsFilters
@@ -199,7 +218,7 @@ export function LeadsWorkspace({
           onBulkStage={handleBulkStage}
         />
       ) : (
-        <LeadsBoard filters={filters} />
+        <LeadsBoard filters={filters} className="min-h-0 flex-1" />
       )}
 
       <LeadFormSheet

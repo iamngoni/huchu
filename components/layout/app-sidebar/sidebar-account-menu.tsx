@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { Avatar } from "@corelithzw/react";
 
 import {
   MedusaArrowRightOnRectangleIcon,
@@ -36,6 +38,8 @@ export function SidebarAccountMenu({
   workspaceIcon: LucideIcon;
 }) {
   const { setOpenMobile } = useSidebar();
+  const { data: session } = useSession();
+  const user = session?.user;
   const closeMobileNav = () => {
     if (isMobile) setOpenMobile(false);
   };
@@ -65,6 +69,25 @@ export function SidebarAccountMenu({
               side={isCollapsed ? "right" : isMobile ? "bottom" : "right"}
               className="w-[min(22rem,calc(100vw-1rem))] rounded-2xl border border-[var(--edge-default)] bg-[var(--surface-base)] p-0 shadow-[var(--elevation-3)]"
             >
+              {/* The switcher recipe leads with who you are and where you
+                  are, because acting in the wrong workspace as the wrong
+                  person is the mistake it exists to prevent. This platform
+                  puts a user in exactly one company — there is no second
+                  workspace to offer — so the block identifies rather than
+                  switches. */}
+              <div className="flex items-center gap-3 border-b border-[var(--edge-default)] px-4 py-3">
+                <Avatar size="sm" name={user?.name ?? user?.email ?? "?"} />
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-medium">
+                    {user?.name ?? user?.email ?? "Signed in"}
+                  </p>
+                  <p className="truncate text-[12px] text-[var(--text-muted)]">
+                    {workspaceLabel}
+                    {user?.role ? ` · ${String(user.role).toLowerCase().replace(/_/g, " ")}` : ""}
+                  </p>
+                </div>
+              </div>
+
               <DropdownMenuItem asChild className="px-4 py-2.5 text-[14px]">
                 <Link href="/preferences" onClick={closeMobileNav}>
                   <MedusaCogSixToothIcon className="h-4 w-4" />

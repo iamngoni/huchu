@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageChrome } from "@/components/layout/page-chrome";
 import { CollectionsContent } from "@/components/crm/collections/collections-content";
 import { authOptions } from "@/lib/auth";
 
@@ -11,10 +11,7 @@ export default async function CrmCollectionsPage() {
   if (!session?.user) redirect("/login");
   return (
     <CrmPage>
-      <PageHeading
-        title="Collections"
-        description="Who owes what, who promised when, and who to ring first."
-      />
+      <PageChrome title="Collections" />
       <CollectionsContent />
     </CrmPage>
   );

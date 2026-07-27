@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
-import { changeLeadStage } from "./pipeline";
+import { changeLeadStage, stagePromotesToDeal } from "./pipeline";
 
 let companyId: string;
 let userId: string;
@@ -29,6 +29,11 @@ afterAll(async () => {
   // User is a restrict-delete parent of the CRM rows, so unwind by hand
   // rather than relying on the company cascade.
   await prisma.crmActivity.deleteMany({ where: { companyId } });
+  // Deals now exist, created by the promotion, and a lead points at one.
+  await prisma.crmLead.updateMany({ where: { companyId }, data: { convertedDealId: null } });
+  await prisma.crmDeal.deleteMany({ where: { companyId } });
+  await prisma.crmPipelineStage.deleteMany({ where: { pipeline: { companyId } } });
+  await prisma.crmPipeline.deleteMany({ where: { companyId } });
   await prisma.crmLead.deleteMany({ where: { companyId } });
   await prisma.idSequence.deleteMany({ where: { companyId } });
   await prisma.user.deleteMany({ where: { companyId } });
@@ -40,7 +45,19 @@ async function createLead(stage: "NEW" | "QUOTED" = "NEW") {
   const leadNo = await reserveIdentifier(prisma, { companyId, entity: "CRM_LEAD" });
   return prisma.crmLead.create({
     data: { companyId, leadNo, title: "Test lead", stage, createdById: userId },
-    select: { id: true, stage: true, clientId: true },
+    // The promotion path reads these; selecting them here keeps the test
+    // calling `changeLeadStage` with the same shape the routes pass.
+    select: {
+      id: true,
+      stage: true,
+      clientId: true,
+      convertedDealId: true,
+      leadNo: true,
+      title: true,
+      estimatedValue: true,
+      currency: true,
+      assignedToId: true,
+    },
   });
 }
 
@@ -147,5 +164,85 @@ describe("sales document numbering", () => {
     expect(next).toBe("QTN-0001");
 
     await prisma.company.delete({ where: { id: other.id } });
+  });
+});
+
+describe("stagePromotesToDeal", () => {
+  it("is false up to and including Contacted", () => {
+    expect(stagePromotesToDeal("NEW")).toBe(false);
+    expect(stagePromotesToDeal("CONTACTED")).toBe(false);
+  });
+
+  it("is true for every stage past Contacted", () => {
+    expect(stagePromotesToDeal("QUALIFIED")).toBe(true);
+    expect(stagePromotesToDeal("SITE_VISIT")).toBe(true);
+    expect(stagePromotesToDeal("QUOTED")).toBe(true);
+    expect(stagePromotesToDeal("INVOICED")).toBe(true);
+    expect(stagePromotesToDeal("WON")).toBe(true);
+  });
+
+  it("is false for Lost", () => {
+    // An enquiry that died before it was ever qualified was never an
+    // opportunity; inventing a deal to lose inflates every funnel it lands in.
+    expect(stagePromotesToDeal("LOST")).toBe(false);
+  });
+});
+
+describe("promotion to a deal", () => {
+  it("creates a deal when a lead moves past Contacted", async () => {
+    const lead = await createLead();
+
+    const updated = await prisma.$transaction((tx) =>
+      changeLeadStage(tx, { companyId, userId, lead, stage: "QUALIFIED" }),
+    );
+
+    expect(updated.promotedDealId).toBeTruthy();
+    const deal = await prisma.crmDeal.findUnique({
+      where: { id: updated.promotedDealId as string },
+    });
+    expect(deal?.title).toBe("Test lead");
+  });
+
+  it("lands on the stage asked for, not the one conversion leaves behind", async () => {
+    const lead = await createLead();
+
+    // `convertLead` finishes by setting the lead to QUALIFIED. Converting
+    // after the stage update would drag this back a stage.
+    const updated = await prisma.$transaction((tx) =>
+      changeLeadStage(tx, { companyId, userId, lead, stage: "QUOTED" }),
+    );
+
+    expect(updated.stage).toBe("QUOTED");
+    expect(updated.promotedDealId).toBeTruthy();
+  });
+
+  it("does not create a second deal on a later move", async () => {
+    const lead = await createLead();
+
+    const first = await prisma.$transaction((tx) =>
+      changeLeadStage(tx, { companyId, userId, lead, stage: "QUALIFIED" }),
+    );
+    const second = await prisma.$transaction((tx) =>
+      changeLeadStage(tx, {
+        companyId,
+        userId,
+        lead: { ...lead, stage: "QUALIFIED", convertedDealId: first.promotedDealId },
+        stage: "QUOTED",
+      }),
+    );
+
+    expect(second.promotedDealId).toBeNull();
+    const deals = await prisma.crmDeal.count({ where: { convertedFromLeadId: lead.id } });
+    expect(deals).toBe(1);
+  });
+
+  it("creates no deal when a lead is lost", async () => {
+    const lead = await createLead();
+
+    const updated = await prisma.$transaction((tx) =>
+      changeLeadStage(tx, { companyId, userId, lead, stage: "LOST", lostReason: "Too dear" }),
+    );
+
+    expect(updated.promotedDealId).toBeNull();
   });
 });

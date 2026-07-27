@@ -1,12 +1,25 @@
+import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
+import { CrmPage } from "@/components/crm/crm-page";
+import { TasksRegisterContent } from "@/components/crm/tasks/tasks-register-content";
+import { authOptions } from "@/lib/auth";
+
 /**
- * Tasks and Follow-ups were two doors onto the same queue.
+ * The task register — everything outstanding, whoever owns it.
  *
- * Follow-ups now runs on this exact task infrastructure and additionally
- * surfaces the legacy lead reminders, so it is strictly the better of the two.
- * The route stays so existing links and bookmarks keep working.
+ * This route used to redirect to Follow-ups on the grounds that they were two
+ * doors onto one queue. They are two questions: Follow-ups is "what do I owe a
+ * customer today", this is "what is outstanding across the team and who has
+ * it". Both read the same rows and neither is a second to-do system.
  */
-export default function CrmTasksPage() {
-  redirect("/crm/follow-ups");
+export default async function CrmTasksPage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect("/login");
+
+  return (
+    <CrmPage>
+      <TasksRegisterContent />
+    </CrmPage>
+  );
 }

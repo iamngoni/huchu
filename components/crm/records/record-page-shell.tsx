@@ -1,9 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 
-import { PageHeader, Tabs, TabsContent, TabsList, TabsTrigger } from "@corelithzw/react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { StatusChip } from "@/components/ui/status-chip";
 import {
@@ -12,7 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DotsThree } from "@/lib/icons";
+import { PageChrome } from "@/components/layout/page-chrome";
+import { ArrowLeft, DotsThree, type LucideIcon } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 export type RecordTab = {
@@ -30,7 +31,13 @@ export type RecordAction = {
 };
 
 /**
- * One record-page structure for people, companies, deals and sites.
+ * One record-page structure for people, companies, deals, sites and reps.
+ *
+ * The record's name and its actions live in the top app bar, the same as
+ * every other page — so moving from a list to a record does not move the
+ * controls. What stays on the page is the part the bar cannot carry: the
+ * identity strip, which is the reference, the status and the one line that
+ * says what this record is, sitting directly above the tabs.
  *
  * Tabs with no content are dropped rather than shown empty: a company with no
  * site visits shouldn't advertise a Visits tab, and a page that only shows
@@ -39,10 +46,12 @@ export type RecordAction = {
 export function RecordPageShell({
   backHref,
   backLabel,
+  icon,
   title,
   reference,
   status,
   subtitle,
+  leading,
   primaryAction,
   actions,
   tabs,
@@ -52,10 +61,14 @@ export function RecordPageShell({
 }: {
   backHref: string;
   backLabel: string;
+  /** The entity's mark, shown beside the record name in the top bar. */
+  icon?: LucideIcon;
   title: string;
   reference?: string | null;
   status?: { label: string; status: CanonicalUiStatus } | null;
   subtitle?: ReactNode;
+  /** An avatar or monogram for the identity strip. */
+  leading?: ReactNode;
   primaryAction?: ReactNode;
   actions?: RecordAction[];
   tabs: RecordTab[];
@@ -65,53 +78,61 @@ export function RecordPageShell({
 }) {
   const visibleTabs = tabs.filter((tab) => tab.content !== null && tab.content !== undefined);
 
+  const barActions = useMemo(
+    () => (
+      <>
+        {primaryAction}
+        {actions && actions.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" className="h-8 w-8 px-0" aria-label="More actions">
+                <DotsThree className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {actions.map((action) => (
+                <DropdownMenuItem
+                  key={action.label}
+                  onClick={action.onSelect}
+                  className={action.destructive ? "text-[var(--status-error-text)]" : undefined}
+                >
+                  {action.icon}
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </>
+    ),
+    [actions, primaryAction],
+  );
+
   return (
     <div className="space-y-4">
-      <Link href={backHref} className="text-sm text-[var(--text-muted)] hover:underline">
-        ← {backLabel}
-      </Link>
+      <PageChrome title={title} icon={icon}>
+        {barActions}
+      </PageChrome>
 
-      <PageHeader
-        title={
-          <span className="flex flex-wrap items-center gap-2">
-            {title}
-            {status ? <StatusChip status={status.status} label={status.label} /> : null}
-          </span>
-        }
-        lede={
-          subtitle ? (
-            <>
-              {reference ? <span className="font-mono">{reference}</span> : null}
-              {reference ? " · " : null}
-              {subtitle}
-            </>
-          ) : undefined
-        }
-        primaryAction={primaryAction}
-        secondaryActions={
-          actions && actions.length > 0 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className="h-8 w-8 px-0" aria-label="More actions">
-                  <DotsThree className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {actions.map((action) => (
-                  <DropdownMenuItem
-                    key={action.label}
-                    onClick={action.onSelect}
-                    className={action.destructive ? "text-[var(--status-error-text)]" : undefined}
-                  >
-                    {action.icon}
-                    {action.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : undefined
-        }
-      />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Link
+          href={backHref}
+          className="flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+        >
+          <ArrowLeft className="size-4" />
+          {backLabel}
+        </Link>
+
+        {leading ? <span className="flex-none">{leading}</span> : null}
+
+        {reference ? (
+          <span className="font-mono text-sm text-[var(--text-muted)]">{reference}</span>
+        ) : null}
+        {status ? <StatusChip status={status.status} label={status.label} /> : null}
+        {subtitle ? (
+          <span className="min-w-0 truncate text-sm text-[var(--text-muted)]">{subtitle}</span>
+        ) : null}
+      </div>
 
       <div className={rail ? "detail-grid" : "min-w-0"}>
         <div className="min-w-0 space-y-4">
