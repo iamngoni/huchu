@@ -64,11 +64,21 @@ export function LeadCard({ lead }: { lead: CrmBoardCard }) {
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition }}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        // dnd-kit only supplies a transition while cards are shuffling out of
+        // the way. Without a fallback the card being dragged snaps home with
+        // no animation at all, which is what made the board feel broken.
+        transition: transition ?? "transform var(--motion-duration-base, 180ms) var(--motion-ease-standard, ease)",
+      }}
       className={cn(
         "rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-3",
-        "cursor-grab active:cursor-grabbing",
-        isDragging && "opacity-40",
+        "cursor-grab shadow-[var(--shadow-xs)] transition-shadow active:cursor-grabbing",
+        "hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-sm)]",
+        // The card left behind is a hole the size of the card, not a ghost of
+        // it — the real thing is under the cursor in the drag overlay.
+        isDragging &&
+          "border-dashed bg-[var(--surface-muted)] opacity-50 shadow-none [&_*]:invisible",
       )}
       {...attributes}
       {...listeners}

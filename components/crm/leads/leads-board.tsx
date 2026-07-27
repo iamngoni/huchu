@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
+  defaultDropAnimationSideEffects,
   KeyboardSensor,
   PointerSensor,
   closestCorners,
@@ -11,6 +12,7 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  type DropAnimation,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import {
   fetchCrmLeadsBoard,
   updateCrmLeadStage,
@@ -32,6 +35,20 @@ import { BoardColumn } from "./board-column";
 import { LeadCardBody } from "./lead-card";
 import { LostReasonDialog } from "./lost-reason-dialog";
 import { CRM_STAGE_LABELS } from "./stage-config";
+
+/**
+ * The card animates back into its column rather than vanishing, and the hole
+ * it left fades out under it. Without this the overlay is destroyed the
+ * instant the pointer lifts and the card appears to teleport.
+ */
+const DROP_ANIMATION: DropAnimation = {
+  duration: 220,
+  easing: "cubic-bezier(0.2, 0, 0, 1)",
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: { active: { opacity: "0.4" } },
+  }),
+};
+
 
 type BoardData = { columns: CrmBoardColumn[]; cardsPerColumn: number };
 
@@ -74,7 +91,13 @@ function moveCardInCache(
   };
 }
 
-export function LeadsBoard({ filters }: { filters: LeadViewFilters }) {
+export function LeadsBoard({
+  filters,
+  className,
+}: {
+  filters: LeadViewFilters;
+  className?: string;
+}) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [activeCard, setActiveCard] = useState<CrmBoardCard | null>(null);
@@ -130,7 +153,15 @@ export function LeadsBoard({ filters }: { filters: LeadViewFilters }) {
     },
   });
 
-  const columns = boardQuery.data?.columns ?? [];
+  // Filtering by stage on a board means the columns you unticked go away.
+  // Leaving them in place and emptying them is the version that looks broken:
+  // eight columns, two with cards, and no explanation.
+  const allColumns = boardQuery.data?.columns ?? [];
+  const chosen = filters.stages;
+  const columns =
+    chosen && chosen.length > 0
+      ? allColumns.filter((column) => chosen.includes(column.stage))
+      : allColumns;
 
   const resolveDropStage = (overId: string): CrmLeadStage | null => {
     if (overId.startsWith("column:")) return overId.slice("column:".length) as CrmLeadStage;
@@ -162,7 +193,7 @@ export function LeadsBoard({ filters }: { filters: LeadViewFilters }) {
 
   if (boardQuery.isLoading) {
     return (
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className={cn("flex gap-3 overflow-x-auto pb-2", className)}>
         {Array.from({ length: 5 }).map((_, index) => (
           <Skeleton key={index} className="h-96 w-72 shrink-0 rounded-[var(--card-radius)]" />
         ))}
@@ -185,7 +216,7 @@ export function LeadsBoard({ filters }: { filters: LeadViewFilters }) {
     columns.flatMap((column) => column.leads).find((lead) => lead.currency)?.currency ?? "USD";
 
   return (
-    <>
+    <div className={cn("flex min-h-0 flex-col", className)}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -193,7 +224,10 @@ export function LeadsBoard({ filters }: { filters: LeadViewFilters }) {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveCard(null)}
       >
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        {/* The strip of columns takes the height the page has left, so a short
+            pipeline still reaches the bottom instead of floating in white
+            space, and a long one scrolls inside its column. */}
+        <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto pb-2">
           {columns.map((column) => (
             <BoardColumn
               key={column.stage}
@@ -209,9 +243,9 @@ export function LeadsBoard({ filters }: { filters: LeadViewFilters }) {
           ))}
         </div>
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={DROP_ANIMATION}>
           {activeCard ? (
-            <div className="w-72 rotate-1 rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg">
+            <div className="w-72 rotate-2 scale-[1.02] cursor-grabbing rounded-[var(--card-radius)] border border-[var(--border-strong)] bg-[var(--surface)] p-3 shadow-[var(--shadow-lg)]">
               <LeadCardBody lead={activeCard} />
             </div>
           ) : null}
@@ -231,6 +265,6 @@ export function LeadsBoard({ filters }: { filters: LeadViewFilters }) {
           );
         }}
       />
-    </>
+    </div>
   );
 }
