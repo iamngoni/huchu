@@ -21,10 +21,12 @@ import {
   Building2,
   Funnel,
   MapPin,
+  Package,
   Plus,
   Receipt,
   Search,
   Users,
+  Wallet,
 } from "@/lib/icons";
 import type { SearchResult, SearchResultType } from "@/lib/crm/search";
 import { cn } from "@/lib/utils";
@@ -40,6 +42,8 @@ const TYPE_ICONS: Record<SearchResultType, typeof Users> = {
   QUOTATION: Receipt,
   INVOICE: Receipt,
   RECEIPT: Receipt,
+  PRODUCT: Package,
+  CUSTOMER: Wallet,
 };
 
 const RECENT_KEY = "crm.search.recent";
@@ -78,12 +82,17 @@ const QUICK_CREATE: Array<{ label: string; href: string }> = [
 ];
 
 /**
- * One search for the whole CRM, opened with ⌘K from any page.
+ * One search for the whole workspace, opened with ⌘K from any page.
+ *
+ * It lives in the navbar rather than on a module layout because "find the
+ * thing" is not a CRM-shaped need: the same box reaches people, companies,
+ * deals, leads, sites, quotations, invoices, receipts, the shared catalogue
+ * and accounting customers.
  *
  * Shows recently viewed records before anything is typed, so the common case
  * — going back to the thing you were just looking at — takes no typing at all.
  */
-export function GlobalSearch() {
+export function GlobalSearch({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -119,7 +128,7 @@ export function GlobalSearch() {
   }, [query]);
 
   const searchQuery = useQuery({
-    queryKey: ["crm", "search", debounced],
+    queryKey: ["global-search", debounced],
     queryFn: () =>
       fetchJson<{ groups: SearchGroup[]; total: number }>(
         `/api/v2/crm/search?q=${encodeURIComponent(debounced)}`,
@@ -148,28 +157,35 @@ export function GlobalSearch() {
 
   return (
     <>
+      {/* `compact` is the phone navbar, where the row is already tight and an
+          icon reads better than a labelled button. */}
       <Button
         variant="outline"
         size="sm"
-        className="gap-2 text-[var(--text-muted)]"
+        className={cn(
+          "gap-2 text-[var(--text-muted)]",
+          compact ? "px-2" : "min-w-56 justify-start",
+        )}
         onClick={() => setOpen(true)}
-        aria-label="Search the CRM"
+        aria-label="Search"
       >
-        <Search className="h-4 w-4" />
-        <span className="hidden sm:inline">Search</span>
-        <kbd className="hidden rounded border border-[var(--border)] px-1 text-[10px] sm:inline">
-          ⌘K
-        </kbd>
+        <Search className="h-4 w-4 shrink-0" />
+        {compact ? null : (
+          <>
+            <span className="flex-1 text-left">Search everything</span>
+            <kbd className="rounded border border-[var(--border)] px-1 text-[10px]">⌘K</kbd>
+          </>
+        )}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="overflow-hidden p-0">
-          <DialogTitle className="sr-only">Search the CRM</DialogTitle>
+          <DialogTitle className="sr-only">Search</DialogTitle>
           <Command shouldFilter={false}>
             <CommandInput
               value={query}
               onValueChange={setQuery}
-              placeholder="Search people, companies, deals, quotes…"
+              placeholder="Search records, documents, catalogue…"
             />
             <CommandList className="max-h-96">
               {noResults ? (

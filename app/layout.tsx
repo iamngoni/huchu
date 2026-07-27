@@ -1,5 +1,12 @@
-import "@rtcamp/frappe-ui-react/theme";
+// `globals.css` first, and it has to stay first: its `@layer` statement is the
+// one that must reach the browser before any other. Frappe's theme is a second
+// Tailwind build that declares `theme, base, components, utilities` and knows
+// nothing of ours, so when it was imported ahead of this file it set the order
+// itself and `corelith`/`app` — unknown names at that point — were appended
+// after `utilities`. The design system's element resets then outranked every
+// Tailwind utility in the app.
 import "./globals.css";
+import "@rtcamp/frappe-ui-react/theme";
 import "./themes/corelith-bridge.css";
 import { Analytics } from "@vercel/analytics/next";
 import { Suspense } from "react";
@@ -118,7 +125,11 @@ export default async function RootLayout({
 
       </head>
       <body
-        className="font-sans subpixel-antialiased"
+        /* No `font-sans`: frappe's theme ships its own `.font-sans` utility
+           with Inter baked in literally, and two Tailwind builds writing the
+           same utility into the same layer means the later one wins. The design
+           system's `body` rule sets the family and is the authority here. */
+        className="subpixel-antialiased"
         data-portal-path={hostContext.portalPath ?? undefined}
         style={brandingVars as React.CSSProperties}
       >

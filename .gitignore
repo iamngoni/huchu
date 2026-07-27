@@ -49,3 +49,7 @@ next-env.d.ts
 .vercel
 .codex
 .claude
+
+# Local-only scratch: seeds and browser probes used while verifying a change.
+zz-*
+scripts/zz-*

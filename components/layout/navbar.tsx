@@ -24,6 +24,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { usePageActions } from "@/components/layout/page-actions";
+import { GlobalSearch } from "@/components/layout/global-search";
 import { NotificationCenter } from "@/components/notifications/notification-center";
 import { MoreHorizontal } from "@/lib/icons";
 import { canAccessCapabilityWithToken } from "@/lib/platform/gating/token-check";
@@ -55,6 +56,7 @@ export function Navbar() {
                 {currentTitle}
               </p>
             </div>
+            <GlobalSearch compact />
             {showNotificationCenter ? <NotificationCenter /> : null}
             <MobileNavbarActions actions={actions} />
           </div>
@@ -69,6 +71,7 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-3">
+              <GlobalSearch />
               {showNotificationCenter ? <NotificationCenter /> : null}
               {actions ? (
                 <div className="flex items-center gap-2">{actions}</div>

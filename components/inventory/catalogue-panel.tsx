@@ -32,7 +32,8 @@ import { Plus } from "@/lib/icons";
 import { ProductSheet, type ProductRecord } from "./product-sheet";
 
 type CatalogueResponse = {
-  data: { data: ProductRecord[]; priceList: { id: string; name: string } | null };
+  data: ProductRecord[];
+  priceList: { id: string; name: string } | null;
 };
 
 const KIND_FILTERS = [
@@ -66,8 +67,8 @@ export function CataloguePanel() {
       ),
   });
 
-  const products = data?.data.data ?? [];
-  const priceList = data?.data.priceList ?? null;
+  const products = data?.data ?? [];
+  const priceList = data?.priceList ?? null;
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["inventory-products"] });
 
   const archive = useMutation({

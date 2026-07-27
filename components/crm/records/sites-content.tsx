@@ -27,7 +27,7 @@ export function SitesContent({ openCreate = false }: { openCreate?: boolean }) {
   });
 
   const rows = useMemo(() => sitesQuery.data?.data ?? [], [sitesQuery.data]);
-  const total = sitesQuery.data?.total ?? rows.length;
+  const total = sitesQuery.data?.pagination?.total ?? rows.length;
 
   const columns = useMemo<ColumnDef<CrmSiteRecord>[]>(
     () => [
@@ -121,6 +121,9 @@ export function SitesContent({ openCreate = false }: { openCreate?: boolean }) {
       error={sitesQuery.error}
     >
       <DataTable
+        // The shell above owns search; a second box in the table toolbar is the
+        // duplicate-control failure the cookbook's one-filter-pathway rule exists to stop.
+        features={{ globalFilter: false }}
         data={rows}
         columns={columns}
         edgeToEdge

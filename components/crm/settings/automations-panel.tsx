@@ -75,10 +75,10 @@ export function AutomationsPanel() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["crm-automations"],
-    queryFn: () => fetchJson<{ data: { data: AutomationRecord[] } }>("/api/v2/crm/automations"),
+    queryFn: () => fetchJson<{ data: AutomationRecord[] }>("/api/v2/crm/automations"),
   });
 
-  const rules = data?.data.data ?? [];
+  const rules = data?.data ?? [];
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["crm-automations"] });
 
   const toggle = useMutation({

@@ -123,7 +123,7 @@ export function DealFormSheet({
     enabled: open,
   });
 
-  const pipelines = useMemo(() => pipelinesQuery.data?.data.data ?? [], [pipelinesQuery.data]);
+  const pipelines = useMemo(() => pipelinesQuery.data?.data ?? [], [pipelinesQuery.data]);
   const selectedPipeline = pipelines.find((pipeline) => pipeline.id === form.pipelineId);
   const openStages = useMemo(
     () => (selectedPipeline?.stages ?? []).filter((stage) => stage.status === "OPEN"),
@@ -179,7 +179,7 @@ export function DealFormSheet({
     [sitesQuery.data],
   );
   const owners = teamQuery.data?.data ?? [];
-  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data.data ?? [];
+  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
 
   const save = useMutation({
     mutationFn: () =>

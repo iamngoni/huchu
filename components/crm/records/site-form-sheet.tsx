@@ -121,7 +121,7 @@ export function SiteFormSheet({
       })),
     [peopleQuery.data],
   );
-  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data.data ?? [];
+  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
 
   const save = useMutation({
     mutationFn: () =>

@@ -53,7 +53,7 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
   });
 
   const rows = useMemo(() => companiesQuery.data?.data ?? [], [companiesQuery.data]);
-  const total = companiesQuery.data?.total ?? rows.length;
+  const total = companiesQuery.data?.pagination?.total ?? rows.length;
 
   const columns = useMemo<ColumnDef<CrmCompanyRecord>[]>(
     () => [
@@ -160,6 +160,9 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
       error={companiesQuery.error}
     >
       <DataTable
+        // The shell above owns search; a second box in the table toolbar is the
+        // duplicate-control failure the cookbook's one-filter-pathway rule exists to stop.
+        features={{ globalFilter: false }}
         data={rows}
         columns={columns}
         edgeToEdge

@@ -71,7 +71,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
     queryFn: () => fetchCrmFieldDefinitions("SITE"),
   });
 
-  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data.data ?? [];
+  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
   const site = siteQuery.data?.data;
 
   if (siteQuery.isLoading) {
