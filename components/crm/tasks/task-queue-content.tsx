@@ -4,13 +4,11 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, Button, SegmentedControl } from "@corelithzw/react";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmTasks } from "@/lib/crm/crm-v2";
 import { TASK_QUEUE_LABELS, type TaskQueue } from "@/lib/crm/tasks";
 import { Plus } from "@/lib/icons";
-import { cn } from "@/lib/utils";
 
 import { TaskFormSheet } from "./task-form-sheet";
 import { TaskList } from "./task-list";
@@ -48,34 +46,26 @@ export function TaskQueueContent() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          {QUEUES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setQueue(value)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-sm transition-colors",
-                queue === value
-                  ? "bg-[var(--surface-inverse)] text-[var(--text-inverse)]"
-                  : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)]",
-              )}
-            >
-              {TASK_QUEUE_LABELS[value]}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          options={QUEUES.map((value) => ({ value, label: TASK_QUEUE_LABELS[value] }))}
+          value={queue}
+          onValueChange={(value) => setQueue(value as TaskQueue)}
+          aria-label="Task queue"
+        />
 
-        <Button size="sm" className="gap-1.5" onClick={() => setCreating(true)}>
-          <Plus className="size-4" />
+        <Button
+          variant="primary"
+          size="sm"
+          startIcon={<Plus className="size-4" />}
+          onClick={() => setCreating(true)}
+        >
           New task
         </Button>
       </div>
 
       {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Couldn&apos;t load tasks</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
+        <Alert tone="danger" title="Couldn't load tasks">
+          {getApiErrorMessage(error)}
         </Alert>
       ) : null}
 

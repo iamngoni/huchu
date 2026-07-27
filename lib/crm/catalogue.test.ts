@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  belowCostLines,
-  catalogItemToLine,
-  lineTotals,
-  needsDiscountApproval,
-  priceForQuantity,
-  quoteTotals,
-} from "./catalogue";
+import { belowCostLines, lineTotals, needsDiscountApproval, quoteTotals } from "./catalogue";
 import {
   ageingBucket,
   chaseUrgency,
@@ -17,36 +10,6 @@ import {
   validateCollectionNote,
 } from "./collections";
 
-describe("priceForQuantity", () => {
-  const tiers = [
-    { minQuantity: 10, unitPrice: 90 },
-    { minQuantity: 50, unitPrice: 80 },
-  ];
-
-  it("uses the list price below the first tier", () => {
-    expect(priceForQuantity(100, tiers, 5).unitPrice).toBe(100);
-    expect(priceForQuantity(100, tiers, 5).tier).toBeNull();
-  });
-
-  it("takes the best tier the quantity qualifies for", () => {
-    expect(priceForQuantity(100, tiers, 10).unitPrice).toBe(90);
-    expect(priceForQuantity(100, tiers, 49).unitPrice).toBe(90);
-    expect(priceForQuantity(100, tiers, 50).unitPrice).toBe(80);
-    expect(priceForQuantity(100, tiers, 500).unitPrice).toBe(80);
-  });
-
-  it("copes with tiers listed out of order", () => {
-    const jumbled = [
-      { minQuantity: 50, unitPrice: 80 },
-      { minQuantity: 10, unitPrice: 90 },
-    ];
-    expect(priceForQuantity(100, jumbled, 20).unitPrice).toBe(90);
-  });
-
-  it("falls back to the list price with no tiers at all", () => {
-    expect(priceForQuantity(100, [], 1000).unitPrice).toBe(100);
-  });
-});
 
 describe("lineTotals", () => {
   it("charges tax on the discounted amount, not the list price", () => {
@@ -187,18 +150,6 @@ describe("belowCostLines", () => {
   });
 });
 
-describe("catalogItemToLine", () => {
-  it("picks up the tier price for the quantity", () => {
-    const line = catalogItemToLine(
-      { name: "Panel", unitPrice: 100, taxRate: 15, costPrice: 60, unit: "m²" },
-      [{ minQuantity: 10, unitPrice: 85 }],
-      12,
-    );
-    expect(line.unitPrice).toBe(85);
-    expect(line.description).toBe("Panel (per m²)");
-    expect(line.costPrice).toBe(60);
-  });
-});
 
 describe("ageing", () => {
   const now = new Date("2026-03-31T12:00:00Z");

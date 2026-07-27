@@ -199,12 +199,13 @@ model Company {
   crmFollowers                  CrmFollower[]
   crmAutomations                CrmAutomation[]
   crmAutomationRuns             CrmAutomationRun[]
-  crmCatalogItems               CrmCatalogItem[]
-  crmPriceTiers                 CrmPriceTier[]
   crmDiscountApprovals          CrmDiscountApproval[]
   crmCollectionNotes            CrmCollectionNote[]
   crmWorkOrders                 CrmWorkOrder[]
   crmWorkOrderItems             CrmWorkOrderItem[]
+  products                      Product[]
+  priceLists                    PriceList[]
+  productPrices                 ProductPrice[]
 
   @@index([tenantStatus])
   @@index([isProvisioned])
@@ -963,12 +964,12 @@ model User {
   crmMentions                       CrmMention[]                   @relation("CrmMentionUser")
   crmFollowing                      CrmFollower[]                  @relation("CrmFollowerUser")
   crmAutomationsCreated             CrmAutomation[]                @relation("CrmAutomationCreatedBy")
-  crmCatalogItemsCreated            CrmCatalogItem[]               @relation("CrmCatalogItemCreatedBy")
   crmDiscountsRequested             CrmDiscountApproval[]          @relation("CrmDiscountRequestedBy")
   crmDiscountsDecided               CrmDiscountApproval[]          @relation("CrmDiscountDecidedBy")
   crmCollectionNotesCreated         CrmCollectionNote[]            @relation("CrmCollectionNoteCreatedBy")
   crmWorkOrdersAssigned             CrmWorkOrder[]                 @relation("CrmWorkOrderAssignedTo")
   crmWorkOrdersCreated              CrmWorkOrder[]                 @relation("CrmWorkOrderCreatedBy")
+  productsCreated                   Product[]                      @relation("ProductCreatedBy")
 
   @@index([companyId])
   @@index([email])
@@ -3231,6 +3232,9 @@ model InventoryItem {
   minStock     Float?
   maxStock     Float?
   unitCost     Float?
+  /// The catalogue item this stock is of. Optional: plenty of stock (fuel,
+  /// consumables) is never sold and needs no catalogue entry at all.
+  productId    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3238,9 +3242,11 @@ model InventoryItem {
   site      Site            @relation(fields: [siteId], references: [id])
   location  StockLocation   @relation(fields: [locationId], references: [id])
   movements StockMovement[]
+  product   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@unique([siteId, itemCode])
   @@index([siteId])
+  @@index([productId])
 }
 
 enum MovementType {
@@ -3306,13 +3312,21 @@ model RetailCatalogItem {
   acquisitionMode String   @default("PURCHASE")
   imageUrl        String?
   status          String   @default("ACTIVE")
+  /// The shared catalogue item this listing sells. Optional so existing
+  /// listings keep working untouched. `unitPrice`/`taxPercent` above stay
+  /// authoritative for the till — offline POS reads them literally and must
+  /// not have to resolve a price list with no network.
+  productId       String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, catalogCode])
   @@unique([companyId, sku])
   @@index([companyId, siteId, status])
   @@index([inventoryItemId])
+  @@index([companyId, productId])
 }
 
 model RetailPromotion {
@@ -4264,6 +4278,9 @@ model SalesInvoice {
   notes         String?
   // Fiscal receipt relation is managed via FiscalReceipt.invoiceId
   fiscalStatus  FiscalReceiptStatus? @default(PENDING)
+  /// The quotation this invoice was raised from, when it was. The CRM reads
+  /// this to recognise its own work coming back from Accounting.
+  quotationId   String?
   createdById   String?
   issuedById    String?
   issuedAt      DateTime?
@@ -4281,6 +4298,8 @@ model SalesInvoice {
   crmLeadDocuments CrmLeadDocument[]  @relation("CrmLeadDocInvoice")
   createdBy        User?              @relation("SalesInvoiceCreatedBy", fields: [createdById], references: [id])
   issuedBy         User?              @relation("SalesInvoiceIssuedBy", fields: [issuedById], references: [id])
+
+  fromQuotation    SalesQuotation?    @relation("SalesInvoiceFromQuotation", fields: [quotationId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, status])
@@ -4331,6 +4350,7 @@ model SalesQuotation {
   createdBy        User?                @relation("SalesQuotationCreatedBy", fields: [createdById], references: [id])
   issuedBy         User?                @relation("SalesQuotationIssuedBy", fields: [issuedById], references: [id])
   crmLeadDocuments CrmLeadDocument[]    @relation("CrmLeadDocQuotation")
+  invoicesRaised   SalesInvoice[]       @relation("SalesInvoiceFromQuotation")
 
   @@unique([companyId, quotationNumber])
   @@index([companyId, status])
@@ -7822,61 +7842,7 @@ enum CrmAutomationRunStatus {
   FAILED
 }
 
-/// What the business sells, for quoting.
-///
-/// Deliberately separate from RetailCatalogItem: that model is a shop's stock,
-/// tied to an inventory item at a site. This one is the things a services
-/// business quotes for — labour, installation, a panel supplied and fitted —
-/// most of which are never held in stock anywhere.
-model CrmCatalogItem {
-  id          String            @id @default(uuid())
-  companyId   String
-  code        String
-  name        String
-  description String?
-  category    String?
-  kind        CrmCatalogKind    @default(SERVICE)
-  /// How it's sold: each, m², hour, day.
-  unit        String?
-  unitPrice   Float             @default(0)
-  currency    String            @default("USD")
-  taxRate     Float             @default(0)
-  /// What it costs us, so margin on a quote is visible before it goes out.
-  costPrice   Float?
-  /// The most a rep may discount without asking. Null means no ceiling.
-  maxDiscountPercent Float?
-  /// Stocked goods can point at the inventory item they draw from.
-  inventoryItemId String?
-  isActive    Boolean           @default(true)
-  customFields Json?
-  createdById String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
 
-  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy User?          @relation("CrmCatalogItemCreatedBy", fields: [createdById], references: [id])
-  tiers   CrmPriceTier[]
-
-  @@unique([companyId, code])
-  @@index([companyId, isActive, category])
-}
-
-/// Volume pricing: buy more, pay less per unit. The tier that applies is the
-/// one with the highest minQuantity at or below the quantity ordered.
-model CrmPriceTier {
-  id            String   @id @default(uuid())
-  companyId     String
-  catalogItemId String
-  minQuantity   Float
-  unitPrice     Float
-  createdAt     DateTime @default(now())
-
-  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  catalogItem CrmCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
-
-  @@unique([catalogItemId, minQuantity])
-  @@index([companyId, catalogItemId])
-}
 
 /// A discount a rep can't give on their own.
 ///
@@ -7936,12 +7902,132 @@ model CrmCollectionNote {
   @@index([companyId, promisedAt])
 }
 
-enum CrmCatalogKind {
+/// ============================================
+/// SHARED CATALOGUE — owned by Stock & Inventory
+/// ============================================
+///
+/// One catalogue for every module. Retail sells it over a counter, the CRM
+/// quotes it, a workshop puts it on a job card. Before this, each module was
+/// growing its own list of "things we sell", which meant the same pump had a
+/// different price depending on which screen you opened.
+///
+/// `Product` is the item master: what a thing *is*, company-wide.
+/// `InventoryItem` stays what it always was: how much of it is at one site.
+/// That separation is deliberate — a service has a Product and no stock at all,
+/// and a stocked product has one Product and one InventoryItem per site.
+model Product {
+  id          String        @id @default(uuid())
+  companyId   String
+  /// Code or SKU. Unique per company so imports and scanners agree.
+  code        String
+  name        String
+  description String?
+  kind        ProductKind   @default(GOODS)
+  category    String?
+  unit        UnitOfMeasure @default(EACH)
+  /// Free text when `unit` is OTHER, e.g. "per pallet".
+  unitLabel   String?
+  /// The fallback price, used when no price list has an entry for this item.
+  standardPrice Float       @default(0)
+  costPrice     Float?
+  defaultTaxRate Float      @default(0)
+  currency      String      @default("USD")
+  /// The most a seller may discount without approval. Null means no ceiling.
+  maxDiscountPercent Float?
+  imageUrl    String?
+  notes       String?
+  isActive    Boolean       @default(true)
+  archivedAt  DateTime?
+  /// Free-form per-module extras, so a module can carry a field the others
+  /// don't need without a migration that touches everyone.
+  attributes  Json?
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  company        Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy      User?               @relation("ProductCreatedBy", fields: [createdById], references: [id])
+  prices         ProductPrice[]
+  inventoryItems InventoryItem[]
+  retailListings RetailCatalogItem[]
+
+  @@unique([companyId, code])
+  @@index([companyId, isActive, kind])
+  @@index([companyId, category])
+}
+
+/// A named price list — Standard, Wholesale, Trade, VIP, or a region's own.
+/// Kept deliberately simple per the spec: a list holds a price per product,
+/// optionally from a minimum quantity. No formulas, no rule engine.
+model PriceList {
+  id          String        @id @default(uuid())
+  companyId   String
+  name        String
+  kind        PriceListKind @default(STANDARD)
+  /// Used when a customer or module asks for no list in particular.
+  isDefault   Boolean       @default(false)
+  /// Region-specific lists say which region they serve.
+  region      String?
+  currency    String        @default("USD")
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entries ProductPrice[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive, kind])
+}
+
+/// One product's price on one list. `minQuantity` gives simple volume breaks;
+/// the row with the highest minimum at or below the quantity ordered wins.
+model ProductPrice {
+  id          String   @id @default(uuid())
+  companyId   String
+  priceListId String
+  productId   String
+  minQuantity Float    @default(1)
+  unitPrice   Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  priceList PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([priceListId, productId, minQuantity])
+  @@index([companyId, productId])
+}
+
+enum ProductKind {
+  GOODS
   SERVICE
-  PRODUCT
   LABOUR
   MATERIAL
   BUNDLE
+}
+
+/// The units the spec calls for, plus an escape hatch.
+enum UnitOfMeasure {
+  EACH
+  METRE
+  SQUARE_METRE
+  HOUR
+  DAY
+  PACKAGE
+  INSTALLATION
+  LITRE
+  KILOGRAM
+  OTHER
+}
+
+enum PriceListKind {
+  STANDARD
+  WHOLESALE
+  TRADE
+  VIP
+  REGIONAL
 }
 
 enum CrmApprovalDecision {
@@ -8040,7 +8126,8 @@ model CrmWorkOrderItem {
   /// part-finished rather than as either done or not started.
   completedQuantity Float @default(0)
   unit        String?
-  catalogItemId String?
+  /// The shared catalogue item this line installs, when it came from one.
+  productId   String?
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

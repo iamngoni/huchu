@@ -15,7 +15,7 @@ import { CustomFieldsPanel } from "@/components/crm/settings/custom-fields-panel
 import { PipelinesPanel } from "@/components/crm/settings/pipelines-panel";
 import { PermissionsPanel } from "@/components/crm/settings/permissions-panel";
 import { AutomationsPanel } from "@/components/crm/settings/automations-panel";
-import { CataloguePanel } from "@/components/crm/settings/catalogue-panel";
+import { CataloguePanel } from "@/components/inventory/catalogue-panel";
 import type { CrmLeadChannel } from "@prisma/client";
 
 type ApiKey = {

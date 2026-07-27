@@ -4,12 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, Button, EmptyState, Skeleton, StatCard } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -36,7 +34,6 @@ import {
   validateCollectionNote,
   type AgeingBucket,
 } from "@/lib/crm/collections";
-import { cn } from "@/lib/utils";
 
 type ChaseRow = {
   documentId: string;
@@ -78,50 +75,39 @@ export function CollectionsContent({ currency = "USD" }: { currency?: string }) 
   return (
     <div className="space-y-5">
       {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Couldn&apos;t load the chase list</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
+        <Alert tone="danger" title="Couldn't load the chase list">
+          {getApiErrorMessage(error)}
         </Alert>
       ) : null}
 
       {isLoading || !report ? (
-        <Skeleton className="h-32" />
+        <Skeleton height={128} />
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="rounded-[var(--card-radius)] border border-[var(--border)] p-4">
-              <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">
-                Outstanding
-              </p>
-              <p className="mt-1 font-mono text-2xl">
-                {formatMoney(report.totalOutstanding, currency)}
-              </p>
-            </div>
+            <StatCard
+              label="Outstanding"
+              value={formatMoney(report.totalOutstanding, currency)}
+              tone={report.totalOutstanding > 0 ? "warn" : "neutral"}
+            />
             {report.ageing.map((band) => (
-              <div
+              <StatCard
                 key={band.bucket}
-                className={cn(
-                  "rounded-[var(--card-radius)] border p-4",
-                  band.bucket === "D90_PLUS" && band.amount > 0
-                    ? "border-[var(--status-error-border)]"
-                    : "border-[var(--border)]",
-                )}
-              >
-                <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">
-                  {AGEING_LABELS[band.bucket]}
-                </p>
-                <p className="mt-1 font-mono text-lg">{formatMoney(band.amount, currency)}</p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {band.count} invoice{band.count === 1 ? "" : "s"}
-                </p>
-              </div>
+                label={AGEING_LABELS[band.bucket]}
+                value={formatMoney(band.amount, currency)}
+                // Debt over 90 days is the band that turns into a write-off,
+                // so it is the one the eye should land on.
+                tone={band.bucket === "D90_PLUS" && band.amount > 0 ? "danger" : "neutral"}
+                footer={`${band.count} invoice${band.count === 1 ? "" : "s"}`}
+              />
             ))}
           </div>
 
           {report.data.length === 0 ? (
-            <p className="rounded-[var(--card-radius)] border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--text-muted)]">
-              Nothing outstanding. Everything issued has been paid.
-            </p>
+            <EmptyState
+              title="Nothing outstanding"
+              body="Everything issued has been paid."
+            />
           ) : (
             <ul className="divide-y divide-[var(--border-subtle)] rounded-[var(--card-radius)] border border-[var(--border)]">
               {report.data.map((row) => (
@@ -169,7 +155,7 @@ export function CollectionsContent({ currency = "USD" }: { currency?: string }) 
                     {formatMoney(row.outstanding, row.currency)}
                   </span>
 
-                  <Button type="button" size="sm" variant="outline" onClick={() => setChasing(row)}>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setChasing(row)}>
                     Log a chase
                   </Button>
                 </li>
@@ -245,9 +231,7 @@ function ChaseDialog({
         </DialogHeader>
 
         {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <Alert tone="danger">{error}</Alert>
         ) : null}
 
         <div className="space-y-3">
@@ -299,7 +283,7 @@ function ChaseDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from "@/components/ui/button";
+import { Button, EmptyState } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -298,7 +298,7 @@ export function CommentThread({
 
         <Button
           type="button"
-          variant={isFollowing ? "secondary" : "outline"}
+          variant={isFollowing ? "secondary" : "ghost"}
           size="sm"
           disabled={toggleFollow.isPending}
           onClick={() => toggleFollow.mutate()}
@@ -331,9 +331,7 @@ export function CommentThread({
       {isLoading ? (
         <p className="text-sm text-[var(--text-muted)]">Loading comments…</p>
       ) : comments.length === 0 ? (
-        <p className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] p-6 text-center text-sm text-[var(--text-muted)]">
-          Nothing has been said about this record yet.
-        </p>
+        <EmptyState title="Nothing has been said about this record yet" />
       ) : (
         <div className="space-y-2">{comments.map((comment) => renderComment(comment))}</div>
       )}

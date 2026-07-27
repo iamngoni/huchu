@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, EmptyState, Progress, SegmentedControl, Skeleton } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
-import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -18,7 +17,6 @@ import {
 } from "@/lib/crm/work-orders";
 import { Clock, MapPin, Users } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
-import { cn } from "@/lib/utils";
 
 import { WorkOrderSheet, type WorkOrderRecord } from "./work-order-sheet";
 
@@ -57,41 +55,27 @@ export function WorkOrdersContent() {
 
   return (
     <div className="space-y-4">
-      <div className="scroll-rail flex flex-wrap gap-1.5">
-        {QUEUES.map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setQueue(value)}
-            className={cn(
-              "rounded-full px-3 py-1.5 text-sm transition-colors",
-              queue === value
-                ? "bg-[var(--surface-inverse)] text-[var(--text-inverse)]"
-                : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)]",
-            )}
-          >
-            {WORK_ORDER_QUEUE_LABELS[value]}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        options={QUEUES.map((value) => ({ value, label: WORK_ORDER_QUEUE_LABELS[value] }))}
+        value={queue}
+        onValueChange={(value) => setQueue(value as WorkOrderQueue)}
+        aria-label="Job queue"
+      />
 
       {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Couldn&apos;t load jobs</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
+        <Alert tone="danger" title="Couldn't load jobs">
+          {getApiErrorMessage(error)}
         </Alert>
       ) : null}
 
       {isLoading ? (
         <div className="space-y-2">
           {[0, 1, 2].map((index) => (
-            <Skeleton key={index} className="h-24" />
+            <Skeleton key={index} height={96} />
           ))}
         </div>
       ) : orders.length === 0 ? (
-        <p className="rounded-[var(--card-radius)] border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--text-muted)]">
-          {EMPTY_MESSAGES[queue]}
-        </p>
+        <EmptyState title={EMPTY_MESSAGES[queue] ?? "Nothing here."} />
       ) : (
         <ul className="space-y-2">
           {orders.map((order) => {
@@ -145,12 +129,11 @@ export function WorkOrdersContent() {
 
                   {order.items.length > 0 ? (
                     <div className="space-y-1">
-                      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
-                        <div
-                          className="h-full rounded-full bg-[var(--surface-inverse)]"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
+                      <Progress
+                        value={percent}
+                        tone={percent === 100 ? "success" : "brand"}
+                        label={`${percent}% of the job done`}
+                      />
                       <p className="text-xs text-[var(--text-muted)]">
                         {percent}% done · {order.items.length} item
                         {order.items.length === 1 ? "" : "s"}

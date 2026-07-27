@@ -110,7 +110,7 @@ export const workOrderItemSchema = z.object({
   description: z.string().trim().min(1).max(300),
   quantity: z.number().finite().positive(),
   unit: z.string().trim().max(20).nullable().optional(),
-  catalogItemId: z.string().uuid().nullable().optional(),
+  productId: z.string().uuid().nullable().optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
 });
 

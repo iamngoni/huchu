@@ -185,8 +185,8 @@ export async function POST(request: NextRequest) {
                 description: item.description,
                 quantity: item.quantity,
                 unit: "unit" in item ? (item.unit ?? undefined) : undefined,
-                catalogItemId:
-                  "catalogItemId" in item ? (item.catalogItemId ?? undefined) : undefined,
+                productId:
+                  "productId" in item ? (item.productId ?? undefined) : undefined,
                 notes: "notes" in item ? (item.notes ?? undefined) : undefined,
               })),
             }

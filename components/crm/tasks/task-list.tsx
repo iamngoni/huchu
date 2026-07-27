@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from "@/components/ui/button";
+import { Badge, Button, EmptyState } from "@corelithzw/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
@@ -105,11 +105,7 @@ export function TaskList({
   }
 
   if (!tasks.length) {
-    return (
-      <p className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] p-6 text-center text-sm text-[var(--text-muted)]">
-        {emptyMessage}
-      </p>
-    );
+    return <EmptyState title={emptyMessage} />;
   }
 
   return (
@@ -144,9 +140,9 @@ export function TaskList({
                   >
                     {task.title}
                   </span>
-                  <span className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[11px] text-[var(--text-muted)]">
+                  <Badge tone="neutral" size="sm">
                     {CRM_TASK_TYPE_LABELS[task.type]}
-                  </span>
+                  </Badge>
                   {task.recurrence !== "NONE" ? (
                     <Repeat
                       className="size-3.5 text-[var(--text-muted)]"

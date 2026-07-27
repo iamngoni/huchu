@@ -1,43 +1,13 @@
 /**
- * The catalogue, and the arithmetic of putting it on a quote.
+ * The arithmetic of putting catalogue items on a quote.
  *
- * Pricing is the part of a CRM people check by hand, so all of it is pure and
- * tested: a rounding rule nobody can reproduce is how a business ends up
+ * The catalogue itself lives in Stock & Inventory (`lib/inventory/catalogue.ts`)
+ * and is shared with Retail and everything else that sells. What stays here is
+ * document maths: line and quote totals, margin, and when a discount needs a
+ * manager. Pricing is the part people check by hand, so all of it is pure and
+ * tested — a rounding rule nobody can reproduce is how a business ends up
  * arguing with its own invoices.
  */
-import type { CrmCatalogKind } from "@prisma/client";
-import { z } from "zod";
-
-export const CATALOG_KINDS = ["SERVICE", "PRODUCT", "LABOUR", "MATERIAL", "BUNDLE"] as const;
-
-export const CATALOG_KIND_LABELS: Record<CrmCatalogKind, string> = {
-  SERVICE: "Service",
-  PRODUCT: "Product",
-  LABOUR: "Labour",
-  MATERIAL: "Material",
-  BUNDLE: "Bundle",
-};
-
-export type PriceTier = { minQuantity: number; unitPrice: number };
-
-/**
- * The unit price for a quantity: the tier with the highest minimum at or below
- * it, falling back to the list price when no tier applies.
- */
-export function priceForQuantity(
-  listPrice: number,
-  tiers: PriceTier[],
-  quantity: number,
-): { unitPrice: number; tier: PriceTier | null } {
-  const applicable = tiers
-    .filter((tier) => quantity >= tier.minQuantity)
-    .sort((a, b) => b.minQuantity - a.minQuantity)[0];
-
-  return applicable
-    ? { unitPrice: applicable.unitPrice, tier: applicable }
-    : { unitPrice: listPrice, tier: null };
-}
-
 /** Money is rounded once, at the point it becomes a number on a document. */
 export function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -194,53 +164,6 @@ export function belowCostLines(lines: QuoteLineInput[]): number[] {
     if (lineTotals(line).net < line.costPrice * line.quantity) flagged.push(index);
   });
   return flagged;
-}
-
-export const catalogItemSchema = z.object({
-  code: z.string().trim().min(1).max(40),
-  name: z.string().trim().min(1).max(200),
-  description: z.string().trim().max(2000).nullable().optional(),
-  category: z.string().trim().max(80).nullable().optional(),
-  kind: z.enum(CATALOG_KINDS).optional(),
-  unit: z.string().trim().max(20).nullable().optional(),
-  unitPrice: z.number().finite().nonnegative(),
-  currency: z.string().trim().length(3).optional(),
-  taxRate: z.number().finite().min(0).max(100).optional(),
-  costPrice: z.number().finite().nonnegative().nullable().optional(),
-  maxDiscountPercent: z.number().finite().min(0).max(100).nullable().optional(),
-  isActive: z.boolean().optional(),
-  tiers: z
-    .array(
-      z.object({
-        minQuantity: z.number().finite().positive(),
-        unitPrice: z.number().finite().nonnegative(),
-      }),
-    )
-    .max(10)
-    .optional(),
-});
-
-/** Build the line a document builder starts from when an item is picked. */
-export function catalogItemToLine(
-  item: {
-    name: string;
-    description?: string | null;
-    unitPrice: number;
-    taxRate?: number;
-    costPrice?: number | null;
-    unit?: string | null;
-  },
-  tiers: PriceTier[],
-  quantity = 1,
-): QuoteLineInput {
-  const { unitPrice } = priceForQuantity(item.unitPrice, tiers, quantity);
-  return {
-    description: item.unit ? `${item.name} (per ${item.unit})` : item.name,
-    quantity,
-    unitPrice,
-    taxRate: item.taxRate ?? 0,
-    costPrice: item.costPrice ?? null,
-  };
 }
 
 /** Default ceiling on what a rep may discount without asking. */

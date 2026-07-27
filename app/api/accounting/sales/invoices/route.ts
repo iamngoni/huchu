@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { onAccountingInvoiceCreated } from "@/lib/crm/accounting-hooks";
 import { validateSession, successResponse, errorResponse, getPaginationParams, paginationResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { createJournalEntryFromSource } from "@/lib/accounting/posting";
@@ -10,6 +11,11 @@ import { resolveDefaultTaxTemplate } from "@/lib/accounting/tax-rules";
 
 const invoiceSchema = z.object({
   customerId: z.string().uuid(),
+  /**
+   * The quotation this invoice is being raised from. When that quote came from
+   * the CRM, raising the invoice here moves the CRM record on too.
+   */
+  quotationId: z.string().uuid().optional(),
   invoiceDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
   dueDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
   currency: z.string().min(1).max(10).optional(),
@@ -191,6 +197,7 @@ export async function POST(request: NextRequest) {
         taxTotal,
         total,
         notes: validated.notes,
+        quotationId: validated.quotationId,
         createdById: session.user.id,
         issuedById: validated.issueNow ? session.user.id : undefined,
         issuedAt: validated.issueNow ? new Date() : undefined,
@@ -229,6 +236,14 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    // If this came off a CRM quote, let the CRM know its work has been
+    // invoiced. Never throws — the invoice is already real either way.
+    await onAccountingInvoiceCreated({
+      companyId: session.user.companyId,
+      invoiceId: invoice.id,
+      userId: session.user.id,
+    });
 
     return successResponse(invoice, 201);
   } catch (error) {

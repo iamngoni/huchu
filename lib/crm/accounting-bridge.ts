@@ -12,9 +12,9 @@
  */
 import type { Prisma } from "@prisma/client";
 
+import { settleCrmRecordIfPaid } from "./accounting-hooks";
 import { prisma } from "@/lib/prisma";
 import { createJournalEntryFromSource } from "@/lib/accounting/posting";
-import { recalcSalesInvoiceBalance } from "@/lib/accounting/balances";
 import { reserveIdentifier } from "@/lib/id-generator";
 
 type Tx = Prisma.TransactionClient;
@@ -564,43 +564,14 @@ export async function recordReceiptForLead(input: RecordReceiptInput) {
     return { leadDocumentId: doc.id, receiptId: receipt.id, invoiceId: invoice.id, ...ownerKey(owner), clientId: owner.clientId };
   });
 
-  // Recompute the invoice balance/status and, once it is settled in full, close
-  // the record out as won. Both read committed rows so they run after the
-  // transaction. A deal's won stage comes from its own pipeline rather than a
-  // fixed name, so it is looked up rather than assumed.
-  const balance = await recalcSalesInvoiceBalance(outcome.invoiceId);
-  if (balance && "status" in balance && balance.status === "PAID") {
-    if (outcome.leadId) {
-      await prisma.crmLead.updateMany({
-        where: { id: outcome.leadId, companyId: input.companyId, stage: { not: "LOST" } },
-        data: { stage: "WON", wonAt: new Date() },
-      });
-    } else if (outcome.dealId) {
-      const deal = await prisma.crmDeal.findFirst({
-        where: { id: outcome.dealId, companyId: input.companyId, status: "OPEN" },
-        select: { id: true, pipelineId: true },
-      });
-      const wonStage = deal
-        ? await prisma.crmPipelineStage.findFirst({
-            where: { pipelineId: deal.pipelineId, status: "WON", archivedAt: null },
-            select: { id: true, probability: true },
-          })
-        : null;
-      if (deal && wonStage) {
-        await prisma.crmDeal.update({
-          where: { id: deal.id },
-          data: {
-            stageId: wonStage.id,
-            status: "WON",
-            probability: wonStage.probability,
-            forecastCategory: "CLOSED",
-            wonAt: new Date(),
-            stageEnteredAt: new Date(),
-          },
-        });
-      }
-    }
-  }
+  // Recompute the invoice balance and, once settled in full, close the record
+  // out as won. Shared with the Accounting-side receipt hook so a payment
+  // taken in either module settles a record identically.
+  await settleCrmRecordIfPaid(
+    input.companyId,
+    { leadId: outcome.leadId ?? null, dealId: outcome.dealId ?? null, clientId: outcome.clientId ?? null },
+    outcome.invoiceId,
+  );
 
   return outcome;
 }

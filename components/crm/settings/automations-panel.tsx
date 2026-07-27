@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, Button, EmptyState } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,26 +112,29 @@ export function AutomationsPanel() {
             change.
           </p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setCreating(true)}>
-          <Plus className="size-4" />
+        <Button
+          variant="primary"
+          size="sm"
+          startIcon={<Plus className="size-4" />}
+          onClick={() => setCreating(true)}
+        >
           New rule
         </Button>
       </div>
 
       {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Couldn&apos;t load rules</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
+        <Alert tone="danger" title="Couldn't load rules">
+          {getApiErrorMessage(error)}
         </Alert>
       ) : null}
 
       {isLoading ? (
         <p className="text-sm text-[var(--text-muted)]">Loading…</p>
       ) : rules.length === 0 ? (
-        <p className="rounded-[var(--card-radius)] border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-muted)]">
-          No rules yet. A good first one: when a lead comes in worth more than
-          your average job, create a call task for today.
-        </p>
+        <EmptyState
+          title="No rules yet"
+          body="A good first one: when a lead comes in worth more than your average job, create a call task for today."
+        />
       ) : (
         <ul className="space-y-2">
           {rules.map((rule) => {
@@ -279,7 +281,7 @@ function AutomationFormSheet({
           }}
           actions={
             <>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={create.isPending}>

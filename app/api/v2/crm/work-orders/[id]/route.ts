@@ -133,7 +133,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
               description: item.description,
               quantity: item.quantity,
               unit: item.unit ?? undefined,
-              catalogItemId: item.catalogItemId ?? undefined,
+              productId: item.productId ?? undefined,
               notes: item.notes ?? undefined,
             })),
           });

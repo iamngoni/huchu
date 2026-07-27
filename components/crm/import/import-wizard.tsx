@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, Button, StatCard } from "@corelithzw/react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -110,9 +109,8 @@ export function ImportWizard() {
   return (
     <div className="space-y-5">
       {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Import problem</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+        <Alert tone="danger" title="Import problem">
+          {error}
         </Alert>
       ) : null}
 
@@ -238,22 +236,18 @@ export function ImportWizard() {
           <div className="flex flex-wrap gap-4">
             {(
               [
-                ["Create", preview.totals.create, ""],
-                ["Update", preview.totals.update, ""],
-                ["Skip", preview.totals.skip, "text-[var(--text-muted)]"],
+                ["Create", preview.totals.create, "success"],
+                ["Update", preview.totals.update, "brand"],
+                ["Skip", preview.totals.skip, "neutral"],
               ] as const
             ).map(([label, count, tone]) => (
-              <div key={label}>
-                <p className={cn("font-mono text-2xl", tone)}>{count}</p>
-                <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">{label}</p>
-              </div>
+              <StatCard key={label} label={label} value={count} tone={tone} />
             ))}
           </div>
 
           {preview.unmappedHeaders.length ? (
-            <Alert>
-              <AlertTitle>Columns not being imported</AlertTitle>
-              <AlertDescription>{preview.unmappedHeaders.join(", ")}</AlertDescription>
+            <Alert tone="warn" title="Columns not being imported">
+              {preview.unmappedHeaders.join(", ")}
             </Alert>
           ) : null}
 
@@ -321,7 +315,7 @@ export function ImportWizard() {
                     preview.totals.create + preview.totals.update === 1 ? "" : "s"
                   }`}
             </Button>
-            <Button type="button" variant="outline" onClick={() => setPreview(null)}>
+            <Button type="button" variant="secondary" onClick={() => setPreview(null)}>
               Back to mapping
             </Button>
           </div>

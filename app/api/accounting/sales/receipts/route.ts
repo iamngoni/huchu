@@ -4,6 +4,7 @@ import { validateSession, successResponse, errorResponse, getPaginationParams, p
 import { prisma } from "@/lib/prisma";
 import { createJournalEntryFromSource } from "@/lib/accounting/posting";
 import { recalcSalesInvoiceBalance } from "@/lib/accounting/balances";
+import { onAccountingReceiptCreated } from "@/lib/crm/accounting-hooks";
 
 const receiptSchema = z.object({
   invoiceId: z.string().uuid().optional(),
@@ -125,6 +126,15 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error("[Accounting] Sales receipt auto-post failed:", error);
     }
+
+    // A payment against an invoice the CRM owns closes that record out, the
+    // same as taking the payment in the CRM would.
+    await onAccountingReceiptCreated({
+      companyId: session.user.companyId,
+      receiptId: receipt.id,
+      invoiceId: receipt.invoiceId,
+      userId: session.user.id,
+    });
 
     return successResponse(receipt, 201);
   } catch (error) {

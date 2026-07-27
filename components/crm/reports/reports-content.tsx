@@ -3,8 +3,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Alert,
+  Card,
+  EmptyState,
+  Progress,
+  SegmentedControl,
+  Skeleton,
+  StatCard,
+} from "@corelithzw/react";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { formatMoney } from "@/components/crm/documents/document-types";
 import {
@@ -16,7 +23,6 @@ import {
   type GroupedPerformance,
   type ReportRange,
 } from "@/lib/crm/reports";
-import { cn } from "@/lib/utils";
 
 type ReportResponse = {
   data: {
@@ -34,24 +40,6 @@ type ReportResponse = {
   };
 };
 
-function Stat({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-[var(--card-radius)] border border-[var(--border)] p-4">
-      <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">{label}</p>
-      <p className="mt-1 font-mono text-2xl">{value}</p>
-      {hint ? <p className="text-xs text-[var(--text-muted)]">{hint}</p> : null}
-    </div>
-  );
-}
-
 export function ReportsContent({ currency = "USD" }: { currency?: string }) {
   const [range, setRange] = useState<ReportRange>("90d");
 
@@ -67,23 +55,13 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1.5">
-          {REPORT_RANGES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setRange(value)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-sm transition-colors",
-                range === value
-                  ? "bg-[var(--surface-inverse)] text-[var(--text-inverse)]"
-                  : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)]",
-              )}
-            >
-              {REPORT_RANGE_LABELS[value]}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          options={REPORT_RANGES.map((value) => ({ value, label: REPORT_RANGE_LABELS[value] }))}
+          value={range}
+          onValueChange={(value) => setRange(value as ReportRange)}
+          aria-label="Reporting period"
+        />
+
         {report ? (
           <p className="text-sm text-[var(--text-muted)]">
             {report.scope === "TEAM" ? "Everyone" : "Your deals only"}
@@ -92,61 +70,52 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
       </div>
 
       {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Couldn&apos;t build the report</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
+        <Alert tone="danger" title="Couldn't build the report">
+          {getApiErrorMessage(error)}
         </Alert>
       ) : null}
 
       {isLoading || !report ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((index) => (
-            <Skeleton key={index} className="h-24" />
+            <Skeleton key={index} height={96} />
           ))}
         </div>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat
+            <StatCard
               label="Win rate"
               value={formatRate(report.winRate)}
-              hint={`${report.counts.won} won, ${report.counts.lost} lost`}
+              footer={`${report.counts.won} won, ${report.counts.lost} lost`}
             />
-            <Stat
+            <StatCard
               label="Weighted forecast"
               value={formatMoney(report.forecast.weighted, currency)}
-              hint={`${formatMoney(report.forecast.unweighted, currency)} if everything lands`}
+              footer={`${formatMoney(report.forecast.unweighted, currency)} if everything lands`}
             />
-            <Stat
+            <StatCard
               label="Typical cycle"
-              value={
-                report.medianCycleDays === null ? "—" : `${report.medianCycleDays}d`
-              }
-              hint="Median, open to closed"
+              value={report.medianCycleDays === null ? "—" : `${report.medianCycleDays}d`}
+              footer="Median, open to closed"
             />
-            <Stat
+            <StatCard
               label="Leads"
               value={String(report.leads.created)}
-              hint={`${report.leads.converted} became deals`}
+              footer={`${report.leads.converted} became deals`}
             />
           </div>
 
-          <section className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold">Pipeline funnel</h2>
-              {leak && leak.droppedFromPrevious > 0 ? (
-                <p className="text-sm text-[var(--text-muted)]">
-                  Biggest drop-off at{" "}
-                  <span className="font-medium text-[var(--text-primary)]">{leak.label}</span> —{" "}
-                  {leak.droppedFromPrevious} lost from the stage before
-                </p>
-              ) : null}
-            </div>
-
+          <Card
+            title="Pipeline funnel"
+            subtitle={
+              leak && leak.droppedFromPrevious > 0
+                ? `Biggest drop-off at ${leak.label} — ${leak.droppedFromPrevious} lost from the stage before`
+                : undefined
+            }
+          >
             {report.funnel.length === 0 ? (
-              <p className="text-sm text-[var(--text-muted)]">
-                No deals in this period yet.
-              </p>
+              <EmptyState title="No deals in this period yet" />
             ) : (
               <ul className="space-y-2">
                 {report.funnel.map((stage, index) => (
@@ -162,25 +131,22 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
                           : ""}
                       </span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
-                      <div
-                        className="h-full rounded-full bg-[var(--surface-inverse)]"
-                        style={{ width: `${Math.max(2, stage.shareOfTotal * 100)}%` }}
-                      />
-                    </div>
+                    <Progress
+                      value={Math.max(2, stage.shareOfTotal * 100)}
+                      label={`${stage.label}: ${stage.reached} of ${report.funnel[0]?.reached ?? 0}`}
+                    />
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </Card>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <PerformanceTable title="By owner" rows={report.byOwner} currency={currency} />
             <PerformanceTable title="By source" rows={report.bySource} currency={currency} />
           </div>
 
-          <section className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
-            <h2 className="text-sm font-semibold">Activity</h2>
+          <Card title="Activity">
             <div className="flex h-24 items-end gap-0.5">
               {report.activity.map((bucket) => (
                 <div
@@ -193,10 +159,10 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
                 />
               ))}
             </div>
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
               Calls, emails and notes logged. Peak {peak} in a single period.
             </p>
-          </section>
+          </Card>
         </>
       )}
     </div>
@@ -213,10 +179,9 @@ function PerformanceTable({
   currency: string;
 }) {
   return (
-    <section className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
-      <h2 className="text-sm font-semibold">{title}</h2>
+    <Card title={title}>
       {rows.length === 0 ? (
-        <p className="text-sm text-[var(--text-muted)]">Nothing to show yet.</p>
+        <EmptyState title="Nothing to show yet" />
       ) : (
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
@@ -241,6 +206,6 @@ function PerformanceTable({
           </tbody>
         </table>
       )}
-    </section>
+    </Card>
   );
 }
