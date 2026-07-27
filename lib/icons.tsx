@@ -298,6 +298,7 @@ export const Palette = createPhosphorIcon("Palette", "Palette");
 export const PanelLeft = createPhosphorIcon("SidebarSimple", "PanelLeft");
 export const Payments = createPhosphorIcon("CurrencyDollar", "Payments");
 export const Pencil = createPhosphorIcon("PencilSimple", "Pencil");
+export const Phone = createPhosphorIcon("Phone", "Phone");
 export const Play = createPhosphorIcon("Play", "Play");
 export const Plus = createPhosphorIcon("Plus", "Plus");
 export const PlusCircle = createPhosphorIcon("PlusCircle", "PlusCircle");
