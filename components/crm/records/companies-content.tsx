@@ -10,7 +10,12 @@ import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 import { useDebounced } from "@/hooks/use-debounced";
 
 import { CompanyFormSheet } from "./company-form-sheet";
-import { RecordList, RecordListPager, type RecordListRow } from "./record-list";
+import { RecordListPager, type RecordListRow } from "./record-list";
+import {
+  GroupedRecordList,
+  bucketByLetter,
+  type RecordListSection,
+} from "./record-list-groups";
 import { RecordListShell } from "./record-list-shell";
 
 const PAGE_SIZE = 50;
@@ -82,6 +87,19 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
     [companies],
   );
 
+  // Same reasoning as People: a directory is scanned by name, so it gets a
+  // heading per letter and a jump strip once it is long enough to be work to
+  // scroll. Search results stay flat — they are ranked, not alphabetical.
+  const sections = useMemo<RecordListSection[]>(
+    () =>
+      bucketByLetter(rows, (row) => String(row.title ?? "")).map((bucket) => ({
+        id: bucket.id,
+        label: bucket.label,
+        rows: bucket.items,
+      })),
+    [rows],
+  );
+
   return (
     <RecordListShell
       title="Companies"
@@ -95,8 +113,9 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
       onCreate={() => setCreateOpen(true)}
       error={companiesQuery.error}
     >
-      <RecordList
-        rows={rows}
+      <GroupedRecordList
+        sections={debouncedSearch ? [{ id: "results", label: "Results", rows }] : sections}
+        showJumpStrip={!debouncedSearch && rows.length >= 30}
         isLoading={companiesQuery.isLoading}
         emptyTitle={debouncedSearch ? "No companies match that search" : "No companies yet"}
         emptyBody={

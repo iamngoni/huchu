@@ -15,9 +15,14 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { useSession } from "next-auth/react";
+
 import { fetchJson } from "@/lib/api-client";
+import { navSections } from "@/lib/navigation";
+import { filterNavSectionsByEnabledFeatures } from "@/lib/platform/gating/nav-filter";
 import {
   AddressBook,
+  ArrowRight,
   Building2,
   Funnel,
   MapPin,
@@ -81,6 +86,26 @@ const QUICK_CREATE: Array<{ label: string; href: string }> = [
   { label: "New lead", href: "/crm/leads?new=1" },
 ];
 
+type Destination = { href: string; label: string; section: string };
+
+/**
+ * Every page this user is allowed to open, as a command.
+ *
+ * A palette that only finds records is half a palette: most of the time you
+ * are not looking for a thing, you are trying to get somewhere. Built from
+ * the same nav table the sidebar renders and put through the same entitlement
+ * filter, so it can never offer a door that would 403.
+ */
+function buildDestinations(enabledFeatures: string[] | undefined): Destination[] {
+  return filterNavSectionsByEnabledFeatures(navSections, enabledFeatures).flatMap((section) =>
+    section.items.map((item) => ({
+      href: item.href,
+      label: item.label,
+      section: section.title,
+    })),
+  );
+}
+
 /**
  * One search for the whole workspace, opened with ⌘K from any page.
  *
@@ -94,6 +119,7 @@ const QUICK_CREATE: Array<{ label: string; href: string }> = [
  */
 export function GlobalSearch({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -139,6 +165,27 @@ export function GlobalSearch({ compact = false }: { compact?: boolean }) {
 
   const groups = useMemo(() => searchQuery.data?.groups ?? [], [searchQuery.data]);
 
+  const destinations = useMemo(
+    () =>
+      buildDestinations(
+        (session?.user as { enabledFeatures?: string[] } | undefined)?.enabledFeatures,
+      ),
+    [session],
+  );
+
+  // Matched here rather than by the Command component, which is in
+  // `shouldFilter={false}` mode so the record results (already filtered by the
+  // server) are not filtered a second time by a different algorithm.
+  const matchedDestinations = useMemo(() => {
+    const needle = debounced.toLowerCase();
+    if (needle.length < 2) return destinations.slice(0, 6);
+    return destinations
+      .filter((destination) =>
+        `${destination.label} ${destination.section}`.toLowerCase().includes(needle),
+      )
+      .slice(0, 6);
+  }, [debounced, destinations]);
+
   const go = useCallback(
     (href: string, entry?: RecentEntry) => {
       if (entry) {
@@ -153,7 +200,11 @@ export function GlobalSearch({ compact = false }: { compact?: boolean }) {
 
   const showRecents = debounced.length < 2 && recents.length > 0;
   const isSearching = debounced.length >= 2;
-  const noResults = isSearching && !searchQuery.isFetching && groups.length === 0;
+  const noResults =
+    isSearching &&
+    !searchQuery.isFetching &&
+    groups.length === 0 &&
+    matchedDestinations.length === 0;
 
   return (
     <>
@@ -256,9 +307,31 @@ export function GlobalSearch({ compact = false }: { compact?: boolean }) {
                 );
               })}
 
+              {matchedDestinations.length > 0 ? (
+                <>
+                  {showRecents || groups.length > 0 ? <CommandSeparator /> : null}
+                  <CommandGroup heading="Go to">
+                    {matchedDestinations.map((destination) => (
+                      <CommandItem
+                        key={destination.href}
+                        value={`goto-${destination.href}`}
+                        onSelect={() => go(destination.href)}
+                        className="gap-2"
+                      >
+                        <ArrowRight className="h-4 w-4 shrink-0 opacity-60" />
+                        <span className="min-w-0 flex-1 truncate">{destination.label}</span>
+                        <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                          {destination.section}
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
+              ) : null}
+
               {!isSearching ? (
                 <>
-                  {showRecents ? <CommandSeparator /> : null}
+                  <CommandSeparator />
                   <CommandGroup heading="Create">
                     {QUICK_CREATE.map((action) => (
                       <CommandItem
