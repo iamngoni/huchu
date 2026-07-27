@@ -157,8 +157,8 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
         className={cn(
           "peer group/sidebar relative flex h-[100dvh] min-h-[100dvh] flex-col bg-sidebar text-sidebar-foreground shadow-[inset_-1px_0_0_0_var(--sidebar-border)] transition-[width,background-color] duration-[var(--motion-duration-base)] ease-[var(--motion-ease-standard)]",
           collapsible === "icon" && state === "collapsed"
-            ? "w-[--sidebar-width-icon]"
-            : "w-[--sidebar-width]",
+            ? "w-[var(--sidebar-width-icon)]"
+            : "w-[var(--sidebar-width)]",
           className,
         )}
         {...props}
@@ -176,7 +176,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
         <Sheet open={openMobile} onOpenChange={setOpenMobile}>
           <SheetContent
             side="left"
-            className="w-[--sidebar-width] max-w-[--sidebar-width] p-0"
+            className="w-[var(--sidebar-width)] max-w-[var(--sidebar-width)] p-0"
             style={
               { "--sidebar-width": SIDEBAR_WIDTH_MOBILE } as React.CSSProperties
             }

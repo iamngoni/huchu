@@ -80,8 +80,8 @@ export function SegmentedControl<V extends string>({
       className={cn(
         "items-stretch rounded-md p-0.5",
         fullWidth ? "flex w-full" : "inline-flex",
-        variant === "default" && "bg-[--surface-muted]",
-        variant === "border" && "border border-[--border] bg-[--surface-muted]",
+        variant === "default" && "bg-[var(--surface-muted)]",
+        variant === "border" && "border border-[var(--border)] bg-[var(--surface-muted)]",
         className,
       )}
     >
@@ -108,9 +108,9 @@ export function SegmentedControl<V extends string>({
               size === "sm" && "h-6 px-2 text-[11px]",
               size === "md" && "h-7 px-3 text-xs",
               active
-                ? "bg-[--surface-base] text-[--text-strong] shadow-[0_1px_0_0_var(--border)]"
-                : "text-[--text-muted] hover:text-[--text-body]",
-              opt.disabled && "cursor-not-allowed opacity-50 hover:text-[--text-muted]",
+                ? "bg-[var(--surface-base)] text-[var(--text-strong)] shadow-[0_1px_0_0_var(--border)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-body)]",
+              opt.disabled && "cursor-not-allowed opacity-50 hover:text-[var(--text-muted)]",
             )}
           >
             <span className="truncate">{opt.label}</span>
@@ -119,8 +119,8 @@ export function SegmentedControl<V extends string>({
                 className={cn(
                   "rounded px-1 text-[10px] tabular-nums",
                   active
-                    ? "bg-[--surface-muted] text-[--text-muted]"
-                    : "bg-[--surface-base] text-[--text-subtle]",
+                    ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
+                    : "bg-[var(--surface-base)] text-[var(--text-subtle)]",
                 )}
               >
                 {opt.count > 99 ? "99+" : opt.count}

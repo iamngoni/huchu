@@ -48,6 +48,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@corelithzw/react/styles.css" layer(corelith);
+/* Components the package exports but whose CSS never made it into its bundle.
+   Same layer, so it behaves exactly as if the package had shipped it — and it
+   goes away the day a release does. See the file header for the audit. */
+@import "./themes/corelith-missing.css" layer(corelith);
 
 @source "../node_modules/@rtcamp/frappe-ui-react/dist";
 
