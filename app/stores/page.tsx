@@ -7,10 +7,14 @@ type StoresPageProps = {
 const viewToRoute: Record<string, string> = {
   dashboard: "/stores/dashboard",
   inventory: "/stores/inventory",
+  locations: "/stores/locations",
   movements: "/stores/movements",
+  catalogue: "/stores/catalogue",
+  "price-lists": "/stores/price-lists",
   fuel: "/stores/fuel",
-  issue: "/stores/issue",
-  receive: "/stores/receive",
+  // Both are dialogs now; the movement log is where they open.
+  issue: "/stores/movements?record=issue",
+  receive: "/stores/movements?record=receive",
 };
 
 export default async function StoresIndexPage({ searchParams }: StoresPageProps) {

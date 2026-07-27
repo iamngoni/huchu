@@ -1,8 +1,6 @@
 import {
   MapPin,
   AlertCircle,
-  ArrowDownward,
-  ArrowUpward,
   BarChart3,
   Building2,
   CalendarCheck,
@@ -214,13 +212,22 @@ export const navSections: NavSection[] = [
     title: "Stores & Inventory",
     description: "Inventory and fuel control",
     featureKey: "stores.dashboard",
+    // Issuing and receiving left this list when they became dialogs — a write
+    // action does not belong in a column of places to look.
+    groups: [
+      { id: "stock", label: "Stock" },
+      { id: "selling", label: "What we sell" },
+    ],
     items: [
       { href: "/stores/dashboard", icon: Dashboard, label: "Overview" },
-      { href: "/stores/inventory", icon: Package, label: "Stock on Hand" },
-      { href: "/stores/movements", icon: History, label: "Stock Movements" },
-      { href: "/stores/fuel", icon: Fuel, label: "Fuel Log" },
-      { href: "/stores/issue", icon: ArrowUpward, label: "Issue Stock" },
-      { href: "/stores/receive", icon: ArrowDownward, label: "Receive Stock" },
+
+      { href: "/stores/inventory", icon: Package, label: "Stock on hand", group: "stock" },
+      { href: "/stores/locations", icon: MapPin, label: "Locations", group: "stock" },
+      { href: "/stores/movements", icon: History, label: "Movements", group: "stock" },
+      { href: "/stores/fuel", icon: Fuel, label: "Fuel log", group: "stock" },
+
+      { href: "/stores/catalogue", icon: TableRows, label: "Catalogue", group: "selling" },
+      { href: "/stores/price-lists", icon: Scale, label: "Price lists", group: "selling" },
     ],
   },
   {
