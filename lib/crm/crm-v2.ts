@@ -4,6 +4,8 @@
  */
 import { fetchJson } from "@/lib/api-client";
 import type { CrmLeadStage } from "@prisma/client";
+import type { LeadSort, LeadViewFilters } from "@/lib/crm/views";
+import type { SiteVisitItemInput, SiteVisitReportInput } from "@/lib/crm/site-visits";
 
 export type CrmClientRecord = {
   id: string;
@@ -61,6 +63,92 @@ export type CrmAppointmentRecord = {
   status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
 };
 
+export type CrmLeadOwner = { id: string; name: string | null };
+
+export type CrmNextFollowUp = { id: string; title: string; dueAt: string };
+
+/** A lead as the table renders it: owner, client, and what's owed next. */
+export type CrmLeadListRecord = CrmLeadRecord & {
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  sourceChannel: string | null;
+  client: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  nextFollowUp: CrmNextFollowUp | null;
+};
+
+export type CrmBoardCard = {
+  id: string;
+  leadNo: string;
+  title: string | null;
+  stage: CrmLeadStage;
+  estimatedValue: number | null;
+  currency: string;
+  contactName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  stageEnteredAt: string;
+  client: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  nextFollowUp: CrmNextFollowUp | null;
+};
+
+export type CrmBoardColumn = {
+  stage: CrmLeadStage;
+  count: number;
+  totalValue: number;
+  hasMore: boolean;
+  leads: CrmBoardCard[];
+};
+
+export type CrmSavedViewRecord = {
+  id: string;
+  name: string;
+  entity: string;
+  viewType: "TABLE" | "BOARD";
+  filters: LeadViewFilters;
+  sort: LeadSort | null;
+  isShared: boolean;
+  createdById: string;
+  createdBy: CrmLeadOwner | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CrmVisitItemRecord = SiteVisitItemInput & {
+  id: string;
+  appointmentId: string;
+  position: number;
+};
+
+export type CrmVisitChecklistItem = {
+  key: string;
+  label: string;
+  checked: boolean;
+  notes?: string | null;
+};
+
+export type CrmVisitPhoto = {
+  url: string;
+  fileName?: string | null;
+  contentType?: string | null;
+  size?: number | null;
+  kind: "PHOTO" | "FILE";
+  caption?: string | null;
+};
+
+export type CrmVisitReportRecord = CrmAppointmentRecord & {
+  checklist: CrmVisitChecklistItem[] | null;
+  photos: CrmVisitPhoto[] | null;
+  siteConditions: string | null;
+  reportNotes: string | null;
+  outcomeNotes: string | null;
+  reportCompletedAt: string | null;
+  completedAt: string | null;
+  visitItems: CrmVisitItemRecord[];
+};
+
 type ListResponse<T> = { data: T[]; total?: number; page?: number; limit?: number };
 type Envelope<T> = { data: T };
 
@@ -74,8 +162,130 @@ function qs(params: Record<string, string | number | boolean | null | undefined>
   return s ? `?${s}` : "";
 }
 
-export function fetchCrmLeads(params: { stage?: string; assignedToId?: string; q?: string; page?: number } = {}) {
-  return fetchJson<ListResponse<CrmLeadRecord>>(`/api/v2/crm/leads${qs(params)}`);
+/**
+ * Flatten a filter set into query params. Arrays are comma-joined and booleans
+ * only sent when true, so a default view produces a clean URL.
+ */
+export function leadFiltersToParams(
+  filters: LeadViewFilters,
+): Record<string, string | number | boolean | undefined> {
+  return {
+    q: filters.q,
+    stages: filters.stages?.join(","),
+    assignedToIds: filters.assignedToIds?.join(","),
+    unassigned: filters.unassigned ? "1" : undefined,
+    mineOnly: filters.mineOnly ? "1" : undefined,
+    channels: filters.channels?.join(","),
+    sources: filters.sources?.join(","),
+    valueMin: filters.valueMin,
+    valueMax: filters.valueMax,
+    createdFrom: filters.createdFrom,
+    createdTo: filters.createdTo,
+    overdueOnly: filters.overdueOnly ? "1" : undefined,
+  };
+}
+
+export function fetchCrmLeads(
+  params: {
+    filters?: LeadViewFilters;
+    sort?: LeadSort;
+    page?: number;
+    limit?: number;
+  } = {},
+) {
+  const query = qs({
+    ...leadFiltersToParams(params.filters ?? {}),
+    sortField: params.sort?.field,
+    sortDir: params.sort?.direction,
+    page: params.page,
+    limit: params.limit,
+  });
+  return fetchJson<ListResponse<CrmLeadListRecord>>(`/api/v2/crm/leads${query}`);
+}
+
+export function fetchCrmLeadsBoard(filters: LeadViewFilters = {}) {
+  const query = qs(leadFiltersToParams(filters));
+  return fetchJson<Envelope<{ columns: CrmBoardColumn[]; cardsPerColumn: number }>>(
+    `/api/v2/crm/leads/board${query}`,
+  );
+}
+
+export type CrmBulkLeadAction =
+  | { action: "assign"; ids: string[]; assignedToId: string | null }
+  | { action: "stage"; ids: string[]; stage: CrmLeadStage; lostReason?: string };
+
+export function bulkUpdateCrmLeads(body: CrmBulkLeadAction) {
+  return fetchJson<
+    Envelope<{ updated: number; unchanged?: number; skipped: number; notFound: number }>
+  >(`/api/v2/crm/leads/bulk`, { method: "POST", body: JSON.stringify(body) });
+}
+
+export function fetchCrmSavedViews() {
+  return fetchJson<Envelope<{ data: CrmSavedViewRecord[] }>>(`/api/v2/crm/saved-views`);
+}
+
+export function createCrmSavedView(body: {
+  name: string;
+  viewType?: "TABLE" | "BOARD";
+  filters: LeadViewFilters;
+  sort?: LeadSort | null;
+  isShared?: boolean;
+}) {
+  return fetchJson<Envelope<CrmSavedViewRecord>>(`/api/v2/crm/saved-views`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateCrmSavedView(
+  id: string,
+  body: Partial<{
+    name: string;
+    viewType: "TABLE" | "BOARD";
+    filters: LeadViewFilters;
+    sort: LeadSort | null;
+    isShared: boolean;
+  }>,
+) {
+  return fetchJson<Envelope<CrmSavedViewRecord>>(`/api/v2/crm/saved-views/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteCrmSavedView(id: string) {
+  return fetchJson<Envelope<{ id: string }>>(`/api/v2/crm/saved-views/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchCrmVisitReport(appointmentId: string) {
+  return fetchJson<Envelope<CrmVisitReportRecord>>(
+    `/api/v2/crm/appointments/${appointmentId}/report`,
+  );
+}
+
+export function saveCrmVisitReport(appointmentId: string, body: SiteVisitReportInput) {
+  return fetchJson<Envelope<CrmVisitReportRecord>>(
+    `/api/v2/crm/appointments/${appointmentId}/report`,
+    { method: "PUT", body: JSON.stringify(body) },
+  );
+}
+
+export function updateCrmFollowUp(
+  id: string,
+  body: Partial<{
+    status: "PENDING" | "COMPLETED" | "CANCELLED";
+    title: string;
+    notes: string | null;
+    dueAt: string;
+    assignedToId: string;
+  }>,
+) {
+  return fetchJson<Envelope<CrmFollowUpRecord>>(`/api/v2/crm/follow-ups/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
 }
 
 export function fetchCrmLead(id: string) {

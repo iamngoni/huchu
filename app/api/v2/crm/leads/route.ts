@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import {
   errorResponse,
@@ -10,9 +9,15 @@ import {
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
-import { defaultProbabilityForStage } from "@/lib/crm/pipeline";
+import { crmLeadStageSchema, defaultProbabilityForStage } from "@/lib/crm/pipeline";
 import { deriveLeadChannel } from "@/lib/crm/sources";
-import { crmLeadStageSchema, isCompanyUser } from "../_helpers";
+import {
+  buildLeadOrderBy,
+  buildLeadWhere,
+  leadSortSchema,
+  parseLeadFiltersFromParams,
+} from "@/lib/crm/views";
+import { isCompanyUser } from "../_helpers";
 
 const createLeadSchema = z.object({
   title: z.string().trim().max(200).nullable().optional(),
@@ -39,43 +44,62 @@ export async function GET(request: NextRequest) {
     const { session } = sessionResult;
 
     const { searchParams } = new URL(request.url);
-    const stage = searchParams.get("stage");
-    const assignedToId = searchParams.get("assignedToId");
-    const source = searchParams.get("source");
-    const channel = searchParams.get("channel");
-    const search = searchParams.get("q")?.trim();
     const { page, limit, skip } = getPaginationParams(request);
 
-    const where: Prisma.CrmLeadWhereInput = {
-      companyId: session.user.companyId,
-      ...(stage ? { stage: stage as Prisma.CrmLeadWhereInput["stage"] } : {}),
-      ...(assignedToId ? { assignedToId } : {}),
-      ...(source ? { source } : {}),
-      ...(channel ? { sourceChannel: channel as Prisma.CrmLeadWhereInput["sourceChannel"] } : {}),
-      ...(search
-        ? {
-            OR: [
-              { title: { contains: search, mode: "insensitive" } },
-              { leadNo: { contains: search, mode: "insensitive" } },
-              { contactName: { contains: search, mode: "insensitive" } },
-              { client: { name: { contains: search, mode: "insensitive" } } },
-            ],
-          }
+    // Legacy singular params (stage=, assignedToId=, source=, channel=) still
+    // work; they fold into the plural filter set the workspace now sends.
+    const filters = parseLeadFiltersFromParams(searchParams);
+    const legacyStage = searchParams.get("stage");
+    const legacyAssignee = searchParams.get("assignedToId");
+    const legacySource = searchParams.get("source");
+    const legacyChannel = searchParams.get("channel");
+    const merged = {
+      ...filters,
+      ...(legacyStage && !filters.stages
+        ? { stages: crmLeadStageSchema.array().parse([legacyStage]) }
+        : {}),
+      ...(legacyAssignee && !filters.assignedToIds ? { assignedToIds: [legacyAssignee] } : {}),
+      ...(legacySource && !filters.sources ? { sources: [legacySource] } : {}),
+      ...(legacyChannel && !filters.channels
+        ? { channels: [legacyChannel as NonNullable<typeof filters.channels>[number]] }
         : {}),
     };
+
+    const where = buildLeadWhere(session.user.companyId, merged, session.user.id);
+    const sortParsed = leadSortSchema.safeParse({
+      field: searchParams.get("sortField"),
+      direction: searchParams.get("sortDir"),
+    });
+    const orderBy = buildLeadOrderBy(sortParsed.success ? sortParsed.data : undefined);
 
     const [leads, total] = await Promise.all([
       prisma.crmLead.findMany({
         where,
-        include: { client: { select: { id: true, name: true } }, assignedTo: { select: { id: true, name: true } } },
-        orderBy: { updatedAt: "desc" },
+        include: {
+          client: { select: { id: true, name: true } },
+          assignedTo: { select: { id: true, name: true } },
+          // The next thing owed on this lead — surfaced in the table and on
+          // board cards so nothing quietly goes cold.
+          followUps: {
+            where: { status: "PENDING" },
+            orderBy: { dueAt: "asc" },
+            take: 1,
+            select: { id: true, title: true, dueAt: true },
+          },
+        },
+        orderBy,
         skip,
         take: limit,
       }),
       prisma.crmLead.count({ where }),
     ]);
 
-    return successResponse(paginationResponse(leads, total, page, limit));
+    const shaped = leads.map(({ followUps, ...lead }) => ({
+      ...lead,
+      nextFollowUp: followUps[0] ?? null,
+    }));
+
+    return successResponse(paginationResponse(shaped, total, page, limit));
   } catch (error) {
     console.error("[API] GET /api/v2/crm/leads error:", error);
     return errorResponse("Failed to fetch leads");

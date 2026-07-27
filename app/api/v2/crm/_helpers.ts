@@ -4,16 +4,7 @@ import type { AuthenticatedSession } from "@/lib/api-utils";
 import { hasCrmFullAccess } from "@/lib/crm/scope";
 import { prisma } from "@/lib/prisma";
 
-export const crmLeadStageSchema = z.enum([
-  "NEW",
-  "CONTACTED",
-  "QUALIFIED",
-  "SITE_VISIT",
-  "QUOTED",
-  "INVOICED",
-  "WON",
-  "LOST",
-]);
+export { crmLeadStageSchema } from "@/lib/crm/pipeline";
 
 export const crmDocumentLineSchema = z.object({
   description: z.string().trim().min(1).max(300),
