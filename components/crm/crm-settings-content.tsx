@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { CRM_CHANNEL_LABELS, CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
+import { CustomFieldsPanel } from "@/components/crm/settings/custom-fields-panel";
+import { PipelinesPanel } from "@/components/crm/settings/pipelines-panel";
 import type { CrmLeadChannel } from "@prisma/client";
 
 type ApiKey = {
@@ -364,14 +366,22 @@ function CommissionsPanel() {
 
 export function CrmSettingsContent() {
   return (
-    <Tabs defaultValue="keys">
+    <Tabs defaultValue="pipelines">
       <div className="scroll-rail max-w-full">
         <TabsList>
+          <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
+          <TabsTrigger value="fields">Custom Fields</TabsTrigger>
           <TabsTrigger value="keys">API Keys</TabsTrigger>
           <TabsTrigger value="sources">Lead Sources</TabsTrigger>
           <TabsTrigger value="commissions">Commissions</TabsTrigger>
         </TabsList>
       </div>
+      <TabsContent value="pipelines">
+        <PipelinesPanel />
+      </TabsContent>
+      <TabsContent value="fields">
+        <CustomFieldsPanel />
+      </TabsContent>
       <TabsContent value="keys">
         <ApiKeysPanel />
       </TabsContent>
