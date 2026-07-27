@@ -34,7 +34,7 @@ import { formatMoney } from "./document-types";
 export function DocumentBuilderSheet({
   open,
   onOpenChange,
-  leadId,
+  basePath,
   mode,
   currency,
   prefillLines,
@@ -43,7 +43,8 @@ export function DocumentBuilderSheet({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  leadId: string;
+  /** The record's API base, e.g. /api/v2/crm/deals/<id>. */
+  basePath: string;
   mode: "quotation" | "invoice";
   currency: string;
   prefillLines?: CrmDocumentLineInput[];
@@ -106,7 +107,7 @@ export function DocumentBuilderSheet({
 
       const endpoint = mode === "quotation" ? "quotation" : "invoice";
       return fetchJson<{ data: { total?: number } }>(
-        `/api/v2/crm/leads/${leadId}/${endpoint}`,
+        `${basePath}/${endpoint}`,
         {
           method: "POST",
           body: JSON.stringify({
@@ -124,7 +125,7 @@ export function DocumentBuilderSheet({
       );
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["crm-lead", leadId] });
+      queryClient.invalidateQueries({ queryKey: ["crm-record", basePath] });
       queryClient.invalidateQueries({ queryKey: ["crm", "leads"] });
       queryClient.invalidateQueries({ queryKey: ["crm", "board"] });
       toast({

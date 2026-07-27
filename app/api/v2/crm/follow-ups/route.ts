@@ -11,6 +11,7 @@ const createSchema = z.object({
   dueAt: z.string().datetime(),
   leadId: z.string().uuid().nullable().optional(),
   clientId: z.string().uuid().nullable().optional(),
+  dealId: z.string().uuid().nullable().optional(),
   appointmentId: z.string().uuid().nullable().optional(),
   assignedToId: z.string().uuid().optional(),
 });
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
         dueAt: new Date(data.dueAt),
         leadId: data.leadId ?? undefined,
         clientId: data.clientId ?? undefined,
+        dealId: data.dealId ?? undefined,
         appointmentId: data.appointmentId ?? undefined,
         assignedToId: data.assignedToId ?? session.user.id,
         createdById: session.user.id,

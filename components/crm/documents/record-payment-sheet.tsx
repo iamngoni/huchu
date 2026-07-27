@@ -31,12 +31,13 @@ const PAYMENT_METHODS = ["Cash", "Bank transfer", "Mobile money", "Card", "Chequ
 export function RecordPaymentSheet({
   open,
   onOpenChange,
-  leadId,
+  basePath,
   document,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  leadId: string;
+  /** The record's API base, e.g. /api/v2/crm/deals/<id>. */
+  basePath: string;
   document: LeadDocument | null;
 }) {
   const queryClient = useQueryClient();
@@ -63,7 +64,7 @@ export function RecordPaymentSheet({
 
   const record = useMutation({
     mutationFn: () =>
-      fetchJson<{ data: Record<string, unknown> }>(`/api/v2/crm/leads/${leadId}/receipt`, {
+      fetchJson<{ data: Record<string, unknown> }>(`${basePath}/receipt`, {
         method: "POST",
         body: JSON.stringify({
           invoiceDocumentId: document?.id,
@@ -75,13 +76,13 @@ export function RecordPaymentSheet({
       }),
     onSuccess: () => {
       const settled = Number(amount) >= outstanding - 0.009;
-      queryClient.invalidateQueries({ queryKey: ["crm-lead", leadId] });
+      queryClient.invalidateQueries({ queryKey: ["crm-record", basePath] });
       queryClient.invalidateQueries({ queryKey: ["crm", "leads"] });
       queryClient.invalidateQueries({ queryKey: ["crm", "board"] });
       toast({
         title: "Payment recorded",
         description: settled
-          ? "Invoice settled in full — the lead moves to Won."
+          ? "Invoice settled in full — this closes as won."
           : `${formatMoney(outstanding - Number(amount), document?.currency ?? "USD")} still outstanding.`,
       });
       onOpenChange(false);

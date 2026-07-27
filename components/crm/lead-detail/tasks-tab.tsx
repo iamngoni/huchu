@@ -21,6 +21,7 @@ import { updateCrmFollowUp } from "@/lib/crm/crm-v2";
 import { cn } from "@/lib/utils";
 
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
+import type { ActivityTarget } from "./activity-composer";
 import { isOverdue } from "@/components/crm/leads/stage-config";
 import type { LeadFollowUp } from "./lead-types";
 
@@ -34,12 +35,12 @@ function defaultDueAt(): string {
 }
 
 export function TasksTab({
-  leadId,
+  target,
   followUps,
   owners,
   currentUserId,
 }: {
-  leadId: string;
+  target: ActivityTarget;
   followUps: LeadFollowUp[];
   owners: LeadFilterOwner[];
   currentUserId?: string;
@@ -50,14 +51,20 @@ export function TasksTab({
   const [dueAt, setDueAt] = useState(defaultDueAt);
   const [assignedToId, setAssignedToId] = useState(currentUserId ?? "");
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["crm-lead", leadId] });
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["crm-lead", target.id] });
+    queryClient.invalidateQueries({ queryKey: ["crm", target.kind, target.id] });
+  };
+
+  // Tasks hang off whichever record the tab is on.
+  const targetKey = target.kind === "deal" ? "dealId" : target.kind === "company" ? "clientId" : "leadId";
 
   const add = useMutation({
     mutationFn: () =>
       fetchJson("/api/v2/crm/follow-ups", {
         method: "POST",
         body: JSON.stringify({
-          leadId,
+          [targetKey]: target.id,
           title: title.trim(),
           dueAt: new Date(dueAt).toISOString(),
           ...(assignedToId ? { assignedToId } : {}),
@@ -171,7 +178,7 @@ export function TasksTab({
 
       {followUps.length === 0 ? (
         <p className="py-6 text-center text-sm text-[var(--text-muted)]">
-          No tasks on this lead. Deals go cold without a next step.
+          No tasks here yet. Work goes cold without a next step.
         </p>
       ) : (
         <>

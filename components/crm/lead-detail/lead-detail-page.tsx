@@ -222,7 +222,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <ActivityComposer leadId={leadId} />
+          <ActivityComposer target={{ kind: "lead", id: leadId }} />
 
           <Tabs value={tab} onValueChange={setTab}>
             <div className="scroll-rail max-w-full">
@@ -249,7 +249,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
 
             <TabsContent value="documents" className="pt-4">
               <DocumentList
-                leadId={leadId}
+                basePath={`/api/v2/crm/leads/${leadId}`}
                 currency={lead.currency}
                 documents={lead.documents}
                 canCreate={Boolean(lead.clientId)}
@@ -268,7 +268,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
 
             <TabsContent value="tasks" className="pt-4">
               <TasksTab
-                leadId={leadId}
+                target={{ kind: "lead", id: leadId }}
                 followUps={lead.followUps}
                 owners={owners}
                 currentUserId={currentUserId}

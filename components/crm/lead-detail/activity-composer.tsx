@@ -32,7 +32,20 @@ const PLACEHOLDERS: Record<ActivityType, string> = {
  * timeline subject and the rest the body, so a one-line note stays a one-liner
  * and a long call write-up still reads well.
  */
-export function ActivityComposer({ leadId }: { leadId: string }) {
+export type ActivityTarget =
+  | { kind: "lead"; id: string }
+  | { kind: "deal"; id: string }
+  | { kind: "person"; id: string }
+  | { kind: "company"; id: string };
+
+const TARGET_KEYS: Record<ActivityTarget["kind"], string> = {
+  lead: "leadId",
+  deal: "dealId",
+  person: "personId",
+  company: "clientId",
+};
+
+export function ActivityComposer({ target }: { target: ActivityTarget }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [type, setType] = useState<ActivityType>("NOTE");
@@ -44,14 +57,21 @@ export function ActivityComposer({ leadId }: { leadId: string }) {
       const breakAt = trimmed.indexOf("\n");
       const subject = breakAt === -1 ? trimmed : trimmed.slice(0, breakAt).trim();
       const body = breakAt === -1 ? undefined : trimmed.slice(breakAt + 1).trim() || undefined;
-      return fetchJson(`/api/v2/crm/leads/${leadId}/activities`, {
+      return fetchJson("/api/v2/crm/activities", {
         method: "POST",
-        body: JSON.stringify({ type, subject: subject.slice(0, 200), body }),
+        body: JSON.stringify({
+          type,
+          subject: subject.slice(0, 200),
+          body,
+          [TARGET_KEYS[target.kind]]: target.id,
+        }),
       });
     },
     onSuccess: () => {
       setText("");
-      queryClient.invalidateQueries({ queryKey: ["crm-lead", leadId] });
+      // Refresh whichever record page is showing this timeline.
+      queryClient.invalidateQueries({ queryKey: ["crm-lead", target.id] });
+      queryClient.invalidateQueries({ queryKey: ["crm", target.kind, target.id] });
     },
     onError: (error) =>
       toast({

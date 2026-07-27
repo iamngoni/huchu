@@ -41,14 +41,15 @@ function KindIcon({ type }: { type: LeadDocument["type"] }) {
 }
 
 export function DocumentList({
-  leadId,
+  basePath,
   currency,
   documents,
   canCreate,
   prefillLines,
   onPrefillConsumed,
 }: {
-  leadId: string;
+  /** The record's API base, e.g. /api/v2/crm/deals/<id>. */
+  basePath: string;
   currency: string;
   documents: LeadDocument[];
   canCreate: boolean;
@@ -66,7 +67,7 @@ export function DocumentList({
   const shareApproval = useMutation({
     mutationFn: (docId: string) =>
       fetchJson<{ data: { token: string; path: string } }>(
-        `/api/v2/crm/leads/${leadId}/documents/${docId}/approval`,
+        `${basePath}/documents/${docId}/approval`,
         { method: "POST", body: JSON.stringify({}) },
       ),
     onSuccess: async (result) => {
@@ -79,7 +80,7 @@ export function DocumentList({
         // showing the link is still useful.
         toast({ title: "Approval link ready", description: url });
       }
-      queryClient.invalidateQueries({ queryKey: ["crm-lead", leadId] });
+      queryClient.invalidateQueries({ queryKey: ["crm-record", basePath] });
     },
     onError: (error) =>
       toast({
@@ -109,8 +110,8 @@ export function DocumentList({
         </div>
       ) : (
         <p className="rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3 text-sm text-[var(--text-muted)]">
-          Attach a client to this lead before quoting or invoicing — documents are billed to a
-          customer record.
+          Attach a company to this record before quoting or invoicing — documents are billed
+          to a customer.
         </p>
       )}
 
@@ -122,7 +123,7 @@ export function DocumentList({
             </EmptyMedia>
             <EmptyTitle>No documents yet</EmptyTitle>
             <EmptyDescription>
-              Quotations, invoices, and receipts raised on this lead will appear here.
+              Quotations, invoices, and receipts raised here will appear in this list.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -174,7 +175,7 @@ export function DocumentList({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>
                       <a
-                        href={`/api/v2/crm/leads/${leadId}/documents/${doc.id}/pdf`}
+                        href={`${basePath}/documents/${doc.id}/pdf`}
                         target="_blank"
                         rel="noreferrer"
                         className="flex items-center gap-2"
@@ -185,7 +186,7 @@ export function DocumentList({
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <a
-                        href={`/api/v2/crm/leads/${leadId}/documents/${doc.id}/pdf?download=1`}
+                        href={`${basePath}/documents/${doc.id}/pdf?download=1`}
                         className="flex items-center gap-2"
                       >
                         <Download className="h-4 w-4" />
@@ -236,7 +237,7 @@ export function DocumentList({
             onPrefillConsumed?.();
           }
         }}
-        leadId={leadId}
+        basePath={basePath}
         mode={builder?.mode ?? "quotation"}
         currency={currency}
         fromQuotationId={builder?.fromQuotationId}
@@ -246,7 +247,7 @@ export function DocumentList({
       <RecordPaymentSheet
         open={Boolean(paymentFor)}
         onOpenChange={(next) => (!next ? setPaymentFor(null) : undefined)}
-        leadId={leadId}
+        basePath={basePath}
         document={paymentFor}
       />
     </div>
