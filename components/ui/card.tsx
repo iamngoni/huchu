@@ -1,92 +1,52 @@
+"use client";
+
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Card — the design system's markup contract, kept compound.
+ *
+ * The DS ships a `Card` React component that takes `title`/`subtitle`/`footer`
+ * as props, but 57 files here compose `<Card><CardHeader><CardTitle>…`. Rather
+ * than rewrite all of them, these render the DS's own class names
+ * (`.card`, `.card-head`, `.card-title`, `.card-sub`, `.card-body`, `.card-foot`)
+ * so the visuals are the design system's while the composition stays local.
+ *
+ * New code should import `Card` from `@corelithzw/react` and use its props.
+ */
 function Card({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card"
-      className={cn(
-        "bg-card text-card-foreground relative isolate flex flex-col rounded-[var(--card-radius)] border border-[var(--border-default)] pb-4 shadow-[var(--card-shadow-rest)]",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <div data-slot="card" className={cn("card", className)} {...props} />;
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-header"
-      className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-[var(--section-gutter-x)] pt-4 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:border-[var(--card-divider)] [.border-b]:pb-4",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <div data-slot="card-header" className={cn("card-head", className)} {...props} />;
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-title"
-      className={cn(
-        "text-section-title text-foreground font-bold tracking-tight",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <div data-slot="card-title" className={cn("card-title", className)} {...props} />;
 }
 
-function CardDescription(_props: React.ComponentProps<"div">) {
-  return null;
+function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
+  return <div data-slot="card-description" className={cn("card-sub", className)} {...props} />;
 }
 
 function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className,
-      )}
+      className={cn("ml-auto flex items-center gap-2", className)}
       {...props}
     />
   );
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn("px-[var(--section-gutter-x)] pb-4", className)}
-      {...props}
-    />
-  );
+  return <div data-slot="card-content" className={cn("card-body", className)} {...props} />;
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-footer"
-      className={cn(
-        "flex items-center px-[var(--section-gutter-x)] pb-4 [.border-t]:border-[var(--card-divider)] [.border-t]:pt-4",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <div data-slot="card-footer" className={cn("card-foot", className)} {...props} />;
 }
 
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardAction,
-  CardDescription,
-  CardContent,
-};
+export { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter };

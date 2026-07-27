@@ -1,63 +1,62 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+"use client";
 
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { Alert as DsAlert, type AlertTone } from "@corelithzw/react";
 
-const alertVariants = cva(
-  "relative w-full rounded-[var(--card-radius)] border border-[var(--border-default)] bg-card px-4 py-3 text-sm text-foreground shadow-[var(--surface-frame-shadow)] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg+div]:translate-y-[-2px] [&>svg+div]:pl-7",
-  {
-    variants: {
-      variant: {
-        default: "bg-card text-foreground",
-        destructive:
-          "border-[var(--status-error-border)] bg-[var(--status-error-bg)] text-[var(--status-error-text)] [&>svg]:text-[var(--status-error-text)]",
-        warning:
-          "border-[var(--status-warning-border)] bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] [&>svg]:text-[var(--status-warning-text)]",
-        success:
-          "border-[var(--status-success-border)] bg-[var(--status-success-bg)] text-[var(--status-success-text)] [&>svg]:text-[var(--status-success-text)]",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  },
-)
+import { cn } from "@/lib/utils";
 
-const Alert = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
->(({ className, variant, ...props }, ref) => (
-  <div
-    ref={ref}
-    role="alert"
-    className={cn(alertVariants({ variant }), className)}
-    {...props}
-  />
-))
-Alert.displayName = "Alert"
+/**
+ * Alert — the design system's, behind this repo's older shape.
+ *
+ * The local API was compound (`Alert` > `AlertTitle` + `AlertDescription`); the
+ * DS takes `title` as a prop. Rather than rewrite every call site, the title
+ * child is hoisted into the prop at render time and the rest becomes the body.
+ */
+const VARIANT_TO_TONE: Record<string, AlertTone> = {
+  default: "info",
+  info: "info",
+  success: "success",
+  warning: "warn",
+  destructive: "danger",
+};
 
-const AlertTitle = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h5
-    ref={ref}
-    className={cn("mb-1 text-sm font-semibold leading-none tracking-[-0.01em] text-[var(--text-strong)]", className)}
-    {...props}
-  />
-))
-AlertTitle.displayName = "AlertTitle"
+export type AlertProps = Omit<React.ComponentProps<typeof DsAlert>, "tone" | "title"> & {
+  variant?: keyof typeof VARIANT_TO_TONE;
+  tone?: AlertTone;
+  title?: React.ReactNode;
+};
 
-const AlertDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("text-sm leading-6 text-[var(--text-muted)] [&_p]:leading-relaxed", className)}
-    {...props}
-  />
-))
-AlertDescription.displayName = "AlertDescription"
+const AlertTitle = ({ children }: React.ComponentProps<"div">) => <>{children}</>;
+AlertTitle.displayName = "AlertTitle";
 
-export { Alert, AlertTitle, AlertDescription }
+const AlertDescription = ({ children }: React.ComponentProps<"div">) => <>{children}</>;
+AlertDescription.displayName = "AlertDescription";
+
+function isElementOfType(node: React.ReactNode, type: React.ElementType): boolean {
+  return React.isValidElement(node) && node.type === type;
+}
+
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
+  { className, variant, tone, title, children, ...props },
+  ref,
+) {
+  // Pull an <AlertTitle> child up into the DS `title` prop; everything else is
+  // the body. Anything already using `title=` passes straight through.
+  const nodes = React.Children.toArray(children);
+  const titleChild = nodes.find((node) => isElementOfType(node, AlertTitle));
+  const body = nodes.filter((node) => node !== titleChild);
+
+  return (
+    <DsAlert
+      ref={ref}
+      tone={tone ?? VARIANT_TO_TONE[variant ?? "default"] ?? "info"}
+      title={title ?? (titleChild as React.ReactElement<{ children?: React.ReactNode }> | undefined)?.props.children}
+      className={cn(className)}
+      {...props}
+    >
+      {body}
+    </DsAlert>
+  );
+});
+
+export { Alert, AlertTitle, AlertDescription };
