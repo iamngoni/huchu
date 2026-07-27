@@ -34,22 +34,25 @@ export function RecordListShell({
   onSearchChange: (value: string) => void;
   searchPlaceholder: string;
   filters?: ReactNode;
-  createLabel: string;
-  onCreate: () => void;
+  /** Omit both to get a list with no create button — quotes and invoices are
+   *  raised against a deal, never from a directory of them. */
+  createLabel?: string;
+  onCreate?: () => void;
   error?: unknown;
   children: ReactNode;
 }) {
   const actions = useMemo(
-    () => (
-      <Button
-        variant="primary"
-        size="sm"
-        startIcon={<Plus className="h-4 w-4" />}
-        onClick={onCreate}
-      >
-        {createLabel}
-      </Button>
-    ),
+    () =>
+      createLabel && onCreate ? (
+        <Button
+          variant="primary"
+          size="sm"
+          startIcon={<Plus className="h-4 w-4" />}
+          onClick={onCreate}
+        >
+          {createLabel}
+        </Button>
+      ) : null,
     [createLabel, onCreate],
   );
 

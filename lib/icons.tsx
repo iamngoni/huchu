@@ -138,6 +138,7 @@ export const ArrowUploadProgress = createPhosphorIcon(
 );
 export const AlertCircle = createPhosphorIcon("WarningCircle", "AlertCircle");
 export const AlertTriangle = createPhosphorIcon("Warning", "AlertTriangle");
+export const ArrowLeft = createPhosphorIcon("ArrowLeft", "ArrowLeft");
 export const ArrowRight = createPhosphorIcon("ArrowRight", "ArrowRight");
 export const ArrowRightLeft = createPhosphorIcon(
   "ArrowsLeftRight",

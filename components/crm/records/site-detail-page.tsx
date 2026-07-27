@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
+import { MapPin } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
@@ -108,6 +109,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
   return (
     <>
       <RecordPageShell
+      icon={MapPin}
       backHref="/crm/sites"
       actions={[{ label: "Edit", onSelect: () => setEditOpen(true) }]}
       backLabel="All sites"

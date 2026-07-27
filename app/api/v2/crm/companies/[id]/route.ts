@@ -62,7 +62,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           include: { stage: { select: { id: true, name: true, status: true } } },
         },
         sites: { take: 50 },
-        activities: { orderBy: { occurredAt: "desc" }, take: 50 },
+        activities: {
+          orderBy: { occurredAt: "desc" },
+          take: 50,
+          // The history feed names who did it; without this every
+          // entry reads as though it happened by itself.
+          include: { createdBy: { select: { id: true, name: true } } },
+        },
       },
     });
     if (!company) return errorResponse("Company not found", 404);

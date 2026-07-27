@@ -1,5 +1,4 @@
 import {
-  AddressBook,
   MapPin,
   AlertCircle,
   ArrowDownward,
@@ -40,6 +39,7 @@ import {
   Video,
   Wallet,
   Payments,
+  Phone,
   Wrench,
   type LucideIcon,
 } from "@/lib/icons";
@@ -330,33 +330,40 @@ export const navSections: NavSection[] = [
     title: "CRM",
     description: "Leads, clients, site visits, and sales pipeline",
     featureKey: "crm.core",
-    // Grouped the way the work runs: win it, know who you are dealing with, do
-    // the work, get paid, then learn from it. Sixteen links in one column was
-    // an inventory of pages rather than a route through the job.
+    // Grouped by what kind of thing each link is, not by what stage of the job
+    // it belongs to. A flat column of sixteen links was an inventory of pages;
+    // so was a set of groups named after phases nobody uses as a noun. These
+    // are the four nouns people actually say: the pipeline, the records, the
+    // work, the paperwork.
     groups: [
-      { id: "sell", label: "Selling" },
-      { id: "records", label: "Who we deal with" },
-      { id: "work", label: "Doing the work" },
-      { id: "money", label: "Getting paid" },
-      { id: "learn", label: "Understanding it" },
+      { id: "pipeline", label: "Pipeline" },
+      { id: "records", label: "Records" },
+      { id: "work", label: "Work" },
+      { id: "documents", label: "Sales documents" },
+      { id: "learn", label: "Insights" },
       { id: "setup", label: "Setup" },
     ],
     items: [
       { href: "/crm", icon: Dashboard, label: "Overview" },
 
-      { href: "/crm/leads", icon: Funnel, label: "Leads", group: "sell" },
-      { href: "/crm/deals", icon: Funnel, label: "Deals", group: "sell" },
-      { href: "/crm/forms", icon: NoteAdd, label: "Intake forms", group: "sell" },
+      { href: "/crm/leads", icon: Funnel, label: "Leads", group: "pipeline" },
+      { href: "/crm/deals", icon: Funnel, label: "Deals", group: "pipeline" },
+      { href: "/crm/forms", icon: NoteAdd, label: "Intake forms", group: "pipeline" },
 
       { href: "/crm/people", icon: Users, label: "People", group: "records" },
       { href: "/crm/companies", icon: Building2, label: "Companies", group: "records" },
       { href: "/crm/sites", icon: MapPin, label: "Sites", group: "records" },
+      { href: "/crm/reps", icon: UserRound, label: "Sales reps", group: "records" },
 
-      { href: "/crm/follow-ups", icon: Checklist, label: "Follow-ups", group: "work" },
+      { href: "/crm/tasks", icon: Checklist, label: "Tasks", group: "work" },
       { href: "/crm/appointments", icon: CalendarCheck, label: "Site visits", group: "work" },
-      { href: "/crm/work-orders", icon: Wrench, label: "Jobs", group: "work" },
+      { href: "/crm/follow-ups", icon: Phone, label: "Follow-ups", group: "work" },
 
-      { href: "/crm/collections", icon: ReceiptLong, label: "Collections", group: "money" },
+      { href: "/crm/quotes", icon: FileText, label: "Quotes", group: "documents" },
+      { href: "/crm/invoices", icon: ReceiptLong, label: "Invoices", group: "documents" },
+      { href: "/crm/receipts", icon: Payments, label: "Receipts", group: "documents" },
+      { href: "/crm/work-orders", icon: Wrench, label: "Work orders", group: "documents" },
+      { href: "/crm/collections", icon: Scale, label: "Collections", group: "documents" },
 
       { href: "/crm/insights", icon: BarChart3, label: "Insights", group: "learn" },
       { href: "/crm/reports", icon: ChartLine, label: "Sales reports", group: "learn" },

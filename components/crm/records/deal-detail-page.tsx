@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { Calendar, FileText, Plus } from "@/lib/icons";
+import { Calendar, FileText, Funnel, Plus } from "@/lib/icons";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
 import { isDealStale } from "@/lib/crm/pipelines";
 import { visitItemsToQuotationLines } from "@/lib/crm/site-visits";
@@ -208,6 +208,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
   return (
     <>
       <RecordPageShell
+      icon={Funnel}
         backHref="/crm/deals"
         backLabel="All deals"
         title={deal.title}
