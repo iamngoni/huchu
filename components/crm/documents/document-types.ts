@@ -10,6 +10,10 @@ export type LeadDocument = {
   receiptId: string | null;
   amount: number;
   currency: string;
+  /** Quote revisions: v1 is the first thing sent, each later one supersedes it. */
+  version: number;
+  supersedesId: string | null;
+  revisionNote: string | null;
   createdAt: string;
   approval: { token: string; status: string; respondedAt: string | null } | null;
   quotation: {

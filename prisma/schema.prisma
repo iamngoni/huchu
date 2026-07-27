@@ -199,6 +199,10 @@ model Company {
   crmFollowers                  CrmFollower[]
   crmAutomations                CrmAutomation[]
   crmAutomationRuns             CrmAutomationRun[]
+  crmCatalogItems               CrmCatalogItem[]
+  crmPriceTiers                 CrmPriceTier[]
+  crmDiscountApprovals          CrmDiscountApproval[]
+  crmCollectionNotes            CrmCollectionNote[]
 
   @@index([tenantStatus])
   @@index([isProvisioned])
@@ -957,6 +961,10 @@ model User {
   crmMentions                       CrmMention[]                   @relation("CrmMentionUser")
   crmFollowing                      CrmFollower[]                  @relation("CrmFollowerUser")
   crmAutomationsCreated             CrmAutomation[]                @relation("CrmAutomationCreatedBy")
+  crmCatalogItemsCreated            CrmCatalogItem[]               @relation("CrmCatalogItemCreatedBy")
+  crmDiscountsRequested             CrmDiscountApproval[]          @relation("CrmDiscountRequestedBy")
+  crmDiscountsDecided               CrmDiscountApproval[]          @relation("CrmDiscountDecidedBy")
+  crmCollectionNotesCreated         CrmCollectionNote[]            @relation("CrmCollectionNoteCreatedBy")
 
   @@index([companyId])
   @@index([email])
@@ -6391,6 +6399,8 @@ model CrmClient {
   deals             CrmDeal[]
   sites             CrmSite[]
 
+  collectionNotes   CrmCollectionNote[]
+
   @@unique([companyId, clientNo])
   @@index([companyId, emailNormalized])
   @@index([companyId, phoneE164])
@@ -6480,9 +6490,18 @@ model CrmLeadDocument {
   receiptId   String?
   amount      Float
   currency    String          @default("USD")
+  /// Quote revisions. v1 is the first thing sent; each later one supersedes
+  /// the last, and the chain is what makes "what did we actually agree" a
+  /// question with an answer.
+  version     Int             @default(1)
+  supersedesId String?
+  /// Why this revision exists — "customer asked for the cheaper panel".
+  revisionNote String?
   createdById String?
   createdAt   DateTime        @default(now())
 
+  supersedes  CrmLeadDocument?  @relation("CrmDocumentRevision", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy CrmLeadDocument[] @relation("CrmDocumentRevision")
   company           Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   lead              CrmLead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
   deal              CrmDeal?             @relation(fields: [dealId], references: [id], onDelete: Cascade)
@@ -6492,11 +6511,15 @@ model CrmLeadDocument {
   createdBy         User?                @relation("CrmLeadDocCreatedBy", fields: [createdById], references: [id])
   approval          CrmDocumentApproval?
   commissionEntries CrmCommissionEntry[]
+  discountApprovals CrmDiscountApproval[]
+  collectionNotes   CrmCollectionNote[]
 
   @@unique([companyId, quotationId])
   @@unique([companyId, invoiceId])
   @@unique([companyId, receiptId])
   @@index([companyId, leadId, type])
+  @@index([companyId, dealId, type])
+  @@index([companyId, supersedesId])
 }
 
 model CrmDocumentApproval {
@@ -7786,4 +7809,141 @@ enum CrmAutomationRunStatus {
   SUCCEEDED
   PARTIAL
   FAILED
+}
+
+/// What the business sells, for quoting.
+///
+/// Deliberately separate from RetailCatalogItem: that model is a shop's stock,
+/// tied to an inventory item at a site. This one is the things a services
+/// business quotes for — labour, installation, a panel supplied and fitted —
+/// most of which are never held in stock anywhere.
+model CrmCatalogItem {
+  id          String            @id @default(uuid())
+  companyId   String
+  code        String
+  name        String
+  description String?
+  category    String?
+  kind        CrmCatalogKind    @default(SERVICE)
+  /// How it's sold: each, m², hour, day.
+  unit        String?
+  unitPrice   Float             @default(0)
+  currency    String            @default("USD")
+  taxRate     Float             @default(0)
+  /// What it costs us, so margin on a quote is visible before it goes out.
+  costPrice   Float?
+  /// The most a rep may discount without asking. Null means no ceiling.
+  maxDiscountPercent Float?
+  /// Stocked goods can point at the inventory item they draw from.
+  inventoryItemId String?
+  isActive    Boolean           @default(true)
+  customFields Json?
+  createdById String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?          @relation("CrmCatalogItemCreatedBy", fields: [createdById], references: [id])
+  tiers   CrmPriceTier[]
+
+  @@unique([companyId, code])
+  @@index([companyId, isActive, category])
+}
+
+/// Volume pricing: buy more, pay less per unit. The tier that applies is the
+/// one with the highest minQuantity at or below the quantity ordered.
+model CrmPriceTier {
+  id            String   @id @default(uuid())
+  companyId     String
+  catalogItemId String
+  minQuantity   Float
+  unitPrice     Float
+  createdAt     DateTime @default(now())
+
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  catalogItem CrmCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  @@unique([catalogItemId, minQuantity])
+  @@index([companyId, catalogItemId])
+}
+
+/// A discount a rep can't give on their own.
+///
+/// Kept as a request rather than a block: the rep builds the quote they think
+/// will win, and a manager says yes or no. Blocking outright just gets the
+/// discount hidden in the unit price.
+model CrmDiscountApproval {
+  id          String                    @id @default(uuid())
+  companyId   String
+  documentId  String
+  /// The discount asked for, as a percentage of the undiscounted total.
+  discountPercent Float
+  discountAmount  Float
+  reason      String?
+  status      CrmApprovalDecision       @default(PENDING)
+  requestedById String
+  decidedById String?
+  decidedAt   DateTime?
+  decisionNote String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  document    CrmLeadDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  requestedBy User            @relation("CrmDiscountRequestedBy", fields: [requestedById], references: [id])
+  decidedBy   User?           @relation("CrmDiscountDecidedBy", fields: [decidedById], references: [id])
+
+  @@index([companyId, status, createdAt])
+  @@index([companyId, documentId])
+}
+
+/// Chasing money that is late.
+///
+/// A promise to pay is the thing worth recording: "they said Friday" is what
+/// turns a chase list into a plan, and a broken promise is a stronger signal
+/// than another day of silence.
+model CrmCollectionNote {
+  id          String                @id @default(uuid())
+  companyId   String
+  documentId  String
+  invoiceId   String?
+  clientId    String?
+  outcome     CrmCollectionOutcome
+  /// When they said they would pay.
+  promisedAt  DateTime?
+  promisedAmount Float?
+  notes       String?
+  createdById String?
+  createdAt   DateTime              @default(now())
+
+  company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  document  CrmLeadDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  client    CrmClient?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy User?           @relation("CrmCollectionNoteCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId, documentId, createdAt])
+  @@index([companyId, promisedAt])
+}
+
+enum CrmCatalogKind {
+  SERVICE
+  PRODUCT
+  LABOUR
+  MATERIAL
+  BUNDLE
+}
+
+enum CrmApprovalDecision {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+enum CrmCollectionOutcome {
+  PROMISED_TO_PAY
+  DISPUTED
+  NO_ANSWER
+  PARTIAL_PAYMENT
+  PAID
+  ESCALATED
 }

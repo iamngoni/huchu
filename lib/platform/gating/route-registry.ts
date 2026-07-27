@@ -166,6 +166,7 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/crm/forms", featureKey: "crm.intake" },
   { scope: "page", prefix: "/crm/insights", featureKey: "crm.insights" },
   { scope: "page", prefix: "/crm/reports", featureKey: "crm.insights" },
+  { scope: "page", prefix: "/crm/collections", featureKey: "crm.documents" },
   { scope: "page", prefix: "/crm/settings", featureKey: "crm.settings" },
   { scope: "page", prefix: "/crm", featureKey: "crm.core" },
 
@@ -418,6 +419,9 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/crm/insights", featureKey: "crm.insights" },
   { scope: "api", prefix: "/api/v2/crm/reports", featureKey: "crm.insights" },
   { scope: "api", prefix: "/api/v2/crm/automations", featureKey: "crm.settings" },
+  { scope: "api", prefix: "/api/v2/crm/catalog", featureKey: "crm.settings" },
+  { scope: "api", prefix: "/api/v2/crm/collections", featureKey: "crm.documents" },
+  { scope: "api", prefix: "/api/v2/crm/discount-approvals", featureKey: "crm.documents" },
   { scope: "api", prefix: "/api/v2/crm/clients", featureKey: "crm.clients" },
   { scope: "api", prefix: "/api/v2/crm/appointments", featureKey: "crm.appointments" },
   { scope: "api", prefix: "/api/v2/crm/follow-ups", featureKey: "crm.core" },

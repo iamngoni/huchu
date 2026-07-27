@@ -198,6 +198,10 @@ export type CreateQuotationInput = DocumentOwnerRef & {
   currency?: string;
   validUntil?: Date | null;
   notes?: string | null;
+  /** The quote this one replaces, when it's a revision rather than a first go. */
+  supersedesId?: string | null;
+  /** Why the revision exists — "customer asked for the cheaper panel". */
+  revisionNote?: string | null;
 };
 
 export async function createQuotationForLead(input: CreateQuotationInput) {
@@ -235,6 +239,18 @@ export async function createQuotationForLead(input: CreateQuotationInput) {
       select: { id: true, quotationNumber: true, total: true },
     });
 
+    // A revision continues the chain rather than starting a new one, so
+    // "what did we actually agree" stays answerable.
+    let version = 1;
+    if (input.supersedesId) {
+      const previous = await tx.crmLeadDocument.findFirst({
+        where: { id: input.supersedesId, companyId: input.companyId, type: "QUOTATION" },
+        select: { id: true, version: true },
+      });
+      if (!previous) throw new Error("The quote being revised doesn't exist");
+      version = previous.version + 1;
+    }
+
     const doc = await tx.crmLeadDocument.create({
       data: {
         companyId: input.companyId,
@@ -243,10 +259,28 @@ export async function createQuotationForLead(input: CreateQuotationInput) {
         quotationId: quotation.id,
         amount: totals.total,
         currency,
+        version,
+        supersedesId: input.supersedesId ?? undefined,
+        revisionNote: input.revisionNote ?? undefined,
         createdById: input.userId,
       },
       select: { id: true },
     });
+
+    // The quote it replaces stops being live: two open quotes for the same
+    // work is how a customer ends up holding the cheaper one.
+    if (input.supersedesId) {
+      const superseded = await tx.crmLeadDocument.findUnique({
+        where: { id: input.supersedesId },
+        select: { quotationId: true },
+      });
+      if (superseded?.quotationId) {
+        await tx.salesQuotation.update({
+          where: { id: superseded.quotationId },
+          data: { status: "VOIDED" },
+        });
+      }
+    }
 
     await tx.crmActivity.create({
       data: {

@@ -149,11 +149,17 @@ export function DocumentList({
                     <span className="text-xs text-[var(--text-muted)]">
                       {DOCUMENT_KIND_LABELS[doc.type]}
                     </span>
+                    {doc.version > 1 ? (
+                      <span className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[11px] text-[var(--text-muted)]">
+                        v{doc.version}
+                      </span>
+                    ) : null}
                     <StatusChip status={status.status} label={status.label} />
                   </div>
                   <div className="text-xs text-[var(--text-muted)]">
                     <ClientDate value={doc.createdAt} mode="date" />
                     {canPay ? ` · ${formatMoney(outstanding, doc.currency)} outstanding` : ""}
+                    {doc.revisionNote ? ` · ${doc.revisionNote}` : ""}
                   </div>
                 </div>
 
