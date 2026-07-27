@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 
 import { PersonDetailPage } from "@/components/crm/records/person-detail-page";
@@ -9,8 +10,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!session?.user) redirect("/login");
   const { id } = await params;
   return (
-    <div className="mx-auto w-full max-w-[100rem]">
+    <CrmPage width="detail">
       <PersonDetailPage personId={id} />
-    </div>
+    </CrmPage>
   );
 }

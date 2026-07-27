@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/layout/page-heading";
 import { CrmSettingsContent } from "@/components/crm/crm-settings-content";
@@ -8,9 +9,9 @@ export default async function CrmSettingsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+    <CrmPage>
       <PageHeading title="CRM Settings" />
       <CrmSettingsContent />
-    </div>
+    </CrmPage>
   );
 }
