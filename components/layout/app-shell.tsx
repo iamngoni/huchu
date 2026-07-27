@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { PageChromeProvider } from "@/components/layout/page-chrome";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingProvider } from "@/components/onboarding/onboarding-provider";
+import { isPublicPath } from "@/lib/public-routes";
 
 export function AppShell({
   children,
@@ -29,10 +30,15 @@ export function AppShell({
     hostPortalPath === "/portal/teacher" ||
     hostPortalPath === "/portal/pos";
   const isAdminRoute = pathname.startsWith("/admin");
+  // A quote link, an intake form, a site brief: opened by a customer or a
+  // courier who has no account here. Wrapping those in the workspace sidebar
+  // showed them a navigation they cannot use and a tenant name that is none of
+  // their business.
+  const isPublicRoute = isPublicPath(pathname);
   const isCctvRoute = pathname.startsWith("/cctv");
   const isScrapRoute = pathname.startsWith("/scrap-metal");
 
-  if (isAuthRoute || isMarketingRoute || isPortalRoute || isAdminRoute) {
+  if (isAuthRoute || isMarketingRoute || isPortalRoute || isAdminRoute || isPublicRoute) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 

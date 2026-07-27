@@ -420,8 +420,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
       <VisitScheduleSheet
         open={scheduleOpen}
         onOpenChange={setScheduleOpen}
-        leadId={dealId}
-        clientId={deal.clientId}
+        subject={{ dealId, clientId: deal.clientId, siteId: deal.site?.id ?? null }}
         defaultLocation={
           [deal.site?.addressLine, deal.site?.city].filter(Boolean).join(", ") || null
         }

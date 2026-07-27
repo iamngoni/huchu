@@ -1,19 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/ui/data-table";
-import { StatusChip } from "@/components/ui/status-chip";
+import { Badge, Button } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
-import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import type { CanonicalUiStatus } from "@/lib/ui/status-map";
+import { fetchJson } from "@/lib/api-client";
+import { CalendarCheck, MapPin } from "@/lib/icons";
+import { useDebounced } from "@/hooks/use-debounced";
 
+import { RecordListShell } from "@/components/crm/records/record-list-shell";
+import {
+  GroupedRecordList,
+  bucketByDueDate,
+  type RecordListSection,
+} from "@/components/crm/records/record-list-groups";
 import { VisitReportSheet } from "@/components/crm/visits/visit-report-sheet";
+import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
+import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
 
 type Appointment = {
   id: string;
@@ -29,168 +34,171 @@ type Appointment = {
   assignedTo: { id: string; name: string } | null;
 };
 
-const VISIT_STATUS: Record<Appointment["status"], { label: string; status: CanonicalUiStatus }> = {
-  SCHEDULED: { label: "Scheduled", status: "pending" },
-  COMPLETED: { label: "Completed", status: "passing" },
-  CANCELLED: { label: "Cancelled", status: "inactive" },
-  NO_SHOW: { label: "No show", status: "failing" },
+const VISIT_STATUS: Record<
+  Appointment["status"],
+  { label: string; tone: "info" | "success" | "neutral" | "danger" }
+> = {
+  SCHEDULED: { label: "Scheduled", tone: "info" },
+  COMPLETED: { label: "Completed", tone: "success" },
+  CANCELLED: { label: "Cancelled", tone: "neutral" },
+  NO_SHOW: { label: "No show", tone: "danger" },
 };
 
+/**
+ * Site visits.
+ *
+ * You could book one from inside a lead or a deal and nowhere else, so the
+ * page that lists them had no way to add one — which is what "site visits
+ * weren't creating" meant from here. It has a schedule action now, and the
+ * visits are grouped by when they are due rather than laid out as a table:
+ * a visit is somewhere you have to be, so the useful sort is by time and the
+ * useful grouping is overdue / today / tomorrow.
+ */
 export function CrmAppointmentsContent() {
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const [reportFor, setReportFor] = useState<Appointment | null>(null);
+  const [scheduling, setScheduling] = useState(false);
+  const [search, setSearch] = useState("");
+  const debounced = useDebounced(search, 300);
 
   const appointmentsQuery = useQuery({
     queryKey: ["crm", "appointments"],
     queryFn: () => fetchJson<{ data: Appointment[] }>("/api/v2/crm/appointments"),
   });
 
-  const rows = useMemo(() => appointmentsQuery.data?.data ?? [], [appointmentsQuery.data]);
+  const teamQuery = useQuery({
+    queryKey: ["crm", "team"],
+    queryFn: () => fetchJson<{ data: LeadFilterOwner[] }>("/api/v2/crm/team"),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const columns = useMemo<ColumnDef<Appointment>[]>(
-    () => [
-      {
-        id: "when",
-        header: "When",
-        size: 190,
-        cell: ({ row }) => (
-          <div className="min-w-0">
-            <div className="text-sm">
-              <ClientDate value={row.original.scheduledStart} />
-            </div>
-            <div className="truncate font-mono text-xs text-[var(--text-muted)]">
-              {row.original.appointmentNo}
-            </div>
-          </div>
+  const visits = useMemo(() => appointmentsQuery.data?.data ?? [], [appointmentsQuery.data]);
+  const owners = useMemo(() => teamQuery.data?.data ?? [], [teamQuery.data]);
+
+  const sections = useMemo<RecordListSection[]>(() => {
+    const needle = debounced.trim().toLowerCase();
+    const matching = visits.filter((visit) =>
+      needle
+        ? `${visit.title} ${visit.appointmentNo} ${visit.client?.name ?? ""} ${visit.location ?? ""}`
+            .toLowerCase()
+            .includes(needle)
+        : true,
+    );
+
+    // Done visits have no due date left to be late for, so they sit at the
+    // bottom in one band rather than being bucketed as "overdue".
+    const open = matching.filter((visit) => visit.status === "SCHEDULED");
+    const closed = matching.filter((visit) => visit.status !== "SCHEDULED");
+
+    const toRow = (visit: Appointment) => {
+      const status = VISIT_STATUS[visit.status];
+      return {
+        id: visit.id,
+        href: visit.lead ? `/crm/leads/${visit.lead.id}` : "/crm/appointments",
+        leading: (
+          <span className="flex size-9 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)]">
+            <CalendarCheck className="size-4" />
+          </span>
         ),
-      },
-      {
-        id: "visit",
-        header: "Visit",
-        size: 220,
-        cell: ({ row }) => (
-          <div className="min-w-0">
-            <div className="truncate text-sm">{row.original.title}</div>
-            {row.original.location ? (
-              <div className="truncate text-xs text-[var(--text-muted)]">
-                {row.original.location}
-              </div>
+        title: visit.title,
+        subtitle: (
+          <>
+            <ClientDate value={visit.scheduledStart} />
+            {visit.client ? ` · ${visit.client.name}` : ""}
+            {visit.location ? ` · ${visit.location}` : ""}
+          </>
+        ),
+        status: (
+          <>
+            <Badge tone={status.tone} size="sm">
+              {status.label}
+            </Badge>
+            {visit.reportCompletedAt ? (
+              <Badge tone="success" size="sm">
+                Report in
+              </Badge>
             ) : null}
-          </div>
+          </>
         ),
-      },
-      {
-        id: "lead",
-        header: "Lead",
-        size: 160,
-        cell: ({ row }) =>
-          row.original.lead ? (
-            <Link
-              href={`/crm/leads/${row.original.lead.id}`}
-              className="font-mono text-sm hover:underline"
-            >
-              {row.original.lead.leadNo}
-            </Link>
-          ) : (
-            <span className="text-sm text-[var(--text-muted)]">—</span>
-          ),
-      },
-      {
-        id: "client",
-        header: "Client",
-        size: 180,
-        cell: ({ row }) => (
-          <span className="truncate text-sm">{row.original.client?.name ?? "—"}</span>
-        ),
-      },
-      {
-        id: "assignee",
-        header: "Assigned to",
-        size: 160,
-        cell: ({ row }) => (
-          <span className="truncate text-sm">{row.original.assignedTo?.name ?? "—"}</span>
-        ),
-      },
-      {
-        id: "status",
-        header: "Status",
-        size: 150,
-        cell: ({ row }) => {
-          const status = VISIT_STATUS[row.original.status];
-          return (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <StatusChip status={status.status} label={status.label} />
-              {row.original.reportCompletedAt ? (
-                <span className="text-xs text-[var(--text-muted)]">Written up</span>
-              ) : null}
-            </div>
-          );
-        },
-      },
-      {
-        id: "actions",
-        header: "",
-        size: 120,
-        cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => setReportFor(row.original)}>
-            {row.original.reportCompletedAt ? "View report" : "Write up"}
+        facts: [
+          { label: "Ref", value: visit.appointmentNo, mono: true },
+          { label: "Going", value: visit.assignedTo?.name ?? "Unassigned" },
+        ],
+        actions: (
+          <Button size="sm" variant="secondary" onClick={() => setReportFor(visit)}>
+            {visit.reportCompletedAt ? "Report" : "Capture"}
           </Button>
         ),
-      },
-    ],
-    [],
-  );
+      };
+    };
+
+    const buckets = bucketByDueDate(open, (visit) => visit.scheduledStart).map((bucket) => ({
+      id: bucket.id,
+      label: bucket.label,
+      alwaysShow: bucket.id === "today",
+      emptyBody: "Nothing booked for today.",
+      rows: bucket.items.map(toRow),
+    }));
+
+    return [
+      ...buckets,
+      { id: "closed", label: "Done and cancelled", rows: closed.map(toRow) },
+    ];
+  }, [debounced, visits]);
 
   return (
-    <div className="space-y-4">
-      {appointmentsQuery.error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Unable to load site visits</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(appointmentsQuery.error)}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <DataTable
-        data={rows}
-        columns={columns}
-        edgeToEdge
-        searchPlaceholder="Search site visits"
-        pagination={{ enabled: true }}
-        mobileCardRenderer={({ row }) => (
-          <div className="flex flex-col gap-2 rounded-[var(--card-radius)] border border-[var(--border)] p-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium">{row.title}</div>
-                <div className="truncate font-mono text-xs text-[var(--text-muted)]">
-                  {row.appointmentNo}
-                </div>
-              </div>
-              <StatusChip
-                status={VISIT_STATUS[row.status].status}
-                label={VISIT_STATUS[row.status].label}
-              />
-            </div>
-            <div className="text-xs text-[var(--text-muted)]">
-              <ClientDate value={row.scheduledStart} />
-              {row.location ? ` · ${row.location}` : ""}
-            </div>
-            <Button size="sm" variant="outline" onClick={() => setReportFor(row)}>
-              {row.reportCompletedAt ? "View report" : "Write up"}
+    <RecordListShell
+      title="Site visits"
+      search={search}
+      onSearchChange={setSearch}
+      searchPlaceholder="Search visits by title, reference, customer or place"
+      createLabel="Schedule a visit"
+      onCreate={() => setScheduling(true)}
+      error={appointmentsQuery.error}
+    >
+      <GroupedRecordList
+        sections={sections}
+        isLoading={appointmentsQuery.isLoading}
+        emptyTitle={debounced ? "No visits match that search" : "No site visits yet"}
+        emptyBody={
+          debounced
+            ? undefined
+            : "Book one and whoever is going gets the address, the access notes and a checklist of what to bring back."
+        }
+        emptyAction={
+          debounced ? undefined : (
+            <Button variant="primary" size="sm" onClick={() => setScheduling(true)}>
+              <MapPin className="mr-1.5 size-4" />
+              Schedule the first visit
             </Button>
-          </div>
-        )}
-        emptyState={
-          appointmentsQuery.isLoading
-            ? "Loading site visits…"
-            : "No site visits scheduled. Book one from a lead."
+          )
         }
       />
 
-      <VisitReportSheet
-        open={Boolean(reportFor)}
-        onOpenChange={(next) => (!next ? setReportFor(null) : undefined)}
-        appointmentId={reportFor?.id ?? null}
-        appointmentNo={reportFor?.appointmentNo}
+      <VisitScheduleSheet
+        open={scheduling}
+        onOpenChange={setScheduling}
+        // Booked from the list rather than from a record, so it starts
+        // unattached. It can still be linked to a deal from the record later.
+        subject={{}}
+        owners={owners}
+        currentUserId={session?.user?.id}
+        onScheduled={() =>
+          queryClient.invalidateQueries({ queryKey: ["crm", "appointments"] })
+        }
       />
-    </div>
+
+      {reportFor ? (
+        <VisitReportSheet
+          open
+          onOpenChange={(next) => {
+            if (!next) setReportFor(null);
+          }}
+          appointmentId={reportFor.id}
+          appointmentNo={reportFor.appointmentNo}
+        />
+      ) : null}
+    </RecordListShell>
   );
 }

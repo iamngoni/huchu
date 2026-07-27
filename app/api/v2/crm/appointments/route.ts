@@ -10,6 +10,12 @@ const createSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   leadId: z.string().uuid().nullable().optional(),
   clientId: z.string().uuid().nullable().optional(),
+  // A visit is booked against a deal at least as often as against a lead, and
+  // usually happens at a site. The columns were always there; the route just
+  // dropped them, so the deal page passed its deal id in `leadId` and every
+  // booking from a deal died on a foreign key.
+  dealId: z.string().uuid().nullable().optional(),
+  siteId: z.string().uuid().nullable().optional(),
   assignedToId: z.string().uuid().optional(),
   scheduledStart: z.string().datetime(),
   scheduledEnd: z.string().datetime().nullable().optional(),
@@ -69,21 +75,38 @@ export async function POST(request: NextRequest) {
     const { session } = sessionResult;
 
     const data = createSchema.parse(await request.json());
-    if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
+    const companyId = session.user.companyId;
+    if (!(await isCompanyUser(companyId, data.assignedToId))) {
       return errorResponse("Invalid assignee", 400);
     }
+
+    // Everything the visit hangs off has to be in this tenant. Without this a
+    // valid-looking uuid from anywhere reaches the database and comes back as
+    // an opaque 500.
+    const checks: Array<[string, string | null | undefined, () => Promise<unknown>]> = [
+      ["lead", data.leadId, () => prisma.crmLead.findFirst({ where: { id: data.leadId!, companyId }, select: { id: true } })],
+      ["deal", data.dealId, () => prisma.crmDeal.findFirst({ where: { id: data.dealId!, companyId }, select: { id: true } })],
+      ["company", data.clientId, () => prisma.crmClient.findFirst({ where: { id: data.clientId!, companyId }, select: { id: true } })],
+      ["site", data.siteId, () => prisma.crmSite.findFirst({ where: { id: data.siteId!, companyId }, select: { id: true } })],
+    ];
+    for (const [label, id, check] of checks) {
+      if (!id) continue;
+      if (!(await check())) return errorResponse(`That ${label} isn't in this workspace`, 400);
+    }
     const appointmentNo = await reserveIdentifier(prisma, {
-      companyId: session.user.companyId,
+      companyId,
       entity: "CRM_APPOINTMENT",
     });
 
     const appointment = await prisma.crmAppointment.create({
       data: {
-        companyId: session.user.companyId,
+        companyId,
         appointmentNo,
         title: data.title ?? "Site visit",
         leadId: data.leadId ?? undefined,
         clientId: data.clientId ?? undefined,
+        dealId: data.dealId ?? undefined,
+        siteId: data.siteId ?? undefined,
         assignedToId: data.assignedToId ?? session.user.id,
         scheduledStart: new Date(data.scheduledStart),
         scheduledEnd: data.scheduledEnd ? new Date(data.scheduledEnd) : undefined,
