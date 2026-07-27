@@ -100,19 +100,38 @@ const EMPTY: FormState = {
   assignedToId: "",
 };
 
+/** Only the keys the form owns; anything else on the record is ignored. */
+function seedFrom(record: CompanyFormRecord): Partial<FormState> {
+  const seed: Partial<FormState> = {};
+  for (const key of Object.keys(EMPTY) as (keyof FormState)[]) {
+    const value = record[key];
+    if (value !== undefined && value !== null) seed[key] = value as never;
+  }
+  return seed;
+}
+
 type SaveResult =
   | { duplicates: DuplicateEntry[] }
   | { company: { id: string; name: string } };
+
+/** The subset of a company this form can edit, as the detail page holds it. */
+export type CompanyFormRecord = { id: string } & Partial<FormState>;
 
 export function CompanyFormSheet({
   open,
   onOpenChange,
   onCreated,
+  record,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (companyId: string) => void;
+  /** Pass a record to edit it. Omit to create a new one. */
+  record?: CompanyFormRecord | null;
+  onSaved?: () => void;
 }) {
+  const isEdit = Boolean(record?.id);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -123,11 +142,14 @@ export function CompanyFormSheet({
 
   // Reset as the sheet opens, adjusting state during render rather than in an
   // effect so there is no flash of the previous record's details.
-  const [wasOpen, setWasOpen] = useState(open);
+  // Starts at `false`, not `open`: a sheet that mounts already open would
+  // otherwise record itself as having always been open, the transition below
+  // would never fire, and the form would never seed.
+  const [wasOpen, setWasOpen] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setForm(EMPTY);
+      setForm(record ? { ...EMPTY, ...seedFrom(record) } : EMPTY);
       setCustomValues({});
       setErrors([]);
       setDuplicates(null);
@@ -191,16 +213,21 @@ export function CompanyFormSheet({
 
   const save = useMutation({
     mutationFn: async (force: boolean): Promise<SaveResult> => {
-      const response = await fetch("/api/v2/crm/companies", {
-        method: "POST",
+      const response = await fetch(
+        isEdit ? `/api/v2/crm/companies/${record?.id}` : "/api/v2/crm/companies",
+        {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildBody(force)),
-      });
+        },
+      );
       const payload = await response.json();
       if (response.status === 409 && payload?.code === "DUPLICATE_CANDIDATES") {
         return { duplicates: (payload.duplicates ?? []) as DuplicateEntry[] };
       }
-      if (!response.ok) throw new Error(payload?.error ?? "Failed to create company");
+      if (!response.ok) {
+        throw new Error(payload?.error ?? `Failed to ${isEdit ? "save" : "create"} company`);
+      }
       return { company: payload as { id: string; name: string } };
     },
     onSuccess: (result) => {
@@ -209,10 +236,15 @@ export function CompanyFormSheet({
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["crm", "companies"] });
-      toast({ title: "Company created", description: result.company.name });
+      if (isEdit) queryClient.invalidateQueries({ queryKey: ["crm", "company", record?.id] });
+      toast({
+        title: isEdit ? "Company saved" : "Company created",
+        description: result.company.name,
+      });
       setDuplicates(null);
       onOpenChange(false);
-      onCreated?.(result.company.id);
+      onSaved?.();
+      if (!isEdit) onCreated?.(result.company.id);
     },
     onError: (error) => setErrors([getApiErrorMessage(error)]),
   });
@@ -233,7 +265,7 @@ export function CompanyFormSheet({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent size="lg" className="w-full overflow-y-auto p-6">
           <SheetHeader>
-            <SheetTitle>New company</SheetTitle>
+            <SheetTitle>{isEdit ? "Edit company" : "New company"}</SheetTitle>
             <SheetDescription>
               The account everything else hangs off — people, sites, deals and invoices.
             </SheetDescription>
@@ -256,7 +288,7 @@ export function CompanyFormSheet({
                     Cancel
                   </Button>
                   <Button type="submit" disabled={save.isPending}>
-                    {save.isPending ? "Saving…" : "Create company"}
+                    {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create company"}
                   </Button>
                 </>
               }

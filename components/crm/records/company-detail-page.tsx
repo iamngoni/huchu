@@ -20,6 +20,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
+import { CompanyFormSheet } from "./company-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
 
@@ -49,7 +50,12 @@ type CompanyDetail = {
   email: string | null;
   phone: string | null;
   city: string | null;
+  country: string | null;
+  addressLine: string | null;
+  billingAddress: string | null;
+  companyType: string;
   accountStatus: string;
+  notes: string | null;
   parentRelation: string | null;
   customFields: Record<string, unknown> | null;
   assignedTo: { id: string; name: string | null } | null;
@@ -96,6 +102,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [tab, setTab] = useState("people");
 
   const companyQuery = useQuery({
@@ -167,7 +174,10 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
     <RecordPageShell
       backHref="/crm/companies"
       backLabel="All companies"
-      actions={[{ label: "Merge a duplicate", onSelect: () => setMergeOpen(true) }]}
+      actions={[
+        { label: "Edit", onSelect: () => setEditOpen(true) },
+        { label: "Merge a duplicate", onSelect: () => setMergeOpen(true) },
+      ]}
       title={company.name}
       reference={company.clientNo}
       status={ACCOUNT_STATUS_PRESENTATION[company.accountStatus] ?? null}
@@ -325,6 +335,33 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
           <CustomFieldDisplay definitions={definitions} values={company.customFields} />
         </>
       }
+    />
+
+    <CompanyFormSheet
+      open={editOpen}
+      onOpenChange={setEditOpen}
+      record={{
+        id: company.id,
+        name: company.name,
+        tradingName: company.tradingName ?? "",
+        companyType: company.companyType,
+        registrationNumber: company.registrationNumber ?? "",
+        taxNumber: company.taxNumber ?? "",
+        website: company.website ?? "",
+        industry: company.industry ?? "",
+        email: company.email ?? "",
+        phone: company.phone ?? "",
+        addressLine: company.addressLine ?? "",
+        city: company.city ?? "",
+        country: company.country ?? "",
+        billingAddress: company.billingAddress ?? "",
+        accountStatus: company.accountStatus,
+        parentClientId: company.parent?.id ?? "",
+        parentRelation: company.parentRelation ?? "",
+        notes: company.notes ?? "",
+        assignedToId: company.assignedTo?.id ?? "",
+      }}
+      onSaved={() => companyQuery.refetch()}
     />
 
     <MergeDialog

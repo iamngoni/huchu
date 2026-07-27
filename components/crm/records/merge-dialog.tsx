@@ -77,7 +77,10 @@ export function MergeDialog({
   const [error, setError] = useState<string | null>(null);
 
   // Reset during render as the dialog opens rather than in an effect.
-  const [wasOpen, setWasOpen] = useState(open);
+  // Starts at `false`, not `open`: a sheet that mounts already open would
+  // otherwise record itself as having always been open, the transition below
+  // would never fire, and the form would never seed.
+  const [wasOpen, setWasOpen] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {

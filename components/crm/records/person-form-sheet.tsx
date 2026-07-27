@@ -84,17 +84,36 @@ const EMPTY: FormState = {
   assignedToId: "",
 };
 
+/** The subset of a person this form can edit, as the detail page holds it. */
+export type PersonFormRecord = { id: string } & Partial<FormState>;
+
+/** Only the keys the form owns; anything else on the record is ignored. */
+function seedFrom(record: PersonFormRecord): Partial<FormState> {
+  const seed: Partial<FormState> = {};
+  for (const key of Object.keys(EMPTY) as (keyof FormState)[]) {
+    const value = record[key];
+    if (value !== undefined && value !== null) seed[key] = value as never;
+  }
+  return seed;
+}
+
 export function PersonFormSheet({
   open,
   onOpenChange,
   defaultClientId,
   onCreated,
+  record,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultClientId?: string;
   onCreated?: (personId: string) => void;
+  /** Pass a record to edit it. Omit to create a new one. */
+  record?: PersonFormRecord | null;
+  onSaved?: () => void;
 }) {
+  const isEdit = Boolean(record?.id);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -105,11 +124,18 @@ export function PersonFormSheet({
 
   // Reset as the sheet opens, adjusting state during render rather than in an
   // effect so there is no flash of the previous person's details.
-  const [wasOpen, setWasOpen] = useState(open);
+  // Starts at `false`, not `open`: a sheet that mounts already open would
+  // otherwise record itself as having always been open, the transition below
+  // would never fire, and the form would never seed.
+  const [wasOpen, setWasOpen] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setForm({ ...EMPTY, clientId: defaultClientId ?? "" });
+      setForm(
+        record
+          ? { ...EMPTY, ...seedFrom(record) }
+          : { ...EMPTY, clientId: defaultClientId ?? "" },
+      );
       setCustomValues({});
       setErrors([]);
       setDuplicates(null);
@@ -165,16 +191,21 @@ export function PersonFormSheet({
 
   const save = useMutation({
     mutationFn: async (force: boolean) => {
-      const response = await fetch("/api/v2/crm/people", {
-        method: "POST",
+      const response = await fetch(
+        isEdit ? `/api/v2/crm/people/${record?.id}` : "/api/v2/crm/people",
+        {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildBody(force)),
-      });
+        },
+      );
       const payload = await response.json();
       if (response.status === 409 && payload?.code === "DUPLICATE_CANDIDATES") {
         return { kind: "duplicates" as const, duplicates: (payload.duplicates ?? []) as DuplicateEntry[] };
       }
-      if (!response.ok) throw new Error(payload?.error ?? "Failed to create person");
+      if (!response.ok) {
+        throw new Error(payload?.error ?? `Failed to ${isEdit ? "save" : "create"} person`);
+      }
       return { kind: "created" as const, record: payload as { id: string; fullName: string } };
     },
     onSuccess: (result) => {
@@ -183,10 +214,15 @@ export function PersonFormSheet({
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["crm", "people"] });
-      toast({ title: "Person created", description: result.record.fullName });
+      if (isEdit) queryClient.invalidateQueries({ queryKey: ["crm", "person", record?.id] });
+      toast({
+        title: isEdit ? "Person saved" : "Person created",
+        description: result.record.fullName,
+      });
       setDuplicates(null);
       onOpenChange(false);
-      onCreated?.(result.record.id);
+      onSaved?.();
+      if (!isEdit) onCreated?.(result.record.id);
     },
     onError: (error) => setErrors([getApiErrorMessage(error)]),
   });
@@ -207,7 +243,7 @@ export function PersonFormSheet({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent size="lg" className="w-full overflow-y-auto p-6">
           <SheetHeader>
-            <SheetTitle>New person</SheetTitle>
+            <SheetTitle>{isEdit ? "Edit person" : "New person"}</SheetTitle>
             <SheetDescription>
               A contact you can attach to any number of deals and sites without re-typing them.
             </SheetDescription>
@@ -230,7 +266,7 @@ export function PersonFormSheet({
                     Cancel
                   </Button>
                   <Button type="submit" disabled={save.isPending}>
-                    {save.isPending ? "Saving…" : "Create person"}
+                    {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create person"}
                   </Button>
                 </>
               }
