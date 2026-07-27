@@ -4,13 +4,15 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { hasCrmFullAccess } from "@/lib/crm/scope";
-import { leadSortSchema, leadViewFiltersSchema } from "@/lib/crm/views";
+import { leadSortSchema } from "@/lib/crm/views";
 
 const updateViewSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
-  viewType: z.enum(["TABLE", "BOARD"]).optional(),
-  filters: leadViewFiltersSchema.optional(),
+  viewType: z.enum(["TABLE", "BOARD", "CALENDAR"]).optional(),
+  filters: z.record(z.string(), z.unknown()).optional(),
   sort: leadSortSchema.nullable().optional(),
+  columns: z.array(z.string().trim().max(60)).max(40).nullable().optional(),
+  groupBy: z.string().trim().max(60).nullable().optional(),
   isShared: z.boolean().optional(),
 });
 
@@ -53,7 +55,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.viewType !== undefined ? { viewType: data.viewType } : {}),
-        ...(data.filters !== undefined ? { filters: data.filters } : {}),
+        ...(data.filters !== undefined ? { filters: data.filters as never } : {}),
+        ...(data.columns !== undefined ? { columns: (data.columns ?? undefined) as never } : {}),
+        ...(data.groupBy !== undefined ? { groupBy: data.groupBy } : {}),
         ...(data.sort !== undefined ? { sort: data.sort ?? undefined } : {}),
         ...(data.isShared !== undefined ? { isShared: data.isShared } : {}),
       },

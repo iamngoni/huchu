@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
+import { listIdFilter, listRecordIds } from "@/lib/crm/lists";
 import { buildCustomFieldValues, type FieldDefinition } from "@/lib/crm/custom-fields";
 import {
   boolParam,
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
 
     const parsed = siteFiltersSchema.safeParse({
       q: searchParams.get("q") || undefined,
+      listId: searchParams.get("listId") || undefined,
       clientIds: listParam(searchParams, "clientIds"),
       cities: listParam(searchParams, "cities"),
       includeArchived: boolParam(searchParams, "includeArchived"),
@@ -55,7 +57,17 @@ export async function GET(request: NextRequest) {
     });
     const filters = parsed.success ? parsed.data : {};
 
-    const where = buildSiteWhere(session.user.companyId, filters);
+    const baseWhere = buildSiteWhere(session.user.companyId, filters);
+    // A filter on an empty list must return nothing — ignoring it would show
+    // the whole table, which reads as though the filter had failed.
+    const listIds = filters.listId
+      ? await listRecordIds(prisma, {
+          companyId: session.user.companyId,
+          userId: session.user.id,
+          listId: filters.listId,
+        })
+      : null;
+    const where = { ...baseWhere, ...(listIdFilter(listIds) ?? {}) };
     const sort = recordSortSchema.safeParse({
       field: searchParams.get("sortField"),
       direction: searchParams.get("sortDir"),

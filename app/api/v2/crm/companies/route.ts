@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
 import { normalizeEmail, normalizePhoneE164 } from "@/lib/crm/phone";
 import { extractDomain, findCompanyDuplicates } from "@/lib/crm/duplicates";
+import { listIdFilter, listRecordIds } from "@/lib/crm/lists";
 import { buildCustomFieldValues, type FieldDefinition } from "@/lib/crm/custom-fields";
 import {
   boolParam,
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
 
     const parsed = companyFiltersSchema.safeParse({
       q: searchParams.get("q") || undefined,
+      listId: searchParams.get("listId") || undefined,
       companyTypes: listParam(searchParams, "companyTypes"),
       accountStatuses: listParam(searchParams, "accountStatuses"),
       assignedToIds: listParam(searchParams, "assignedToIds"),
@@ -72,7 +74,17 @@ export async function GET(request: NextRequest) {
     });
     const filters = parsed.success ? parsed.data : {};
 
-    const where = buildCompanyWhere(session.user.companyId, filters, session.user.id);
+    const baseWhere = buildCompanyWhere(session.user.companyId, filters, session.user.id);
+    // A filter on an empty list must return nothing — ignoring it would show
+    // the whole table, which reads as though the filter had failed.
+    const listIds = filters.listId
+      ? await listRecordIds(prisma, {
+          companyId: session.user.companyId,
+          userId: session.user.id,
+          listId: filters.listId,
+        })
+      : null;
+    const where = { ...baseWhere, ...(listIdFilter(listIds) ?? {}) };
     const sort = recordSortSchema.safeParse({
       field: searchParams.get("sortField"),
       direction: searchParams.get("sortDir"),

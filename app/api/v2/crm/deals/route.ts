@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
 import { ensureDefaultPipeline, firstOpenStage } from "@/lib/crm/pipelines";
+import { listIdFilter, listRecordIds } from "@/lib/crm/lists";
 import { buildCustomFieldValues, type FieldDefinition } from "@/lib/crm/custom-fields";
 import {
   boolParam,
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest) {
 
     const parsed = dealFiltersSchema.safeParse({
       q: searchParams.get("q") || undefined,
+      listId: searchParams.get("listId") || undefined,
       pipelineIds: listParam(searchParams, "pipelineIds"),
       stageIds: listParam(searchParams, "stageIds"),
       statuses: listParam(searchParams, "statuses"),
@@ -77,7 +79,17 @@ export async function GET(request: NextRequest) {
     });
     const filters = parsed.success ? parsed.data : {};
 
-    const where = buildDealWhere(session.user.companyId, filters, session.user.id);
+    const baseWhere = buildDealWhere(session.user.companyId, filters, session.user.id);
+    // A filter on an empty list must return nothing — ignoring it would show
+    // the whole table, which reads as though the filter had failed.
+    const listIds = filters.listId
+      ? await listRecordIds(prisma, {
+          companyId: session.user.companyId,
+          userId: session.user.id,
+          listId: filters.listId,
+        })
+      : null;
+    const where = { ...baseWhere, ...(listIdFilter(listIds) ?? {}) };
     const sort = recordSortSchema.safeParse({
       field: searchParams.get("sortField"),
       direction: searchParams.get("sortDir"),

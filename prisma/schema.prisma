@@ -191,6 +191,8 @@ model Company {
   crmPipelines                  CrmPipeline[]
   crmPipelineStages             CrmPipelineStage[]
   crmFieldDefinitions           CrmFieldDefinition[]
+  crmLists                      CrmList[]
+  crmListMembers                CrmListMember[]
 
   @@index([tenantStatus])
   @@index([isProvisioned])
@@ -940,6 +942,8 @@ model User {
   crmPipelinesCreated               CrmPipeline[]                  @relation("CrmPipelineCreatedBy")
   crmFieldDefinitionsCreated        CrmFieldDefinition[]           @relation("CrmFieldDefinitionCreatedBy")
   crmLeadsConverted                 CrmLead[]                      @relation("CrmLeadConvertedBy")
+  crmListsCreated                   CrmList[]                      @relation("CrmListCreatedBy")
+  crmListMembersAdded               CrmListMember[]                @relation("CrmListMemberAddedBy")
 
   @@index([companyId])
   @@index([email])
@@ -6302,6 +6306,7 @@ enum CrmCommissionEntryStatus {
 enum CrmViewType {
   TABLE
   BOARD
+  CALENDAR
 }
 
 /// The CRM company record — a customer organisation, supplier, partner or
@@ -6625,6 +6630,11 @@ model CrmSavedView {
   viewType    CrmViewType @default(TABLE)
   filters     Json
   sort        Json?
+  /// Column keys in the order they should appear. Null means the table's
+  /// own defaults, so an existing view keeps rendering as it did.
+  columns     Json?
+  /// Field key to group rows by, for board and grouped-table views.
+  groupBy     String?
   isShared    Boolean     @default(false)
   createdById String
   createdAt   DateTime    @default(now())
@@ -7453,4 +7463,49 @@ model CrmFieldDefinition {
 
   @@unique([companyId, entity, key])
   @@index([companyId, entity, archivedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Static lists: manual membership, as opposed to a saved view's filters.
+//
+// The distinction is deliberate and kept visible in the UI — a view shows
+// whatever matches, a list shows what someone put in it.
+// ---------------------------------------------------------------------------
+
+model CrmList {
+  id          String         @id @default(uuid())
+  companyId   String
+  entity      CrmFieldEntity
+  name        String
+  description String?
+  isShared    Boolean        @default(false)
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User             @relation("CrmListCreatedBy", fields: [createdById], references: [id])
+  members   CrmListMember[]
+
+  @@unique([companyId, entity, name])
+  @@index([companyId, entity])
+}
+
+model CrmListMember {
+  id        String   @id @default(uuid())
+  companyId String
+  listId    String
+  /// The record's id. Which table it points at is fixed by the list's entity,
+  /// so this is deliberately not a foreign key — one join table serves every
+  /// record type rather than one per type.
+  recordId  String
+  addedById String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  list    CrmList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  addedBy User?   @relation("CrmListMemberAddedBy", fields: [addedById], references: [id])
+
+  @@unique([listId, recordId])
+  @@index([companyId, recordId])
 }

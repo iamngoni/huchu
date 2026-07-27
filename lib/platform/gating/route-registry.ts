@@ -423,6 +423,7 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/crm/sites", featureKey: "crm.appointments" },
   { scope: "api", prefix: "/api/v2/crm/pipelines", featureKey: "crm.settings" },
   { scope: "api", prefix: "/api/v2/crm/field-definitions", featureKey: "crm.settings" },
+  { scope: "api", prefix: "/api/v2/crm/lists", featureKey: "crm.core" },
   { scope: "api", prefix: "/api/v2/crm/uploads", featureKey: "crm.core" },
   { scope: "api", prefix: "/api/v2/crm", featureKey: "crm.core" },
 

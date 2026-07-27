@@ -35,6 +35,8 @@ export function buildRecordOrderBy(entity: string, sort: RecordSort | undefined)
 
 export const personFiltersSchema = z.object({
   q: z.string().trim().max(200).optional(),
+  /** Narrow to the members of a static list. */
+  listId: z.string().uuid().optional(),
   clientId: z.string().uuid().optional(),
   assignedToIds: z.array(z.string().uuid()).max(50).optional(),
   contactTypes: z.array(z.string().trim().max(40)).max(10).optional(),
@@ -47,6 +49,8 @@ export const personFiltersSchema = z.object({
 
 export const companyFiltersSchema = z.object({
   q: z.string().trim().max(200).optional(),
+  /** Narrow to the members of a static list. */
+  listId: z.string().uuid().optional(),
   companyTypes: z.array(z.string().trim().max(40)).max(10).optional(),
   accountStatuses: z.array(z.string().trim().max(40)).max(10).optional(),
   assignedToIds: z.array(z.string().uuid()).max(50).optional(),
@@ -60,6 +64,8 @@ export const companyFiltersSchema = z.object({
 
 export const dealFiltersSchema = z.object({
   q: z.string().trim().max(200).optional(),
+  /** Narrow to the members of a static list. */
+  listId: z.string().uuid().optional(),
   pipelineIds: z.array(z.string().uuid()).max(20).optional(),
   stageIds: z.array(z.string().uuid()).max(50).optional(),
   statuses: z.array(z.enum(["OPEN", "WON", "LOST"])).max(3).optional(),
@@ -87,6 +93,8 @@ export const dealFiltersSchema = z.object({
 
 export const siteFiltersSchema = z.object({
   q: z.string().trim().max(200).optional(),
+  /** Narrow to the members of a static list. */
+  listId: z.string().uuid().optional(),
   clientIds: z.array(z.string().uuid()).max(50).optional(),
   cities: z.array(z.string().trim().max(80)).max(30).optional(),
   includeArchived: z.boolean().optional(),
