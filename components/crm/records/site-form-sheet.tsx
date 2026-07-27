@@ -125,7 +125,7 @@ export function SiteFormSheet({
 
   const save = useMutation({
     mutationFn: () =>
-      fetchJson<{ data: { id: string; name: string } }>("/api/v2/crm/sites", {
+      fetchJson<{ id: string; name: string }>("/api/v2/crm/sites", {
         method: "POST",
         body: JSON.stringify({
           name: form.name.trim(),
@@ -144,9 +144,9 @@ export function SiteFormSheet({
       }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["crm", "sites"] });
-      toast({ title: "Site created", description: result.data.name });
+      toast({ title: "Site created", description: result.name });
       onOpenChange(false);
-      onCreated?.(result.data.id);
+      onCreated?.(result.id);
     },
     onError: (error) => setErrors([getApiErrorMessage(error)]),
   });

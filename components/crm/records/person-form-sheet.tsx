@@ -175,7 +175,7 @@ export function PersonFormSheet({
         return { kind: "duplicates" as const, duplicates: (payload.duplicates ?? []) as DuplicateEntry[] };
       }
       if (!response.ok) throw new Error(payload?.error ?? "Failed to create person");
-      return { kind: "created" as const, record: payload.data as { id: string; fullName: string } };
+      return { kind: "created" as const, record: payload as { id: string; fullName: string } };
     },
     onSuccess: (result) => {
       if (result.kind === "duplicates") {

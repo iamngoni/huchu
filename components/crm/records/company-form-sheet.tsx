@@ -201,7 +201,7 @@ export function CompanyFormSheet({
         return { duplicates: (payload.duplicates ?? []) as DuplicateEntry[] };
       }
       if (!response.ok) throw new Error(payload?.error ?? "Failed to create company");
-      return { company: payload.data as { id: string; name: string } };
+      return { company: payload as { id: string; name: string } };
     },
     onSuccess: (result) => {
       if ("duplicates" in result) {

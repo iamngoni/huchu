@@ -94,7 +94,7 @@ export function VisitReportSheet({
     enabled: open && Boolean(appointmentId),
   });
 
-  const report = reportQuery.data?.data;
+  const report = reportQuery.data;
 
   useEffect(() => {
     if (!report) return;

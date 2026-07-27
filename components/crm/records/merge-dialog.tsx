@@ -103,7 +103,7 @@ export function MergeDialog({
   const preview = useMutation({
     mutationFn: (id: string) => previewCrmMerge(entity, survivorId, id),
     onSuccess: (result) => {
-      setPlan(result.data);
+      setPlan(result);
       setChoices({});
       setError(null);
     },

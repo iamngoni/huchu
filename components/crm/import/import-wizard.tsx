@@ -74,7 +74,7 @@ export function ImportWizard() {
   const dryRun = useMutation({
     mutationFn: () => previewCrmImport({ entity, mapping, onDuplicate, csv }),
     onSuccess: (result) => {
-      setPreview(result.data);
+      setPreview(result);
       setError(null);
     },
     onError: (err) => setError(getApiErrorMessage(err)),
@@ -83,7 +83,7 @@ export function ImportWizard() {
   const commit = useMutation({
     mutationFn: () => commitCrmImport({ entity, mapping, onDuplicate, csv }),
     onSuccess: (result) => {
-      const { created, updated, failed } = result.data;
+      const { created, updated, failed } = result;
       toast({
         title: `Imported ${created + updated} record${created + updated === 1 ? "" : "s"}`,
         description: failed.length ? `${failed.length} row(s) couldn't be saved.` : undefined,

@@ -106,7 +106,7 @@ export function DocumentBuilderSheet({
       }
 
       const endpoint = mode === "quotation" ? "quotation" : "invoice";
-      return fetchJson<{ data: { total?: number } }>(
+      return fetchJson<{ total?: number }>(
         `${basePath}/${endpoint}`,
         {
           method: "POST",
@@ -133,8 +133,8 @@ export function DocumentBuilderSheet({
         // Report the server's total, not the preview — per-line rounding can
         // put the two a cent apart, and money should never look uncertain.
         description:
-          typeof result.data.total === "number"
-            ? formatMoney(result.data.total, currency)
+          typeof result.total === "number"
+            ? formatMoney(result.total, currency)
             : undefined,
       });
       onOpenChange(false);

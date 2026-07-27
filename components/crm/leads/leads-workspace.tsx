@@ -97,7 +97,7 @@ export function LeadsWorkspace({
     mutationFn: bulkUpdateCrmLeads,
     onSuccess: (result) => {
       refreshLeadLists();
-      const { updated, skipped } = result.data;
+      const { updated, skipped } = result;
       toast({
         title: `${updated} lead${updated === 1 ? "" : "s"} updated`,
         description:

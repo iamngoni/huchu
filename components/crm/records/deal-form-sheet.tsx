@@ -183,7 +183,7 @@ export function DealFormSheet({
 
   const save = useMutation({
     mutationFn: () =>
-      fetchJson<{ data: { id: string; dealNo: string } }>("/api/v2/crm/deals", {
+      fetchJson<{ id: string; dealNo: string }>("/api/v2/crm/deals", {
         method: "POST",
         body: JSON.stringify({
           title: form.title.trim(),
@@ -204,9 +204,9 @@ export function DealFormSheet({
       }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["crm", "deals"] });
-      toast({ title: "Deal created", description: result.data.dealNo });
+      toast({ title: "Deal created", description: result.dealNo });
       onOpenChange(false);
-      onCreated?.(result.data.id);
+      onCreated?.(result.id);
     },
     onError: (error) => setErrors([getApiErrorMessage(error)]),
   });
