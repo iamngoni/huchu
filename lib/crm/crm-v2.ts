@@ -103,6 +103,11 @@ export type CrmBoardCard = {
   client: { id: string; name: string } | null;
   assignedTo: CrmLeadOwner | null;
   nextFollowUp: CrmNextFollowUp | null;
+  /**
+   * Set once the enquiry has been promoted. Past Contacted the card is a deal
+   * — it says so and opens the deal, not the lead it grew out of.
+   */
+  deal: { id: string; dealNo: string; value: number | null } | null;
 };
 
 export type CrmBoardColumn = {

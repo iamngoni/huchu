@@ -41,6 +41,11 @@ export async function GET(request: NextRequest) {
               contactName: true,
               createdAt: true,
               updatedAt: true,
+              // Past Contacted an enquiry has become a deal, and the card
+              // should say so and open the deal rather than the lead it grew
+              // out of — otherwise the board shows you the husk.
+              convertedDealId: true,
+              convertedDeal: { select: { id: true, dealNo: true, value: true } },
               client: { select: { id: true, name: true } },
               assignedTo: { select: { id: true, name: true } },
               followUps: {
@@ -103,10 +108,16 @@ export async function GET(request: NextRequest) {
         count: summary.count,
         totalValue: summary.totalValue,
         hasMore: summary.count > stageLeads.length,
-        leads: stageLeads.map(({ followUps, ...lead }) => ({
+        leads: stageLeads.map(({ followUps, convertedDeal, ...lead }) => ({
           ...lead,
           nextFollowUp: followUps[0] ?? null,
           stageEnteredAt: stageEntered.get(lead.id) ?? lead.createdAt,
+          deal: convertedDeal
+            ? { id: convertedDeal.id, dealNo: convertedDeal.dealNo, value: convertedDeal.value }
+            : null,
+          // The deal's own value supersedes the lead's estimate once one
+          // exists — that is the number somebody actually agreed to.
+          estimatedValue: convertedDeal?.value ?? lead.estimatedValue,
         })),
       };
     });

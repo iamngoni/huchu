@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { Clock } from "@/lib/icons";
+import { formatSlaRemaining, stageSla } from "@/lib/crm/sla";
 import type { CrmBoardCard } from "@/lib/crm/crm-v2";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,11 @@ import { formatDaysAgo, formatLeadValue, initialsOf, isOverdue } from "./stage-c
 
 export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
   const overdue = isOverdue(lead.nextFollowUp?.dueAt);
+  // Time in stage against what the stage is allowed, counted in working hours.
+  // "3 days in stage" over a weekend is not the same fact as three working
+  // days, and the card is where somebody decides what to pick up next.
+  const sla = stageSla(lead.stage, lead.stageEnteredAt);
+  const slaLabel = formatSlaRemaining(sla);
 
   return (
     <div className="space-y-2">
@@ -19,6 +25,8 @@ export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{lead.title ?? lead.leadNo}</p>
           <p className="truncate text-xs text-[var(--text-muted)]">
+            <span className="font-mono">{lead.deal?.dealNo ?? lead.leadNo}</span>
+            {" · "}
             {lead.client?.name ?? lead.contactName ?? "No client"}
           </p>
         </div>
@@ -43,9 +51,21 @@ export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
         </span>
       </div>
 
-      <div className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+      <div
+        className={cn(
+          "flex items-center gap-1 text-[11px]",
+          sla.breached
+            ? "font-medium text-[var(--status-danger-fg)]"
+            : sla.atRisk
+              ? "font-medium text-[var(--status-warning-fg)]"
+              : "text-[var(--text-muted)]",
+        )}
+      >
         <Clock className="h-3 w-3" />
-        <span>{formatDaysAgo(lead.stageEnteredAt)} in stage</span>
+        <span>
+          {formatDaysAgo(lead.stageEnteredAt)} in stage
+          {slaLabel ? ` · ${slaLabel}` : ""}
+        </span>
       </div>
     </div>
   );
@@ -84,7 +104,9 @@ export function LeadCard({ lead }: { lead: CrmBoardCard }) {
       {...listeners}
     >
       <Link
-        href={`/crm/leads/${lead.id}`}
+        // Once promoted, the deal is the live record — the lead behind it is
+        // history. Opening the lead from the board would show the husk.
+        href={lead.deal ? `/crm/deals/${lead.deal.id}` : `/crm/leads/${lead.id}`}
         className="block focus:outline-none focus-visible:underline"
         // Let the drag sensor own pointer gestures; the link still works for
         // clicks, keyboard activation, and open-in-new-tab.

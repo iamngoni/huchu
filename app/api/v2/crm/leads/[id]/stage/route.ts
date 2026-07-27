@@ -20,7 +20,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const existing = await prisma.crmLead.findFirst({
       where: { id, companyId: session.user.companyId },
-      select: { id: true, stage: true, assignedToId: true, clientId: true },
+      select: {
+        id: true,
+        stage: true,
+        assignedToId: true,
+        clientId: true,
+        // The promotion to a deal reads these to fill the deal in without
+        // stopping to ask; `convertedDealId` is how it knows not to do it twice.
+        convertedDealId: true,
+        leadNo: true,
+        title: true,
+        estimatedValue: true,
+        currency: true,
+      },
     });
     if (!existing) return errorResponse("Lead not found", 404);
     if (!canEditAssignedRecord(session, existing.assignedToId)) {

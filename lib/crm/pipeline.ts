@@ -4,6 +4,8 @@
 import type { CrmLeadStage, Prisma } from "@prisma/client";
 import { z } from "zod";
 
+import { convertLead } from "@/lib/crm/conversion";
+
 export const crmLeadStageSchema = z.enum([
   "NEW",
   "CONTACTED",
@@ -34,6 +36,34 @@ export const CRM_OPEN_STAGES: CrmLeadStage[] = [
   "QUOTED",
   "INVOICED",
 ];
+
+/**
+ * Where each stage sits in the run of play. Used to answer "is this further
+ * along than that", which a string enum cannot.
+ */
+const STAGE_ORDER: Record<CrmLeadStage, number> = {
+  NEW: 0,
+  CONTACTED: 1,
+  QUALIFIED: 2,
+  SITE_VISIT: 3,
+  QUOTED: 4,
+  INVOICED: 5,
+  WON: 6,
+  LOST: 7,
+};
+
+/**
+ * Whether reaching this stage means the enquiry has become a real opportunity.
+ *
+ * Past Contacted, somebody has spoken to them and it is worth quoting: that is
+ * a deal, and it should exist as one without anybody remembering to press
+ * Convert. Lost is excluded deliberately — an enquiry that died before it was
+ * ever qualified was never an opportunity, and manufacturing a deal to
+ * immediately lose it inflates every funnel it appears in.
+ */
+export function stagePromotesToDeal(stage: CrmLeadStage): boolean {
+  return stage !== "LOST" && STAGE_ORDER[stage] > STAGE_ORDER.CONTACTED;
+}
 
 export const CRM_STAGE_LABELS: Record<CrmLeadStage, string> = {
   NEW: "New",
@@ -78,7 +108,18 @@ export async function changeLeadStage(
   params: {
     companyId: string;
     userId: string;
-    lead: { id: string; stage: CrmLeadStage; clientId: string | null };
+    lead: {
+      id: string;
+      stage: CrmLeadStage;
+      clientId: string | null;
+      /** Set once the lead has already become a deal. */
+      convertedDealId?: string | null;
+      title?: string | null;
+      leadNo?: string;
+      estimatedValue?: number | null;
+      currency?: string | null;
+      assignedToId?: string | null;
+    };
     stage: CrmLeadStage;
     lostReason?: string | null;
     now?: Date;
@@ -86,6 +127,29 @@ export async function changeLeadStage(
 ) {
   const now = params.now ?? new Date();
   const { lead, stage } = params;
+
+  // Promote before the stage lands, not after: `convertLead` finishes by
+  // setting the lead to QUALIFIED, so converting second would quietly drag a
+  // lead moved straight to QUOTED back a stage.
+  let promotedDealId: string | null = null;
+  if (stagePromotesToDeal(stage) && !lead.convertedDealId) {
+    const result = await convertLead(tx, {
+      companyId: params.companyId,
+      userId: params.userId,
+      leadId: lead.id,
+      input: {
+        // Everything else is inferred from the lead. A promotion nobody asked
+        // for should not stop to ask questions; the deal can be edited after.
+        dealTitle: lead.title?.trim() || `Enquiry ${lead.leadNo ?? ""}`.trim(),
+        clientId: lead.clientId ?? undefined,
+        value: lead.estimatedValue ?? undefined,
+        currency: lead.currency ?? undefined,
+        assignedToId: lead.assignedToId ?? undefined,
+        createCompany: false,
+      },
+    });
+    promotedDealId = result.dealId;
+  }
 
   const updated = await tx.crmLead.update({
     where: { id: lead.id },
@@ -112,11 +176,12 @@ export async function changeLeadStage(
         fromStage: lead.stage,
         toStage: stage,
         ...(params.lostReason ? { lostReason: params.lostReason } : {}),
+        ...(promotedDealId ? { promotedDealId } : {}),
       },
       createdById: params.userId,
       occurredAt: now,
     },
   });
 
-  return updated;
+  return { ...updated, promotedDealId };
 }
