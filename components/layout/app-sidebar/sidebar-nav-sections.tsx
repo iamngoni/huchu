@@ -44,13 +44,7 @@ function SidebarNavLink({
         size="sm"
         isActive={isActive}
         tooltip={item.label}
-        className={cn(
-          "h-11 rounded-[10px] border-transparent! px-2.5 text-[14px] font-medium lg:h-9",
-          "text-text-muted transition-[background-color,color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)]",
-          "hover:translate-x-[1px] hover:bg-surface-base hover:text-text-strong",
-          "data-[active=true]:bg-surface-base data-[active=true]:text-[var(--sidebar-item-active-fg)] data-[active=true]:shadow-popover",
-          className,
-        )}
+        className={cn("h-11 px-2.5 lg:h-9", className)}
       >
         <Link
           href={item.href}
@@ -146,10 +140,7 @@ function SidebarExpandableSection({
               onClick={onToggle}
               isActive={hasActiveChild}
               tooltip={section.title}
-              className={cn(
-                "h-11 rounded-[10px] px-2.5 lg:h-9 bg-transparent shadow-none!",
-                "text-[14px] font-medium text-[var(--sidebar-item-fg-muted)] transition-[background-color,color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:translate-x-[1px]",
-              )}
+              className="h-11 bg-transparent px-2.5 lg:h-9"
             >
               {React.createElement(sectionIcon, {
                 className: cn(
@@ -182,7 +173,7 @@ function SidebarExpandableSection({
         >
           <div className="overflow-hidden">
             <SidebarGroupContent className="mt-0 pl-4 pr-0.5">
-              <SidebarMenu className="relative ml-2 gap-1 border-l border-[var(--edge-subtle)] pl-2.5">
+              <SidebarMenu className="relative ml-2 gap-1 pl-2.5">
                 {section.items.map((item) => (
                   <SidebarNavLink
                     key={item.href}
@@ -219,7 +210,7 @@ export function SidebarHomeLink({
               asChild
               isActive={isActive}
               tooltip={label}
-              className="h-11 rounded-[10px] border border-[var(--edge-subtle)]/70 px-2.5 text-[14px] font-medium text-[var(--sidebar-item-fg-muted)] transition-[background-color,color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:translate-x-[1px] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-item-hover-fg)] data-[active=true]:border-[var(--sidebar-item-active-border)] data-[active=true]:bg-[var(--sidebar-item-active-bg)] data-[active=true]:text-[var(--sidebar-item-active-fg)] data-[active=true]:shadow-[inset_0_0_0_1px_var(--sidebar-item-active-border)] lg:h-9"
+              className="h-11 px-2.5 lg:h-9"
             >
               <Link
                 href={href}

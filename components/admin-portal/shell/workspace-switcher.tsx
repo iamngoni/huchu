@@ -61,8 +61,8 @@ export function WorkspaceSwitcher({ activeCompanyId, companies }: Props) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          className="group/switcher h-11 w-full justify-between rounded-[10px] bg-[var(--surface-base)] px-2.5 text-left text-[var(--sidebar-item-fg-muted)] shadow-none transition-[background-color,color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:translate-x-[1px] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-item-hover-fg)] data-[state=open]:border-[var(--sidebar-item-active-border)] data-[state=open]:bg-[var(--sidebar-item-active-bg)] data-[state=open]:text-[var(--sidebar-item-active-fg)] lg:h-10"
+          variant="ghost"
+          className="group/switcher h-11 w-full justify-between rounded-[8px] border-0 bg-transparent px-2.5 text-left text-[var(--sidebar-item-fg-muted)] shadow-none transition-[background-color,color] duration-[var(--motion-duration-fast,120ms)] ease-[var(--motion-ease-standard,ease)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-item-hover-fg)] data-[state=open]:bg-[var(--sidebar-item-active-bg)] data-[state=open]:text-[var(--sidebar-item-active-fg)] lg:h-10"
         >
           <span className="flex min-w-0 items-center gap-2.5 text-left">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] bg-[#1f1c18] text-[10px] font-semibold text-white">

@@ -47,12 +47,7 @@ export function SidebarAccountMenu({
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 tooltip="Workspace"
-                className={cn(
-                  "h-11 min-w-0 rounded-xl border border-[var(--edge-subtle)]/70 px-2.5 text-[14px] font-semibold text-[var(--sidebar-item-fg)] lg:h-10",
-                  "transition-[background-color,color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)]",
-                  "hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-item-hover-fg)]",
-                  "data-[active=true]:border-[var(--sidebar-item-active-border)] data-[active=true]:bg-[var(--sidebar-item-active-bg)] data-[active=true]:text-[var(--sidebar-item-active-fg)]",
-                )}
+                className="h-11 min-w-0 px-2.5 font-semibold text-[var(--sidebar-item-fg)] lg:h-10"
               >
                 <div className="inline-flex size-6 shrink-0 items-center justify-center rounded-[8px] bg-[#1b1d23] text-white transition-transform duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)]">
                   <WorkspaceIcon className="h-4 w-4" />
