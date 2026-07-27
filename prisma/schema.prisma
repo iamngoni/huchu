@@ -175,6 +175,8 @@ model Company {
   crmActivities                 CrmActivity[]
   crmFollowUps                  CrmFollowUp[]
   crmAppointments               CrmAppointment[]
+  crmSiteVisitItems             CrmSiteVisitItem[]
+  crmSavedViews                 CrmSavedView[]
   crmIntakeForms                CrmIntakeForm[]
   crmIntakeSubmissions          CrmIntakeSubmission[]
   crmApiKeys                    CrmApiKey[]
@@ -915,6 +917,7 @@ model User {
   crmFollowUpsCreated               CrmFollowUp[]                  @relation("CrmFollowUpCreatedBy")
   crmAppointmentsAssigned           CrmAppointment[]               @relation("CrmAppointmentAssignedTo")
   crmAppointmentsCreated            CrmAppointment[]               @relation("CrmAppointmentCreatedBy")
+  crmSavedViewsCreated              CrmSavedView[]                 @relation("CrmSavedViewCreatedBy")
   crmIntakeFormsCreated             CrmIntakeForm[]                @relation("CrmIntakeFormCreatedBy")
   crmIntakeFormsDefaultAssignee     CrmIntakeForm[]                @relation("CrmIntakeFormDefaultAssignee")
   crmApiKeysCreated                 CrmApiKey[]                    @relation("CrmApiKeyCreatedBy")
@@ -6280,6 +6283,11 @@ enum CrmCommissionEntryStatus {
   VOIDED
 }
 
+enum CrmViewType {
+  TABLE
+  BOARD
+}
+
 model CrmClient {
   id              String    @id @default(uuid())
   companyId       String
@@ -6486,16 +6494,73 @@ model CrmAppointment {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
-  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  lead       CrmLead?      @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  client     CrmClient?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  assignedTo User          @relation("CrmAppointmentAssignedTo", fields: [assignedToId], references: [id])
-  createdBy  User?         @relation("CrmAppointmentCreatedBy", fields: [createdById], references: [id])
+  // Site-visit report captured on site. `checklist` is an array of
+  // { key, label, checked, notes? }; `photos` an array of
+  // { url, fileName, contentType, size, kind, caption? }.
+  checklist         Json?
+  photos            Json?
+  siteConditions    String?
+  reportNotes       String?
+  reportCompletedAt DateTime?
+
+  company    Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead       CrmLead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client     CrmClient?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  assignedTo User               @relation("CrmAppointmentAssignedTo", fields: [assignedToId], references: [id])
+  createdBy  User?              @relation("CrmAppointmentCreatedBy", fields: [createdById], references: [id])
   followUps  CrmFollowUp[]
+  visitItems CrmSiteVisitItem[]
 
   @@unique([companyId, appointmentNo])
   @@index([companyId, assignedToId, scheduledStart])
   @@index([companyId, status, scheduledStart])
+}
+
+/// Measurements and specifications captured during a site visit. These convert
+/// directly into quotation lines via `visitItemsToQuotationLines`.
+model CrmSiteVisitItem {
+  id            String   @id @default(uuid())
+  companyId     String
+  appointmentId String
+  position      Int      @default(0)
+  category      String?
+  description   String
+  quantity      Float    @default(1)
+  unit          String?
+  widthMm       Float?
+  heightMm      Float?
+  depthMm       Float?
+  specNotes     String?
+  unitPrice     Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  appointment CrmAppointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, appointmentId, position])
+}
+
+/// A named, reusable set of lead filters + sort. Private to its creator unless
+/// `isShared`, in which case the whole company sees it.
+model CrmSavedView {
+  id          String      @id @default(uuid())
+  companyId   String
+  entity      String      @default("LEAD")
+  name        String
+  viewType    CrmViewType @default(TABLE)
+  filters     Json
+  sort        Json?
+  isShared    Boolean     @default(false)
+  createdById String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("CrmSavedViewCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId, entity, isShared])
+  @@index([companyId, createdById])
 }
 
 model CrmIntakeForm {

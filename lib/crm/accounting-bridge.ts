@@ -15,6 +15,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createJournalEntryFromSource } from "@/lib/accounting/posting";
 import { recalcSalesInvoiceBalance } from "@/lib/accounting/balances";
+import { reserveIdentifier } from "@/lib/id-generator";
 
 type Tx = Prisma.TransactionClient;
 
@@ -63,26 +64,6 @@ function computeTotals(lines: CrmDocumentLineInput[]): DocTotals {
   const taxTotal = round2(computed.reduce((s, l) => s + l.taxAmount, 0));
   const total = round2(subTotal + taxTotal);
   return { lines: computed, subTotal, taxTotal, total };
-}
-
-function pad2(v: number): string {
-  return String(v).padStart(2, "0");
-}
-
-async function generateDocNumber(
-  tx: Tx,
-  prefix: string,
-  exists: (candidate: string) => Promise<boolean>,
-): Promise<string> {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const now = new Date();
-    const datePart = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}`;
-    const timePart = `${pad2(now.getHours())}${pad2(now.getMinutes())}`;
-    const randomPart = Math.floor(100 + Math.random() * 900);
-    const candidate = `${prefix}-${datePart}-${timePart}-${randomPart}`;
-    if (!(await exists(candidate))) return candidate;
-  }
-  return `${prefix}-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
 /**
@@ -181,9 +162,10 @@ export async function createQuotationForLead(input: CreateQuotationInput) {
       clientId: lead.clientId,
     });
     const totals = computeTotals(input.lines);
-    const quotationNumber = await generateDocNumber(tx, "QTN", async (candidate) =>
-      Boolean(await tx.salesQuotation.findFirst({ where: { quotationNumber: candidate }, select: { id: true } })),
-    );
+    const quotationNumber = await reserveIdentifier(tx, {
+      companyId: input.companyId,
+      entity: "SALES_QUOTATION",
+    });
 
     const quotation = await tx.salesQuotation.create({
       data: {
@@ -292,9 +274,10 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
     if (lines.length === 0) throw new Error("Invoice needs at least one line");
 
     const totals = computeTotals(lines);
-    const invoiceNumber = await generateDocNumber(tx, "INV", async (candidate) =>
-      Boolean(await tx.salesInvoice.findFirst({ where: { invoiceNumber: candidate }, select: { id: true } })),
-    );
+    const invoiceNumber = await reserveIdentifier(tx, {
+      companyId: input.companyId,
+      entity: "SALES_INVOICE",
+    });
     const invoiceDate = new Date();
 
     const invoice = await tx.salesInvoice.create({
@@ -430,9 +413,10 @@ export async function recordReceiptForLead(input: RecordReceiptInput) {
       );
     }
 
-    const receiptNumber = await generateDocNumber(tx, "REC", async (candidate) =>
-      Boolean(await tx.salesReceipt.findFirst({ where: { receiptNumber: candidate }, select: { id: true } })),
-    );
+    const receiptNumber = await reserveIdentifier(tx, {
+      companyId: input.companyId,
+      entity: "SALES_RECEIPT",
+    });
 
     const receipt = await tx.salesReceipt.create({
       data: {

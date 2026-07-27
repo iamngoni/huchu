@@ -40,7 +40,10 @@ export type ReservableIdEntity =
   | "RETAIL_PROMOTION"
   | "CRM_CLIENT"
   | "CRM_LEAD"
-  | "CRM_APPOINTMENT";
+  | "CRM_APPOINTMENT"
+  | "SALES_QUOTATION"
+  | "SALES_INVOICE"
+  | "SALES_RECEIPT";
 
 type EntityConfig = {
   prefix: string;
@@ -94,6 +97,9 @@ export const ID_ENTITY_CONFIG: Record<ReservableIdEntity, EntityConfig> = {
   CRM_CLIENT: { prefix: "CLI", requiresSiteId: false },
   CRM_LEAD: { prefix: "CRL", requiresSiteId: false },
   CRM_APPOINTMENT: { prefix: "SVT", requiresSiteId: false },
+  SALES_QUOTATION: { prefix: "QTN", requiresSiteId: false },
+  SALES_INVOICE: { prefix: "INV", requiresSiteId: false },
+  SALES_RECEIPT: { prefix: "REC", requiresSiteId: false },
 };
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
@@ -414,6 +420,27 @@ async function findEntityMaxExistingCode(
         select: { promoCode: true },
       });
       return extractMaxFromCodes(records.map((record) => record.promoCode), prefix);
+    }
+    case "SALES_QUOTATION": {
+      const records = await db.salesQuotation.findMany({
+        where: { companyId },
+        select: { quotationNumber: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.quotationNumber), prefix);
+    }
+    case "SALES_INVOICE": {
+      const records = await db.salesInvoice.findMany({
+        where: { companyId },
+        select: { invoiceNumber: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.invoiceNumber), prefix);
+    }
+    case "SALES_RECEIPT": {
+      const records = await db.salesReceipt.findMany({
+        where: { companyId },
+        select: { receiptNumber: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.receiptNumber), prefix);
     }
     default:
       return 0;
