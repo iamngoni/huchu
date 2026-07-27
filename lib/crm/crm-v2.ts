@@ -224,7 +224,9 @@ export function fetchCrmLeads(
 
 export function fetchCrmLeadsBoard(filters: LeadViewFilters = {}) {
   const query = qs(leadFiltersToParams(filters));
-  return fetchJson<Envelope<{ columns: CrmBoardColumn[]; cardsPerColumn: number }>>(
+  // The route answers `{ columns, cardsPerColumn }` — no envelope. Declaring
+  // one here is what made the board throw the moment it was switched to.
+  return fetchJson<{ columns: CrmBoardColumn[]; cardsPerColumn: number }>(
     `/api/v2/crm/leads/board${query}`,
   );
 }

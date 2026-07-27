@@ -31,7 +31,7 @@ type PendingLostBulk = { ids: string[]; done: () => void };
 
 export function LeadsWorkspace({
   initialFilters = {},
-  initialView = "TABLE",
+  initialView = "BOARD",
 }: {
   /** Parsed from the page's query string, so links like /crm/leads?stages=QUOTED land pre-filtered. */
   initialFilters?: LeadViewFilters;

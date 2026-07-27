@@ -9,7 +9,10 @@ export default async function CrmFollowUpsPage() {
   if (!session?.user) redirect("/login");
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading title="Follow-ups" />
+      <PageHeading
+        title="Follow-ups"
+        description="Everything owed to a customer, across leads, deals, companies and sites."
+      />
       <CrmFollowUpsContent />
     </div>
   );
