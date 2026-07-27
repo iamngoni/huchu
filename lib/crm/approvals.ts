@@ -229,6 +229,7 @@ export async function respondToApproval(input: RespondInput): Promise<{ status: 
           type: true,
           quotationId: true,
           lead: { select: { id: true, clientId: true, assignedToId: true } },
+          deal: { select: { id: true, clientId: true, assignedToId: true } },
         },
       },
     },
@@ -268,20 +269,32 @@ export async function respondToApproval(input: RespondInput): Promise<{ status: 
       });
     }
 
+    // A document hangs off a deal once the lead has been converted, and off
+    // the lead before that. Log the response against whichever it has.
     const lead = approval.leadDocument.lead;
+    const deal = approval.leadDocument.deal;
+    const owner = deal ?? lead;
     await tx.crmActivity.create({
       data: {
         companyId: approval.companyId,
         type: input.action === "APPROVE" ? "DOCUMENT_APPROVED" : "DOCUMENT_DECLINED",
-        leadId: lead.id,
-        clientId: lead.clientId ?? undefined,
+        leadId: lead?.id,
+        dealId: deal?.id,
+        clientId: owner?.clientId ?? undefined,
         subject: `Document ${input.action === "APPROVE" ? "approved" : "declined"} by client${input.name ? ` (${input.name})` : ""}`,
         body: input.note ?? undefined,
         metadata: { leadDocumentId: approval.leadDocument.id },
       },
     });
 
-    return { companyId: approval.companyId, leadId: lead.id, assignedToId: lead.assignedToId, action: input.action, nextStatus };
+    return {
+      companyId: approval.companyId,
+      leadId: lead?.id ?? null,
+      dealId: deal?.id ?? null,
+      assignedToId: owner?.assignedToId ?? null,
+      action: input.action,
+      nextStatus,
+    };
   });
 
   if (result.assignedToId) {
@@ -291,8 +304,8 @@ export async function respondToApproval(input: RespondInput): Promise<{ status: 
       type: result.action === "APPROVE" ? NotificationType.CRM_DOCUMENT_APPROVED : NotificationType.CRM_DOCUMENT_DECLINED,
       title: result.action === "APPROVE" ? "Quote approved" : "Quote declined",
       summary: `A client ${result.action === "APPROVE" ? "approved" : "declined"} a document.`,
-      leadId: result.leadId,
-      viewPath: `/crm/leads/${result.leadId}`,
+      leadId: result.leadId ?? undefined,
+      viewPath: result.dealId ? `/crm/deals/${result.dealId}` : `/crm/leads/${result.leadId}`,
     });
   }
 

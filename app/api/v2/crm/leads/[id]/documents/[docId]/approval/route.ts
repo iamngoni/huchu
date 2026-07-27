@@ -10,8 +10,18 @@ const bodySchema = z.object({ expiresInDays: z.number().int().min(1).max(90).opt
 async function loadDoc(companyId: string, leadId: string, docId: string) {
   return prisma.crmLeadDocument.findFirst({
     where: { id: docId, companyId, leadId },
-    select: { id: true, lead: { select: { assignedToId: true } } },
+    select: {
+      id: true,
+      // A document sits on a lead before conversion and on the deal after,
+      // so the owner to check comes from whichever it is attached to.
+      lead: { select: { assignedToId: true } },
+      deal: { select: { assignedToId: true } },
+    },
   });
+}
+
+function docOwnerId(doc: { lead: { assignedToId: string | null } | null; deal: { assignedToId: string | null } | null }) {
+  return doc.deal?.assignedToId ?? doc.lead?.assignedToId ?? null;
 }
 
 export async function POST(
@@ -26,7 +36,7 @@ export async function POST(
 
     const doc = await loadDoc(session.user.companyId, id, docId);
     if (!doc) return errorResponse("Document not found", 404);
-    if (!canEditAssignedRecord(session, doc.lead.assignedToId)) {
+    if (!canEditAssignedRecord(session, docOwnerId(doc))) {
       return errorResponse("You can only share documents on leads assigned to you", 403);
     }
 
@@ -59,7 +69,7 @@ export async function DELETE(
 
     const doc = await loadDoc(session.user.companyId, id, docId);
     if (!doc) return errorResponse("Document not found", 404);
-    if (!canEditAssignedRecord(session, doc.lead.assignedToId)) {
+    if (!canEditAssignedRecord(session, docOwnerId(doc))) {
       return errorResponse("You can only revoke documents on leads assigned to you", 403);
     }
 

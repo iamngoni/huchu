@@ -183,6 +183,14 @@ model Company {
   crmLeadSources                CrmLeadSource[]
   crmCommissionRules            CrmCommissionRule[]
   crmCommissionEntries          CrmCommissionEntry[]
+  crmPeople                     CrmPerson[]
+  crmPersonCompanies            CrmPersonCompany[]
+  crmSites                      CrmSite[]
+  crmDeals                      CrmDeal[]
+  crmDealContacts               CrmDealContact[]
+  crmPipelines                  CrmPipeline[]
+  crmPipelineStages             CrmPipelineStage[]
+  crmFieldDefinitions           CrmFieldDefinition[]
 
   @@index([tenantStatus])
   @@index([isProvisioned])
@@ -924,6 +932,14 @@ model User {
   crmCommissionRulesFor             CrmCommissionRule[]            @relation("CrmCommissionRuleUser")
   crmCommissionEntries              CrmCommissionEntry[]           @relation("CrmCommissionEntryRep")
   crmCommissionEntriesApproved      CrmCommissionEntry[]           @relation("CrmCommissionEntryApprovedBy")
+  crmPeopleAssigned                 CrmPerson[]                    @relation("CrmPersonAssignedTo")
+  crmPeopleCreated                  CrmPerson[]                    @relation("CrmPersonCreatedBy")
+  crmSitesCreated                   CrmSite[]                      @relation("CrmSiteCreatedBy")
+  crmDealsAssigned                  CrmDeal[]                      @relation("CrmDealAssignedTo")
+  crmDealsCreated                   CrmDeal[]                      @relation("CrmDealCreatedBy")
+  crmPipelinesCreated               CrmPipeline[]                  @relation("CrmPipelineCreatedBy")
+  crmFieldDefinitionsCreated        CrmFieldDefinition[]           @relation("CrmFieldDefinitionCreatedBy")
+  crmLeadsConverted                 CrmLead[]                      @relation("CrmLeadConvertedBy")
 
   @@index([companyId])
   @@index([email])
@@ -6288,40 +6304,73 @@ enum CrmViewType {
   BOARD
 }
 
+/// The CRM company record — a customer organisation, supplier, partner or
+/// prospect. Named CrmClient for historical reasons: it predates the wider
+/// record set and already owns the link to the accounting Customer, so it is
+/// extended in place. The UI calls it "Company".
 model CrmClient {
-  id              String    @id @default(uuid())
-  companyId       String
-  clientNo        String
-  name            String
-  contactName     String?
-  email           String?
-  emailNormalized String?
-  phone           String?
-  phoneE164       String?
-  addressLine     String?
-  city            String?
-  country         String?
-  notes           String?
-  tags            String[]  @default([])
-  customerId      String?
-  assignedToId    String?
-  archivedAt      DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                 String              @id @default(uuid())
+  companyId          String
+  clientNo           String
+  name               String
+  tradingName        String?
+  companyType        CrmCompanyType      @default(CUSTOMER)
+  registrationNumber String?
+  taxNumber          String?
+  website            String?
+  /// Host part of `website`, used for duplicate detection on import.
+  websiteDomain      String?
+  industry           String?
+  contactName        String?
+  email              String?
+  emailNormalized    String?
+  phone              String?
+  phoneE164          String?
+  addressLine        String?
+  city               String?
+  country            String?
+  billingAddress     String?
+  accountStatus      CrmAccountStatus    @default(ACTIVE)
+  /// Simple hierarchy: this company sits under `parent` as a branch,
+  /// subsidiary or department. Not a corporate ownership model.
+  parentClientId     String?
+  parentRelation     CrmCompanyRelation?
+  notes              String?
+  tags               String[]            @default([])
+  customFields       Json?
+  customerId         String?
+  assignedToId       String?
+  lastContactedAt    DateTime?
+  archivedAt         DateTime?
+  /// Set when this record was merged away; reads redirect to the survivor.
+  mergedIntoId       String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   company           Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   customer          Customer?             @relation(fields: [customerId], references: [id])
   assignedTo        User?                 @relation("CrmClientAssignedTo", fields: [assignedToId], references: [id])
+  parent            CrmClient?            @relation("CrmClientHierarchy", fields: [parentClientId], references: [id], onDelete: SetNull)
+  children          CrmClient[]           @relation("CrmClientHierarchy")
+  mergedInto        CrmClient?            @relation("CrmClientMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom        CrmClient[]           @relation("CrmClientMerge")
   leads             CrmLead[]
   activities        CrmActivity[]
   followUps         CrmFollowUp[]
   appointments      CrmAppointment[]
   intakeSubmissions CrmIntakeSubmission[]
+  people            CrmPerson[]           @relation("CrmPersonPrimaryCompany")
+  personLinks       CrmPersonCompany[]
+  deals             CrmDeal[]
+  sites             CrmSite[]
 
   @@unique([companyId, clientNo])
   @@index([companyId, emailNormalized])
   @@index([companyId, phoneE164])
   @@index([companyId, name])
+  @@index([companyId, websiteDomain])
+  @@index([companyId, parentClientId])
+  @@index([companyId, archivedAt])
 }
 
 model CrmLead {
@@ -6354,6 +6403,16 @@ model CrmLead {
   firstContactAt DateTime?
   wonAt          DateTime?
   lostAt         DateTime?
+  customFields   Json?
+  /// Transparent rule-based score; see lib/crm/lead-scoring.ts.
+  score          Int?
+  /// Set when the lead was qualified into a deal. A converted lead is
+  /// read-only history — the deal carries the work from then on.
+  convertedAt      DateTime?
+  convertedById    String?
+  convertedDealId  String?
+  convertedPersonId String?
+  convertedClientId String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -6367,6 +6426,9 @@ model CrmLead {
   documents         CrmLeadDocument[]
   intakeSubmissions CrmIntakeSubmission[]
   commissionEntries CrmCommissionEntry[]
+  convertedDeal     CrmDeal?              @relation("CrmLeadConvertedDeal", fields: [convertedDealId], references: [id], onDelete: SetNull)
+  convertedPerson   CrmPerson?            @relation("CrmLeadConvertedPerson", fields: [convertedPersonId], references: [id], onDelete: SetNull)
+  convertedBy       User?                 @relation("CrmLeadConvertedBy", fields: [convertedById], references: [id])
 
   @@unique([companyId, leadNo])
   @@index([companyId, stage, updatedAt])
@@ -6381,7 +6443,8 @@ model CrmLead {
 model CrmLeadDocument {
   id          String          @id @default(uuid())
   companyId   String
-  leadId      String
+  leadId      String?
+  dealId      String?
   type        CrmDocumentType
   quotationId String?
   invoiceId   String?
@@ -6392,7 +6455,8 @@ model CrmLeadDocument {
   createdAt   DateTime        @default(now())
 
   company           Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  lead              CrmLead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead              CrmLead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal              CrmDeal?             @relation(fields: [dealId], references: [id], onDelete: Cascade)
   quotation         SalesQuotation?      @relation("CrmLeadDocQuotation", fields: [quotationId], references: [id])
   invoice           SalesInvoice?        @relation("CrmLeadDocInvoice", fields: [invoiceId], references: [id])
   receipt           SalesReceipt?        @relation("CrmLeadDocReceipt", fields: [receiptId], references: [id])
@@ -6432,6 +6496,8 @@ model CrmActivity {
   type        CrmActivityType
   leadId      String?
   clientId    String?
+  dealId      String?
+  personId    String?
   subject     String
   body        String?
   metadata    Json?
@@ -6442,6 +6508,8 @@ model CrmActivity {
   company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   lead      CrmLead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
   client    CrmClient? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  deal      CrmDeal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  person    CrmPerson? @relation(fields: [personId], references: [id], onDelete: Cascade)
   createdBy User?      @relation("CrmActivityCreatedBy", fields: [createdById], references: [id])
 
   @@index([companyId, leadId, occurredAt])
@@ -6457,6 +6525,7 @@ model CrmFollowUp {
   status        CrmFollowUpStatus @default(PENDING)
   leadId        String?
   clientId      String?
+  dealId        String?
   appointmentId String?
   assignedToId  String
   createdById   String?
@@ -6467,6 +6536,7 @@ model CrmFollowUp {
   company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   lead        CrmLead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   client      CrmClient?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  deal        CrmDeal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
   appointment CrmAppointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   assignedTo  User            @relation("CrmFollowUpAssignedTo", fields: [assignedToId], references: [id])
   createdBy   User?           @relation("CrmFollowUpCreatedBy", fields: [createdById], references: [id])
@@ -6483,6 +6553,8 @@ model CrmAppointment {
   title          String               @default("Site visit")
   leadId         String?
   clientId       String?
+  dealId         String?
+  siteId         String?
   assignedToId   String
   scheduledStart DateTime
   scheduledEnd   DateTime?
@@ -6506,6 +6578,8 @@ model CrmAppointment {
   company    Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   lead       CrmLead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
   client     CrmClient?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  deal       CrmDeal?           @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  site       CrmSite?           @relation(fields: [siteId], references: [id], onDelete: SetNull)
   assignedTo User               @relation("CrmAppointmentAssignedTo", fields: [assignedToId], references: [id])
   createdBy  User?              @relation("CrmAppointmentCreatedBy", fields: [createdById], references: [id])
   followUps  CrmFollowUp[]
@@ -6992,4 +7066,391 @@ model CameraAccessLog {
   @@index([cameraId])
   @@index([userId])
   @@index([startTime])
+}
+
+// ---------------------------------------------------------------------------
+// CRM core records: people, companies, deals, sites.
+//
+// CrmClient is the company record. It predates this model set and already
+// carries the link to the accounting Customer, so it is extended in place
+// rather than renamed — a rename under db:push would drop the table.
+// ---------------------------------------------------------------------------
+
+enum CrmCompanyType {
+  CUSTOMER
+  PROSPECT
+  SUPPLIER
+  PARTNER
+  OTHER
+}
+
+/// How a company sits under its parent. Deliberately not a corporate
+/// ownership model — users only need to say "this belongs under that".
+enum CrmCompanyRelation {
+  HEAD_OFFICE
+  BRANCH
+  SUBSIDIARY
+  DEPARTMENT
+}
+
+enum CrmAccountStatus {
+  ACTIVE
+  ON_HOLD
+  INACTIVE
+  BLACKLISTED
+}
+
+enum CrmContactType {
+  CUSTOMER
+  DECISION_MAKER
+  SITE_CONTACT
+  FINANCE_CONTACT
+  SUPPLIER_CONTACT
+  REFERRAL_PARTNER
+  OTHER
+}
+
+enum CrmPreferredChannel {
+  PHONE
+  EMAIL
+  WHATSAPP
+  SMS
+  IN_PERSON
+}
+
+/// A person's role on a specific deal. One person may hold several.
+enum CrmDealContactRole {
+  PRIMARY
+  DECISION_MAKER
+  FINANCE
+  SITE
+  TECHNICAL
+  INFLUENCER
+  REFERRER
+}
+
+/// Won and Lost are protected outcomes: stages are configurable, but every
+/// pipeline resolves to one of these three states.
+enum CrmDealStatus {
+  OPEN
+  WON
+  LOST
+}
+
+enum CrmForecastCategory {
+  PIPELINE
+  BEST_CASE
+  COMMIT
+  CLOSED
+}
+
+model CrmPerson {
+  id                 String               @id @default(uuid())
+  companyId          String
+  personNo           String
+  firstName          String
+  lastName           String?
+  /// Denormalised "First Last" for search and display ordering.
+  fullName           String
+  jobTitle           String?
+  email              String?
+  emailNormalized    String?
+  additionalEmails   String[]             @default([])
+  phone              String?
+  phoneE164          String?
+  additionalPhones   String[]             @default([])
+  contactType        CrmContactType       @default(CUSTOMER)
+  preferredChannel   CrmPreferredChannel?
+  addressLine        String?
+  city               String?
+  country            String?
+  notes              String?
+  tags               String[]             @default([])
+  /// Primary employer. Additional affiliations live in CrmPersonCompany.
+  clientId           String?
+  assignedToId       String?
+  /// Where this record came from: MANUAL, IMPORT, LEAD_CONVERSION, INTAKE_FORM.
+  sourceType         String               @default("MANUAL")
+  convertedFromLeadId String?
+  customFields       Json?
+  lastContactedAt    DateTime?
+  archivedAt         DateTime?
+  /// Set when this record was merged away; reads redirect to the survivor.
+  mergedIntoId       String?
+  createdById        String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  company        Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client         CrmClient?         @relation("CrmPersonPrimaryCompany", fields: [clientId], references: [id], onDelete: SetNull)
+  assignedTo     User?              @relation("CrmPersonAssignedTo", fields: [assignedToId], references: [id])
+  createdBy      User?              @relation("CrmPersonCreatedBy", fields: [createdById], references: [id])
+  mergedInto     CrmPerson?         @relation("CrmPersonMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom     CrmPerson[]        @relation("CrmPersonMerge")
+  companyLinks   CrmPersonCompany[]
+  dealContacts   CrmDealContact[]
+  dealsPrimaryOn CrmDeal[]          @relation("CrmDealPrimaryContact")
+  sitesPrimaryOn CrmSite[]          @relation("CrmSitePrimaryContact")
+  activities     CrmActivity[]
+  leadsConverted CrmLead[]          @relation("CrmLeadConvertedPerson")
+
+  @@unique([companyId, personNo])
+  @@index([companyId, fullName])
+  @@index([companyId, emailNormalized])
+  @@index([companyId, phoneE164])
+  @@index([companyId, clientId])
+  @@index([companyId, assignedToId])
+  @@index([companyId, archivedAt])
+}
+
+/// Additional company affiliations beyond CrmPerson.clientId.
+model CrmPersonCompany {
+  id        String   @id @default(uuid())
+  companyId String
+  personId  String
+  clientId  String
+  jobTitle  String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  company Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  person  CrmPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+  client  CrmClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, clientId])
+  @@index([companyId, clientId])
+}
+
+model CrmSite {
+  id                 String   @id @default(uuid())
+  companyId          String
+  siteNo             String
+  name               String
+  clientId           String?
+  addressLine        String?
+  city               String?
+  country            String?
+  latitude           Float?
+  longitude          Float?
+  primaryContactId   String?
+  accessInstructions String?
+  siteConditions     String?
+  photos             Json?
+  notes              String?
+  tags               String[] @default([])
+  customFields       Json?
+  archivedAt         DateTime?
+  createdById        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client         CrmClient?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  primaryContact CrmPerson?       @relation("CrmSitePrimaryContact", fields: [primaryContactId], references: [id], onDelete: SetNull)
+  createdBy      User?            @relation("CrmSiteCreatedBy", fields: [createdById], references: [id])
+  deals          CrmDeal[]
+  appointments   CrmAppointment[]
+
+  @@unique([companyId, siteNo])
+  @@index([companyId, name])
+  @@index([companyId, clientId])
+  @@index([companyId, archivedAt])
+}
+
+/// A deal is the commercial opportunity: the record that carries pipeline
+/// stage, value, quotes, visits and payments. A lead is only the unqualified
+/// enquiry that may produce one.
+model CrmDeal {
+  id                String               @id @default(uuid())
+  companyId         String
+  dealNo            String
+  title             String
+  clientId          String?
+  primaryContactId  String?
+  siteId            String?
+  pipelineId        String
+  stageId           String
+  status            CrmDealStatus        @default(OPEN)
+  value             Float?
+  currency          String               @default("USD")
+  probability       Int?
+  forecastCategory  CrmForecastCategory  @default(PIPELINE)
+  expectedCloseDate DateTime?
+  assignedToId      String?
+  services          String[]             @default([])
+  source            String?
+  sourceChannel     CrmLeadChannel       @default(MANUAL)
+  lostReason        String?
+  customFields      Json?
+  /// Stamped on every stage move so "days in stage" needs no timeline scan.
+  stageEnteredAt    DateTime             @default(now())
+  wonAt             DateTime?
+  lostAt            DateTime?
+  convertedFromLeadId String?
+  archivedAt        DateTime?
+  createdById       String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client         CrmClient?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  primaryContact CrmPerson?        @relation("CrmDealPrimaryContact", fields: [primaryContactId], references: [id], onDelete: SetNull)
+  site           CrmSite?          @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  pipeline       CrmPipeline       @relation(fields: [pipelineId], references: [id])
+  stage          CrmPipelineStage  @relation(fields: [stageId], references: [id])
+  assignedTo     User?             @relation("CrmDealAssignedTo", fields: [assignedToId], references: [id])
+  createdBy      User?             @relation("CrmDealCreatedBy", fields: [createdById], references: [id])
+  contacts       CrmDealContact[]
+  activities     CrmActivity[]
+  followUps      CrmFollowUp[]
+  appointments   CrmAppointment[]
+  documents      CrmLeadDocument[]
+  leadsConverted CrmLead[]         @relation("CrmLeadConvertedDeal")
+
+  @@unique([companyId, dealNo])
+  @@index([companyId, stageId])
+  @@index([companyId, status, updatedAt])
+  @@index([companyId, assignedToId, status])
+  @@index([companyId, clientId])
+  @@index([companyId, expectedCloseDate])
+}
+
+model CrmDealContact {
+  id        String             @id @default(uuid())
+  companyId String
+  dealId    String
+  personId  String
+  role      CrmDealContactRole @default(PRIMARY)
+  notes     String?
+  createdAt DateTime           @default(now())
+
+  company Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  deal    CrmDeal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  person  CrmPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId, personId, role])
+  @@index([companyId, personId])
+}
+
+// ---------------------------------------------------------------------------
+// Configurable pipelines. Stages are data, not code — but every pipeline
+// still resolves to the three protected outcomes in CrmDealStatus.
+// ---------------------------------------------------------------------------
+
+model CrmPipeline {
+  id          String    @id @default(uuid())
+  companyId   String
+  name        String
+  description String?
+  /// The pipeline new deals land in when none is chosen.
+  isDefault   Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  position    Int       @default(0)
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?              @relation("CrmPipelineCreatedBy", fields: [createdById], references: [id])
+  stages    CrmPipelineStage[]
+  deals     CrmDeal[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+}
+
+model CrmPipelineStage {
+  id                String        @id @default(uuid())
+  companyId         String
+  pipelineId        String
+  name              String
+  position          Int           @default(0)
+  /// Which protected outcome entering this stage puts the deal in. Exactly
+  /// one WON and one LOST stage per pipeline; the rest are OPEN.
+  status            CrmDealStatus @default(OPEN)
+  probability       Int           @default(0)
+  colorToken        String?
+  /// Days a deal may sit here before it counts as stale. Null disables.
+  inactivityDays    Int?
+  /// Field keys that must be filled before a deal may leave this stage.
+  requiredFields    String[]      @default([])
+  /// Short "what should happen here" checklist shown on the deal.
+  checklist         Json?
+  requiresSiteVisit Boolean       @default(false)
+  requiresQuotation Boolean       @default(false)
+  archivedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  company  Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pipeline CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    CrmDeal[]
+
+  @@unique([pipelineId, name])
+  @@index([companyId, pipelineId, position])
+}
+
+// ---------------------------------------------------------------------------
+// Custom fields. Definitions are metadata; values live in a `customFields`
+// JSON column on each record, keyed by CrmFieldDefinition.key. That keeps
+// reads a single row fetch and avoids an EAV join on every list query.
+// ---------------------------------------------------------------------------
+
+enum CrmFieldEntity {
+  PERSON
+  COMPANY
+  LEAD
+  DEAL
+  SITE
+  WORK_ORDER
+}
+
+enum CrmFieldType {
+  SHORT_TEXT
+  LONG_TEXT
+  NUMBER
+  CURRENCY
+  PERCENT
+  DATE
+  DATETIME
+  CHECKBOX
+  SINGLE_SELECT
+  MULTI_SELECT
+  PHONE
+  EMAIL
+  URL
+  ADDRESS
+  USER
+  PERSON
+  COMPANY
+  SITE
+}
+
+model CrmFieldDefinition {
+  id           String         @id @default(uuid())
+  companyId    String
+  entity       CrmFieldEntity
+  /// Stable key used in the record's customFields JSON. Immutable once set.
+  key          String
+  label        String
+  description  String?
+  type         CrmFieldType
+  isRequired   Boolean        @default(false)
+  defaultValue Json?
+  /// Choices for SINGLE_SELECT / MULTI_SELECT: [{value,label,colorToken?}].
+  options      Json?
+  /// Grouping on the record page, e.g. "Qualification".
+  section      String?
+  position     Int            @default(0)
+  showInTable  Boolean        @default(false)
+  archivedAt   DateTime?
+  createdById  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("CrmFieldDefinitionCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([companyId, entity, key])
+  @@index([companyId, entity, archivedAt])
 }

@@ -41,6 +41,9 @@ export type ReservableIdEntity =
   | "CRM_CLIENT"
   | "CRM_LEAD"
   | "CRM_APPOINTMENT"
+  | "CRM_PERSON"
+  | "CRM_DEAL"
+  | "CRM_SITE"
   | "SALES_QUOTATION"
   | "SALES_INVOICE"
   | "SALES_RECEIPT";
@@ -97,6 +100,10 @@ export const ID_ENTITY_CONFIG: Record<ReservableIdEntity, EntityConfig> = {
   CRM_CLIENT: { prefix: "CLI", requiresSiteId: false },
   CRM_LEAD: { prefix: "CRL", requiresSiteId: false },
   CRM_APPOINTMENT: { prefix: "SVT", requiresSiteId: false },
+  CRM_PERSON: { prefix: "PSN", requiresSiteId: false },
+  // DEAL is already taken by CAR_SALES_DEAL, so the CRM deal reads CRMD.
+  CRM_DEAL: { prefix: "CRMD", requiresSiteId: false },
+  CRM_SITE: { prefix: "CSITE", requiresSiteId: false },
   SALES_QUOTATION: { prefix: "QTN", requiresSiteId: false },
   SALES_INVOICE: { prefix: "INV", requiresSiteId: false },
   SALES_RECEIPT: { prefix: "REC", requiresSiteId: false },
@@ -420,6 +427,50 @@ async function findEntityMaxExistingCode(
         select: { promoCode: true },
       });
       return extractMaxFromCodes(records.map((record) => record.promoCode), prefix);
+    }
+    // CRM entities seed from existing rows so a lost IdSequence row cannot
+    // restart the counter at 0001 and collide with the unique constraint.
+    case "CRM_CLIENT": {
+      const records = await db.crmClient.findMany({
+        where: { companyId },
+        select: { clientNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.clientNo), prefix);
+    }
+    case "CRM_LEAD": {
+      const records = await db.crmLead.findMany({
+        where: { companyId },
+        select: { leadNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.leadNo), prefix);
+    }
+    case "CRM_APPOINTMENT": {
+      const records = await db.crmAppointment.findMany({
+        where: { companyId },
+        select: { appointmentNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.appointmentNo), prefix);
+    }
+    case "CRM_PERSON": {
+      const records = await db.crmPerson.findMany({
+        where: { companyId },
+        select: { personNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.personNo), prefix);
+    }
+    case "CRM_DEAL": {
+      const records = await db.crmDeal.findMany({
+        where: { companyId },
+        select: { dealNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.dealNo), prefix);
+    }
+    case "CRM_SITE": {
+      const records = await db.crmSite.findMany({
+        where: { companyId },
+        select: { siteNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.siteNo), prefix);
     }
     case "SALES_QUOTATION": {
       const records = await db.salesQuotation.findMany({
