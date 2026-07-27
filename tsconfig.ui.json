@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["components/ui/**/*.ts", "components/ui/**/*.tsx", "next-env.d.ts"]
+}

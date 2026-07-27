@@ -1,83 +1,98 @@
-import { cva, type VariantProps } from "class-variance-authority"
-import { Slot } from "radix-ui"
+import * as React from "react";
+import {
+  ButtonGroup as DsButtonGroup,
+  ButtonGroupSeparator as DsButtonGroupSeparator,
+  ButtonGroupText as DsButtonGroupText,
+  type ButtonGroupOrientation,
+} from "@corelithzw/react";
 
-import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
-const buttonGroupVariants = cva(
-  "flex w-fit items-stretch overflow-hidden rounded-[var(--button-radius)] border border-[var(--border-default)] bg-[var(--surface-base)] [&>*]:focus-visible:z-10 [&>*]:focus-visible:relative [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md has-[>[data-slot=button-group]]:gap-0",
-  {
-    variants: {
-      orientation: {
-        horizontal:
-          "[&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:border-l-0 [&>*:not(:last-child)]:rounded-r-none",
-        vertical:
-          "flex-col [&>*:not(:first-child)]:rounded-t-none [&>*:not(:first-child)]:border-t-0 [&>*:not(:last-child)]:rounded-b-none",
-      },
-    },
-    defaultVariants: {
-      orientation: "horizontal",
-    },
-  }
-)
+/**
+ * ButtonGroup — the design system's, behind this repo's export names.
+ *
+ * The whole attached-segment recipe the local `cva` spelled out by hand — the
+ * shared outer border, the zeroed inner radii, the hairline between segments,
+ * the vertical flip — is what `.btn-group` already draws, keyed off the
+ * `data-orientation` attribute the DS emits. The three call sites here fill the
+ * group with the local `Button`, which already renders the DS `.btn`, so the
+ * `[&>*]` descendant selectors are no longer needed either.
+ *
+ * `buttonGroupVariants` is kept as a class-string function (the same trick
+ * `button.tsx` uses to outlive its `cva`) so `cn(buttonGroupVariants(…))` call
+ * sites still compile. Note that it can only ever return `btn-group`: the DS
+ * expresses orientation as a data attribute, not a class, so a caller who
+ * wants the vertical form has to render `<ButtonGroup orientation="vertical">`
+ * rather than splice the class string in by hand.
+ *
+ * `ButtonGroupSeparator` keeps `React.ComponentProps<typeof Separator>` as its
+ * prop type — it is part of this repo's published shape — but the DS derives a
+ * separator's direction from the parent group, so `orientation` is passed
+ * through as `data-orientation` for styling only and `decorative` is dropped
+ * (the DS separator is always `role="none"`).
+ *
+ * New code should import `ButtonGroup` from `@corelithzw/react`.
+ */
+/**
+ * Kept so existing `cn(buttonGroupVariants({ orientation }))` call sites still
+ * compile. `orientation` cannot be expressed as a class here — the DS keys it
+ * off `data-orientation` — so it is accepted and ignored rather than silently
+ * producing a class name that has no rule behind it.
+ */
+function buttonGroupVariants({
+  orientation,
+}: { orientation?: ButtonGroupOrientation } = {}): string {
+  void orientation;
+  return "btn-group";
+}
 
 function ButtonGroup({
   className,
   orientation,
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>) {
+}: React.ComponentProps<typeof DsButtonGroup>) {
   return (
-    <div
-      role="group"
+    <DsButtonGroup
       data-slot="button-group"
-      data-orientation={orientation}
-      className={cn(buttonGroupVariants({ orientation }), className)}
+      orientation={orientation}
+      className={cn(className)}
       {...props}
     />
-  )
+  );
 }
 
 function ButtonGroupText({
   className,
-  asChild = false,
   ...props
-}: React.ComponentProps<"div"> & {
-  asChild?: boolean
-}) {
-  const Comp = asChild ? Slot.Root : "div"
-
+}: React.ComponentProps<typeof DsButtonGroupText>) {
   return (
-    <Comp
-      className={cn(
-        "bg-[var(--surface-subtle)] flex items-center gap-2 border-l border-[var(--border-default)] px-4 text-sm font-medium text-[var(--text-strong)] shadow-none first:border-l-0 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+    <DsButtonGroupText
+      data-slot="button-group-text"
+      className={cn(className)}
       {...props}
     />
-  )
+  );
 }
 
 function ButtonGroupSeparator({
   className,
   orientation = "vertical",
+  decorative,
   ...props
 }: React.ComponentProps<typeof Separator>) {
+  // The DS separator is always `role="none"`, so `decorative` has nothing to
+  // switch — accepted for signature compatibility, then dropped.
+  void decorative;
+
   return (
-    <Separator
+    <DsButtonGroupSeparator
       data-slot="button-group-separator"
-      orientation={orientation}
-      className={cn(
-        "bg-[var(--border-default)] relative !m-0 self-stretch data-[orientation=vertical]:h-auto",
-        className
-      )}
+      data-orientation={orientation}
+      className={cn(className)}
       {...props}
     />
-  )
+  );
 }
 
-export {
-  ButtonGroup,
-  ButtonGroupSeparator,
-  ButtonGroupText,
-  buttonGroupVariants,
-}
+export { ButtonGroup, ButtonGroupSeparator, ButtonGroupText, buttonGroupVariants };

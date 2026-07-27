@@ -1,20 +1,23 @@
 "use client";
 
 import * as React from "react";
+import { SegmentedControl as DsSegmentedControl } from "@corelithzw/react";
+
 import { cn } from "@/lib/utils";
 
 /**
- * SegmentedControl — a compact pill-style switch for 2-5 mutually-exclusive
- * options. Use this when the choices are short and equally likely (e.g.
- * "Activity / Reconcile", "All / Mine"). For longer or unequal choices,
- * reach for Tabs or a Select instead.
+ * SegmentedControl — the design system's, behind this repo's prop names.
  *
- * Visual contract:
- *   - The strip sits on `--surface-muted` so it reads as a control, not a header.
- *   - The active segment lifts to `--surface-base` with `--text-strong`.
- *   - No internal animation — instant feels precise. The eye does the work.
+ * The DS gained `size`, `fullWidth`, `variant` and per-option `count` during
+ * this migration, so the local API now maps across one-to-one. Two differences
+ * remain and are absorbed here:
  *
- * Accessibility: implemented as a radiogroup. Arrow keys cycle, Home/End jump.
+ *   - `ariaLabel` (camelCase) is the local spelling; the DS takes `aria-label`.
+ *   - `fullWidth` defaults to `false` here but `true` in the DS, because the DS
+ *     `.segmented` track has always stretched. The local default is preserved.
+ *
+ * The generic `<V extends string>` is kept — call sites rely on
+ * `onValueChange` being typed to their own union rather than to `string`.
  */
 export type SegmentedControlOption<V extends string> = {
   value: V;
@@ -47,88 +50,16 @@ export function SegmentedControl<V extends string>({
   size = "md",
   fullWidth = false,
 }: SegmentedControlProps<V>) {
-  const refs = React.useRef<Array<HTMLButtonElement | null>>([]);
-
-  const handleKey = (e: React.KeyboardEvent, idx: number) => {
-    const enabled = options
-      .map((o, i) => ({ o, i }))
-      .filter(({ o }) => !o.disabled);
-    if (enabled.length === 0) return;
-    const enabledIdx = enabled.findIndex(({ i }) => i === idx);
-    let nextEnabled = enabledIdx;
-    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-      nextEnabled = (enabledIdx + 1) % enabled.length;
-    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-      nextEnabled = (enabledIdx - 1 + enabled.length) % enabled.length;
-    } else if (e.key === "Home") {
-      nextEnabled = 0;
-    } else if (e.key === "End") {
-      nextEnabled = enabled.length - 1;
-    } else {
-      return;
-    }
-    e.preventDefault();
-    const target = enabled[nextEnabled];
-    refs.current[target.i]?.focus();
-    onValueChange(target.o.value);
-  };
-
   return (
-    <div
-      role="radiogroup"
+    <DsSegmentedControl<V>
+      value={value}
+      onValueChange={onValueChange}
+      options={options}
+      size={size}
+      variant={variant === "border" ? "bordered" : "default"}
+      fullWidth={fullWidth}
       aria-label={ariaLabel}
-      className={cn(
-        "items-stretch rounded-md p-0.5",
-        fullWidth ? "flex w-full" : "inline-flex",
-        variant === "default" && "bg-[var(--surface-muted)]",
-        variant === "border" && "border border-[var(--border)] bg-[var(--surface-muted)]",
-        className,
-      )}
-    >
-      {options.map((opt, idx) => {
-        const active = opt.value === value;
-        return (
-          <button
-            key={opt.value}
-            ref={(el) => {
-              refs.current[idx] = el;
-            }}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            aria-disabled={opt.disabled || undefined}
-            disabled={opt.disabled}
-            onClick={() => !opt.disabled && onValueChange(opt.value)}
-            onKeyDown={(e) => handleKey(e, idx)}
-            tabIndex={active ? 0 : -1}
-            className={cn(
-              "inline-flex items-center justify-center gap-1.5 rounded-[5px] font-medium transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-              fullWidth && "flex-1",
-              size === "sm" && "h-6 px-2 text-[11px]",
-              size === "md" && "h-7 px-3 text-xs",
-              active
-                ? "bg-[var(--surface-base)] text-[var(--text-strong)] shadow-[0_1px_0_0_var(--border)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-body)]",
-              opt.disabled && "cursor-not-allowed opacity-50 hover:text-[var(--text-muted)]",
-            )}
-          >
-            <span className="truncate">{opt.label}</span>
-            {typeof opt.count === "number" && opt.count > 0 ? (
-              <span
-                className={cn(
-                  "rounded px-1 text-[10px] tabular-nums",
-                  active
-                    ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
-                    : "bg-[var(--surface-base)] text-[var(--text-subtle)]",
-                )}
-              >
-                {opt.count > 99 ? "99+" : opt.count}
-              </span>
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
+      className={cn(className)}
+    />
   );
 }

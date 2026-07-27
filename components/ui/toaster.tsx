@@ -1,33 +1,15 @@
-"use client"
+"use client";
 
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "@/components/ui/toast"
-import { useToast } from "@/components/ui/use-toast"
+import { Toaster as DsToaster } from "@corelithzw/react";
 
+/**
+ * Toaster — the design system's host, mounted once in `app-providers.tsx`.
+ *
+ * The DS renders the stack itself from its own store, so the local
+ * `toasts.map(...)` loop is gone. `position` and `max` are passed to preserve
+ * this repo's placement (top-right) and limit (4); the DS defaults are
+ * bottom-right and 5.
+ */
 export function Toaster() {
-  const { toasts } = useToast()
-
-  return (
-    <ToastProvider>
-      {toasts.map(({ id, title, description, action, ...props }) => (
-        <Toast key={id} {...props}>
-          <div className="grid gap-1">
-            {title ? <ToastTitle>{title}</ToastTitle> : null}
-            {description ? (
-              <ToastDescription>{description}</ToastDescription>
-            ) : null}
-          </div>
-          {action}
-          <ToastClose />
-        </Toast>
-      ))}
-      <ToastViewport />
-    </ToastProvider>
-  )
+  return <DsToaster position="top-right" max={4} />;
 }

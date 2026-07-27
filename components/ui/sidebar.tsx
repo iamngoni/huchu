@@ -303,162 +303,32 @@ const SidebarMenuItem = React.forwardRef<
 SidebarMenuItem.displayName = "SidebarMenuItem";
 
 /**
- * A sidebar row is navigation, not a control. It carries no outline and no
- * shadow, and it does not shift on hover — hover and active are the same soft
- * fill, separated by the weight of the label. This is the same contract as
- * `.rail-item` in globals.css; the two surfaces should read identically.
+ * Sidebar — the design system's, re-exported under the same names.
+ *
+ * The whole set now lives in `@corelithzw/react` (`src/shells/Sidebar.tsx`):
+ * the provider that owns open/collapsed state and publishes `--sidebar-width*`,
+ * the `<aside>` that becomes a `Drawer` on mobile, and every row primitive. The
+ * markup contract is identical to what this file used to emit — same
+ * `data-sidebar="…"` attributes, same `data-state` / `data-collapsible` /
+ * `data-variant`, same `data-active` / `data-collapsed` on rows — so the 7
+ * files importing from here (`SidebarGroup` and `SidebarGroupContent` 24× each,
+ * `useSidebar` 16×) need no changes. The Tailwind utility strings this file
+ * carried are now `.sidebar-*` rules in the DS's `nav.css`.
+ *
+ * `useSidebar` still throws outside a `SidebarProvider` — verified in the DS
+ * source, so the "must be used within a SidebarProvider" guard is unchanged.
+ *
+ * Three things are deliberately different, none of them a prop:
+ *   - `SidebarSeparator` is a DS `<div role="separator">` rather than a wrapped
+ *     Radix `Separator`. Nothing here passed Radix-only props to it.
+ *   - `SidebarInput` is the DS `Input` at `size="sm"` rather than this repo's
+ *     `Input`. Same element, same forwarded props.
+ *   - `SidebarTrigger`'s default glyph is the DS's own inline panel icon rather
+ *     than the Phosphor `SidebarSimple` from `@/lib/icons`. Pass `children` to
+ *     override it. The accessible name ("Toggle sidebar") is unchanged.
+ *
+ * New code should import these from `@corelithzw/react` directly.
  */
-const sidebarMenuButtonVariants = cva(
-  "relative flex w-full items-center gap-2.5 rounded-[8px] border-0 px-2.5 py-2 text-[14px] font-medium text-[var(--sidebar-item-fg-muted)] shadow-none transition-[color,background-color] duration-[var(--motion-duration-fast,120ms)] ease-[var(--motion-ease-standard,ease)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-item-hover-fg)] hover:shadow-none data-[active=true]:bg-[var(--sidebar-item-active-bg)] data-[active=true]:font-semibold data-[active=true]:text-[var(--sidebar-item-active-fg)] data-[collapsed=true]:mx-auto data-[collapsed=true]:h-10 data-[collapsed=true]:w-10 data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 data-[collapsed=true]:py-0 data-[collapsed=true]:[&_span]:hidden [&_svg]:shrink-0",
-  {
-    variants: {
-      variant: {
-        default: "",
-        outline:
-          "text-foreground shadow-[var(--surface-frame-shadow)] hover:bg-surface data-[active=true]:bg-surface",
-      },
-      size: {
-        default: "h-10",
-        sm: "h-9 text-[13px]",
-        lg: "h-11 text-[14px]",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
-
-type SidebarMenuButtonProps = React.ComponentProps<"button"> &
-  VariantProps<typeof sidebarMenuButtonVariants> & {
-    asChild?: boolean;
-    isActive?: boolean;
-    tooltip?: string;
-  };
-
-const SidebarMenuButton = React.forwardRef<
-  HTMLButtonElement,
-  SidebarMenuButtonProps
->(
-  (
-    { className, variant, size, asChild = false, isActive, tooltip, ...props },
-    ref,
-  ) => {
-    const { state } = useSidebar();
-    const Comp = asChild ? Slot : "button";
-    const button = (
-      <Comp
-        ref={ref}
-        data-active={isActive}
-        data-collapsed={state === "collapsed"}
-        className={cn(sidebarMenuButtonVariants({ variant, size, className }))}
-        {...props}
-      />
-    );
-
-    if (!tooltip) {
-      return button;
-    }
-
-    return state === "collapsed" ? (
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="right" align="center">
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
-    ) : (
-      button
-    );
-  },
-);
-SidebarMenuButton.displayName = "SidebarMenuButton";
-
-const SidebarSeparator = React.forwardRef<
-  React.ElementRef<typeof Separator>,
-  React.ComponentPropsWithoutRef<typeof Separator>
->(({ className, ...props }, ref) => (
-  <Separator ref={ref} className={cn("my-2", className)} {...props} />
-));
-SidebarSeparator.displayName = "SidebarSeparator";
-
-const SidebarInput = React.forwardRef<
-  React.ElementRef<typeof Input>,
-  React.ComponentPropsWithoutRef<typeof Input>
->(({ className, ...props }, ref) => (
-  <Input
-    ref={ref}
-    data-sidebar="input"
-    className={cn(
-      "h-[var(--control-height-sm)] rounded-lg border-[var(--border-default)] bg-sidebar-accent/85 shadow-[var(--surface-frame-shadow)]",
-      className,
-    )}
-    {...props}
-  />
-));
-SidebarInput.displayName = "SidebarInput";
-
-const SidebarTrigger = React.forwardRef<
-  React.ElementRef<typeof Button>,
-  React.ComponentPropsWithoutRef<typeof Button>
->(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar();
-  return (
-    <Button
-      ref={ref}
-      variant="ghost"
-      size="icon-sm"
-      className={cn(
-        "h-9 w-9 rounded-[10px] hover:bg-[var(--surface-subtle)]",
-        className,
-      )}
-      onClick={(event) => {
-        onClick?.(event);
-        toggleSidebar();
-      }}
-      {...props}
-    >
-      <SidebarLeft className="h-4 w-4" />
-      <span className="sr-only">Toggle sidebar</span>
-    </Button>
-  );
-});
-SidebarTrigger.displayName = "SidebarTrigger";
-
-const SidebarRail = React.forwardRef<
-  HTMLButtonElement,
-  React.ComponentProps<"button">
->(({ className, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar();
-  return (
-    <button
-      ref={ref}
-      type="button"
-      aria-label="Toggle sidebar"
-      onClick={toggleSidebar}
-      className={cn(
-        "absolute -right-1.5 top-1/2 hidden h-12 w-1 -translate-y-1/2 rounded-full bg-[var(--surface-panel)] shadow-[var(--surface-frame-shadow)] opacity-0 transition-opacity duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] md:block group-hover/sidebar:opacity-100",
-        className,
-      )}
-      {...props}
-    />
-  );
-});
-SidebarRail.displayName = "SidebarRail";
-
-const SidebarInset = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div">
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex min-h-screen min-w-0 flex-1 flex-col", className)}
-    {...props}
-  />
-));
-SidebarInset.displayName = "SidebarInset";
-
 export {
   SidebarProvider,
   Sidebar,
@@ -477,4 +347,11 @@ export {
   SidebarRail,
   SidebarInset,
   useSidebar,
-};
+} from "@corelithzw/react";
+
+export type {
+  SidebarProps,
+  SidebarProviderProps,
+  SidebarMenuButtonProps,
+  SidebarContextValue,
+} from "@corelithzw/react";

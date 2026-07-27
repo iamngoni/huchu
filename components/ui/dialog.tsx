@@ -6,7 +6,6 @@ import { cva } from "class-variance-authority"
 import { X } from "@/lib/icons"
 import {
   DIALOG_INSET_VIEWPORT_CLASSNAMES,
-  DIALOG_SIZE_CLASSNAMES,
   DIALOG_TABLET_CONTENT_CLASSNAMES,
   DIALOG_TABLET_VIEWPORT_CLASSNAMES,
   type DialogTabletBehavior,
@@ -15,16 +14,55 @@ import {
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Dialog — the design system's chrome on Base UI's engine.
+ *
+ * The DS ships its own modal, but it has no focus trap, no scroll lock and no
+ * portal/viewport machinery. Base UI provides all three, so the engine stays and
+ * only the styling moves: the backdrop renders `.modal-scrim`, the popup renders
+ * `.modal-card` plus a `size-*` class (which drives `--modal-max-w`), the header
+ * renders `.modal-h` so `.t`/`.s` bind to the title and description, the footer
+ * renders `.modal-f`, and the built-in close button renders `.x`.
+ *
+ * Two deliberate deviations:
+ *
+ *   - `.modal-b` is not applied. The DS modal is a three-region flex column
+ *     (head / scrolling body / foot) but this compound API has no body slot —
+ *     73 call sites drop loose JSX straight into `DialogContent` — so the card
+ *     keeps scrolling as a whole, as it does today.
+ *   - Because the body is unwrapped, the card still owns the content padding via
+ *     `inset`. `.modal-h`/`.modal-f` would double-pad against it, so their own
+ *     padding (and the footer's rule and muted band, which would float inset
+ *     from the card edges) is neutralised by local utilities. What they still
+ *     contribute is the descendant scope `.t`/`.s` needs and `flex: none`.
+ *
+ * The `size`, `tabletBehavior` and `inset` props, every export and every
+ * `data-slot` are unchanged. New code should import `Modal` from
+ * `@corelithzw/react`.
+ */
 const Dialog = DialogPrimitive.Root
 const DialogTrigger = DialogPrimitive.Trigger
 const DialogPortal = DialogPrimitive.Portal
 const DialogClose = DialogPrimitive.Close
 
+/**
+ * The DS's own max-width scale, keyed by the local `size` values — they happen
+ * to be the same five names. `.modal-card.size-*` only sets `--modal-max-w`,
+ * which `.modal-card` reads, so these must sit on the popup itself.
+ */
+const DIALOG_SURFACE_SIZE: Record<ResponsiveSurfaceSize, string> = {
+  sm: "modal-sm",
+  md: "modal-md",
+  lg: "modal-lg",
+  xl: "modal-xl",
+  full: "modal-full",
+}
+
 const dialogContentVariants = cva(
-  "relative grid w-full gap-4 overflow-y-auto overscroll-contain rounded-[calc(var(--card-radius)+2px)] border border-[var(--border-default)] bg-popover text-foreground shadow-[var(--shadow-popover)] transition ease-[var(--motion-ease-default)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-[0.985] motion-safe:duration-200 focus:outline-none [--dialog-max-w-sm:34rem] [--dialog-max-w-md:40rem] [--dialog-max-w-lg:44rem] max-w-full sm:max-w-[var(--dialog-max-w-sm)] md:max-w-[var(--dialog-max-w-md)] lg:max-w-[var(--dialog-max-w-lg)] max-h-[100dvh] sm:max-h-[calc(100dvh-3rem)]",
+  "modal-card relative gap-4 overflow-y-auto overscroll-contain transition ease-[var(--motion-ease-default)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-[0.985] motion-safe:duration-200 focus:outline-none max-h-[100dvh] sm:max-h-[calc(100dvh-3rem)]",
   {
     variants: {
-      size: DIALOG_SIZE_CLASSNAMES,
+      size: DIALOG_SURFACE_SIZE,
       tabletBehavior: DIALOG_TABLET_CONTENT_CLASSNAMES,
       inset: {
         true: "p-5 sm:p-6",
@@ -50,7 +88,11 @@ const DialogContent = React.forwardRef<
   DialogContentProps
 >(({ className, children, size = "md", tabletBehavior = "adaptive", inset = true, ...props }, ref) => (
   <DialogPortal>
-    <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-[var(--surface-overlay)] backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200" />
+    {/* `fixed inset-0` restates what `.modal-scrim` already does, so the
+        backdrop does not depend on which of the package's two `.modal-scrim`
+        rules lands last; `z-50` pins it to the app's overlay layer rather than
+        the DS's own `z-index: 1100`. */}
+    <DialogPrimitive.Backdrop className="modal-scrim fixed inset-0 z-50 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200" />
     <DialogPrimitive.Viewport
       className={cn(
         "fixed inset-0 z-50 flex justify-center overflow-y-auto overscroll-contain",
@@ -68,7 +110,13 @@ const DialogContent = React.forwardRef<
         {...props}
       >
         {children}
-        <DialogClose className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-[var(--button-radius)] bg-[var(--surface-subtle)] text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-[var(--surface-soft)] hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20 focus:ring-offset-0 disabled:pointer-events-none">
+        {/* `.modal-card .x` styles this; it only binds because the button is
+            inside the popup. Placement stays absolute — the DS puts its close
+            in the header, which this compound API cannot guarantee exists. */}
+        <DialogClose
+          data-slot="dialog-close"
+          className="x absolute right-3 top-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-soft)] disabled:pointer-events-none"
+        >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogClose>
@@ -79,12 +127,23 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Popup.displayName
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex min-w-0 flex-col gap-1.5 text-left", className)} {...props} />
+  <div
+    data-slot="dialog-header"
+    className={cn("modal-h flex min-w-0 flex-col p-0 text-left", className)}
+    {...props}
+  />
 )
 DialogHeader.displayName = "DialogHeader"
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col-reverse gap-2 pt-3 sm:flex-row sm:justify-end sm:space-x-0", className)} {...props} />
+  <div
+    data-slot="dialog-footer"
+    className={cn(
+      "modal-f flex-col-reverse border-0 bg-transparent p-0 pt-3 sm:flex-row",
+      className
+    )}
+    {...props}
+  />
 )
 DialogFooter.displayName = "DialogFooter"
 
@@ -94,7 +153,8 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold tracking-[-0.02em] text-foreground text-wrap-balance", className)}
+    data-slot="dialog-title"
+    className={cn("t text-wrap-balance", className)}
     {...props}
   />
 ))
@@ -104,9 +164,12 @@ const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => (
+  // `sr-only` is the long-standing default here — most call sites pass a
+  // description purely to satisfy the dialog's accessible name requirement.
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("sr-only", className)}
+    data-slot="dialog-description"
+    className={cn("s sr-only", className)}
     {...props}
   />
 ))

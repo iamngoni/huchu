@@ -7,3 +7,8 @@ allowBuilds:
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@corelithzw/react@0.3.2 || 0.3.3 || 0.3.4'
+# Phase 1 of the Corelith migration develops the design system alongside this
+# repo. Point at the checkout so package changes land here without a publish.
+# Swap back to a version range once the package is released.
+overrides:
+  '@corelithzw/react': link:../corelith-design-docs/packages/react

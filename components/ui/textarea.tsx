@@ -1,19 +1,32 @@
-import * as React from "react"
+"use client";
 
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { TextArea as DsTextArea } from "@corelithzw/react";
 
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+import { cn } from "@/lib/utils";
+
+/**
+ * Textarea — the design system's `TextArea`, under this repo's spelling.
+ *
+ * One behavioural note for call sites: the DS sets `resize: vertical` and
+ * `minHeight: 80` as inline styles, and inline styles beat Tailwind classes.
+ * A caller that wants to pin the size has to say `style={{ resize: "none" }}`
+ * rather than `className="resize-none"`. The caller's `style` always wins.
+ */
+export type TextareaProps = React.ComponentProps<"textarea">;
+
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  { className, ...props },
+  ref,
+) {
   return (
-    <textarea
+    <DsTextArea
+      ref={ref}
       data-slot="textarea"
-      className={cn(
-        "placeholder:text-muted-foreground flex min-h-20 w-full rounded-[var(--button-radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm shadow-none transition-[background-color,border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-default)] outline-none focus-visible:border-[var(--focus-ring)] focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60",
-        "hover:border-[var(--border-strong)] aria-invalid:border-destructive aria-invalid:ring-destructive/30",
-        className
-      )}
-      {...props}
+      className={cn(className)}
+      {...(props as React.ComponentProps<typeof DsTextArea>)}
     />
-  )
-}
+  );
+});
 
-export { Textarea }
+export { Textarea };

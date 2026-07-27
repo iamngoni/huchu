@@ -1,66 +1,69 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronDownIcon } from "@/lib/icons"
-import { Accordion as AccordionPrimitive } from "radix-ui"
+import * as React from "react";
+import {
+  Accordion as DsAccordion,
+  AccordionItem as DsAccordionItem,
+  AccordionTrigger as DsAccordionTrigger,
+  AccordionContent as DsAccordionContent,
+} from "@corelithzw/react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-function Accordion({
-  ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Root>) {
-  return <AccordionPrimitive.Root data-slot="accordion" {...props} />
-}
+/**
+ * Accordion — the design system's, behind the Radix prop names.
+ *
+ * Radix is gone here. The DS accordion is built on native `<details>` /
+ * `<summary>`, and its CSS (`.accordion > details > summary`, `.acc-body`) is
+ * written as a child-selector chain that Radix's div/button markup could never
+ * satisfy — so restyling Radix in place would have left it unstyled.
+ *
+ * Nothing imported this file, so the swap is free. The shadcn-shaped `type`
+ * prop is still accepted and mapped onto the DS `multiple` boolean, so code
+ * pasted from that ecosystem keeps working.
+ *
+ * The chevron is deliberately not rendered: the DS draws it as a
+ * `summary::after` pseudo-element, and keeping the icon would double it up.
+ */
+export type AccordionProps = Omit<
+  React.ComponentProps<typeof DsAccordion>,
+  "multiple"
+> & {
+  /** shadcn spelling. `"multiple"` maps to the DS `multiple` flag. */
+  type?: "single" | "multiple";
+  /** Accepted for source compatibility; the DS always allows collapsing. */
+  collapsible?: boolean;
+};
 
-function AccordionItem({
-  className,
-  ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Item>) {
+function Accordion({ type, collapsible, className, ...props }: AccordionProps) {
+  void collapsible;
+
   return (
-    <AccordionPrimitive.Item
-      data-slot="accordion-item"
-      className={cn("border-b border-[var(--border-default)] last:border-b-0", className)}
+    <DsAccordion
+      data-slot="accordion"
+      multiple={type === "multiple"}
+      className={cn(className)}
       {...props}
     />
-  )
+  );
+}
+
+function AccordionItem({ className, ...props }: React.ComponentProps<typeof DsAccordionItem>) {
+  return <DsAccordionItem data-slot="accordion-item" className={cn(className)} {...props} />;
 }
 
 function AccordionTrigger({
   className,
-  children,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
-  return (
-    <AccordionPrimitive.Header className="flex">
-      <AccordionPrimitive.Trigger
-        data-slot="accordion-trigger"
-        className={cn(
-          "flex flex-1 items-start justify-between gap-4 rounded-[var(--button-radius)] px-2 py-4 text-left text-sm font-medium text-[var(--text-strong)] transition-all outline-none hover:bg-[var(--surface-subtle)] focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
-          className
-        )}
-        {...props}
-      >
-        {children}
-        <ChevronDownIcon className="pointer-events-none size-4 shrink-0 translate-y-0.5 text-[var(--text-subtle)] transition-transform duration-200" />
-      </AccordionPrimitive.Trigger>
-    </AccordionPrimitive.Header>
-  )
+}: React.ComponentProps<typeof DsAccordionTrigger>) {
+  return <DsAccordionTrigger data-slot="accordion-trigger" className={cn(className)} {...props} />;
 }
 
 function AccordionContent({
   className,
-  children,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Content>) {
-  return (
-    <AccordionPrimitive.Content
-      data-slot="accordion-content"
-      className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
-      {...props}
-    >
-      <div className={cn("px-2 pb-4 pt-0 text-[var(--text-muted)]", className)}>{children}</div>
-    </AccordionPrimitive.Content>
-  )
+}: React.ComponentProps<typeof DsAccordionContent>) {
+  return <DsAccordionContent data-slot="accordion-content" className={cn(className)} {...props} />;
 }
 
-export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent };

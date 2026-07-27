@@ -2,18 +2,39 @@
 
 import * as React from "react";
 import Link from "next/link";
+import {
+  SectionTab as DsSectionTab,
+  SectionTabs as DsSectionTabs,
+} from "@corelithzw/react";
 
 import { cn } from "@/lib/utils";
 
 /**
  * In-page horizontal tab strip — the row that sits above a section's content,
- * usually next to a {@link NavRail}.
+ * usually next to a {@link NavRail}. Now the design system's `SectionTabs`.
  *
- * Styling lives in `app/styles/components.css` under `.section-tabs`. The
- * active tab is strong text over a neutral rule; it is deliberately not the
- * brand colour, which is reserved for primary actions. Modules used to inline
- * their own `border-b-2 border-[var(--action-primary-bg)] text-[…]` variant of
- * this, which is why every one of them drifted.
+ * The DS owns the markup and the styling: the `<nav>` landmark, the
+ * `.section-tabs` / `.section-tab` / `.section-tab-count` classes, the
+ * `aria-current="page"` marking, and the deliberately *neutral* active
+ * indicator (`--text-strong`, not brand — brand is reserved for primary
+ * actions). Modules used to inline their own `border-b-2 …` variant of this,
+ * which is why every one of them drifted.
+ *
+ * Two things stay local:
+ *
+ *   - **The `next/link` binding.** The DS is framework-free, so the routed
+ *     branch renders a `<Link>` inside `SectionTab asChild`.
+ *   - **The discriminated `SectionTabProps` union.** Six shell files depend on
+ *     `{ to }` and `{ onClick, disabled }` being mutually exclusive, so the
+ *     union is preserved verbatim rather than flattened onto the DS's single
+ *     button-shaped prop type.
+ *
+ * Two small behaviour changes come with the DS and are intentional:
+ *
+ *   - Counts above 99 now render as "99+" rather than the raw number.
+ *   - The button branch marks itself `aria-current="page"` instead of
+ *     `aria-current="true"`; "page" is the correct token for a tab strip that
+ *     switches sections.
  */
 
 type SectionTabsProps = React.ComponentPropsWithoutRef<"nav"> & {
@@ -28,9 +49,9 @@ export function SectionTabs({
   ...props
 }: SectionTabsProps) {
   return (
-    <nav aria-label={label} className={cn("section-tabs", className)} {...props}>
+    <DsSectionTabs label={label} className={cn(className)} {...props}>
       {children}
-    </nav>
+    </DsSectionTabs>
   );
 }
 
@@ -58,39 +79,30 @@ export function SectionTab({
   disabled,
   children,
 }: SectionTabProps) {
-  const inner = (
-    <>
-      {icon}
-      <span>{children}</span>
-      {typeof count === "number" ? (
-        <span className="section-tab-count">{count}</span>
-      ) : null}
-    </>
-  );
-
-  const classes = cn("section-tab", active && "active", className);
-
   if (to) {
     return (
-      <Link
-        href={to}
-        className={classes}
-        aria-current={active ? "page" : undefined}
+      <DsSectionTab
+        asChild
+        active={active}
+        icon={icon}
+        count={count}
+        className={cn(className)}
       >
-        {inner}
-      </Link>
+        <Link href={to}>{children}</Link>
+      </DsSectionTab>
     );
   }
 
   return (
-    <button
-      type="button"
-      className={classes}
+    <DsSectionTab
+      active={active}
+      icon={icon}
+      count={count}
+      className={cn(className)}
       onClick={onClick}
       disabled={disabled}
-      aria-current={active ? "true" : undefined}
     >
-      {inner}
-    </button>
+      {children}
+    </DsSectionTab>
   );
 }
