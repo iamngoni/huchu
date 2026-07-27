@@ -302,6 +302,7 @@ export const Pencil = createPhosphorIcon("PencilSimple", "Pencil");
 export const Phone = createPhosphorIcon("Phone", "Phone");
 export const Play = createPhosphorIcon("Play", "Play");
 export const Plus = createPhosphorIcon("Plus", "Plus");
+export const CopyLink = createPhosphorIcon("Copy", "CopyLink");
 export const PlusCircle = createPhosphorIcon("PlusCircle", "PlusCircle");
 export const QrCode = createPhosphorIcon("QrCode", "QrCode");
 export const Radio = createPhosphorIcon("Radio", "Radio");
