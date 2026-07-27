@@ -59,12 +59,7 @@ export function SidebarQuickActions({
                     asChild
                     isActive={isActive}
                     tooltip={item.label}
-                    className={cn(
-                      "h-11 rounded-[10px] border border-[var(--edge-subtle)]/70 px-2.5 text-[14px] font-medium text-[var(--sidebar-item-fg-muted)] lg:h-9",
-                      "transition-[background-color,color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:translate-x-[1px] hover:bg-[var(--sidebar-accent)] hover:shadow-none",
-                      "hover:text-[var(--sidebar-item-hover-fg)]",
-                      "data-[active=true]:border-[var(--sidebar-item-active-border)] data-[active=true]:bg-[var(--sidebar-item-active-bg)] data-[active=true]:text-[var(--sidebar-item-active-fg)] data-[active=true]:shadow-[inset_0_0_0_1px_var(--sidebar-item-active-border)]",
-                    )}
+                    className="h-11 px-2.5 lg:h-9"
                   >
                     <Link href={item.href} onClick={closeMobileNav}>
                       <item.icon
@@ -84,10 +79,8 @@ export function SidebarQuickActions({
                         <SidebarMenuButton
                           tooltip="Create"
                           className={cn(
-                            "h-11 rounded-[10px] border border-[var(--edge-subtle)]/70 px-2.5 text-[14px] font-medium text-[var(--sidebar-item-fg-muted)] lg:h-9",
-                            "transition-[background-color,color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:translate-x-[1px] hover:bg-[var(--sidebar-accent)]",
-                            "hover:text-[var(--sidebar-item-hover-fg)]",
-                            "data-[state=open]:border-[var(--sidebar-item-active-border)] data-[state=open]:bg-[var(--sidebar-item-active-bg)] data-[state=open]:text-[var(--sidebar-item-active-fg)]",
+                            "h-11 px-2.5 lg:h-9",
+                            "data-[state=open]:bg-[var(--sidebar-item-active-bg)] data-[state=open]:text-[var(--sidebar-item-active-fg)]",
                           )}
                         >
                           <MedusaCirclePlusIcon className="h-4 w-4" />
