@@ -1,7 +1,8 @@
+"use client";
+
 import * as React from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { NavRail, NavRailItem } from "@/components/ui/nav-rail";
 import { cn } from "@/lib/utils";
 
 export type VerticalDataViewItem = {
@@ -20,6 +21,14 @@ type VerticalDataViewsProps = {
   children: React.ReactNode;
 };
 
+/**
+ * A view switcher rendered as the shared nav rail.
+ *
+ * These were `<Button>`s carrying a border and a pill radius, so a list of
+ * views read as a column of controls rather than as navigation. They are now
+ * the same quiet rail Settings uses, and counts sit at the right as plain
+ * tabular text instead of outlined badges.
+ */
 export function VerticalDataViews({
   items,
   value,
@@ -28,44 +37,31 @@ export function VerticalDataViews({
   railLabel = "Views",
   children,
 }: VerticalDataViewsProps) {
+  const accessibleLabel = typeof railLabel === "string" ? railLabel : "Views";
+
   return (
     <section
-      className={cn("grid gap-4 lg:grid-cols-[210px_minmax(0,1fr)]", className)}
+      className={cn(
+        "grid gap-4 lg:grid-cols-[var(--rail-w)_minmax(0,1fr)]",
+        className,
+      )}
     >
-      <aside className="space-y-2 lg:sticky lg:top-16 lg:self-start">
-        <h3 className="px-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-          {railLabel}
-        </h3>
-        <div className="-mx-1 overflow-x-auto pb-1 lg:mx-0 lg:overflow-visible lg:pb-0">
-          <div className="flex gap-2 px-1 lg:grid lg:gap-1.5 lg:px-0">
+      <aside className="lg:sticky lg:top-16 lg:self-start">
+        <NavRail label={accessibleLabel} orientation="responsive">
+          {railLabel ? <div className="group-label">{railLabel}</div> : null}
           {items.map((item) => (
-            <Button
+            <NavRailItem
               key={item.id}
-              type="button"
-              variant="ghost"
-              className={cn(
-                "h-11 min-w-fit justify-between rounded-full border border-transparent px-3.5 text-[13px] shadow-none lg:h-10 lg:w-full lg:rounded-xl",
-                item.id === value
-                  ? "border-[var(--edge-subtle)] bg-[var(--surface-subtle)] text-[var(--text-strong)] hover:bg-[var(--surface-subtle)]"
-                  : "text-[var(--text-muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-strong)]",
-              )}
+              active={item.id === value}
+              count={item.count}
               onClick={() => onValueChange(item.id)}
             >
-              <span className="truncate text-left">{item.label}</span>
-              {typeof item.count === "number" ? (
-                <Badge
-                  variant={item.id === value ? "secondary" : "outline"}
-                  className="rounded-full px-2 py-0 font-mono text-[10px]"
-                >
-                  {item.count}
-                </Badge>
-              ) : null}
-            </Button>
+              {item.label}
+            </NavRailItem>
           ))}
-          </div>
-        </div>
+        </NavRail>
       </aside>
-      <div className="space-y-2.5">{children}</div>
+      <div className="min-w-0 space-y-2.5">{children}</div>
     </section>
   );
 }

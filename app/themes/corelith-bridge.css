@@ -324,9 +324,12 @@
   --sidebar-item-fg-muted:      color-mix(in oklab, var(--text-muted) 88%, var(--text-body));
   --sidebar-item-icon:          color-mix(in oklab, var(--text-muted) 78%, var(--text-body));
   --sidebar-item-hover-fg:      var(--text-body);
-  --sidebar-item-active-bg:     var(--brand-soft);
-  --sidebar-item-active-fg:     var(--brand-strong);
-  --sidebar-item-active-border: color-mix(in oklab, var(--brand-300) 50%, var(--border-subtle));
+  /* Selection is marked by a soft neutral fill and a stronger label, not by
+     colour. Brand is the primary-action colour — spending it on "you are here"
+     puts the loudest thing on the page next to every action that matters. */
+  --sidebar-item-active-bg:     var(--sidebar-accent);
+  --sidebar-item-active-fg:     var(--text-strong);
+  --sidebar-item-active-border: transparent;
 
   /* ══════════════════════════════════════════════════════════════════════
      CHARTS

@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { PageActions } from "@/components/layout/page-actions";
 import { PageHeading } from "@/components/layout/page-heading";
+import { SectionTab, SectionTabs } from "@/components/ui/section-tabs";
 import { filterHrefItemsByEnabledFeatures } from "@/lib/platform/gating/nav-filter";
-import { cn } from "@/lib/utils";
 import { Fuel, History, Home, Minus, Package, Plus } from "@/lib/icons";
 import type { LucideIcon } from "@/lib/icons";
 import { getWorkspaceModulePresentation } from "@/lib/workspace-products";
@@ -101,31 +100,18 @@ export function StoresShell({
         className="mb-4"
       />
 
-      <nav
-        aria-label="Stores navigation"
-        className="flex w-full flex-wrap justify-start gap-2 border-b border-[var(--edge-subtle)] pb-1"
-      >
-        {visibleTabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <Link
-              key={tab.id}
-              href={buildHref(tab.href)}
-              aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "inline-flex items-center justify-center whitespace-nowrap border-b-2 px-3 py-1.5 text-sm font-semibold transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                isActive
-                  ? "border-[var(--action-primary-bg)] text-[var(--action-primary-bg)]"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <tab.icon className="h-4 w-4" />
-              <span className="ml-2">{modulePresentation.tabLabels?.[tab.id] ?? tab.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <SectionTabs label="Stores navigation">
+        {visibleTabs.map((tab) => (
+          <SectionTab
+            key={tab.id}
+            to={buildHref(tab.href)}
+            active={activeTab === tab.id}
+            icon={<tab.icon aria-hidden="true" />}
+          >
+            {modulePresentation.tabLabels?.[tab.id] ?? tab.label}
+          </SectionTab>
+        ))}
+      </SectionTabs>
 
       {children}
     </div>
