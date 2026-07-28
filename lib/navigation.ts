@@ -411,6 +411,13 @@ export const navSections: NavSection[] = [
         group: "workflows",
       },
 
+      {
+        href: "/crm/templates",
+        icon: FileText,
+        label: "Templates",
+        roles: ["SUPERADMIN", "MANAGER"],
+        group: "setup",
+      },
       { href: "/crm/import", icon: Upload, label: "Import", group: "setup" },
       {
         href: "/crm/settings",
