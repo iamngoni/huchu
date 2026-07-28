@@ -1,15 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MasterDataShell } from "@corelithzw/react";
 import { ManagementShell } from "@/components/settings/management-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 
 type DomainStatus =
   | "PENDING_VERIFICATION"
@@ -124,6 +126,38 @@ type BrandingFormState = {
 };
 
 export type BrandingSection = "identity" | "assets" | "finance";
+
+/**
+ * The rail of the branding surface. Three routes serve the same form —
+ * they're sections of one record (the company's brand), not three pages —
+ * so the shell is the DS master-data split: sections on the left, the
+ * selected section's fields on the right.
+ */
+const BRANDING_SECTIONS: Array<{
+  id: BrandingSection;
+  label: string;
+  blurb: string;
+  href: string;
+}> = [
+  {
+    id: "identity",
+    label: "Identity & Theme",
+    blurb: "Name, palette, font, and custom domain.",
+    href: "/preferences/organization/branding/identity",
+  },
+  {
+    id: "assets",
+    label: "Assets & Contact",
+    blurb: "Logos, signatures, and contact details.",
+    href: "/preferences/organization/branding/assets",
+  },
+  {
+    id: "finance",
+    label: "Finance & Defaults",
+    blurb: "Banking, legal text, and document defaults.",
+    href: "/preferences/organization/branding/finance",
+  },
+];
 
 const DEFAULT_FORM_STATE: BrandingFormState = {
   displayName: "",
@@ -288,8 +322,12 @@ async function fetchBrandingSettings(): Promise<BrandingSettingsResponse> {
 export function BrandingSettingsSection({ section }: { section: BrandingSection }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [formDraft, setFormDraft] = useState<BrandingFormState | null>(null);
   const [domainInputDraft, setDomainInputDraft] = useState<string | null>(null);
+  // Mobile drill-in for the master-data shell. A section is always selected
+  // (the route carries it), so the detail leads; the rail is one tap back.
+  const [mobilePane, setMobilePane] = useState<"list" | "detail">("detail");
 
   const settingsQuery = useQuery({
     queryKey: ["branding-settings"],
@@ -492,58 +530,84 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
     [form.primaryColor],
   );
 
-  const sectionMeta = {
-    identity: {
-      title: "Brand Identity",
-      description: "Control company identity, theme palette, and custom domain setup.",
-    },
-    assets: {
-      title: "Brand Assets",
-      description: "Manage logos, signatures, and contact details for generated documents.",
-    },
-    finance: {
-      title: "Finance & Defaults",
-      description: "Define legal, banking, and document defaults used across templates.",
-    },
-  }[section];
-
   const hasLoadError = Boolean(settingsQuery.error);
+  const activeSection = BRANDING_SECTIONS.find((entry) => entry.id === section)!;
+
+  const rail = (
+    <div className="space-y-1 p-2">
+      {BRANDING_SECTIONS.map((entry) => {
+        const active = entry.id === section;
+        return (
+          <button
+            key={entry.id}
+            type="button"
+            onClick={() => {
+              setMobilePane("detail");
+              if (!active) router.push(entry.href);
+            }}
+            aria-current={active ? "true" : undefined}
+            className={cn(
+              "w-full rounded-[10px] px-3 py-2 text-left text-sm transition-colors",
+              active
+                ? "bg-[var(--surface-muted)] font-medium text-[var(--text-strong)]"
+                : "hover:bg-[var(--surface-muted)]/60",
+            )}
+          >
+            <span className="block">{entry.label}</span>
+            <span className="block text-[var(--text-muted)]">{entry.blurb}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const detailHeader = (
+    <header className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        <button
+          type="button"
+          onClick={() => setMobilePane("list")}
+          className="mb-1 text-sm text-[var(--text-muted)] min-[720px]:hidden"
+        >
+          ← All sections
+        </button>
+        <h2 className="text-base font-semibold text-[var(--text-strong)]">
+          {activeSection.label}
+        </h2>
+        <p className="text-sm text-[var(--text-muted)]">{activeSection.blurb}</p>
+      </div>
+      <Button
+        type="button"
+        onClick={() => saveBrandingMutation.mutate(formDraft ?? form)}
+        disabled={saveBrandingMutation.isPending || settingsQuery.isLoading || hasLoadError}
+      >
+        {saveBrandingMutation.isPending ? "Saving..." : "Save Changes"}
+      </Button>
+    </header>
+  );
 
   return (
     <ManagementShell
       area="branding"
-      title={sectionMeta.title}
-      actions={
-        <Button
-          type="button"
-          onClick={() => saveBrandingMutation.mutate(formDraft ?? form)}
-          disabled={saveBrandingMutation.isPending || settingsQuery.isLoading || hasLoadError}
-        >
-          {saveBrandingMutation.isPending ? "Saving..." : "Save Changes"}
-        </Button>
-      }
+      title="Branding"
+      description="How the company presents itself — on screen and on every generated document."
     >
-      {settingsQuery.isLoading ? (
-        <Card>
-          <CardContent className="py-10 text-sm text-muted-foreground">
-            Loading branding settings...
-          </CardContent>
-        </Card>
-      ) : settingsQuery.error ? (
-        <Card>
-          <CardContent className="py-10 text-sm text-destructive">
-            {(settingsQuery.error as Error).message}
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {section === "identity" ? (
-            <Card>
-            <CardHeader>
-              <CardTitle>Identity</CardTitle>
-              <CardDescription>Brand name, font, and color system.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+      <MasterDataShell pane={mobilePane} list={rail} listWidth={280}>
+        <div className="space-y-8 p-4 sm:p-6">
+          {detailHeader}
+
+          {settingsQuery.isLoading ? (
+            <p className="py-10 text-sm text-[var(--text-muted)]">
+              Loading branding settings...
+            </p>
+          ) : settingsQuery.error ? (
+            <p className="py-10 text-sm text-[var(--danger)]">
+              {(settingsQuery.error as Error).message}
+            </p>
+          ) : (
+            <>
+              {section === "identity" ? (
+                <section className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold" htmlFor="display-name">
@@ -706,7 +770,7 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
               </div>
 
               <div className="rounded-lg border border-[var(--edge-subtle)] bg-[var(--surface-subtle)] p-4">
-                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   Live Preview
                 </p>
                 <div className="mt-3 flex items-center gap-3">
@@ -718,19 +782,15 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
                   </div>
                 </div>
               </div>
-            </CardContent>
-            </Card>
-          ) : null}
+                </section>
+              ) : null}
 
-          {section === "assets" ? (
-            <Card>
-            <CardHeader>
-              <CardTitle>Brand Assets and Contact</CardTitle>
-              <CardDescription>
-                Asset and contact fields used by templates for headers, signatures, and contact blocks.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              {section === "assets" ? (
+                <section className="space-y-4">
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Asset and contact fields used by templates for headers, signatures, and contact
+                    blocks.
+                  </p>
               <div className="grid gap-4 md:grid-cols-2">
                 <Input placeholder="Logo URL" value={form.logoUrl} onChange={(event) => setField("logoUrl", event.target.value)} />
                 <Input
@@ -758,19 +818,14 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
                 value={form.postalAddress}
                 onChange={(event) => setField("postalAddress", event.target.value)}
               />
-            </CardContent>
-            </Card>
-          ) : null}
+                </section>
+              ) : null}
 
-          {section === "finance" ? (
-            <Card>
-            <CardHeader>
-              <CardTitle>Finance and Document Defaults</CardTitle>
-              <CardDescription>
-                Bank, payment, legal, and localization values used by invoice/report templates.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              {section === "finance" ? (
+                <section className="space-y-4">
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Bank, payment, legal, and localization values used by invoice/report templates.
+                  </p>
               <div className="grid gap-4 md:grid-cols-2">
                 <Input placeholder="Bank Name" value={form.bankName} onChange={(event) => setField("bankName", event.target.value)} />
                 <Input
@@ -830,19 +885,19 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
                 value={form.paymentTerms}
                 onChange={(event) => setField("paymentTerms", event.target.value)}
               />
-            </CardContent>
-            </Card>
-          ) : null}
+                </section>
+              ) : null}
 
-          {section === "identity" ? (
-            <Card>
-            <CardHeader>
-              <CardTitle>Custom Domain</CardTitle>
-              <CardDescription>
-                Connect your own domain and verify ownership using a DNS TXT record.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              {section === "identity" ? (
+                <section className="space-y-4 border-t border-[var(--border-subtle)] pt-6">
+                  <div>
+                    <h3 className="text-base font-semibold text-[var(--text-strong)]">
+                      Custom Domain
+                    </h3>
+                    <p className="text-sm text-[var(--text-muted)]">
+                      Connect your own domain and verify ownership using a DNS TXT record.
+                    </p>
+                  </div>
               <div className="grid gap-4 md:grid-cols-[1fr_auto_auto] md:items-end">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold" htmlFor="custom-domain">
@@ -877,7 +932,7 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
               </div>
 
               {!customDomainEnabled ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-[var(--text-muted)]">
                   Enable the custom domain add-on to connect a branded domain.
                 </p>
               ) : null}
@@ -892,13 +947,13 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                         DNS TXT Host
                       </p>
                       <p className="mt-1 font-mono text-sm">{currentDomain.verificationHost}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                         DNS TXT Value
                       </p>
                       <p className="mt-1 font-mono text-sm">{currentDomain.verificationValue}</p>
@@ -906,15 +961,16 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-[var(--text-muted)]">
                   No custom domain configured yet.
                 </p>
               )}
-            </CardContent>
-            </Card>
-          ) : null}
-        </>
-      )}
+                </section>
+              ) : null}
+            </>
+          )}
+        </div>
+      </MasterDataShell>
     </ManagementShell>
   );
 }

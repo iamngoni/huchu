@@ -1,18 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useDeferredValue, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+import type { DataTableColumn } from "@corelithzw/react";
+import {
+  DetailFact,
+  MasterDataPage,
+} from "@/components/management/master-data/master-data-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable, type DataTableQueryState } from "@/components/ui/data-table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { NumericCell } from "@/components/ui/numeric-cell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchInspections, fetchSites, fetchUsers, type InspectionRecord } from "@/lib/api";
@@ -48,7 +50,13 @@ const emptyForm: InspectionForm = {
 const toDateInput = (value?: string | null) => (value ? value.slice(0, 10) : "");
 const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
-export function InspectionsTab({ createdId }: { createdId: string | null }) {
+const inspectionStatus = (row: InspectionRecord) => {
+  const overdue =
+    Boolean(row.actionsDue) && !row.completedAt && toDateInput(row.actionsDue) < TODAY_ISO;
+  return overdue ? "OVERDUE" : row.completedAt ? "COMPLETED" : "OPEN";
+};
+
+export function InspectionsTab({ createdId, banner }: { createdId: string | null; banner?: ReactNode }) {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,16 +64,13 @@ export function InspectionsTab({ createdId }: { createdId: string | null }) {
 
   const [siteFilter, setSiteFilter] = useState("all");
   const [overdueFilter, setOverdueFilter] = useState("all");
-  const [queryState, setQueryState] = useState<DataTableQueryState>({
-    mode: "paginated",
-    page: 1,
-    pageSize: 25,
-    search: "",
-  });
+  const [search, setSearch] = useState("");
+  // Server-side filter; deferring keeps one request per pause, not keystroke.
+  const deferredSearch = useDeferredValue(search);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<InspectionForm>(emptyForm);
 
-  const { data: sites, isLoading: sitesLoading, error: sitesError } = useQuery({
+  const { data: sites, error: sitesError } = useQuery({
     queryKey: ["sites"],
     queryFn: fetchSites,
   });
@@ -77,12 +82,12 @@ export function InspectionsTab({ createdId }: { createdId: string | null }) {
   const users = usersData?.data ?? [];
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["compliance", "inspections", siteFilter, overdueFilter, queryState.search],
+    queryKey: ["compliance", "inspections", siteFilter, overdueFilter, deferredSearch],
     queryFn: () =>
       fetchInspections({
         siteId: siteFilter === "all" ? undefined : siteFilter,
         overdue: overdueFilter === "overdue" ? true : undefined,
-        search: queryState.search || undefined,
+        search: deferredSearch || undefined,
         limit: 500,
       }),
   });
@@ -171,191 +176,201 @@ export function InspectionsTab({ createdId }: { createdId: string | null }) {
     setDialogOpen(true);
   };
 
-  const columns = useMemo<ColumnDef<InspectionRecord>[]>(
+  const openEdit = (row: InspectionRecord) => {
+    setForm({
+      id: row.id,
+      siteId: row.siteId,
+      inspectionDate: toDateInput(row.inspectionDate),
+      inspectorName: row.inspectorName,
+      inspectorOrg: row.inspectorOrg,
+      findings: row.findings,
+      actions: row.actions ?? "",
+      actionsDue: toDateInput(row.actionsDue),
+      completedById: row.completedById ?? "",
+      completedAt: toDateInput(row.completedAt),
+      documentUrl: row.documentUrl ?? "",
+    });
+    setDialogOpen(true);
+  };
+
+  // No actions column: a row is picked, and what can be done to it lives in
+  // the detail pane.
+  const columns = useMemo<DataTableColumn<InspectionRecord>[]>(
     () => [
       {
-        id: "date",
+        key: "date",
         header: "Date",
-        accessorFn: (row) => row.inspectionDate,
-        cell: ({ row }) => (
+        sortable: true,
+        sortAccessor: (row) => row.inspectionDate,
+        render: (row) => (
           <div>
-            <NumericCell align="left">{toDateInput(row.original.inspectionDate)}</NumericCell>
-            {createdId === row.original.id ? <Badge variant="secondary">Saved</Badge> : null}
+            <NumericCell align="left">{toDateInput(row.inspectionDate)}</NumericCell>
+            {createdId === row.id ? <Badge variant="secondary">Saved</Badge> : null}
           </div>
         ),
       },
       {
-        id: "site",
+        key: "site",
         header: "Site",
-        accessorFn: (row) => row.site.name,
-        cell: ({ row }) => row.original.site.name,
+        sortable: true,
+        sortAccessor: (row) => row.site.name,
+        render: (row) => row.site.name,
       },
       {
-        id: "inspector",
+        key: "inspector",
         header: "Inspector",
-        accessorFn: (row) => `${row.inspectorName} ${row.inspectorOrg}`,
-        cell: ({ row }) => (
+        sortable: true,
+        sortAccessor: (row) => `${row.inspectorName} ${row.inspectorOrg}`,
+        render: (row) => (
           <div>
-            <div className="font-semibold">{row.original.inspectorName}</div>
-            <div className="text-xs text-muted-foreground">{row.original.inspectorOrg}</div>
+            <div className="font-semibold">{row.inspectorName}</div>
+            <div className="text-sm text-[var(--text-muted)]">{row.inspectorOrg}</div>
           </div>
         ),
       },
       {
-        id: "actionsDue",
+        key: "actionsDue",
         header: "Actions Due",
-        accessorFn: (row) => row.actionsDue ?? "",
-        cell: ({ row }) => (
-          <NumericCell align="left">{toDateInput(row.original.actionsDue)}</NumericCell>
-        ),
+        sortable: true,
+        sortAccessor: (row) => row.actionsDue ?? "",
+        render: (row) => <NumericCell align="left">{toDateInput(row.actionsDue)}</NumericCell>,
       },
       {
-        id: "status",
+        key: "status",
         header: "Status",
-        accessorFn: (row) => {
-          const overdue =
-            Boolean(row.actionsDue) &&
-            !row.completedAt &&
-            toDateInput(row.actionsDue) < TODAY_ISO;
-          return overdue ? "OVERDUE" : row.completedAt ? "COMPLETED" : "OPEN";
-        },
-        cell: ({ row }) => {
-          const overdue =
-            Boolean(row.original.actionsDue) &&
-            !row.original.completedAt &&
-            toDateInput(row.original.actionsDue) < TODAY_ISO;
+        width: 140,
+        sortable: true,
+        sortAccessor: (row) => inspectionStatus(row),
+        render: (row) => {
+          const status = inspectionStatus(row);
           return (
-            <Badge variant={overdue ? "destructive" : row.original.completedAt ? "secondary" : "outline"}>
-              {overdue ? "OVERDUE" : row.original.completedAt ? "COMPLETED" : "OPEN"}
+            <Badge
+              variant={
+                status === "OVERDUE" ? "destructive" : status === "COMPLETED" ? "secondary" : "outline"
+              }
+            >
+              {status}
             </Badge>
           );
         },
       },
-      {
-        id: "actions",
-        header: "",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setForm({
-                  id: row.original.id,
-                  siteId: row.original.siteId,
-                  inspectionDate: toDateInput(row.original.inspectionDate),
-                  inspectorName: row.original.inspectorName,
-                  inspectorOrg: row.original.inspectorOrg,
-                  findings: row.original.findings,
-                  actions: row.original.actions ?? "",
-                  actionsDue: toDateInput(row.original.actionsDue),
-                  completedById: row.original.completedById ?? "",
-                  completedAt: toDateInput(row.original.completedAt),
-                  documentUrl: row.original.documentUrl ?? "",
-                });
-                setDialogOpen(true);
-              }}
-            >
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={deleteMutation.isPending}
-              onClick={() => {
-                if (!window.confirm("Delete this inspection?")) return;
-                deleteMutation.mutate(row.original.id);
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        ),
-      },
     ],
-    [createdId, deleteMutation],
+    [createdId],
   );
 
   return (
-    <>
-      <section className="space-y-4">
-        <header className="section-shell flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="text-section-title text-foreground font-bold tracking-tight">
-              Inspections
-            </h2>
-            <p className="text-sm text-muted-foreground">Track findings and closure actions</p>
-          </div>
-          <Button onClick={openCreate}>New Inspection</Button>
-        </header>
-          {pageError ? (
-            <Alert variant="destructive">
-              <AlertTitle>Unable to load inspections</AlertTitle>
-              <AlertDescription>{getApiErrorMessage(pageError)}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {isLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : inspections.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No inspections found.</div>
-          ) : (
-            <DataTable
-              data={inspections}
-              columns={columns}
-              queryState={queryState}
-              onQueryStateChange={(next) => setQueryState((prev) => ({ ...prev, ...next }))}
-              searchPlaceholder="Inspector, organization, findings"
-              searchSubmitLabel="Search"
-              tableClassName="text-sm"
-              pagination={{ enabled: true }}
-              toolbar={
-                <>
-                  {sitesLoading ? (
-                    <Skeleton className="h-8 w-[180px]" />
-                  ) : (
-                    <Select
-                      value={siteFilter}
-                      onValueChange={(value) => {
-                        setSiteFilter(value);
-                        setQueryState((prev) => ({ ...prev, page: 1 }));
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-[180px]">
-                        <SelectValue placeholder="All sites" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All sites</SelectItem>
-                        {sites?.map((site) => (
-                          <SelectItem key={site.id} value={site.id}>
-                            {site.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <Select
-                    value={overdueFilter}
-                    onValueChange={(value) => {
-                      setOverdueFilter(value);
-                      setQueryState((prev) => ({ ...prev, page: 1 }));
-                    }}
+    <MasterDataPage<InspectionRecord>
+      area="compliance"
+      title="Compliance Inspections"
+      description="Manage inspections, due actions, and completion by responsible staff."
+      createLabel="New Inspection"
+      onCreate={openCreate}
+      columns={columns}
+      data={inspections}
+      rowKey={(row) => row.id}
+      isLoading={isLoading}
+      error={pageError}
+      emptyLabel="No inspections found."
+      banner={banner}
+      search={
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Inspector, organization, findings"
+          aria-label="Search inspections"
+          className="h-9 w-full sm:w-64"
+        />
+      }
+      filters={
+        <>
+          <Select value={siteFilter} onValueChange={setSiteFilter}>
+            <SelectTrigger className="h-9 w-[180px]">
+              <SelectValue placeholder="All sites" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sites</SelectItem>
+              {sites?.map((site) => (
+                <SelectItem key={site.id} value={site.id}>
+                  {site.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={overdueFilter} onValueChange={setOverdueFilter}>
+            <SelectTrigger className="h-9 w-[160px]">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All inspections</SelectItem>
+              <SelectItem value="overdue">Overdue only</SelectItem>
+            </SelectContent>
+          </Select>
+        </>
+      }
+      renderDetail={(row, close) => {
+        const status = inspectionStatus(row);
+        return (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <DetailFact label="Inspection Date">{toDateInput(row.inspectionDate)}</DetailFact>
+              <DetailFact label="Site">{row.site.name}</DetailFact>
+              <DetailFact label="Inspector">{row.inspectorName}</DetailFact>
+              <DetailFact label="Inspector Org">{row.inspectorOrg}</DetailFact>
+              <DetailFact label="Findings">{row.findings}</DetailFact>
+              {row.actions ? <DetailFact label="Actions">{row.actions}</DetailFact> : null}
+              {row.actionsDue ? (
+                <DetailFact label="Actions Due">{toDateInput(row.actionsDue)}</DetailFact>
+              ) : null}
+              {row.completedAt ? (
+                <DetailFact label="Completed At">{toDateInput(row.completedAt)}</DetailFact>
+              ) : null}
+              {row.documentUrl ? (
+                <DetailFact label="Document">
+                  <a
+                    href={row.documentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
                   >
-                    <SelectTrigger className="h-8 w-[160px]">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All inspections</SelectItem>
-                      <SelectItem value="overdue">Overdue only</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </>
-              }
-            />
-          )}
-      </section>
+                    Open document
+                  </a>
+                </DetailFact>
+              ) : null}
+              <DetailFact label="Status">
+                <Badge
+                  variant={
+                    status === "OVERDUE"
+                      ? "destructive"
+                      : status === "COMPLETED"
+                        ? "secondary"
+                        : "outline"
+                  }
+                >
+                  {status}
+                </Badge>
+              </DetailFact>
+            </div>
 
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onClick={() => {
+                  if (!window.confirm("Delete this inspection?")) return;
+                  deleteMutation.mutate(row.id, { onSuccess: close });
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        );
+      }}
+    >
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent size="md" className="w-full">
           <DialogHeader>
@@ -507,8 +522,6 @@ export function InspectionsTab({ createdId }: { createdId: string | null }) {
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </MasterDataPage>
   );
 }
-
-

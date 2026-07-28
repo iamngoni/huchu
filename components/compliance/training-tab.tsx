@@ -1,18 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useDeferredValue, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+import type { DataTableColumn } from "@corelithzw/react";
+import {
+  DetailFact,
+  MasterDataPage,
+} from "@/components/management/master-data/master-data-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable, type DataTableQueryState } from "@/components/ui/data-table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { NumericCell } from "@/components/ui/numeric-cell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchTrainingRecords, fetchUsers, type TrainingRecordSummary } from "@/lib/api";
@@ -42,19 +44,16 @@ const emptyForm: TrainingForm = {
 const toDateInput = (value?: string | null) => (value ? value.slice(0, 10) : "");
 const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
-export function TrainingTab({ createdId }: { createdId: string | null }) {
+export function TrainingTab({ createdId, banner }: { createdId: string | null; banner?: ReactNode }) {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   const [expiringFilter, setExpiringFilter] = useState("all");
-  const [queryState, setQueryState] = useState<DataTableQueryState>({
-    mode: "paginated",
-    page: 1,
-    pageSize: 25,
-    search: "",
-  });
+  const [search, setSearch] = useState("");
+  // Server-side filter; deferring keeps one request per pause, not keystroke.
+  const deferredSearch = useDeferredValue(search);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<TrainingForm>(emptyForm);
 
@@ -65,11 +64,11 @@ export function TrainingTab({ createdId }: { createdId: string | null }) {
   const users = usersData?.data ?? [];
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["compliance", "training", expiringFilter, queryState.search],
+    queryKey: ["compliance", "training", expiringFilter, deferredSearch],
     queryFn: () =>
       fetchTrainingRecords({
         expiringDays: expiringFilter === "expiring" ? 30 : undefined,
-        search: queryState.search || undefined,
+        search: deferredSearch || undefined,
         limit: 500,
       }),
   });
@@ -155,43 +154,61 @@ export function TrainingTab({ createdId }: { createdId: string | null }) {
     setDialogOpen(true);
   };
 
-  const columns = useMemo<ColumnDef<TrainingRecordSummary>[]>(
+  const openEdit = (row: TrainingRecordSummary) => {
+    setForm({
+      id: row.id,
+      userId: row.userId,
+      trainingType: row.trainingType,
+      trainingDate: toDateInput(row.trainingDate),
+      expiryDate: toDateInput(row.expiryDate),
+      certificateUrl: row.certificateUrl ?? "",
+      trainedBy: row.trainedBy ?? "",
+      notes: row.notes ?? "",
+    });
+    setDialogOpen(true);
+  };
+
+  // No actions column: a row is picked, and what can be done to it lives in
+  // the detail pane.
+  const columns = useMemo<DataTableColumn<TrainingRecordSummary>[]>(
     () => [
       {
-        id: "user",
+        key: "user",
         header: "User",
-        accessorFn: (row) => row.user.name,
-        cell: ({ row }) => (
+        sortable: true,
+        sortAccessor: (row) => row.user.name,
+        render: (row) => (
           <div>
-            <div>{row.original.user.name}</div>
-            {createdId === row.original.id ? <Badge variant="secondary">Saved</Badge> : null}
+            <div>{row.user.name}</div>
+            {createdId === row.id ? <Badge variant="secondary">Saved</Badge> : null}
           </div>
         ),
       },
       {
-        id: "trainingType",
+        key: "trainingType",
         header: "Training",
-        accessorFn: (row) => row.trainingType,
-        cell: ({ row }) => row.original.trainingType,
+        sortable: true,
+        sortAccessor: (row) => row.trainingType,
+        render: (row) => row.trainingType,
       },
       {
-        id: "trainingDate",
+        key: "trainingDate",
         header: "Date",
-        accessorFn: (row) => row.trainingDate,
-        cell: ({ row }) => <NumericCell align="left">{toDateInput(row.original.trainingDate)}</NumericCell>,
+        sortable: true,
+        sortAccessor: (row) => row.trainingDate,
+        render: (row) => <NumericCell align="left">{toDateInput(row.trainingDate)}</NumericCell>,
       },
       {
-        id: "expiryDate",
+        key: "expiryDate",
         header: "Expiry",
-        accessorFn: (row) => row.expiryDate ?? "",
-        cell: ({ row }) => {
-          const expired =
-            Boolean(row.original.expiryDate) &&
-            toDateInput(row.original.expiryDate) < TODAY_ISO;
+        sortable: true,
+        sortAccessor: (row) => row.expiryDate ?? "",
+        render: (row) => {
+          const expired = Boolean(row.expiryDate) && toDateInput(row.expiryDate) < TODAY_ISO;
           return (
             <div className="flex items-center gap-2">
-              <NumericCell align="left">{toDateInput(row.original.expiryDate)}</NumericCell>
-              {row.original.expiryDate ? (
+              <NumericCell align="left">{toDateInput(row.expiryDate)}</NumericCell>
+              {row.expiryDate ? (
                 <Badge variant={expired ? "destructive" : "outline"}>
                   {expired ? "Expired" : "Active"}
                 </Badge>
@@ -200,105 +217,98 @@ export function TrainingTab({ createdId }: { createdId: string | null }) {
           );
         },
       },
-      {
-        id: "actions",
-        header: "",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setForm({
-                  id: row.original.id,
-                  userId: row.original.userId,
-                  trainingType: row.original.trainingType,
-                  trainingDate: toDateInput(row.original.trainingDate),
-                  expiryDate: toDateInput(row.original.expiryDate),
-                  certificateUrl: row.original.certificateUrl ?? "",
-                  trainedBy: row.original.trainedBy ?? "",
-                  notes: row.original.notes ?? "",
-                });
-                setDialogOpen(true);
-              }}
-            >
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={deleteMutation.isPending}
-              onClick={() => {
-                if (!window.confirm("Delete this training record?")) return;
-                deleteMutation.mutate(row.original.id);
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        ),
-      },
     ],
-    [createdId, deleteMutation],
+    [createdId],
   );
 
   return (
-    <>
-      <section className="space-y-4">
-        <header className="section-shell flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="text-section-title text-foreground font-bold tracking-tight">
-              Training Records
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Track certification expiry and refresher schedules
-            </p>
+    <MasterDataPage<TrainingRecordSummary>
+      area="compliance"
+      title="Compliance Training"
+      description="Monitor training records, expiries, and certificate evidence."
+      createLabel="New Training"
+      onCreate={openCreate}
+      columns={columns}
+      data={records}
+      rowKey={(row) => row.id}
+      isLoading={isLoading || usersLoading}
+      error={pageError}
+      emptyLabel="No training records found."
+      banner={banner}
+      search={
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Training type, trained by, user"
+          aria-label="Search training records"
+          className="h-9 w-full sm:w-64"
+        />
+      }
+      filters={
+        <Select value={expiringFilter} onValueChange={setExpiringFilter}>
+          <SelectTrigger className="h-9 w-[190px]">
+            <SelectValue placeholder="All records" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All records</SelectItem>
+            <SelectItem value="expiring">Expiring in 30 days</SelectItem>
+          </SelectContent>
+        </Select>
+      }
+      renderDetail={(row, close) => {
+        const expired = Boolean(row.expiryDate) && toDateInput(row.expiryDate) < TODAY_ISO;
+        return (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <DetailFact label="User">{row.user.name}</DetailFact>
+              <DetailFact label="Training Type">{row.trainingType}</DetailFact>
+              <DetailFact label="Training Date">{toDateInput(row.trainingDate)}</DetailFact>
+              {row.expiryDate ? (
+                <DetailFact label="Expiry Date">
+                  <div className="flex items-center gap-2">
+                    <span>{toDateInput(row.expiryDate)}</span>
+                    <Badge variant={expired ? "destructive" : "outline"}>
+                      {expired ? "Expired" : "Active"}
+                    </Badge>
+                  </div>
+                </DetailFact>
+              ) : null}
+              {row.trainedBy ? <DetailFact label="Trained By">{row.trainedBy}</DetailFact> : null}
+              {row.certificateUrl ? (
+                <DetailFact label="Certificate">
+                  <a
+                    href={row.certificateUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    Open certificate
+                  </a>
+                </DetailFact>
+              ) : null}
+              {row.notes ? <DetailFact label="Notes">{row.notes}</DetailFact> : null}
+            </div>
+
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onClick={() => {
+                  if (!window.confirm("Delete this training record?")) return;
+                  deleteMutation.mutate(row.id, { onSuccess: close });
+                }}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
-          <Button onClick={openCreate}>New Training</Button>
-        </header>
-          {pageError ? (
-            <Alert variant="destructive">
-              <AlertTitle>Unable to load training records</AlertTitle>
-              <AlertDescription>{getApiErrorMessage(pageError)}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {isLoading || usersLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : records.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No training records found.</div>
-          ) : (
-            <DataTable
-              data={records}
-              columns={columns}
-              queryState={queryState}
-              onQueryStateChange={(next) => setQueryState((prev) => ({ ...prev, ...next }))}
-              searchPlaceholder="Training type, trained by, user"
-              searchSubmitLabel="Search"
-              tableClassName="text-sm"
-              pagination={{ enabled: true }}
-              toolbar={
-                <Select
-                  value={expiringFilter}
-                  onValueChange={(value) => {
-                    setExpiringFilter(value);
-                    setQueryState((prev) => ({ ...prev, page: 1 }));
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-[190px]">
-                    <SelectValue placeholder="All records" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All records</SelectItem>
-                    <SelectItem value="expiring">Expiring in 30 days</SelectItem>
-                  </SelectContent>
-                </Select>
-              }
-            />
-          )}
-      </section>
-
+        );
+      }}
+    >
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent size="md" className="w-full">
           <DialogHeader>
@@ -403,8 +413,6 @@ export function TrainingTab({ createdId }: { createdId: string | null }) {
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </MasterDataPage>
   );
 }
-
-

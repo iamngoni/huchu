@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 
 import { MasterData, type DataTableColumn } from "@corelithzw/react";
 import { ManagementShell } from "@/components/settings/management-shell";
+import type { ManagementArea } from "@/lib/settings/management-nav";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getApiErrorMessage } from "@/lib/api-client";
 
@@ -22,6 +23,7 @@ import { getApiErrorMessage } from "@/lib/api-client";
  * rows, a detail renderer, and its create/edit sheet.
  */
 export function MasterDataPage<Row>({
+  area = "master-data",
   title,
   description,
   createLabel,
@@ -33,9 +35,13 @@ export function MasterDataPage<Row>({
   isLoading,
   error,
   search,
+  filters,
   emptyLabel,
+  banner,
   children,
 }: {
+  /** Which management navigation group the shell highlights. */
+  area?: ManagementArea;
   title: string;
   description?: string;
   createLabel?: string;
@@ -52,7 +58,11 @@ export function MasterDataPage<Row>({
   error?: unknown;
   /** Search slot, shown in the table toolbar. */
   search?: ReactNode;
+  /** Filter controls, shown in the table toolbar beside search. */
+  filters?: ReactNode;
   emptyLabel?: string;
+  /** Rendered above the assembly — saved-record banners and the like. */
+  banner?: ReactNode;
   /** Dialogs and sheets — mounted outside the assembly. */
   children?: ReactNode;
 }) {
@@ -63,7 +73,8 @@ export function MasterDataPage<Row>({
   return (
     // The DS assembly composes its own header (title, lede, create action),
     // so the shell is asked to hold only the navigation chrome.
-    <ManagementShell area="master-data" title={title} hideHeader>
+    <ManagementShell area={area} title={title} hideHeader>
+      {banner}
       {error ? (
         <Alert variant="destructive">
           <AlertTitle>Unable to load {title.toLowerCase()}</AlertTitle>
@@ -87,6 +98,7 @@ export function MasterDataPage<Row>({
             : undefined
         }
         search={search}
+        filters={filters}
         emptyState={
           <p className="py-8 text-center text-sm text-[var(--text-muted)]">
             {isLoading ? "Loading…" : (emptyLabel ?? "Nothing here yet.")}

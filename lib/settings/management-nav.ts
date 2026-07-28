@@ -79,10 +79,11 @@ export const managementModuleItems: ManagementModuleItem[] = [
 ];
 
 const areaNavItems: Record<ManagementArea, ManagementNavItem[]> = {
+  // One entry: the branding surface is a master-data shell whose own rail
+  // switches between Identity/Assets/Finance — repeating them here would be
+  // two navs for the same three sections.
   branding: [
-    { id: "identity", label: "Identity & Theme", href: "/preferences/organization/branding/identity", icon: Building2 },
-    { id: "assets", label: "Assets & Contact", href: "/preferences/organization/branding/assets", icon: Grid3x3 },
-    { id: "finance", label: "Finance & Defaults", href: "/preferences/organization/branding/finance", icon: Coins },
+    { id: "branding", label: "Branding", href: "/preferences/organization/branding", icon: Building2 },
   ],
   "master-data": [
     { id: "overview", label: "Overview", href: "/management/master-data", icon: Grid3x3 },
