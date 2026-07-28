@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +51,12 @@ export type BlockRendererContext = {
   /** Rows for a table block, keyed by the block's source. */
   tables?: Record<string, Array<Record<string, string>>>;
   brandingLogoUrl?: string | null;
+  /**
+   * Where a file question posts its file. What a file answer stores is the URL
+   * the upload landed at, so without somewhere to put it a file question can
+   * only ever be decorative.
+   */
+  uploadUrl?: string;
 };
 
 function money(value: number, currency: string): string {
@@ -63,6 +69,120 @@ function money(value: number, currency: string): string {
 
 function Fill({ text, context }: { text: string; context: BlockRendererContext }) {
   return <>{resolveVariables(text, context.values)}</>;
+}
+
+/**
+ * A file question.
+ *
+ * Separate from the other inputs because a file input cannot be controlled —
+ * setting `value` from `event.target.value` was writing "C:\fakepath\x.pdf"
+ * into the answer and React was refusing the assignment anyway, so a file
+ * question collected a made-up string and never a file. The real shape is:
+ * post the file, keep the URL it landed at, show what was attached.
+ */
+function FileAnswer({
+  id,
+  value,
+  readOnly,
+  uploadUrl,
+  onChange,
+}: {
+  id: string;
+  value: string | null;
+  readOnly: boolean;
+  uploadUrl?: string;
+  onChange: (next: string | null) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (readOnly || !uploadUrl) {
+    return value ? (
+      <a
+        href={value}
+        target="_blank"
+        rel="noreferrer"
+        className="text-sm text-[var(--action-primary-bg)] underline"
+      >
+        {fileNameFrom(value)}
+      </a>
+    ) : (
+      <p className="text-sm text-[var(--text-subtle)]">No file</p>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {value ? (
+        <div className="flex items-center gap-2">
+          <a
+            href={value}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-[var(--action-primary-bg)] underline"
+          >
+            {fileNameFrom(value)}
+          </a>
+          <button
+            type="button"
+            className="text-sm text-[var(--text-muted)] underline"
+            onClick={() => onChange(null)}
+          >
+            Remove
+          </button>
+        </div>
+      ) : null}
+
+      <input
+        id={id}
+        type="file"
+        disabled={busy}
+        className="block w-full text-sm file:mr-3 file:rounded-[var(--radius-sm)] file:border file:border-[var(--border)] file:bg-[var(--surface-subtle)] file:px-3 file:py-1.5 file:text-sm"
+        onChange={async (event) => {
+          const file = event.target.files?.[0];
+          // The input is cleared either way: what it holds is a picking
+          // gesture, not the answer, and leaving it filled makes a failed
+          // upload look like a successful one.
+          event.target.value = "";
+          if (!file) return;
+
+          setBusy(true);
+          setError(null);
+          try {
+            const body = new FormData();
+            body.append("file", file);
+            const response = await fetch(uploadUrl, { method: "POST", body });
+            const payload = (await response.json()) as {
+              ok?: boolean;
+              url?: string;
+              data?: { url?: string };
+              error?: string;
+            };
+            const url = payload.url ?? payload.data?.url;
+            if (!response.ok || !url) throw new Error(payload.error ?? "Upload failed");
+            onChange(url);
+          } catch (uploadError) {
+            setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+
+      {busy ? <p className="text-sm text-[var(--text-subtle)]">Uploading…</p> : null}
+      {error ? <p className="text-sm text-[var(--status-danger-text)]">{error}</p> : null}
+    </div>
+  );
+}
+
+/** The last path segment, which is as close to a filename as a blob URL gets. */
+function fileNameFrom(url: string): string {
+  try {
+    const path = new URL(url).pathname;
+    return decodeURIComponent(path.slice(path.lastIndexOf("/") + 1)) || "Attached file";
+  } catch {
+    return "Attached file";
+  }
 }
 
 function FieldBlock({
@@ -167,6 +287,14 @@ function FieldBlock({
           />
           {block.placeholder ?? "Yes"}
         </label>
+      ) : block.fieldType === "file" ? (
+        <FileAnswer
+          id={`field-${block.id}`}
+          value={typeof value === "string" ? value : null}
+          readOnly={readOnly}
+          uploadUrl={context.uploadUrl}
+          onChange={set}
+        />
       ) : (
         <Input
           id={`field-${block.id}`}
@@ -179,9 +307,7 @@ function FieldBlock({
                   ? "tel"
                   : block.fieldType === "date"
                     ? "date"
-                    : block.fieldType === "file"
-                      ? "file"
-                      : "text"
+                    : "text"
           }
           disabled={readOnly}
           placeholder={block.placeholder}

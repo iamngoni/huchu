@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { AuthenticatedSession } from "@/lib/api-utils";
 import type { CollabRecord } from "@/lib/crm/collaboration";
-import { hasCrmFullAccess } from "@/lib/crm/scope";
+import { canUser, type CrmCapability } from "@/lib/crm/permissions";
 import { prisma } from "@/lib/prisma";
 
 export { crmLeadStageSchema } from "@/lib/crm/pipeline";
@@ -15,11 +15,21 @@ export const crmDocumentLineSchema = z.object({
 });
 
 /**
- * Require the session to have CRM manager access (forms, API keys, commission
- * rules, cross-rep actions). Returns true if allowed.
+ * Whether this session holds a capability — role default, unless an admin has
+ * decided otherwise for this person.
+ *
+ * This replaced a `requireCrmManager(session)` that asked only about the role.
+ * The distinction matters because the permissions screen offers per-user
+ * allow and deny for every capability in the list, and a screen that promises
+ * a decision the server does not read is worse than no screen at all. Naming
+ * the capability at each call site also documents which of them a route is
+ * actually gated on, which "manager access required" never did.
  */
-export function requireCrmManager(session: AuthenticatedSession): boolean {
-  return hasCrmFullAccess(session.user.role);
+export function requireCrmCapability(
+  session: AuthenticatedSession,
+  capability: CrmCapability,
+): Promise<boolean> {
+  return canUser(session, capability);
 }
 
 /**

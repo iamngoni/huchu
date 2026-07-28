@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord, canUser, denialMessage } from "@/lib/crm/permissions";
 import { createQuotationForLead } from "@/lib/crm/accounting-bridge";
 import { createOrRotateApproval } from "@/lib/crm/approvals";
 import { crmDocumentLineSchema } from "../../../_helpers";
@@ -30,8 +30,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       select: { id: true, assignedToId: true },
     });
     if (!deal) return errorResponse("Deal not found", 404);
-    if (!canEditAssignedRecord(session, deal.assignedToId)) {
+    if (!await canEditRecord(session, deal.assignedToId)) {
       return errorResponse("You can only quote on deals assigned to you", 403);
+    }
+    // Owning the record is not the same as being allowed to bill against it.
+    if (!(await canUser(session, "documents.issue"))) {
+      return errorResponse(denialMessage("documents.issue"), 403);
     }
 
     const data = bodySchema.parse(await request.json());

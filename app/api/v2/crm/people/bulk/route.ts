@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { recordEditor } from "@/lib/crm/permissions";
 
 const MAX_BULK_IDS = 100;
 
@@ -41,9 +41,8 @@ export async function POST(request: NextRequest) {
       select: { id: true, assignedToId: true },
     });
 
-    const editable = people.filter((person) =>
-      canEditAssignedRecord(session, person.assignedToId),
-    );
+    const mayEdit = await recordEditor(session);
+    const editable = people.filter((person) => mayEdit(person.assignedToId));
     const skipped = people.length - editable.length;
     const notFound = body.ids.length - people.length;
 

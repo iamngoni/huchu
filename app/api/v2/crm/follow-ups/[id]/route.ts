@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import { isCompanyUser } from "../../_helpers";
 
 const updateSchema = z.object({
@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       select: { id: true, assignedToId: true },
     });
     if (!existing) return errorResponse("Follow-up not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only edit follow-ups assigned to you", 403);
     }
 

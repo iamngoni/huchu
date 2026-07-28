@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 
 const OUTBOUND_TYPES = new Set(["CALL", "EMAIL", "WHATSAPP", "MEETING"]);
 
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       select: { id: true, clientId: true, assignedToId: true, firstContactAt: true },
     });
     if (!lead) return errorResponse("Lead not found", 404);
-    if (!canEditAssignedRecord(session, lead.assignedToId)) {
+    if (!await canEditRecord(session, lead.assignedToId)) {
       return errorResponse("You can only log activity on leads assigned to you", 403);
     }
 

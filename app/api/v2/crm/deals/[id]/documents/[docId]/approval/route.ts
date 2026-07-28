@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord, canUser, denialMessage } from "@/lib/crm/permissions";
 import { createOrRotateApproval } from "@/lib/crm/approvals";
 
 const bodySchema = z.object({ expiresInDays: z.number().int().min(1).max(90).optional() });
@@ -36,8 +36,12 @@ export async function POST(
 
     const doc = await loadDoc(session.user.companyId, id, docId);
     if (!doc) return errorResponse("Document not found", 404);
-    if (!canEditAssignedRecord(session, docOwnerId(doc))) {
+    if (!await canEditRecord(session, docOwnerId(doc))) {
       return errorResponse("You can only share documents on deals assigned to you", 403);
+    }
+    // Sending a document to the customer is its own permission.
+    if (!(await canUser(session, "documents.approve"))) {
+      return errorResponse(denialMessage("documents.approve"), 403);
     }
 
     const { expiresInDays } = bodySchema.parse(await request.json().catch(() => ({})));
@@ -69,8 +73,12 @@ export async function DELETE(
 
     const doc = await loadDoc(session.user.companyId, id, docId);
     if (!doc) return errorResponse("Document not found", 404);
-    if (!canEditAssignedRecord(session, docOwnerId(doc))) {
+    if (!await canEditRecord(session, docOwnerId(doc))) {
       return errorResponse("You can only revoke documents on deals assigned to you", 403);
+    }
+    // Sending a document to the customer is its own permission.
+    if (!(await canUser(session, "documents.approve"))) {
+      return errorResponse(denialMessage("documents.approve"), 403);
     }
 
     await prisma.crmDocumentApproval.updateMany({

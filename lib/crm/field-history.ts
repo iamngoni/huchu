@@ -63,7 +63,10 @@ export const TRACKED_FIELDS: Record<string, string[]> = {
     "city",
     "country",
     "assignedToId",
-    "parentId",
+    // The column is `parentClientId`. Tracking `parentId` — the name the
+    // relation reads as — matched no key in the payload and no key on the
+    // record, so re-parenting a company was silently unrecorded.
+    "parentClientId",
   ],
   SITE: ["name", "addressLine", "city", "country", "clientId", "primaryContactId"],
 };
@@ -74,6 +77,7 @@ export const FIELD_LABELS: Record<string, string> = {
   clientId: "Company",
   siteId: "Site",
   parentId: "Parent company",
+  parentClientId: "Parent company",
   primaryContactId: "Primary contact",
   stageId: "Stage",
   estimatedValue: "Value",

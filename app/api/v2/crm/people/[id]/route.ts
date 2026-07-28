@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import { normalizeEmail, normalizePhoneE164 } from "@/lib/crm/phone";
 import { buildFullName } from "@/lib/crm/conversion";
 import {
@@ -14,7 +14,7 @@ import {
 import { recordFieldChanges } from "@/lib/crm/history";
 import { recordMarkFields } from "@/lib/crm/record-mark";
 import { isCompanyUser } from "../../_helpers";
-import { diffFields } from "@/lib/crm/field-history";
+import { recordFieldChanges as recordFieldDiff } from "@/lib/crm/field-history";
 
 const updatePersonSchema = z.object({
   ...recordMarkFields,
@@ -128,7 +128,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       },
     });
     if (!existing) return errorResponse("Person not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only edit people assigned to you", 403);
     }
 
@@ -164,57 +164,57 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const lastName = data.lastName !== undefined ? data.lastName : existing.lastName;
     const nameChanged = data.firstName !== undefined || data.lastName !== undefined;
 
-    // The diff is taken against what the select read, and written in the same
-    // transaction as the change — a record that moved with no row saying so is
-    // worse than no history, because it makes the history look complete.
-    await prisma.crmFieldChange.createMany({
-      data: diffFields("PERSON", existing as Record<string, unknown>, data as Record<string, unknown>).map(
-        (change) => ({
-          companyId,
-          entity: "PERSON",
-          recordId: id,
-          field: change.field,
-          oldValue: change.oldValue,
-          newValue: change.newValue,
-          changedById: session.user.id,
-        }),
-      ),
-    });
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.crmPerson.update({
+        where: { id },
+        data: {
+          emoji: data.emoji,
+          accent: data.accent,
+          avatarUrl: data.avatarUrl,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          ...(nameChanged ? { fullName: buildFullName(firstName, lastName) } : {}),
+          jobTitle: data.jobTitle,
+          email: data.email,
+          ...(data.email !== undefined ? { emailNormalized: normalizeEmail(data.email) } : {}),
+          additionalEmails: data.additionalEmails,
+          phone: data.phone,
+          ...(data.phone !== undefined ? { phoneE164: normalizePhoneE164(data.phone) } : {}),
+          additionalPhones: data.additionalPhones,
+          contactType: data.contactType,
+          preferredChannel: data.preferredChannel,
+          addressLine: data.addressLine,
+          city: data.city,
+          country: data.country,
+          notes: data.notes,
+          tags: data.tags,
+          clientId: data.clientId,
+          assignedToId: data.assignedToId,
+          ...(customFields !== undefined ? { customFields } : {}),
+          ...(data.archived !== undefined
+            ? { archivedAt: data.archived ? new Date() : null }
+            : {}),
+        },
+        include: {
+          client: { select: { id: true, name: true } },
+          assignedTo: { select: { id: true, name: true } },
+        },
+      });
 
-    const updated = await prisma.crmPerson.update({
-      where: { id },
-      data: {
-        emoji: data.emoji,
-        accent: data.accent,
-        avatarUrl: data.avatarUrl,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        ...(nameChanged ? { fullName: buildFullName(firstName, lastName) } : {}),
-        jobTitle: data.jobTitle,
-        email: data.email,
-        ...(data.email !== undefined ? { emailNormalized: normalizeEmail(data.email) } : {}),
-        additionalEmails: data.additionalEmails,
-        phone: data.phone,
-        ...(data.phone !== undefined ? { phoneE164: normalizePhoneE164(data.phone) } : {}),
-        additionalPhones: data.additionalPhones,
-        contactType: data.contactType,
-        preferredChannel: data.preferredChannel,
-        addressLine: data.addressLine,
-        city: data.city,
-        country: data.country,
-        notes: data.notes,
-        tags: data.tags,
-        clientId: data.clientId,
-        assignedToId: data.assignedToId,
-        ...(customFields !== undefined ? { customFields } : {}),
-        ...(data.archived !== undefined
-          ? { archivedAt: data.archived ? new Date() : null }
-          : {}),
-      },
-      include: {
-        client: { select: { id: true, name: true } },
-        assignedTo: { select: { id: true, name: true } },
-      },
+      // One row per field that actually moved, written with the change it
+      // describes. Before, this ran ahead of the update and outside any
+      // transaction, so an update that failed still left history behind
+      // saying it had happened.
+      await recordFieldDiff(tx, {
+        companyId,
+        entity: "PERSON",
+        recordId: id,
+        changedById: session.user.id,
+        before: existing as Record<string, unknown>,
+        update: data as Record<string, unknown>,
+      });
+
+      return row;
     });
 
     await recordFieldChanges(prisma, {

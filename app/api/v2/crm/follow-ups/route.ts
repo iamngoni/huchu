@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
+import { canUser, denialMessage } from "@/lib/crm/permissions";
 import { prisma } from "@/lib/prisma";
 import { isCompanyUser } from "../_helpers";
 
@@ -60,6 +61,14 @@ export async function POST(request: NextRequest) {
     const data = createSchema.parse(await request.json());
     if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
       return errorResponse("Invalid assignee", 400);
+    }
+    // Putting work on somebody else's list is its own permission.
+    if (
+      data.assignedToId &&
+      data.assignedToId !== session.user.id &&
+      !(await canUser(session, "tasks.assign.others"))
+    ) {
+      return errorResponse(denialMessage("tasks.assign.others"), 403);
     }
     const followUp = await prisma.crmFollowUp.create({
       data: {

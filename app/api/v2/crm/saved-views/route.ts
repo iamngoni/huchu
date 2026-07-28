@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
+import { canUser, denialMessage } from "@/lib/crm/permissions";
 import { prisma } from "@/lib/prisma";
 import { leadSortSchema } from "@/lib/crm/views";
 import { allowedViewTypes, VIEW_ENTITY_KEYS, type ViewEntity } from "@/lib/crm/views-registry";
@@ -61,6 +62,12 @@ export async function POST(request: NextRequest) {
     const viewType = data.viewType ?? "TABLE";
     if (!allowedViewTypes(entity).includes(viewType)) {
       return errorResponse(`${entity.toLowerCase()} records can't be shown as a ${viewType.toLowerCase()}`, 400);
+    }
+
+    // Publishing a view to the whole team is its own permission — one person's
+    // idea of "all open deals" becomes everybody's default otherwise.
+    if (data.isShared && !(await canUser(session, "views.share"))) {
+      return errorResponse(denialMessage("views.share"), 403);
     }
 
     const view = await prisma.crmSavedView.create({

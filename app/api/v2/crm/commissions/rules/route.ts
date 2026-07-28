@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { isCompanyUser, requireCrmManager } from "../../_helpers";
+import { isCompanyUser, requireCrmCapability } from "../../_helpers";
 
 const tierSchema = z.object({
   thresholdFrom: z.number().finite().nonnegative(),
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "commissions.manage")) return errorResponse("Manager access required", 403);
 
     const rules = await prisma.crmCommissionRule.findMany({
       where: { companyId: session.user.companyId },
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "commissions.manage")) return errorResponse("Manager access required", 403);
 
     const data = createSchema.parse(await request.json());
     if (!(await isCompanyUser(session.user.companyId, data.appliesToUserId))) {

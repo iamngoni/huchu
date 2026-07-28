@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import {
   buildCustomFieldValues,
   mergeCustomFields,
@@ -12,7 +12,7 @@ import {
 import { recordFieldChanges } from "@/lib/crm/history";
 import { recordMarkFields } from "@/lib/crm/record-mark";
 import { isCompanyUser } from "../../_helpers";
-import { diffFields } from "@/lib/crm/field-history";
+import { recordFieldChanges as recordFieldDiff } from "@/lib/crm/field-history";
 
 // stageId and status are deliberately absent: a stage move has side effects
 // (stageEnteredAt, probability, won/lost stamps) and belongs to the stage
@@ -130,7 +130,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       },
     });
     if (!existing) return errorResponse("Deal not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only edit deals assigned to you", 403);
     }
 
@@ -175,59 +175,57 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       customFields = mergeCustomFields(existing.customFields, values, data.clearCustomFields ?? []);
     }
 
-    // Written before the update so the diff compares against what was read,
-    // and one row per field that actually moved — "somebody updated the deal"
-    // is the sentence nobody needs.
-    await prisma.crmFieldChange.createMany({
-      data: diffFields(
-        "DEAL",
-        existing as Record<string, unknown>,
-        data as Record<string, unknown>,
-      ).map((change) => ({
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.crmDeal.update({
+        where: { id },
+        data: {
+          emoji: data.emoji,
+          accent: data.accent,
+          avatarUrl: data.avatarUrl,
+          title: data.title,
+          clientId: data.clientId,
+          primaryContactId: data.primaryContactId,
+          siteId: data.siteId,
+          value: data.value,
+          currency: data.currency,
+          probability: data.probability,
+          forecastCategory: data.forecastCategory,
+          ...(data.expectedCloseDate !== undefined
+            ? {
+                expectedCloseDate: data.expectedCloseDate ? new Date(data.expectedCloseDate) : null,
+              }
+            : {}),
+          assignedToId: data.assignedToId,
+          services: data.services,
+          source: data.source,
+          ...(customFields !== undefined ? { customFields } : {}),
+          ...(data.archived !== undefined
+            ? { archivedAt: data.archived ? new Date() : null }
+            : {}),
+        },
+        include: {
+          client: { select: { id: true, name: true } },
+          primaryContact: { select: { id: true, fullName: true } },
+          site: { select: { id: true, name: true } },
+          stage: { select: { id: true, name: true, status: true } },
+          assignedTo: { select: { id: true, name: true } },
+        },
+      });
+
+      // One row per field that actually moved, written with the change it
+      // describes. Before, this ran ahead of the update and outside any
+      // transaction, so an update that failed still left history behind
+      // saying it had happened.
+      await recordFieldDiff(tx, {
         companyId,
         entity: "DEAL",
         recordId: id,
-        field: change.field,
-        oldValue: change.oldValue,
-        newValue: change.newValue,
         changedById: session.user.id,
-      })),
-    });
+        before: existing as Record<string, unknown>,
+        update: data as Record<string, unknown>,
+      });
 
-    const updated = await prisma.crmDeal.update({
-      where: { id },
-      data: {
-        emoji: data.emoji,
-        accent: data.accent,
-        avatarUrl: data.avatarUrl,
-        title: data.title,
-        clientId: data.clientId,
-        primaryContactId: data.primaryContactId,
-        siteId: data.siteId,
-        value: data.value,
-        currency: data.currency,
-        probability: data.probability,
-        forecastCategory: data.forecastCategory,
-        ...(data.expectedCloseDate !== undefined
-          ? {
-              expectedCloseDate: data.expectedCloseDate ? new Date(data.expectedCloseDate) : null,
-            }
-          : {}),
-        assignedToId: data.assignedToId,
-        services: data.services,
-        source: data.source,
-        ...(customFields !== undefined ? { customFields } : {}),
-        ...(data.archived !== undefined
-          ? { archivedAt: data.archived ? new Date() : null }
-          : {}),
-      },
-      include: {
-        client: { select: { id: true, name: true } },
-        primaryContact: { select: { id: true, fullName: true } },
-        site: { select: { id: true, name: true } },
-        stage: { select: { id: true, name: true, status: true } },
-        assignedTo: { select: { id: true, name: true } },
-      },
+      return row;
     });
 
     await recordFieldChanges(prisma, {

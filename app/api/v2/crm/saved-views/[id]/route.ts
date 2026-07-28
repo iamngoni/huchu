@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
+import { canUser, denialMessage } from "@/lib/crm/permissions";
 import { prisma } from "@/lib/prisma";
 import { hasCrmFullAccess } from "@/lib/crm/scope";
 import { leadSortSchema } from "@/lib/crm/views";
@@ -49,6 +50,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!allowed) return errorResponse("You can only edit views you created", 403);
 
     const data = updateViewSchema.parse(await request.json());
+    if (data.isShared && !(await canUser(session, "views.share"))) {
+      return errorResponse(denialMessage("views.share"), 403);
+    }
 
     const updated = await prisma.crmSavedView.update({
       where: { id },

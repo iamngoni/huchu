@@ -7,7 +7,7 @@ import {
   crmIntakeFormConfigSchema,
   crmIntakeServicesSchema,
 } from "@/lib/crm/intake-schema";
-import { isCompanyUser, requireCrmManager } from "../../_helpers";
+import { isCompanyUser, requireCrmCapability } from "../../_helpers";
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
@@ -45,7 +45,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "settings.manage")) return errorResponse("Manager access required", 403);
     const { id } = await params;
 
     const existing = await prisma.crmIntakeForm.findFirst({
@@ -91,7 +91,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "settings.manage")) return errorResponse("Manager access required", 403);
     const { id } = await params;
 
     const existing = await prisma.crmIntakeForm.findFirst({

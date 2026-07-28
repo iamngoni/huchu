@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import { normalizeEmail, normalizePhoneE164 } from "@/lib/crm/phone";
 import { extractDomain } from "@/lib/crm/duplicates";
 import {
@@ -14,7 +14,7 @@ import {
 import { recordFieldChanges } from "@/lib/crm/history";
 import { recordMarkFields } from "@/lib/crm/record-mark";
 import { isCompanyUser } from "../../_helpers";
-import { diffFields } from "@/lib/crm/field-history";
+import { recordFieldChanges as recordFieldDiff } from "@/lib/crm/field-history";
 
 const updateCompanySchema = z.object({
   ...recordMarkFields,
@@ -110,11 +110,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         parentClientId: true,
         assignedToId: true,
         city: true,
+        // The rest of what field history tracks. A field the select leaves out
+        // reads as null, so every edit to it looked like a value appearing
+        // from nowhere.
+        tradingName: true,
+        email: true,
+        phone: true,
+        country: true,
         customFields: true,
       },
     });
     if (!existing) return errorResponse("Company not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only edit companies assigned to you", 403);
     }
 
@@ -147,63 +154,61 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       customFields = mergeCustomFields(existing.customFields, values, data.clearCustomFields ?? []);
     }
 
-    // One row per field that actually moved, taken against what the select
-    // read a moment ago.
-    await prisma.crmFieldChange.createMany({
-      data: diffFields(
-        "CLIENT",
-        existing as Record<string, unknown>,
-        data as Record<string, unknown>,
-      ).map((change) => ({
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.crmClient.update({
+        where: { id },
+        data: {
+          emoji: data.emoji,
+          accent: data.accent,
+          avatarUrl: data.avatarUrl,
+          name: data.name,
+          tradingName: data.tradingName,
+          companyType: data.companyType,
+          registrationNumber: data.registrationNumber,
+          taxNumber: data.taxNumber,
+          website: data.website,
+          // websiteDomain is derived, so it has to follow every website edit.
+          ...(data.website !== undefined ? { websiteDomain: extractDomain(data.website) } : {}),
+          industry: data.industry,
+          email: data.email,
+          ...(data.email !== undefined ? { emailNormalized: normalizeEmail(data.email) } : {}),
+          phone: data.phone,
+          ...(data.phone !== undefined ? { phoneE164: normalizePhoneE164(data.phone) } : {}),
+          contactName: data.contactName,
+          addressLine: data.addressLine,
+          city: data.city,
+          country: data.country,
+          billingAddress: data.billingAddress,
+          accountStatus: data.accountStatus,
+          parentClientId: data.parentClientId,
+          parentRelation: data.parentRelation,
+          notes: data.notes,
+          tags: data.tags,
+          assignedToId: data.assignedToId,
+          ...(customFields !== undefined ? { customFields } : {}),
+          ...(data.archived !== undefined
+            ? { archivedAt: data.archived ? new Date() : null }
+            : {}),
+        },
+        include: {
+          assignedTo: { select: { id: true, name: true } },
+          parent: { select: { id: true, name: true } },
+        },
+      });
+
+      // One row per field that actually moved, written with the change it
+      // describes. Outside the transaction, an update that failed still left
+      // history behind saying it had happened.
+      await recordFieldDiff(tx, {
         companyId,
         entity: "CLIENT",
         recordId: id,
-        field: change.field,
-        oldValue: change.oldValue,
-        newValue: change.newValue,
         changedById: session.user.id,
-      })),
-    });
+        before: existing as Record<string, unknown>,
+        update: data as Record<string, unknown>,
+      });
 
-    const updated = await prisma.crmClient.update({
-      where: { id },
-      data: {
-        emoji: data.emoji,
-        accent: data.accent,
-        avatarUrl: data.avatarUrl,
-        name: data.name,
-        tradingName: data.tradingName,
-        companyType: data.companyType,
-        registrationNumber: data.registrationNumber,
-        taxNumber: data.taxNumber,
-        website: data.website,
-        // websiteDomain is derived, so it has to follow every website edit.
-        ...(data.website !== undefined ? { websiteDomain: extractDomain(data.website) } : {}),
-        industry: data.industry,
-        email: data.email,
-        ...(data.email !== undefined ? { emailNormalized: normalizeEmail(data.email) } : {}),
-        phone: data.phone,
-        ...(data.phone !== undefined ? { phoneE164: normalizePhoneE164(data.phone) } : {}),
-        contactName: data.contactName,
-        addressLine: data.addressLine,
-        city: data.city,
-        country: data.country,
-        billingAddress: data.billingAddress,
-        accountStatus: data.accountStatus,
-        parentClientId: data.parentClientId,
-        parentRelation: data.parentRelation,
-        notes: data.notes,
-        tags: data.tags,
-        assignedToId: data.assignedToId,
-        ...(customFields !== undefined ? { customFields } : {}),
-        ...(data.archived !== undefined
-          ? { archivedAt: data.archived ? new Date() : null }
-          : {}),
-      },
-      include: {
-        assignedTo: { select: { id: true, name: true } },
-        parent: { select: { id: true, name: true } },
-      },
+      return row;
     });
 
     await recordFieldChanges(prisma, {

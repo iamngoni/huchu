@@ -11,7 +11,7 @@ import {
   type StageInput,
   type StageTemplate,
 } from "@/lib/crm/pipelines";
-import { requireCrmManager } from "../_helpers";
+import { requireCrmCapability } from "../_helpers";
 
 const createPipelineSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) {
+    if (!await requireCrmCapability(session, "pipelines.manage")) {
       return errorResponse("Only managers can create pipelines", 403);
     }
     const companyId = session.user.companyId;

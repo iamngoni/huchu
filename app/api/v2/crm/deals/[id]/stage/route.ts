@@ -4,7 +4,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { runAutomations } from "@/lib/crm/automation-runner";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import { missingRequiredFields } from "@/lib/crm/pipelines";
 import { fieldLabel } from "@/lib/crm/history";
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     });
     if (!deal) return errorResponse("Deal not found", 404);
-    if (!canEditAssignedRecord(session, deal.assignedToId)) {
+    if (!await canEditRecord(session, deal.assignedToId)) {
       return errorResponse("You can only change stage on deals assigned to you", 403);
     }
 

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { scoreLead } from "@/lib/crm/lead-scoring";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import { crmLeadChannelSchema } from "@/lib/crm/views";
 import { isCompanyUser } from "../../_helpers";
 
@@ -114,7 +114,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       select: { id: true, assignedToId: true },
     });
     if (!existing) return errorResponse("Lead not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only edit leads assigned to you", 403);
     }
 

@@ -371,3 +371,120 @@ export function templateProblems(kind: TemplateKind, blocks: Block[]): string[] 
 
   return [...new Set(problems)];
 }
+
+export type FieldBlock = Extract<Block, { type: "field" }>;
+
+/**
+ * What a single answer is allowed to be.
+ *
+ * The form builder already declares this — a question is a number, or a date,
+ * or a pick from six options — and until now the public endpoint read none of
+ * it. Anything non-empty satisfied a required question, so "banana" was a
+ * valid answer to "How many units?" and a select could come back with an
+ * option that was never offered. That is not a cosmetic gap: these answers are
+ * read back as record values.
+ *
+ * Optional questions accept `undefined`, `null` and `""` alike and normalise
+ * them all to absent, because three ways of saying "they didn't answer" is
+ * three branches at every reader.
+ */
+export function answerSchemaFor(field: FieldBlock): z.ZodTypeAny {
+  const options = field.options ?? [];
+
+  const base = (): z.ZodTypeAny => {
+    switch (field.fieldType) {
+      case "longText":
+        return z.string().max(5000);
+      case "number":
+      case "rating":
+        // Numbers arrive as strings from a plain form post as often as not.
+        return z.coerce.number().finite();
+      case "email":
+        return z.string().trim().email().max(200);
+      case "phone":
+        return z.string().trim().min(3).max(40);
+      case "date":
+        return z.string().trim().refine(
+          (value) => !Number.isNaN(new Date(value).getTime()),
+          "Not a date",
+        );
+      case "checkbox":
+        return z.coerce.boolean();
+      case "select":
+        // An option that was never offered is not an answer to this question.
+        return options.length > 0 ? z.enum(options as [string, ...string[]]) : z.string().max(200);
+      case "multiSelect":
+        return z
+          .array(options.length > 0 ? z.enum(options as [string, ...string[]]) : z.string().max(200))
+          .max(50);
+      case "file":
+        // What is stored is where the upload landed, not the file itself.
+        // `C:\fakepath\plan.pdf` — what a browser puts in a file input's value
+        // — parses as a URL with scheme "c:", so the scheme has to be named.
+        return z
+          .string()
+          .trim()
+          .max(2000)
+          .refine((value) => /^https?:\/\//i.test(value), "Not an uploaded file");
+      case "text":
+      default:
+        return z.string().max(1000);
+    }
+  };
+
+  const schema = base();
+  if (field.required) {
+    // A required text question is not satisfied by whitespace, so the trim has
+    // to happen before the length is counted.
+    return field.fieldType === "multiSelect"
+      ? (schema as z.ZodArray<z.ZodTypeAny>).min(1, "Pick at least one")
+      : schema instanceof z.ZodString
+        ? schema.trim().min(1, "Required")
+        : schema;
+  }
+  return z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    schema.optional(),
+  );
+}
+
+export type AnswerProblem = { key: string; label: string; message: string };
+
+/**
+ * Check a submission against the form that produced it.
+ *
+ * Returns every problem rather than the first, because a person who fixes one
+ * field, resubmits and is told about the next one gives up around the third.
+ * Unknown keys are dropped: a stale cached form or somebody poking at the
+ * endpoint is not a reason to write columns nobody asked for.
+ */
+export function validateAnswers(
+  fields: FieldBlock[],
+  answers: Record<string, unknown>,
+): { values: Record<string, unknown>; problems: AnswerProblem[] } {
+  const values: Record<string, unknown> = {};
+  const problems: AnswerProblem[] = [];
+
+  for (const field of fields) {
+    const raw = answers[field.key];
+
+    if (!field.required && (raw === undefined || raw === null || raw === "")) continue;
+    if (field.required && (raw === undefined || raw === null || raw === "")) {
+      problems.push({ key: field.key, label: field.label || field.key, message: "Required" });
+      continue;
+    }
+
+    const parsed = answerSchemaFor(field).safeParse(raw);
+    if (!parsed.success) {
+      problems.push({
+        key: field.key,
+        label: field.label || field.key,
+        message: parsed.error.issues[0]?.message ?? "Not valid",
+      });
+      continue;
+    }
+    if (parsed.data !== undefined) values[field.key] = parsed.data;
+  }
+
+  return { values, problems };
+}

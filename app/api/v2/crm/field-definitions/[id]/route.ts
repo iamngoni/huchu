@@ -4,7 +4,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { fieldOptionSchema } from "@/lib/crm/custom-fields";
-import { requireCrmManager } from "../../_helpers";
+import { requireCrmCapability } from "../../_helpers";
 
 const updateSchema = z.object({
   label: z.string().trim().min(1).max(120).optional(),
@@ -24,7 +24,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) {
+    if (!await requireCrmCapability(session, "fields.manage")) {
       return errorResponse("Only managers can change custom fields", 403);
     }
     const { id } = await params;
@@ -75,7 +75,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) {
+    if (!await requireCrmCapability(session, "fields.manage")) {
       return errorResponse("Only managers can archive custom fields", 403);
     }
     const { id } = await params;

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import {
   WORK_ORDER_STATUS_LABELS,
   allowedTransitions,
@@ -58,7 +58,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // The crew on the job can update it; so can whoever it's assigned to.
     const onCrew = existing.crewIds.includes(session.user.id);
-    if (!onCrew && !canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!onCrew && !await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You're not on this job", 403);
     }
 

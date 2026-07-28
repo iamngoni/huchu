@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import { buildDefaultChecklist, siteVisitReportSchema } from "@/lib/crm/site-visits";
 
 async function loadAppointment(companyId: string, id: string) {
@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       select: { id: true, appointmentNo: true, assignedToId: true, leadId: true, clientId: true, status: true },
     });
     if (!existing) return errorResponse("Site visit not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only write up site visits assigned to you", 403);
     }
 
