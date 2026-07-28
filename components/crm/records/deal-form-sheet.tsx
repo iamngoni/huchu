@@ -13,15 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/searchable-select";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -227,212 +220,199 @@ export function DealFormSheet({
   const patch = (next: Partial<FormState>) => setForm((prev) => ({ ...prev, ...next }));
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent size="lg" className="w-full overflow-y-auto p-6">
-        <SheetHeader>
-          <SheetTitle>New deal</SheetTitle>
-          <SheetDescription>
-            A live opportunity — this is what carries the quote, the visit and the payment.
-          </SheetDescription>
-        </SheetHeader>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="New deal"
+      description="A live opportunity — this is what carries the quote, the visit and the payment."
+      errors={errors}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const found = validate();
+        setErrors(found);
+        if (found.length === 0) save.mutate();
+      }}
+      footer={<>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : "Create deal"}
+        </Button>
+      </>}
+    >
+      <div className="space-y-1.5">
+        <Label htmlFor="deal-title">Title *</Label>
+        <Input
+          id="deal-title"
+          value={form.title}
+          onChange={(event) => patch({ title: event.target.value })}
+          placeholder="e.g. Warehouse roof replacement"
+          maxLength={200}
+          autoFocus
+        />
+      </div>
 
-        <div className="mt-6">
-          <FormShell
-            variant="bare"
-            errors={errors}
-            requiredHint="A title and a starting stage are required."
-            onSubmit={(event) => {
-              event.preventDefault();
-              const found = validate();
-              setErrors(found);
-              if (found.length === 0) save.mutate();
+      <div className="space-y-1.5">
+        <SearchableSelect
+          label="Company"
+          value={form.clientId}
+          options={companyOptions}
+          placeholder={companiesQuery.isLoading ? "Loading companies…" : "Search companies"}
+          onValueChange={(clientId) =>
+            // Contacts and sites are scoped to the company, so a change
+            // here invalidates whatever was picked under the old one.
+            patch({ clientId, primaryContactId: "", siteId: "" })
+          }
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <SearchableSelect
+          label="Primary contact"
+          value={form.primaryContactId}
+          options={personOptions}
+          placeholder="Search people"
+          onValueChange={(primaryContactId) => patch({ primaryContactId })}
+        />
+        <SearchableSelect
+          label="Site"
+          value={form.siteId}
+          options={siteOptions}
+          placeholder="Search sites"
+          onValueChange={(siteId) => patch({ siteId })}
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="deal-pipeline">Pipeline</Label>
+          <Select
+            value={form.pipelineId}
+            onValueChange={(pipelineId) => {
+              const pipeline = pipelines.find((entry) => entry.id === pipelineId);
+              const firstOpen = pipeline?.stages.filter((stage) => stage.status === "OPEN")[0];
+              patch({ pipelineId, stageId: firstOpen?.id ?? "" });
             }}
-            actions={
-              <>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={save.isPending}>
-                  {save.isPending ? "Saving…" : "Create deal"}
-                </Button>
-              </>
-            }
           >
-            <div className="space-y-1.5">
-              <Label htmlFor="deal-title">Title *</Label>
-              <Input
-                id="deal-title"
-                value={form.title}
-                onChange={(event) => patch({ title: event.target.value })}
-                placeholder="e.g. Warehouse roof replacement"
-                maxLength={200}
-                autoFocus
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <SearchableSelect
-                label="Company"
-                value={form.clientId}
-                options={companyOptions}
-                placeholder={companiesQuery.isLoading ? "Loading companies…" : "Search companies"}
-                onValueChange={(clientId) =>
-                  // Contacts and sites are scoped to the company, so a change
-                  // here invalidates whatever was picked under the old one.
-                  patch({ clientId, primaryContactId: "", siteId: "" })
-                }
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <SearchableSelect
-                label="Primary contact"
-                value={form.primaryContactId}
-                options={personOptions}
-                placeholder="Search people"
-                onValueChange={(primaryContactId) => patch({ primaryContactId })}
-              />
-              <SearchableSelect
-                label="Site"
-                value={form.siteId}
-                options={siteOptions}
-                placeholder="Search sites"
-                onValueChange={(siteId) => patch({ siteId })}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="deal-pipeline">Pipeline</Label>
-                <Select
-                  value={form.pipelineId}
-                  onValueChange={(pipelineId) => {
-                    const pipeline = pipelines.find((entry) => entry.id === pipelineId);
-                    const firstOpen = pipeline?.stages.filter((stage) => stage.status === "OPEN")[0];
-                    patch({ pipelineId, stageId: firstOpen?.id ?? "" });
-                  }}
-                >
-                  <SelectTrigger id="deal-pipeline">
-                    <SelectValue placeholder="Choose a pipeline" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pipelines.map((pipeline) => (
-                      <SelectItem key={pipeline.id} value={pipeline.id}>
-                        {pipeline.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="deal-stage">Starting stage *</Label>
-                <Select value={form.stageId} onValueChange={(stageId) => patch({ stageId })}>
-                  <SelectTrigger id="deal-stage">
-                    <SelectValue placeholder="Choose a stage" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {openStages.map((stage) => (
-                      <SelectItem key={stage.id} value={stage.id}>
-                        {stage.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="deal-value">Value</Label>
-                <Input
-                  id="deal-value"
-                  inputMode="decimal"
-                  className="font-mono"
-                  value={form.value}
-                  onChange={(event) => patch({ value: event.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="deal-currency">Currency</Label>
-                <Select value={form.currency} onValueChange={(currency) => patch({ currency })}>
-                  <SelectTrigger id="deal-currency">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((currency) => (
-                      <SelectItem key={currency} value={currency}>
-                        {currency}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="deal-close">Expected close</Label>
-                <Input
-                  id="deal-close"
-                  type="date"
-                  value={form.expectedCloseDate}
-                  onChange={(event) => patch({ expectedCloseDate: event.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="deal-forecast">Forecast</Label>
-                <Select
-                  value={form.forecastCategory}
-                  onValueChange={(forecastCategory) => patch({ forecastCategory })}
-                >
-                  <SelectTrigger id="deal-forecast">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FORECAST_CATEGORIES.map((category) => (
-                      <SelectItem key={category.value} value={category.value}>
-                        {category.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-[var(--text-muted)]">
-                  {FORECAST_CATEGORIES.find((entry) => entry.value === form.forecastCategory)?.hint}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="deal-owner">Owner</Label>
-              <Select
-                value={form.assignedToId || "__unassigned"}
-                onValueChange={(value) =>
-                  patch({ assignedToId: value === "__unassigned" ? "" : value })
-                }
-              >
-                <SelectTrigger id="deal-owner">
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__unassigned">Unassigned</SelectItem>
-                  {owners.map((owner) => (
-                    <SelectItem key={owner.id} value={owner.id}>
-                      {owner.name ?? "Unnamed"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <CustomFieldInputs
-              definitions={definitions}
-              values={customValues}
-              onChange={setCustomValues}
-            />
-          </FormShell>
+            <SelectTrigger id="deal-pipeline">
+              <SelectValue placeholder="Choose a pipeline" />
+            </SelectTrigger>
+            <SelectContent>
+              {pipelines.map((pipeline) => (
+                <SelectItem key={pipeline.id} value={pipeline.id}>
+                  {pipeline.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </SheetContent>
-    </Sheet>
+        <div className="space-y-1.5">
+          <Label htmlFor="deal-stage">Starting stage *</Label>
+          <Select value={form.stageId} onValueChange={(stageId) => patch({ stageId })}>
+            <SelectTrigger id="deal-stage">
+              <SelectValue placeholder="Choose a stage" />
+            </SelectTrigger>
+            <SelectContent>
+              {openStages.map((stage) => (
+                <SelectItem key={stage.id} value={stage.id}>
+                  {stage.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="deal-value">Value</Label>
+          <Input
+            id="deal-value"
+            inputMode="decimal"
+            className="font-mono"
+            value={form.value}
+            onChange={(event) => patch({ value: event.target.value })}
+            placeholder="0.00"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="deal-currency">Currency</Label>
+          <Select value={form.currency} onValueChange={(currency) => patch({ currency })}>
+            <SelectTrigger id="deal-currency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCIES.map((currency) => (
+                <SelectItem key={currency} value={currency}>
+                  {currency}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="deal-close">Expected close</Label>
+          <Input
+            id="deal-close"
+            type="date"
+            value={form.expectedCloseDate}
+            onChange={(event) => patch({ expectedCloseDate: event.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="deal-forecast">Forecast</Label>
+          <Select
+            value={form.forecastCategory}
+            onValueChange={(forecastCategory) => patch({ forecastCategory })}
+          >
+            <SelectTrigger id="deal-forecast">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FORECAST_CATEGORIES.map((category) => (
+                <SelectItem key={category.value} value={category.value}>
+                  {category.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-[var(--text-muted)]">
+            {FORECAST_CATEGORIES.find((entry) => entry.value === form.forecastCategory)?.hint}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="deal-owner">Owner</Label>
+        <Select
+          value={form.assignedToId || "__unassigned"}
+          onValueChange={(value) =>
+            patch({ assignedToId: value === "__unassigned" ? "" : value })
+          }
+        >
+          <SelectTrigger id="deal-owner">
+            <SelectValue placeholder="Unassigned" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__unassigned">Unassigned</SelectItem>
+            {owners.map((owner) => (
+              <SelectItem key={owner.id} value={owner.id}>
+                {owner.name ?? "Unnamed"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <CustomFieldInputs
+        definitions={definitions}
+        values={customValues}
+        onChange={setCustomValues}
+      />
+    </RecordDialog>
   );
 }

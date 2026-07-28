@@ -15,14 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -460,393 +453,382 @@ function AutomationFormSheet({
     );
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "Edit rule" : "New rule"}</SheetTitle>
-          <SheetDescription>
-            When something happens, check a few things, then do something about
-            it.
-          </SheetDescription>
-        </SheetHeader>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? "Edit rule" : "New rule"}
+      description="When something happens, check a few things, then do something about it."
+      size="xl"
+      errors={errors}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const found: string[] = [];
+        if (!name.trim()) found.push("Give the rule a name.");
+        if (actions.length === 0) found.push("Add at least one action.");
+        if (actions.some((action) => action.type === "ADD_TAG" && !action.tag.trim())) {
+          found.push("A tag action needs a tag.");
+        }
+        if (
+          actions.some((action) => action.type === "CREATE_TASK" && !action.title.trim())
+        ) {
+          found.push("A task action needs a title.");
+        }
+        if (actions.some((action) => action.type === "NOTIFY" && !action.message.trim())) {
+          found.push("A notification needs something to say.");
+        }
+        if (actions.some((action) => action.type === "SET_FIELD" && !action.field)) {
+          found.push("Pick the field to set.");
+        }
+        if (conditions.some((condition) => !condition.field)) {
+          found.push("Every condition needs a field.");
+        }
+        setErrors(found);
+        if (found.length === 0) save.mutate();
+      }}
+      footer={<>
+        <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create rule"}
+        </Button>
+      </>}
+    >
+      <div className="space-y-1.5">
+        <Label htmlFor="rule-name">Name *</Label>
+        <Input
+          id="rule-name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Chase big new leads the same day"
+        />
+      </div>
 
-        <FormShell
-          variant="bare"
-          errors={errors}
-          requiredHint="A name, a trigger and at least one action are required."
-          onSubmit={(event) => {
-            event.preventDefault();
-            const found: string[] = [];
-            if (!name.trim()) found.push("Give the rule a name.");
-            if (actions.length === 0) found.push("Add at least one action.");
-            if (actions.some((action) => action.type === "ADD_TAG" && !action.tag.trim())) {
-              found.push("A tag action needs a tag.");
-            }
-            if (
-              actions.some((action) => action.type === "CREATE_TASK" && !action.title.trim())
-            ) {
-              found.push("A task action needs a title.");
-            }
-            if (actions.some((action) => action.type === "NOTIFY" && !action.message.trim())) {
-              found.push("A notification needs something to say.");
-            }
-            if (actions.some((action) => action.type === "SET_FIELD" && !action.field)) {
-              found.push("Pick the field to set.");
-            }
-            if (conditions.some((condition) => !condition.field)) {
-              found.push("Every condition needs a field.");
-            }
-            setErrors(found);
-            if (found.length === 0) save.mutate();
+      <div className="space-y-1.5">
+        <Label>When</Label>
+        <OptionSelect
+          value={trigger}
+          onValueChange={(value) => {
+            setTrigger(value as (typeof AUTOMATION_TRIGGERS)[number]);
+            // The fields a condition can name depend on which record the
+            // trigger hands over, so conditions written against the old
+            // one would silently stop matching. Clearing is honest.
+            setConditions([]);
           }}
-          actions={
-            <>
-              <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={save.isPending}>
-                {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create rule"}
-              </Button>
-            </>
-          }
-        >
+          options={AUTOMATION_TRIGGERS.map((value) => ({
+            value,
+            label: TRIGGER_LABELS[value],
+          }))}
+          ariaLabel="Trigger"
+        />
+      </div>
+
+      {triggerUsesStage(trigger) ? (
+        <div className="space-y-1.5">
+          <Label>Only when it lands on</Label>
+          <OptionSelect
+            value={stage}
+            onValueChange={setStage}
+            options={[{ value: "", label: "Any stage" }, ...LEAD_STAGE_OPTIONS]}
+            placeholder="Any stage"
+            ariaLabel="Landing stage"
+          />
+        </div>
+      ) : null}
+
+      {triggerUsesIdle(trigger) ? (
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="rule-name">Name *</Label>
+            <Label htmlFor="rule-idle-days">Days of silence</Label>
             <Input
-              id="rule-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Chase big new leads the same day"
+              id="rule-idle-days"
+              type="number"
+              min={1}
+              value={idleDays}
+              onChange={(event) => setIdleDays(Number(event.target.value) || 1)}
             />
           </div>
-
           <div className="space-y-1.5">
-            <Label>When</Label>
+            <Label>On</Label>
             <OptionSelect
-              value={trigger}
-              onValueChange={(value) => {
-                setTrigger(value as (typeof AUTOMATION_TRIGGERS)[number]);
-                // The fields a condition can name depend on which record the
-                // trigger hands over, so conditions written against the old
-                // one would silently stop matching. Clearing is honest.
-                setConditions([]);
-              }}
-              options={AUTOMATION_TRIGGERS.map((value) => ({
-                value,
-                label: TRIGGER_LABELS[value],
-              }))}
-              ariaLabel="Trigger"
+              value={idleEntity}
+              onValueChange={(value) => setIdleEntity(value as "LEAD" | "DEAL")}
+              options={[
+                { value: "LEAD", label: "Leads" },
+                { value: "DEAL", label: "Deals" },
+              ]}
+              ariaLabel="Record type"
             />
           </div>
+        </div>
+      ) : null}
 
-          {triggerUsesStage(trigger) ? (
-            <div className="space-y-1.5">
-              <Label>Only when it lands on</Label>
-              <OptionSelect
-                value={stage}
-                onValueChange={setStage}
-                options={[{ value: "", label: "Any stage" }, ...LEAD_STAGE_OPTIONS]}
-                placeholder="Any stage"
-                ariaLabel="Landing stage"
-              />
-            </div>
-          ) : null}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>And these are true</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setConditions((previous) => [
+                ...previous,
+                { field: fields[0]?.path ?? "", operator: "equals", value: "" },
+              ])
+            }
+          >
+            Add condition
+          </Button>
+        </div>
 
-          {triggerUsesIdle(trigger) ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="rule-idle-days">Days of silence</Label>
-                <Input
-                  id="rule-idle-days"
-                  type="number"
-                  min={1}
-                  value={idleDays}
-                  onChange={(event) => setIdleDays(Number(event.target.value) || 1)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>On</Label>
+        {conditions.length === 0 ? (
+          <p className="text-sm text-[var(--text-muted)]">
+            No conditions — the rule fires every time.
+          </p>
+        ) : (
+          conditions.map((condition, index) => {
+            const field = findField(trigger, condition.field);
+            const operators = operatorsForKind(field?.kind ?? "text");
+            return (
+              <div key={index} className="flex flex-wrap gap-2">
                 <OptionSelect
-                  value={idleEntity}
-                  onValueChange={(value) => setIdleEntity(value as "LEAD" | "DEAL")}
-                  options={[
-                    { value: "LEAD", label: "Leads" },
-                    { value: "DEAL", label: "Deals" },
-                  ]}
-                  ariaLabel="Record type"
+                  className="min-w-40 flex-1"
+                  value={condition.field}
+                  onValueChange={(value) => {
+                    const next = findField(trigger, value);
+                    // Widened to string: each kind returns its own narrow
+                    // tuple, so `includes` refuses an operator from a
+                    // different kind — which is exactly the case being
+                    // tested for.
+                    const allowed: readonly string[] = operatorsForKind(
+                      next?.kind ?? "text",
+                    );
+                    patchCondition(index, {
+                      field: value,
+                      // Changing the field can invalidate the operator —
+                      // "contains" on a number is a rule that never fires.
+                      operator: allowed.includes(condition.operator)
+                        ? condition.operator
+                        : (allowed[0] as AutomationCondition["operator"]),
+                      value: "",
+                    });
+                  }}
+                  options={fields.map((option) => ({
+                    value: option.path,
+                    label: option.label,
+                  }))}
+                  placeholder="Field"
+                  ariaLabel="Condition field"
                 />
-              </div>
-            </div>
-          ) : null}
 
-          <div className="space-y-2">
+                <OptionSelect
+                  className="w-36"
+                  value={condition.operator}
+                  onValueChange={(value) =>
+                    patchCondition(index, {
+                      operator: value as AutomationCondition["operator"],
+                    })
+                  }
+                  options={operators.map((value) => ({
+                    value,
+                    label: OPERATOR_LABELS[value],
+                  }))}
+                  ariaLabel="Condition operator"
+                />
+
+                {operatorNeedsValue(condition.operator) ? (
+                  <FieldValueInput
+                    className="min-w-32 flex-1"
+                    field={field}
+                    value={condition.value}
+                    owners={owners}
+                    onChange={(value) => patchCondition(index, { value })}
+                  />
+                ) : null}
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Remove condition"
+                  onClick={() =>
+                    setConditions((previous) =>
+                      previous.filter((_item, position) => position !== index),
+                    )
+                  }
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Then</Label>
+          <OptionSelect
+            className="w-40"
+            value=""
+            onValueChange={(value) =>
+              setActions((previous) => [...previous, defaultAction(value as ActionType)])
+            }
+            options={ACTION_TYPES.map((value) => ({
+              value,
+              label: ACTION_LABELS[value],
+            }))}
+            placeholder="Add action"
+            ariaLabel="Add action"
+          />
+        </div>
+
+        {actions.map((action, index) => (
+          <div
+            key={index}
+            className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-2"
+          >
             <div className="flex items-center justify-between">
-              <Label>And these are true</Label>
+              <span className="text-sm font-medium">{ACTION_LABELS[action.type]}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                aria-label="Remove action"
                 onClick={() =>
-                  setConditions((previous) => [
-                    ...previous,
-                    { field: fields[0]?.path ?? "", operator: "equals", value: "" },
-                  ])
+                  setActions((previous) =>
+                    previous.filter((_item, position) => position !== index),
+                  )
                 }
               >
-                Add condition
+                <Trash2 className="size-4" />
               </Button>
             </div>
 
-            {conditions.length === 0 ? (
-              <p className="text-sm text-[var(--text-muted)]">
-                No conditions — the rule fires every time.
-              </p>
-            ) : (
-              conditions.map((condition, index) => {
-                const field = findField(trigger, condition.field);
-                const operators = operatorsForKind(field?.kind ?? "text");
-                return (
-                  <div key={index} className="flex flex-wrap gap-2">
-                    <OptionSelect
-                      className="min-w-40 flex-1"
-                      value={condition.field}
-                      onValueChange={(value) => {
-                        const next = findField(trigger, value);
-                        // Widened to string: each kind returns its own narrow
-                        // tuple, so `includes` refuses an operator from a
-                        // different kind — which is exactly the case being
-                        // tested for.
-                        const allowed: readonly string[] = operatorsForKind(
-                          next?.kind ?? "text",
-                        );
-                        patchCondition(index, {
-                          field: value,
-                          // Changing the field can invalidate the operator —
-                          // "contains" on a number is a rule that never fires.
-                          operator: allowed.includes(condition.operator)
-                            ? condition.operator
-                            : (allowed[0] as AutomationCondition["operator"]),
-                          value: "",
-                        });
-                      }}
-                      options={fields.map((option) => ({
-                        value: option.path,
-                        label: option.label,
-                      }))}
-                      placeholder="Field"
-                      ariaLabel="Condition field"
-                    />
-
-                    <OptionSelect
-                      className="w-36"
-                      value={condition.operator}
-                      onValueChange={(value) =>
-                        patchCondition(index, {
-                          operator: value as AutomationCondition["operator"],
-                        })
-                      }
-                      options={operators.map((value) => ({
-                        value,
-                        label: OPERATOR_LABELS[value],
-                      }))}
-                      ariaLabel="Condition operator"
-                    />
-
-                    {operatorNeedsValue(condition.operator) ? (
-                      <FieldValueInput
-                        className="min-w-32 flex-1"
-                        field={field}
-                        value={condition.value}
-                        owners={owners}
-                        onChange={(value) => patchCondition(index, { value })}
-                      />
-                    ) : null}
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Remove condition"
-                      onClick={() =>
-                        setConditions((previous) =>
-                          previous.filter((_item, position) => position !== index),
-                        )
-                      }
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Then</Label>
-              <OptionSelect
-                className="w-40"
-                value=""
-                onValueChange={(value) =>
-                  setActions((previous) => [...previous, defaultAction(value as ActionType)])
-                }
-                options={ACTION_TYPES.map((value) => ({
-                  value,
-                  label: ACTION_LABELS[value],
-                }))}
-                placeholder="Add action"
-                ariaLabel="Add action"
-              />
-            </div>
-
-            {actions.map((action, index) => (
-              <div
-                key={index}
-                className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{ACTION_LABELS[action.type]}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Remove action"
-                    onClick={() =>
-                      setActions((previous) =>
-                        previous.filter((_item, position) => position !== index),
-                      )
-                    }
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-
-                {action.type === "CREATE_TASK" ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Input
-                        className="flex-1"
-                        value={action.title}
-                        placeholder="Task title"
-                        aria-label="Task title"
-                        onChange={(event) => patchAction(index, { title: event.target.value })}
-                      />
-                      <Input
-                        className="w-28"
-                        type="number"
-                        min={0}
-                        value={action.dueInDays}
-                        aria-label="Days from now"
-                        onChange={(event) =>
-                          patchAction(index, { dueInDays: Number(event.target.value) || 0 })
-                        }
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <OptionSelect
-                        className="flex-1"
-                        value={action.taskType ?? "GENERAL"}
-                        onValueChange={(value) => patchAction(index, { taskType: value })}
-                        options={TASK_TYPE_OPTIONS}
-                        ariaLabel="Task type"
-                      />
-                      <OptionSelect
-                        className="flex-1"
-                        value={action.assignedToId ?? ""}
-                        onValueChange={(value) =>
-                          patchAction(index, { assignedToId: value || null })
-                        }
-                        options={[
-                          { value: "", label: "Whoever owns the record" },
-                          ...owners.map((owner) => ({
-                            value: owner.id,
-                            label: owner.name ?? "Unnamed",
-                          })),
-                        ]}
-                        ariaLabel="Task assignee"
-                      />
-                    </div>
-                  </div>
-                ) : null}
-
-                {action.type === "ADD_TAG" ? (
+            {action.type === "CREATE_TASK" ? (
+              <div className="space-y-2">
+                <div className="flex gap-2">
                   <Input
-                    value={action.tag}
-                    placeholder="Tag"
-                    aria-label="Tag"
-                    onChange={(event) => patchAction(index, { tag: event.target.value })}
+                    className="flex-1"
+                    value={action.title}
+                    placeholder="Task title"
+                    aria-label="Task title"
+                    onChange={(event) => patchAction(index, { title: event.target.value })}
                   />
-                ) : null}
-
-                {action.type === "NOTIFY" ? (
-                  <div className="space-y-2">
-                    <Input
-                      value={action.message}
-                      placeholder="What the notification says"
-                      aria-label="Notification message"
-                      onChange={(event) => patchAction(index, { message: event.target.value })}
-                    />
-                    <OptionSelect
-                      value={action.recipientIds[0] ?? ""}
-                      onValueChange={(value) =>
-                        patchAction(index, { recipientIds: value ? [value] : [] })
-                      }
-                      options={[
-                        { value: "", label: "The record's owner" },
-                        ...owners.map((owner) => ({
-                          value: owner.id,
-                          label: owner.name ?? "Unnamed",
-                        })),
-                      ]}
-                      ariaLabel="Notify"
-                    />
-                  </div>
-                ) : null}
-
-                {action.type === "SET_FIELD" ? (
-                  <div className="flex gap-2">
-                    <OptionSelect
-                      className="flex-1"
-                      value={action.field}
-                      onValueChange={(value) => patchAction(index, { field: value, value: "" })}
-                      options={writableFields.map((option) => ({
-                        value: option.path,
-                        label: option.label,
-                      }))}
-                      placeholder="Field"
-                      ariaLabel="Field to set"
-                    />
-                    <FieldValueInput
-                      className="flex-1"
-                      field={findField(trigger, action.field)}
-                      value={action.value}
-                      owners={owners}
-                      onChange={(value) => patchAction(index, { value })}
-                    />
-                  </div>
-                ) : null}
-
-                {action.type === "ASSIGN_OWNER" ? (
+                  <Input
+                    className="w-28"
+                    type="number"
+                    min={0}
+                    value={action.dueInDays}
+                    aria-label="Days from now"
+                    onChange={(event) =>
+                      patchAction(index, { dueInDays: Number(event.target.value) || 0 })
+                    }
+                  />
+                </div>
+                <div className="flex gap-2">
                   <OptionSelect
+                    className="flex-1"
+                    value={action.taskType ?? "GENERAL"}
+                    onValueChange={(value) => patchAction(index, { taskType: value })}
+                    options={TASK_TYPE_OPTIONS}
+                    ariaLabel="Task type"
+                  />
+                  <OptionSelect
+                    className="flex-1"
                     value={action.assignedToId ?? ""}
                     onValueChange={(value) =>
                       patchAction(index, { assignedToId: value || null })
                     }
                     options={[
-                      { value: "", label: "Whoever the assignment rule picks" },
+                      { value: "", label: "Whoever owns the record" },
                       ...owners.map((owner) => ({
                         value: owner.id,
                         label: owner.name ?? "Unnamed",
                       })),
                     ]}
-                    ariaLabel="Owner"
+                    ariaLabel="Task assignee"
                   />
-                ) : null}
+                </div>
               </div>
-            ))}
+            ) : null}
+
+            {action.type === "ADD_TAG" ? (
+              <Input
+                value={action.tag}
+                placeholder="Tag"
+                aria-label="Tag"
+                onChange={(event) => patchAction(index, { tag: event.target.value })}
+              />
+            ) : null}
+
+            {action.type === "NOTIFY" ? (
+              <div className="space-y-2">
+                <Input
+                  value={action.message}
+                  placeholder="What the notification says"
+                  aria-label="Notification message"
+                  onChange={(event) => patchAction(index, { message: event.target.value })}
+                />
+                <OptionSelect
+                  value={action.recipientIds[0] ?? ""}
+                  onValueChange={(value) =>
+                    patchAction(index, { recipientIds: value ? [value] : [] })
+                  }
+                  options={[
+                    { value: "", label: "The record's owner" },
+                    ...owners.map((owner) => ({
+                      value: owner.id,
+                      label: owner.name ?? "Unnamed",
+                    })),
+                  ]}
+                  ariaLabel="Notify"
+                />
+              </div>
+            ) : null}
+
+            {action.type === "SET_FIELD" ? (
+              <div className="flex gap-2">
+                <OptionSelect
+                  className="flex-1"
+                  value={action.field}
+                  onValueChange={(value) => patchAction(index, { field: value, value: "" })}
+                  options={writableFields.map((option) => ({
+                    value: option.path,
+                    label: option.label,
+                  }))}
+                  placeholder="Field"
+                  ariaLabel="Field to set"
+                />
+                <FieldValueInput
+                  className="flex-1"
+                  field={findField(trigger, action.field)}
+                  value={action.value}
+                  owners={owners}
+                  onChange={(value) => patchAction(index, { value })}
+                />
+              </div>
+            ) : null}
+
+            {action.type === "ASSIGN_OWNER" ? (
+              <OptionSelect
+                value={action.assignedToId ?? ""}
+                onValueChange={(value) =>
+                  patchAction(index, { assignedToId: value || null })
+                }
+                options={[
+                  { value: "", label: "Whoever the assignment rule picks" },
+                  ...owners.map((owner) => ({
+                    value: owner.id,
+                    label: owner.name ?? "Unnamed",
+                  })),
+                ]}
+                ariaLabel="Owner"
+              />
+            ) : null}
           </div>
-        </FormShell>
-      </SheetContent>
-    </Sheet>
+        ))}
+      </div>
+    </RecordDialog>
   );
 }

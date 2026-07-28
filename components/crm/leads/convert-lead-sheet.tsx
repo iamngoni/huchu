@@ -9,14 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { ArrowRight, Check } from "@/lib/icons";
@@ -186,191 +179,193 @@ export function ConvertLeadSheet({
 
   const alreadyConverted = Boolean(prep?.lead.convertedAt);
 
+  // The dialog is one of three things depending on where the lead is, and only
+  // the third is a form — so the submit handler and the buttons come and go
+  // with it rather than sitting under a screen that has nothing to submit.
+  const showForm = !prepQuery.isLoading && !alreadyConverted && Boolean(prep);
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent size="lg" className="w-full overflow-y-auto p-6">
-        <SheetHeader>
-          <SheetTitle>Convert lead</SheetTitle>
-          <SheetDescription>
-            Turn a qualified enquiry into a deal, reusing the people and companies you already have.
-          </SheetDescription>
-        </SheetHeader>
-
-        {prepQuery.isLoading ? (
-          <div className="mt-6 space-y-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-24 w-full" />
-            ))}
-          </div>
-        ) : alreadyConverted ? (
-          <div className="mt-6 space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
-            <p className="text-sm">
-              This lead was already converted. Its deal carries the work from here.
-            </p>
-            {prep?.lead.convertedDealId ? (
-              <Button
-                size="sm"
-                className="gap-1.5"
-                onClick={() => {
-                  onOpenChange(false);
-                  router.push(`/crm/deals/${prep.lead.convertedDealId}`);
-                }}
-              >
-                Open the deal
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            ) : null}
-          </div>
-        ) : prep ? (
-          <div className="mt-6">
-            <FormShell
-              variant="bare"
-              errors={errors}
-              requiredHint="The deal needs a title. Everything else can be filled in later."
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!dealTitle.trim()) {
-                  setErrors(["Give the deal a title."]);
-                  return;
-                }
-                setErrors([]);
-                convert.mutate();
-              }}
-              actions={
-                <>
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={convert.isPending}>
-                    {convert.isPending ? "Converting…" : "Convert to deal"}
-                  </Button>
-                </>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Convert lead"
+      description="Turn a qualified enquiry into a deal, reusing the people and companies you already have."
+      errors={showForm ? errors : undefined}
+      onSubmit={
+        showForm
+          ? (event) => {
+              event.preventDefault();
+              if (!dealTitle.trim()) {
+                setErrors(["Give the deal a title."]);
+                return;
               }
+              setErrors([]);
+              convert.mutate();
+            }
+          : undefined
+      }
+      footer={
+        showForm ? (
+          <>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={convert.isPending}>
+              {convert.isPending ? "Converting…" : "Convert to deal"}
+            </Button>
+          </>
+        ) : null
+      }
+    >
+      {prepQuery.isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-24 w-full" />
+          ))}
+        </div>
+      ) : alreadyConverted ? (
+        <div className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
+          <p className="text-sm">
+            This lead was already converted. Its deal carries the work from here.
+          </p>
+          {prep?.lead.convertedDealId ? (
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                onOpenChange(false);
+                router.push(`/crm/deals/${prep.lead.convertedDealId}`);
+              }}
             >
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  Person
-                </h3>
-                {prep.personDuplicates.length > 0 ? (
-                  <>
-                    <p className="text-sm text-[var(--text-muted)]">
-                      {prep.personDuplicates.length === 1
-                        ? "Someone on file looks like this contact."
-                        : `${prep.personDuplicates.length} people on file look like this contact.`}
-                    </p>
-                    <div className="space-y-1.5">
-                      {prep.personDuplicates.map((match) => (
-                        <CandidateRow
-                          key={match.record.id}
-                          title={String(match.record.fullName ?? "Unnamed")}
-                          subtitle={
-                            [
-                              match.record.jobTitle,
-                              (match.record.client as { name?: string } | null)?.name,
-                              match.record.email,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ") || null
-                          }
-                          reasons={match.reasons}
-                          confidence={match.confidence}
-                          selected={personId === match.record.id}
-                          onSelect={() =>
-                            setPersonId(personId === match.record.id ? null : match.record.id)
-                          }
-                        />
-                      ))}
-                    </div>
-                  </>
-                ) : null}
+              Open the deal
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+        </div>
+      ) : prep ? (
+        <div className="space-y-4">
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Person
+            </h3>
+            {prep.personDuplicates.length > 0 ? (
+              <>
                 <p className="text-sm text-[var(--text-muted)]">
-                  {personId
-                    ? "That existing person will be used."
-                    : `A new person will be created: ${prep.suggested.personFirstName}${
-                        prep.suggested.personLastName ? ` ${prep.suggested.personLastName}` : ""
-                      }.`}
+                  {prep.personDuplicates.length === 1
+                    ? "Someone on file looks like this contact."
+                    : `${prep.personDuplicates.length} people on file look like this contact.`}
                 </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  Company
-                </h3>
-                {prep.companyDuplicates.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {prep.companyDuplicates.map((match) => (
-                      <CandidateRow
-                        key={match.record.id}
-                        title={String(match.record.name ?? "Unnamed")}
-                        subtitle={
-                          [match.record.city, match.record.website].filter(Boolean).join(" · ") ||
-                          null
-                        }
-                        reasons={match.reasons}
-                        confidence={match.confidence}
-                        selected={clientId === match.record.id}
-                        onSelect={() =>
-                          setClientId(clientId === match.record.id ? null : match.record.id)
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : null}
-
-                {!clientId ? (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="convert-company">New company name</Label>
-                    <Input
-                      id="convert-company"
-                      value={companyName}
-                      onChange={(event) => {
-                        setCompanyName(event.target.value);
-                        setCreateCompany(event.target.value.trim().length > 0);
-                      }}
-                      placeholder="Leave blank for an individual customer"
-                      maxLength={200}
+                <div className="space-y-1.5">
+                  {prep.personDuplicates.map((match) => (
+                    <CandidateRow
+                      key={match.record.id}
+                      title={String(match.record.fullName ?? "Unnamed")}
+                      subtitle={
+                        [
+                          match.record.jobTitle,
+                          (match.record.client as { name?: string } | null)?.name,
+                          match.record.email,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || null
+                      }
+                      reasons={match.reasons}
+                      confidence={match.confidence}
+                      selected={personId === match.record.id}
+                      onSelect={() =>
+                        setPersonId(personId === match.record.id ? null : match.record.id)
+                      }
                     />
-                    <p className="text-sm text-[var(--text-muted)]">
-                      Plenty of jobs are for a person rather than a business — leaving this empty is
-                      fine.
-                    </p>
-                  </div>
-                ) : null}
-              </section>
+                  ))}
+                </div>
+              </>
+            ) : null}
+            <p className="text-sm text-[var(--text-muted)]">
+              {personId
+                ? "That existing person will be used."
+                : `A new person will be created: ${prep.suggested.personFirstName}${
+                    prep.suggested.personLastName ? ` ${prep.suggested.personLastName}` : ""
+                  }.`}
+            </p>
+          </section>
 
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  Deal
-                </h3>
-                <div className="space-y-1.5">
-                  <Label htmlFor="convert-title">Title *</Label>
-                  <Input
-                    id="convert-title"
-                    value={dealTitle}
-                    onChange={(event) => setDealTitle(event.target.value)}
-                    maxLength={200}
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Company
+            </h3>
+            {prep.companyDuplicates.length > 0 ? (
+              <div className="space-y-1.5">
+                {prep.companyDuplicates.map((match) => (
+                  <CandidateRow
+                    key={match.record.id}
+                    title={String(match.record.name ?? "Unnamed")}
+                    subtitle={
+                      [match.record.city, match.record.website].filter(Boolean).join(" · ") ||
+                      null
+                    }
+                    reasons={match.reasons}
+                    confidence={match.confidence}
+                    selected={clientId === match.record.id}
+                    onSelect={() =>
+                      setClientId(clientId === match.record.id ? null : match.record.id)
+                    }
                   />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="convert-value">Value ({prep.lead.currency})</Label>
-                  <Input
-                    id="convert-value"
-                    inputMode="decimal"
-                    className="font-mono"
-                    value={value}
-                    onChange={(event) => setValue(event.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
+                ))}
+              </div>
+            ) : null}
+
+            {!clientId ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="convert-company">New company name</Label>
+                <Input
+                  id="convert-company"
+                  value={companyName}
+                  onChange={(event) => {
+                    setCompanyName(event.target.value);
+                    setCreateCompany(event.target.value.trim().length > 0);
+                  }}
+                  placeholder="Leave blank for an individual customer"
+                  maxLength={200}
+                />
                 <p className="text-sm text-[var(--text-muted)]">
-                  Notes, calls, tasks and documents from lead {prep.lead.leadNo} carry across to the
-                  deal. The lead stays as the record of where this came from.
+                  Plenty of jobs are for a person rather than a business — leaving this empty is
+                  fine.
                 </p>
-              </section>
-            </FormShell>
-          </div>
-        ) : null}
-      </SheetContent>
-    </Sheet>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Deal
+            </h3>
+            <div className="space-y-1.5">
+              <Label htmlFor="convert-title">Title *</Label>
+              <Input
+                id="convert-title"
+                value={dealTitle}
+                onChange={(event) => setDealTitle(event.target.value)}
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="convert-value">Value ({prep.lead.currency})</Label>
+              <Input
+                id="convert-value"
+                inputMode="decimal"
+                className="font-mono"
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <p className="text-sm text-[var(--text-muted)]">
+              Notes, calls, tasks and documents from lead {prep.lead.leadNo} carry across to the
+              deal. The lead stays as the record of where this came from.
+            </p>
+          </section>
+        </div>
+      ) : null}
+    </RecordDialog>
   );
 }

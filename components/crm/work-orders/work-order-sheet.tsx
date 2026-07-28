@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -12,13 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
+import { EntityLink } from "@/components/crm/records/entity-link";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -158,248 +152,247 @@ export function WorkOrderSheet({
       !order.assignedTo);
 
   return (
-    <Sheet open={Boolean(workOrderId)} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
-        {isLoading || !order ? (
-          <div className="space-y-3 pt-6">
-            <Skeleton className="h-8 w-2/3" />
-            <Skeleton className="h-40" />
+    <RecordDialog
+      open={Boolean(workOrderId)}
+      onOpenChange={onOpenChange}
+      title={order?.title ?? "Job"}
+      description="What was agreed, what has been done, and who signed it off."
+    >
+      {isLoading || !order ? (
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-2/3" />
+          <Skeleton className="h-40" />
+        </div>
+      ) : (
+        <>
+          {/* The reference and status sit here rather than in the dialog
+              header, which only carries a name. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm text-[var(--text-muted)]">
+              {order.workOrderNo}
+            </span>
+            <StatusChip
+              status={STATUS_TONE[order.status] ?? "inactive"}
+              label={WORK_ORDER_STATUS_LABELS[order.status]}
+            />
+            {order.deal ? (
+              <EntityLink href={`/crm/deals/${order.deal.id}`} muted className="text-sm">
+                {order.deal.title}
+              </EntityLink>
+            ) : null}
           </div>
-        ) : (
-          <>
-            <SheetHeader>
-              <div className="flex flex-wrap items-center gap-2">
-                <SheetTitle>{order.title}</SheetTitle>
-                <StatusChip
-                  status={STATUS_TONE[order.status] ?? "inactive"}
-                  label={WORK_ORDER_STATUS_LABELS[order.status]}
-                />
-              </div>
-              <SheetDescription>
-                <span className="font-mono">{order.workOrderNo}</span>
-                {order.deal ? (
-                  <>
-                    {" · "}
-                    <Link href={`/crm/deals/${order.deal.id}`} className="hover:underline">
-                      {order.deal.title}
-                    </Link>
-                  </>
-                ) : null}
-              </SheetDescription>
-            </SheetHeader>
 
-            <div className="space-y-5 pb-6">
-              {error ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
+          <div className="space-y-5">
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
 
-              {blockers.length ? (
-                <Alert>
-                  <AlertTitle>Not ready to close</AlertTitle>
-                  <AlertDescription>
-                    <ul className="list-disc space-y-1 pl-5">
-                      {blockers.map((blocker) => (
-                        <li key={blocker}>{blocker}</li>
-                      ))}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-
-              <section className="space-y-1.5 text-sm">
-                {order.scheduledStart ? (
-                  <p className="flex items-center gap-2">
-                    <Clock className="size-4 text-[var(--text-muted)]" />
-                    <ClientDate value={order.scheduledStart} mode="datetime" />
-                  </p>
-                ) : null}
-                {order.site?.addressLine || order.addressLine ? (
-                  <p className="flex items-start gap-2">
-                    <MapPin className="mt-0.5 size-4 shrink-0 text-[var(--text-muted)]" />
-                    <span>
-                      {order.site?.name ? <strong>{order.site.name}</strong> : null}
-                      {order.site?.name ? " — " : ""}
-                      {order.site?.addressLine ?? order.addressLine}
-                    </span>
-                  </p>
-                ) : null}
-                {order.contactPhone ? (
-                  <p className="flex items-center gap-2">
-                    <Phone className="size-4 text-[var(--text-muted)]" />
-                    {/* Tappable, because this is read standing outside a gate. */}
-                    <a href={`tel:${order.contactPhone}`} className="hover:underline">
-                      {order.contactName ? `${order.contactName} — ` : ""}
-                      {order.contactPhone}
-                    </a>
-                  </p>
-                ) : null}
-                {order.accessNotes || order.site?.accessInstructions ? (
-                  <p className="rounded-[var(--radius-md)] bg-[var(--surface-subtle)] p-2 text-sm">
-                    {order.accessNotes ?? order.site?.accessInstructions}
-                  </p>
-                ) : null}
-              </section>
-
-              {order.description ? (
-                <p className="whitespace-pre-wrap text-sm text-[var(--text-muted)]">
-                  {order.description}
-                </p>
-              ) : null}
-
-              {order.items.length > 0 ? (
-                <section className="space-y-2">
-                  <div className="flex items-baseline justify-between">
-                    <h3 className="text-sm font-semibold">What needs doing</h3>
-                    <span className="text-sm text-[var(--text-muted)]">
-                      {completionPercent(order.items)}% done
-                    </span>
-                  </div>
-
-                  <ul className="space-y-2">
-                    {order.items.map((item) => (
-                      <li
-                        key={item.id}
-                        className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-2"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm">{item.description}</p>
-                          {item.notes ? (
-                            <p className="text-sm text-[var(--text-muted)]">{item.notes}</p>
-                          ) : null}
-                        </div>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Input
-                            className="h-9 w-16 text-right"
-                            type="number"
-                            min={0}
-                            max={item.quantity}
-                            inputMode="decimal"
-                            disabled={order.status === "COMPLETED"}
-                            value={progress[item.id] ?? String(item.completedQuantity)}
-                            onChange={(event) =>
-                              setProgress((previous) => ({
-                                ...previous,
-                                [item.id]: event.target.value,
-                              }))
-                            }
-                          />
-                          <span className="text-[var(--text-muted)]">
-                            / {item.quantity}
-                            {item.unit ? ` ${item.unit}` : ""}
-                          </span>
-                        </div>
-                      </li>
+            {blockers.length ? (
+              <Alert>
+                <AlertTitle>Not ready to close</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc space-y-1 pl-5">
+                    {blockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
                     ))}
                   </ul>
-                </section>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            <section className="space-y-1.5 text-sm">
+              {order.scheduledStart ? (
+                <p className="flex items-center gap-2">
+                  <Clock className="size-4 text-[var(--text-muted)]" />
+                  <ClientDate value={order.scheduledStart} mode="datetime" />
+                </p>
               ) : null}
+              {order.site?.addressLine || order.addressLine ? (
+                <p className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 size-4 shrink-0 text-[var(--text-muted)]" />
+                  <span>
+                    {order.site?.name ? <strong>{order.site.name}</strong> : null}
+                    {order.site?.name ? " — " : ""}
+                    {order.site?.addressLine ?? order.addressLine}
+                  </span>
+                </p>
+              ) : null}
+              {order.contactPhone ? (
+                <p className="flex items-center gap-2">
+                  <Phone className="size-4 text-[var(--text-muted)]" />
+                  {/* Tappable, because this is read standing outside a gate. */}
+                  <a href={`tel:${order.contactPhone}`} className="hover:underline">
+                    {order.contactName ? `${order.contactName} — ` : ""}
+                    {order.contactPhone}
+                  </a>
+                </p>
+              ) : null}
+              {order.accessNotes || order.site?.accessInstructions ? (
+                <p className="rounded-[var(--radius-md)] bg-[var(--surface-subtle)] p-2 text-sm">
+                  {order.accessNotes ?? order.site?.accessInstructions}
+                </p>
+              ) : null}
+            </section>
 
-              {order.status === "COMPLETED" ? (
-                <section className="space-y-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-3 text-sm">
-                  <p className="font-medium">Signed off by {order.signedByName}</p>
-                  {order.customerRating ? (
-                    <p className="text-[var(--text-muted)]">
-                      Rated {order.customerRating} out of 5
-                    </p>
-                  ) : null}
-                  {order.completionNotes ? (
-                    <p className="text-[var(--text-muted)]">{order.completionNotes}</p>
-                  ) : null}
-                </section>
-              ) : canAct ? (
-                <section className="space-y-3">
-                  {order.status === "IN_PROGRESS" ? (
-                    <>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="signed-by">Signed off by *</Label>
+            {order.description ? (
+              <p className="whitespace-pre-wrap text-sm text-[var(--text-muted)]">
+                {order.description}
+              </p>
+            ) : null}
+
+            {order.items.length > 0 ? (
+              <section className="space-y-2">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="text-sm font-semibold">What needs doing</h3>
+                  <span className="text-sm text-[var(--text-muted)]">
+                    {completionPercent(order.items)}% done
+                  </span>
+                </div>
+
+                <ul className="space-y-2">
+                  {order.items.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm">{item.description}</p>
+                        {item.notes ? (
+                          <p className="text-sm text-[var(--text-muted)]">{item.notes}</p>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-1 text-sm">
                         <Input
-                          id="signed-by"
-                          value={signedByName}
-                          onChange={(event) => setSignedByName(event.target.value)}
-                          placeholder="Who at the site accepted the work"
+                          className="h-9 w-16 text-right"
+                          type="number"
+                          min={0}
+                          max={item.quantity}
+                          inputMode="decimal"
+                          disabled={order.status === "COMPLETED"}
+                          value={progress[item.id] ?? String(item.completedQuantity)}
+                          onChange={(event) =>
+                            setProgress((previous) => ({
+                              ...previous,
+                              [item.id]: event.target.value,
+                            }))
+                          }
                         />
+                        <span className="text-[var(--text-muted)]">
+                          / {item.quantity}
+                          {item.unit ? ` ${item.unit}` : ""}
+                        </span>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="completion-notes">Notes</Label>
-                        <Textarea
-                          id="completion-notes"
-                          rows={2}
-                          value={completionNotes}
-                          onChange={(event) => setCompletionNotes(event.target.value)}
-                        />
-                      </div>
-                    </>
-                  ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
 
-                  {order.status === "BLOCKED" || order.allowedTransitions?.includes("BLOCKED") ? (
+            {order.status === "COMPLETED" ? (
+              <section className="space-y-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-3 text-sm">
+                <p className="font-medium">Signed off by {order.signedByName}</p>
+                {order.customerRating ? (
+                  <p className="text-[var(--text-muted)]">
+                    Rated {order.customerRating} out of 5
+                  </p>
+                ) : null}
+                {order.completionNotes ? (
+                  <p className="text-[var(--text-muted)]">{order.completionNotes}</p>
+                ) : null}
+              </section>
+            ) : canAct ? (
+              <section className="space-y-3">
+                {order.status === "IN_PROGRESS" ? (
+                  <>
                     <div className="space-y-1.5">
-                      <Label htmlFor="blocked-reason">If it&apos;s blocked, why</Label>
+                      <Label htmlFor="signed-by">Signed off by *</Label>
                       <Input
-                        id="blocked-reason"
-                        value={blockedReason || (order.blockedReason ?? "")}
-                        onChange={(event) => setBlockedReason(event.target.value)}
-                        placeholder="Gate locked, wrong parts delivered…"
+                        id="signed-by"
+                        value={signedByName}
+                        onChange={(event) => setSignedByName(event.target.value)}
+                        placeholder="Who at the site accepted the work"
                       />
                     </div>
-                  ) : null}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="completion-notes">Notes</Label>
+                      <Textarea
+                        id="completion-notes"
+                        rows={2}
+                        value={completionNotes}
+                        onChange={(event) => setCompletionNotes(event.target.value)}
+                      />
+                    </div>
+                  </>
+                ) : null}
 
-                  <div className="flex flex-wrap gap-2">
-                    {(order.allowedTransitions ?? []).map((status) => (
-                      <Button
-                        key={status}
-                        type="button"
-                        variant={status === "COMPLETED" ? "default" : "outline"}
-                        size="sm"
-                        disabled={update.isPending}
-                        onClick={() =>
-                          update.mutate({
-                            status,
-                            itemProgress: itemProgress(),
-                            ...(status === "COMPLETED"
-                              ? {
-                                  signedByName: signedByName.trim() || undefined,
-                                  completionNotes: completionNotes.trim() || undefined,
-                                }
-                              : {}),
-                            ...(status === "BLOCKED"
-                              ? { blockedReason: blockedReason.trim() || undefined }
-                              : {}),
-                          })
-                        }
-                      >
-                        {status === "COMPLETED"
-                          ? "Complete job"
-                          : status === "IN_PROGRESS"
-                            ? "Start job"
-                            : WORK_ORDER_STATUS_LABELS[status]}
-                      </Button>
-                    ))}
+                {order.status === "BLOCKED" || order.allowedTransitions?.includes("BLOCKED") ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="blocked-reason">If it&apos;s blocked, why</Label>
+                    <Input
+                      id="blocked-reason"
+                      value={blockedReason || (order.blockedReason ?? "")}
+                      onChange={(event) => setBlockedReason(event.target.value)}
+                      placeholder="Gate locked, wrong parts delivered…"
+                    />
                   </div>
+                ) : null}
 
-                  {Object.keys(progress).length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {(order.allowedTransitions ?? []).map((status) => (
                     <Button
+                      key={status}
                       type="button"
-                      variant="ghost"
+                      variant={status === "COMPLETED" ? "default" : "outline"}
                       size="sm"
                       disabled={update.isPending}
-                      onClick={() => update.mutate({ itemProgress: itemProgress() })}
+                      onClick={() =>
+                        update.mutate({
+                          status,
+                          itemProgress: itemProgress(),
+                          ...(status === "COMPLETED"
+                            ? {
+                                signedByName: signedByName.trim() || undefined,
+                                completionNotes: completionNotes.trim() || undefined,
+                              }
+                            : {}),
+                          ...(status === "BLOCKED"
+                            ? { blockedReason: blockedReason.trim() || undefined }
+                            : {}),
+                        })
+                      }
                     >
-                      Save progress
+                      {status === "COMPLETED"
+                        ? "Complete job"
+                        : status === "IN_PROGRESS"
+                          ? "Start job"
+                          : WORK_ORDER_STATUS_LABELS[status]}
                     </Button>
-                  ) : null}
-                </section>
-              ) : (
-                <p className="text-sm text-[var(--text-muted)]">
-                  You&apos;re not on this job, so it&apos;s read-only for you.
-                </p>
-              )}
-            </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+                  ))}
+                </div>
+
+                {Object.keys(progress).length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={update.isPending}
+                    onClick={() => update.mutate({ itemProgress: itemProgress() })}
+                  >
+                    Save progress
+                  </Button>
+                ) : null}
+              </section>
+            ) : (
+              <p className="text-sm text-[var(--text-muted)]">
+                You&apos;re not on this job, so it&apos;s read-only for you.
+              </p>
+            )}
+          </div>
+        </>
+      )}
+    </RecordDialog>
   );
 }
 

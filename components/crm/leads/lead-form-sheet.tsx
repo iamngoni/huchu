@@ -15,15 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/searchable-select";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { X } from "@/lib/icons";
@@ -279,256 +272,244 @@ export function LeadFormSheet({
   const patch = (next: Partial<LeadFormValues>) => setForm((prev) => ({ ...prev, ...next }));
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent size="xl" className="w-full overflow-y-auto p-6">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "Edit lead" : "New lead"}</SheetTitle>
-          <SheetDescription>
-            {isEdit
-              ? "Update what you know about this opportunity."
-              : "Capture the opportunity now — you can fill in the rest as it develops."}
-          </SheetDescription>
-        </SheetHeader>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? "Edit lead" : "New lead"}
+      description={isEdit
+        ? "Update what you know about this opportunity."
+        : "Capture the opportunity now — you can fill in the rest as it develops."}
+      size="xl"
+      errors={errors}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const found = validate();
+        setErrors(found);
+        if (found.length === 0) save.mutate();
+      }}
+      footer={<>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create lead"}
+        </Button>
+      </>}
+    >
+      <Section title="Opportunity">
+        <div className="space-y-1.5">
+          <Label htmlFor="lead-title">Title</Label>
+          <Input
+            id="lead-title"
+            value={form.title}
+            onChange={(event) => patch({ title: event.target.value })}
+            placeholder="e.g. Warehouse roof replacement"
+            maxLength={200}
+          />
+        </div>
 
-        <div className="mt-6">
-          <FormShell
-            variant="bare"
-            errors={errors}
-            onSubmit={(event) => {
-              event.preventDefault();
-              const found = validate();
-              setErrors(found);
-              if (found.length === 0) save.mutate();
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="lead-value">Estimated value</Label>
+            <Input
+              id="lead-value"
+              inputMode="decimal"
+              className="font-mono"
+              value={form.estimatedValue}
+              onChange={(event) => patch({ estimatedValue: event.target.value })}
+              placeholder="0.00"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-currency">Currency</Label>
+            <Select value={form.currency} onValueChange={(value) => patch({ currency: value })}>
+              <SelectTrigger id="lead-currency">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((currency) => (
+                  <SelectItem key={currency} value={currency}>
+                    {currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-stage">Stage</Label>
+            <Select
+              value={form.stage}
+              onValueChange={(value) => patch({ stage: value as CrmLeadStage })}
+            >
+              <SelectTrigger id="lead-stage">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CRM_LEAD_STAGES.map((stage: CrmLeadStage) => (
+                  <SelectItem key={stage} value={stage}>
+                    {CRM_STAGE_LABELS[stage]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {isEdit ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="lead-probability">Probability (%)</Label>
+              <Input
+                id="lead-probability"
+                inputMode="numeric"
+                className="font-mono"
+                value={form.probability}
+                onChange={(event) => patch({ probability: event.target.value })}
+                placeholder={String(CRM_STAGE_DEFAULT_PROBABILITY[form.stage])}
+              />
+              <p className="text-sm text-[var(--text-muted)]">
+                Leave blank to use the {CRM_STAGE_LABELS[form.stage].toLowerCase()} default of{" "}
+                {CRM_STAGE_DEFAULT_PROBABILITY[form.stage]}%.
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Services</Label>
+          <ServicesInput
+            services={form.services}
+            onChange={(services) => patch({ services })}
+          />
+        </div>
+      </Section>
+
+      <Section title="Contact">
+        <div className="space-y-1.5">
+          <SearchableSelect
+            label="Client"
+            value={form.clientId}
+            options={clientOptions}
+            placeholder={clientsQuery.isLoading ? "Loading clients…" : "Search clients"}
+            searchPlaceholder="Search by name"
+            onValueChange={(clientId) => {
+              const client = clients.find((entry) => entry.id === clientId);
+              patch({
+                clientId,
+                // Prefill from the client, but leave anything already
+                // typed alone — the site contact often isn't the client.
+                contactName: form.contactName || client?.contactName || "",
+                contactEmail: form.contactEmail || client?.email || "",
+                contactPhone: form.contactPhone || client?.phone || "",
+              });
             }}
-            requiredHint="A lead needs at least a title, a client, or a contact name."
-            actions={
-              <>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={save.isPending}>
-                  {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create lead"}
-                </Button>
-              </>
+            onAddOption={(name) => createClient.mutate(name)}
+            addLabel="Create client"
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-contact-name">Contact name</Label>
+            <Input
+              id="lead-contact-name"
+              value={form.contactName}
+              onChange={(event) => patch({ contactName: event.target.value })}
+              maxLength={200}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-contact-email">Email</Label>
+            <Input
+              id="lead-contact-email"
+              type="email"
+              value={form.contactEmail}
+              onChange={(event) => patch({ contactEmail: event.target.value })}
+              maxLength={200}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-contact-phone">Phone</Label>
+            <Input
+              id="lead-contact-phone"
+              value={form.contactPhone}
+              onChange={(event) => patch({ contactPhone: event.target.value })}
+              maxLength={40}
+            />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Attribution & ownership">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-source">Source</Label>
+            <Input
+              id="lead-source"
+              list="crm-lead-source-options"
+              value={form.source}
+              onChange={(event) => {
+                const value = event.target.value;
+                const match = sources.find((source) => source.name === value);
+                patch({
+                  source: value,
+                  sourceChannel: match?.channel ?? form.sourceChannel,
+                });
+              }}
+              placeholder="e.g. Referral from Musa"
+              maxLength={120}
+            />
+            <datalist id="crm-lead-source-options">
+              {sources.map((source) => (
+                <option key={source.id} value={source.name} />
+              ))}
+            </datalist>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-channel">Channel</Label>
+            <Select
+              value={form.sourceChannel}
+              onValueChange={(value) => patch({ sourceChannel: value })}
+            >
+              <SelectTrigger id="lead-channel">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CRM_LEAD_CHANNELS.map((channel) => (
+                  <SelectItem key={channel} value={channel}>
+                    {CRM_CHANNEL_LABELS[channel]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="lead-owner">Owner</Label>
+          <Select
+            value={form.assignedToId || "__unassigned"}
+            onValueChange={(value) =>
+              patch({ assignedToId: value === "__unassigned" ? "" : value })
             }
           >
-            <Section title="Opportunity">
-              <div className="space-y-1.5">
-                <Label htmlFor="lead-title">Title</Label>
-                <Input
-                  id="lead-title"
-                  value={form.title}
-                  onChange={(event) => patch({ title: event.target.value })}
-                  placeholder="e.g. Warehouse roof replacement"
-                  maxLength={200}
-                />
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="lead-value">Estimated value</Label>
-                  <Input
-                    id="lead-value"
-                    inputMode="decimal"
-                    className="font-mono"
-                    value={form.estimatedValue}
-                    onChange={(event) => patch({ estimatedValue: event.target.value })}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="lead-currency">Currency</Label>
-                  <Select value={form.currency} onValueChange={(value) => patch({ currency: value })}>
-                    <SelectTrigger id="lead-currency">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CURRENCIES.map((currency) => (
-                        <SelectItem key={currency} value={currency}>
-                          {currency}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="lead-stage">Stage</Label>
-                  <Select
-                    value={form.stage}
-                    onValueChange={(value) => patch({ stage: value as CrmLeadStage })}
-                  >
-                    <SelectTrigger id="lead-stage">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CRM_LEAD_STAGES.map((stage: CrmLeadStage) => (
-                        <SelectItem key={stage} value={stage}>
-                          {CRM_STAGE_LABELS[stage]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {isEdit ? (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="lead-probability">Probability (%)</Label>
-                    <Input
-                      id="lead-probability"
-                      inputMode="numeric"
-                      className="font-mono"
-                      value={form.probability}
-                      onChange={(event) => patch({ probability: event.target.value })}
-                      placeholder={String(CRM_STAGE_DEFAULT_PROBABILITY[form.stage])}
-                    />
-                    <p className="text-sm text-[var(--text-muted)]">
-                      Leave blank to use the {CRM_STAGE_LABELS[form.stage].toLowerCase()} default of{" "}
-                      {CRM_STAGE_DEFAULT_PROBABILITY[form.stage]}%.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Services</Label>
-                <ServicesInput
-                  services={form.services}
-                  onChange={(services) => patch({ services })}
-                />
-              </div>
-            </Section>
-
-            <Section title="Contact">
-              <div className="space-y-1.5">
-                <SearchableSelect
-                  label="Client"
-                  value={form.clientId}
-                  options={clientOptions}
-                  placeholder={clientsQuery.isLoading ? "Loading clients…" : "Search clients"}
-                  searchPlaceholder="Search by name"
-                  onValueChange={(clientId) => {
-                    const client = clients.find((entry) => entry.id === clientId);
-                    patch({
-                      clientId,
-                      // Prefill from the client, but leave anything already
-                      // typed alone — the site contact often isn't the client.
-                      contactName: form.contactName || client?.contactName || "",
-                      contactEmail: form.contactEmail || client?.email || "",
-                      contactPhone: form.contactPhone || client?.phone || "",
-                    });
-                  }}
-                  onAddOption={(name) => createClient.mutate(name)}
-                  addLabel="Create client"
-                />
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="lead-contact-name">Contact name</Label>
-                  <Input
-                    id="lead-contact-name"
-                    value={form.contactName}
-                    onChange={(event) => patch({ contactName: event.target.value })}
-                    maxLength={200}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="lead-contact-email">Email</Label>
-                  <Input
-                    id="lead-contact-email"
-                    type="email"
-                    value={form.contactEmail}
-                    onChange={(event) => patch({ contactEmail: event.target.value })}
-                    maxLength={200}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="lead-contact-phone">Phone</Label>
-                  <Input
-                    id="lead-contact-phone"
-                    value={form.contactPhone}
-                    onChange={(event) => patch({ contactPhone: event.target.value })}
-                    maxLength={40}
-                  />
-                </div>
-              </div>
-            </Section>
-
-            <Section title="Attribution & ownership">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="lead-source">Source</Label>
-                  <Input
-                    id="lead-source"
-                    list="crm-lead-source-options"
-                    value={form.source}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      const match = sources.find((source) => source.name === value);
-                      patch({
-                        source: value,
-                        sourceChannel: match?.channel ?? form.sourceChannel,
-                      });
-                    }}
-                    placeholder="e.g. Referral from Musa"
-                    maxLength={120}
-                  />
-                  <datalist id="crm-lead-source-options">
-                    {sources.map((source) => (
-                      <option key={source.id} value={source.name} />
-                    ))}
-                  </datalist>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="lead-channel">Channel</Label>
-                  <Select
-                    value={form.sourceChannel}
-                    onValueChange={(value) => patch({ sourceChannel: value })}
-                  >
-                    <SelectTrigger id="lead-channel">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CRM_LEAD_CHANNELS.map((channel) => (
-                        <SelectItem key={channel} value={channel}>
-                          {CRM_CHANNEL_LABELS[channel]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="lead-owner">Owner</Label>
-                <Select
-                  value={form.assignedToId || "__unassigned"}
-                  onValueChange={(value) =>
-                    patch({ assignedToId: value === "__unassigned" ? "" : value })
-                  }
-                >
-                  <SelectTrigger id="lead-owner">
-                    <SelectValue placeholder="Unassigned" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__unassigned">Unassigned</SelectItem>
-                    {owners.map((owner) => (
-                      <SelectItem key={owner.id} value={owner.id}>
-                        {owner.name ?? "Unnamed"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-[var(--text-muted)]">
-                  Unassigned leads are claimable by anyone on the team.
-                </p>
-              </div>
-            </Section>
-          </FormShell>
+            <SelectTrigger id="lead-owner">
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__unassigned">Unassigned</SelectItem>
+              {owners.map((owner) => (
+                <SelectItem key={owner.id} value={owner.id}>
+                  {owner.name ?? "Unnamed"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-[var(--text-muted)]">
+            Unassigned leads are claimable by anyone on the team.
+          </p>
         </div>
-      </SheetContent>
-    </Sheet>
+      </Section>
+    </RecordDialog>
   );
 }

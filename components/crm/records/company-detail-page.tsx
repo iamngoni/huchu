@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -20,6 +19,7 @@ import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { EntityLink } from "./entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { CompanyFormSheet } from "./company-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
@@ -156,9 +156,18 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
     );
   }
 
-  const subtitle = [company.tradingName, company.city, company.assignedTo?.name ?? "Unassigned"]
-    .filter(Boolean)
-    .join(" · ");
+  const subtitle = (
+    <>
+      {[company.tradingName, company.city].filter(Boolean).join(" · ")}
+      {company.tradingName || company.city ? " · " : null}
+      <EntityLink
+        href={company.assignedTo ? `/crm/reps/${company.assignedTo.id}` : null}
+        muted
+      >
+        {company.assignedTo?.name ?? "Unassigned"}
+      </EntityLink>
+    </>
+  );
 
   const wonValue = company.deals
     .filter((deal) => deal.status === "WON")
@@ -296,9 +305,9 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
             <RailSection title="Hierarchy">
               {company.parent ? (
                 <p className="text-sm">
-                  <Link href={`/crm/companies/${company.parent.id}`} className="hover:underline">
+                  <EntityLink href={`/crm/companies/${company.parent.id}`}>
                     {company.parent.name}
-                  </Link>
+                  </EntityLink>
                   {company.parentRelation ? (
                     <span className="text-sm text-[var(--text-muted)]">
                       {" · "}
@@ -311,9 +320,9 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
                 <ul className={company.parent ? "mt-2 space-y-1.5" : "space-y-1.5"}>
                   {company.children.map((child) => (
                     <li key={child.id} className="text-sm">
-                      <Link href={`/crm/companies/${child.id}`} className="hover:underline">
+                      <EntityLink href={`/crm/companies/${child.id}`}>
                         {child.name}
-                      </Link>
+                      </EntityLink>
                       {child.parentRelation ? (
                         <span className="text-sm text-[var(--text-muted)]">
                           {" · "}

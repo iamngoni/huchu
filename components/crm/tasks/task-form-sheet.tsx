@@ -14,14 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { createCrmTask, type CrmTaskRecordRef } from "@/lib/crm/crm-v2";
@@ -145,154 +138,145 @@ export function TaskFormSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>New task</SheetTitle>
-          <SheetDescription>
-            Pick a type and the task will ask what happened when you complete it.
-          </SheetDescription>
-        </SheetHeader>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="New task"
+      description="Pick a type and the task will ask what happened when you complete it."
+      errors={errors}
+      onSubmit={(event) => {
+        event.preventDefault();
+        submit();
+      }}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={create.isPending}>
+            {create.isPending ? "Creating…" : "Create task"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-2">
+        <Label htmlFor="task-title">Title</Label>
+        <Input
+          id="task-title"
+          value={form.title}
+          onChange={(event) => set("title", event.target.value)}
+          placeholder="Call about the revised quote"
+        />
+      </div>
 
-        <FormShell
-          variant="bare"
-          errors={errors}
-          requiredHint="A title and a due date are required."
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit();
-          }}
-          actions={
-            <>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "Creating…" : "Create task"}
-              </Button>
-            </>
-          }
-        >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Type</Label>
+          <Select value={form.type} onValueChange={(value) => set("type", value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CRM_TASK_TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {CRM_TASK_TYPE_LABELS[type]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Priority</Label>
+          <Select value={form.priority} onValueChange={(value) => set("priority", value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(CRM_TASK_PRIORITY_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="task-due">Due</Label>
+          <Input
+            id="task-due"
+            type="datetime-local"
+            value={form.dueAt}
+            onChange={(event) => set("dueAt", event.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Assigned to</Label>
+          <Select
+            value={form.assignedToId}
+            onValueChange={(value) => set("assignedToId", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              {(team?.data ?? []).map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name ?? user.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Repeats</Label>
+          <Select value={form.recurrence} onValueChange={(value) => set("recurrence", value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NONE">Doesn&apos;t repeat</SelectItem>
+              <SelectItem value="DAILY">Daily</SelectItem>
+              <SelectItem value="WEEKLY">Weekly</SelectItem>
+              <SelectItem value="MONTHLY">Monthly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {form.recurrence !== "NONE" ? (
           <div className="space-y-2">
-            <Label htmlFor="task-title">Title</Label>
+            <Label htmlFor="task-interval">Every</Label>
             <Input
-              id="task-title"
-              value={form.title}
-              onChange={(event) => set("title", event.target.value)}
-              placeholder="Call about the revised quote"
+              id="task-interval"
+              type="number"
+              min={1}
+              max={52}
+              value={form.recurrenceInterval}
+              onChange={(event) => set("recurrenceInterval", event.target.value)}
             />
+            <p className="text-sm text-[var(--text-muted)]">
+              The next one is created when you complete this one.
+            </p>
           </div>
+        ) : null}
+      </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Type</Label>
-              <Select value={form.type} onValueChange={(value) => set("type", value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CRM_TASK_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {CRM_TASK_TYPE_LABELS[type]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Priority</Label>
-              <Select value={form.priority} onValueChange={(value) => set("priority", value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(CRM_TASK_PRIORITY_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="task-due">Due</Label>
-              <Input
-                id="task-due"
-                type="datetime-local"
-                value={form.dueAt}
-                onChange={(event) => set("dueAt", event.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Assigned to</Label>
-              <Select
-                value={form.assignedToId}
-                onValueChange={(value) => set("assignedToId", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(team?.data ?? []).map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name ?? user.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Repeats</Label>
-              <Select value={form.recurrence} onValueChange={(value) => set("recurrence", value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NONE">Doesn&apos;t repeat</SelectItem>
-                  <SelectItem value="DAILY">Daily</SelectItem>
-                  <SelectItem value="WEEKLY">Weekly</SelectItem>
-                  <SelectItem value="MONTHLY">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {form.recurrence !== "NONE" ? (
-              <div className="space-y-2">
-                <Label htmlFor="task-interval">Every</Label>
-                <Input
-                  id="task-interval"
-                  type="number"
-                  min={1}
-                  max={52}
-                  value={form.recurrenceInterval}
-                  onChange={(event) => set("recurrenceInterval", event.target.value)}
-                />
-                <p className="text-sm text-[var(--text-muted)]">
-                  The next one is created when you complete this one.
-                </p>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="task-notes">Notes</Label>
-            <Textarea
-              id="task-notes"
-              rows={3}
-              value={form.description}
-              onChange={(event) => set("description", event.target.value)}
-            />
-          </div>
-        </FormShell>
-      </SheetContent>
-    </Sheet>
+      <div className="space-y-2">
+        <Label htmlFor="task-notes">Notes</Label>
+        <Textarea
+          id="task-notes"
+          rows={3}
+          value={form.description}
+          onChange={(event) => set("description", event.target.value)}
+        />
+      </div>
+    </RecordDialog>
   );
 }

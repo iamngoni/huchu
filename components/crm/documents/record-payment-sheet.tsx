@@ -13,14 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 
@@ -105,103 +98,91 @@ export function RecordPaymentSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent size="md" className="w-full overflow-y-auto p-6">
-        <SheetHeader>
-          <SheetTitle>Record a payment</SheetTitle>
-          <SheetDescription>
-            {document?.invoice
-              ? `Against invoice ${document.invoice.invoiceNumber} — ${formatMoney(
-                  outstanding,
-                  document.currency,
-                )} outstanding.`
-              : "Against this invoice."}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="mt-6">
-          <FormShell
-            variant="bare"
-            errors={errors}
-            requiredHint="Amount and method are required."
-            onSubmit={(event) => {
-              event.preventDefault();
-              const found = validate();
-              setErrors(found);
-              if (found.length === 0) record.mutate();
-            }}
-            actions={
-              <>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={record.isPending}>
-                  {record.isPending ? "Recording…" : "Record payment"}
-                </Button>
-              </>
-            }
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Record a payment"
+      description={document?.invoice
+        ? `Against invoice ${document.invoice.invoiceNumber} — ${formatMoney(
+            outstanding,
+            document.currency,
+          )} outstanding.`
+        : "Against this invoice."}
+      size="md"
+      errors={errors}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const found = validate();
+        setErrors(found);
+        if (found.length === 0) record.mutate();
+      }}
+      footer={<>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={record.isPending}>
+          {record.isPending ? "Recording…" : "Record payment"}
+        </Button>
+      </>}
+    >
+      <div className="space-y-1.5">
+        <Label htmlFor="payment-amount">Amount *</Label>
+        <Input
+          id="payment-amount"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+          inputMode="decimal"
+          className="font-mono"
+          placeholder="0.00"
+        />
+        {outstanding > 0 && Number(amount) < outstanding ? (
+          <button
+            type="button"
+            className="text-sm text-[var(--text-muted)] underline"
+            onClick={() => setAmount(outstanding.toFixed(2))}
           >
-            <div className="space-y-1.5">
-              <Label htmlFor="payment-amount">Amount *</Label>
-              <Input
-                id="payment-amount"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                inputMode="decimal"
-                className="font-mono"
-                placeholder="0.00"
-              />
-              {outstanding > 0 && Number(amount) < outstanding ? (
-                <button
-                  type="button"
-                  className="text-sm text-[var(--text-muted)] underline"
-                  onClick={() => setAmount(outstanding.toFixed(2))}
-                >
-                  Pay the full {formatMoney(outstanding, document?.currency ?? "USD")}
-                </button>
-              ) : null}
-            </div>
+            Pay the full {formatMoney(outstanding, document?.currency ?? "USD")}
+          </button>
+        ) : null}
+      </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="payment-method">Method *</Label>
-                <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger id="payment-method">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_METHODS.map((entry) => (
-                      <SelectItem key={entry} value={entry}>
-                        {entry}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="payment-date">Received on</Label>
-                <Input
-                  id="payment-date"
-                  type="date"
-                  value={receivedAt}
-                  onChange={(event) => setReceivedAt(event.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="payment-reference">Reference</Label>
-              <Input
-                id="payment-reference"
-                value={reference}
-                onChange={(event) => setReference(event.target.value)}
-                placeholder="Transfer reference, cheque number…"
-                maxLength={120}
-              />
-            </div>
-          </FormShell>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="payment-method">Method *</Label>
+          <Select value={method} onValueChange={setMethod}>
+            <SelectTrigger id="payment-method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAYMENT_METHODS.map((entry) => (
+                <SelectItem key={entry} value={entry}>
+                  {entry}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </SheetContent>
-    </Sheet>
+        <div className="space-y-1.5">
+          <Label htmlFor="payment-date">Received on</Label>
+          <Input
+            id="payment-date"
+            type="date"
+            value={receivedAt}
+            onChange={(event) => setReceivedAt(event.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="payment-reference">Reference</Label>
+        <Input
+          id="payment-reference"
+          value={reference}
+          onChange={(event) => setReference(event.target.value)}
+          placeholder="Transfer reference, cheque number…"
+          maxLength={120}
+        />
+      </div>
+    </RecordDialog>
   );
 }

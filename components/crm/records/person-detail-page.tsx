@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -18,6 +17,7 @@ import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { EntityLink } from "./entity-link";
 import { Users } from "@/lib/icons";
 
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
@@ -160,9 +160,25 @@ export function PersonDetailPage({ personId }: { personId: string }) {
     );
   }
 
-  const subtitle = [person.jobTitle, person.client?.name, person.assignedTo?.name ?? "Unassigned"]
-    .filter(Boolean)
-    .join(" · ");
+  const subtitle = (
+    <>
+      {person.jobTitle ? <>{person.jobTitle} · </> : null}
+      {person.client ? (
+        <>
+          <EntityLink href={`/crm/companies/${person.client.id}`} muted>
+            {person.client.name}
+          </EntityLink>
+          {" · "}
+        </>
+      ) : null}
+      <EntityLink
+        href={person.assignedTo ? `/crm/reps/${person.assignedTo.id}` : null}
+        muted
+      >
+        {person.assignedTo?.name ?? "Unassigned"}
+      </EntityLink>
+    </>
+  );
 
   return (
     <>
@@ -252,9 +268,9 @@ export function PersonDetailPage({ personId }: { personId: string }) {
 
           <RailSection title="Company">
             {person.client ? (
-              <Link href={`/crm/companies/${person.client.id}`} className="text-sm hover:underline">
+              <EntityLink href={`/crm/companies/${person.client.id}`} className="text-sm">
                 {person.client.name}
-              </Link>
+              </EntityLink>
             ) : (
               <p className="text-sm text-[var(--text-muted)]">No company</p>
             )}
@@ -265,9 +281,9 @@ export function PersonDetailPage({ personId }: { personId: string }) {
               <ul className="space-y-1.5">
                 {person.companyLinks.map((link) => (
                   <li key={link.id} className="text-sm">
-                    <Link href={`/crm/companies/${link.client.id}`} className="hover:underline">
+                    <EntityLink href={`/crm/companies/${link.client.id}`}>
                       {link.client.name}
-                    </Link>
+                    </EntityLink>
                     {link.jobTitle ? (
                       <span className="text-sm text-[var(--text-muted)]"> · {link.jobTitle}</span>
                     ) : null}

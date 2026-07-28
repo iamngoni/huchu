@@ -9,14 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { Camera, Plus, Trash2 } from "@/lib/icons";
@@ -212,347 +205,345 @@ export function VisitReportSheet({
   const isLoading = reportQuery.isLoading;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent size="xl" className="w-full overflow-y-auto p-6">
-        <SheetHeader>
-          <SheetTitle>Site visit report{appointmentNo ? ` · ${appointmentNo}` : ""}</SheetTitle>
-          <SheetDescription>
-            Everything captured here feeds the quotation — measure once, quote from it.
-          </SheetDescription>
-        </SheetHeader>
-
-        {isLoading ? (
-          <div className="mt-6 space-y-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-6">
-            <FormShell
-              variant="bare"
-              errors={errors}
-              requiredHint="Save a draft any time — complete the visit when you're off site."
-              onSubmit={(event) => {
-                event.preventDefault();
-                const found = validateForCompletion();
-                setErrors(found);
-                if (found.length === 0) save.mutate(true);
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Site visit report${appointmentNo ? ` · ${appointmentNo}` : ""}`}
+      description="Everything captured here feeds the quotation — measure once, quote from it."
+      size="xl"
+      errors={isLoading ? undefined : errors}
+      onSubmit={
+        isLoading
+          ? undefined
+          : (event) => {
+              event.preventDefault();
+              const found = validateForCompletion();
+              setErrors(found);
+              if (found.length === 0) save.mutate(true);
+            }
+      }
+      footer={
+        isLoading ? null : (
+          <>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={save.isPending}
+              onClick={() => {
+                setErrors([]);
+                save.mutate(false);
               }}
-              actions={
-                <>
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                    Close
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={save.isPending}
-                    onClick={() => {
-                      setErrors([]);
-                      save.mutate(false);
-                    }}
-                  >
-                    Save draft
-                  </Button>
-                  <Button type="submit" disabled={save.isPending}>
-                    {save.isPending ? "Saving…" : "Complete visit"}
-                  </Button>
-                </>
-              }
             >
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  On-site checklist
-                </h3>
-                <ul className="divide-y divide-[var(--border-subtle)]">
-                  {checklist.map((entry, index) => (
-                    <li key={entry.key} className="space-y-1.5 p-2.5">
-                      <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                        <Checkbox
-                          checked={entry.checked}
-                          onCheckedChange={(checked) =>
-                            setChecklist((current) =>
-                              current.map((item, i) =>
-                                i === index ? { ...item, checked: checked === true } : item,
-                              ),
-                            )
-                          }
-                        />
-                        <span>{entry.label}</span>
-                      </label>
-                      {entry.checked ? null : (
-                        <Input
-                          value={entry.notes ?? ""}
-                          onChange={(event) =>
-                            setChecklist((current) =>
-                              current.map((item, i) =>
-                                i === index ? { ...item, notes: event.target.value } : item,
-                              ),
-                            )
-                          }
-                          placeholder="Why not? (optional)"
-                          className="h-8 text-sm"
-                          aria-label={`Note for ${entry.label}`}
-                        />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              Save draft
+            </Button>
+            <Button type="submit" disabled={save.isPending}>
+              {save.isPending ? "Saving…" : "Complete visit"}
+            </Button>
+          </>
+        )
+      }
+    >
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-20 w-full" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              On-site checklist
+            </h3>
+            <ul className="divide-y divide-[var(--border-subtle)]">
+              {checklist.map((entry, index) => (
+                <li key={entry.key} className="space-y-1.5 p-2.5">
+                  <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                    <Checkbox
+                      checked={entry.checked}
+                      onCheckedChange={(checked) =>
+                        setChecklist((current) =>
+                          current.map((item, i) =>
+                            i === index ? { ...item, checked: checked === true } : item,
+                          ),
+                        )
+                      }
+                    />
+                    <span>{entry.label}</span>
+                  </label>
+                  {entry.checked ? null : (
+                    <Input
+                      value={entry.notes ?? ""}
+                      onChange={(event) =>
+                        setChecklist((current) =>
+                          current.map((item, i) =>
+                            i === index ? { ...item, notes: event.target.value } : item,
+                          ),
+                        )
+                      }
+                      placeholder="Why not? (optional)"
+                      className="h-8 text-sm"
+                      aria-label={`Note for ${entry.label}`}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
 
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  Measurements & specifications
-                </h3>
-                <p className="text-sm text-[var(--text-muted)]">
-                  Each row becomes a quotation line. Prices are optional — leave them blank to
-                  price up back at the office.
-                </p>
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Measurements & specifications
+            </h3>
+            <p className="text-sm text-[var(--text-muted)]">
+              Each row becomes a quotation line. Prices are optional — leave them blank to
+              price up back at the office.
+            </p>
 
-                <div className="space-y-3">
-                  {items.map((item, index) => (
-                    <div
-                      key={index}
-                      className="space-y-2 rounded-[var(--card-radius)] border border-[var(--border)] p-3"
-                    >
-                      <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)_2rem]">
-                        <Input
-                          value={item.category}
-                          onChange={(event) => patchItem(index, { category: event.target.value })}
-                          placeholder="Category"
-                          aria-label={`Item ${index + 1} category`}
-                          maxLength={80}
-                        />
-                        <Input
-                          value={item.description}
-                          onChange={(event) =>
-                            patchItem(index, { description: event.target.value })
-                          }
-                          placeholder="What is it? e.g. Aluminium sliding window"
-                          aria-label={`Item ${index + 1} description`}
-                          maxLength={300}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-9 w-9 px-0"
-                          aria-label={`Remove item ${index + 1}`}
-                          disabled={items.length === 1}
-                          onClick={() =>
-                            setItems((current) => current.filter((_, i) => i !== index))
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
-                        <div className="space-y-1">
-                          <Label className="text-sm">Qty</Label>
-                          <Input
-                            value={item.quantity}
-                            onChange={(event) =>
-                              patchItem(index, { quantity: event.target.value })
-                            }
-                            inputMode="decimal"
-                            className="font-mono"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-sm">Unit</Label>
-                          <Input
-                            value={item.unit}
-                            onChange={(event) => patchItem(index, { unit: event.target.value })}
-                            list="crm-visit-units"
-                            maxLength={20}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-sm">Width mm</Label>
-                          <Input
-                            value={item.widthMm}
-                            onChange={(event) => patchItem(index, { widthMm: event.target.value })}
-                            inputMode="decimal"
-                            className="font-mono"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-sm">Height mm</Label>
-                          <Input
-                            value={item.heightMm}
-                            onChange={(event) =>
-                              patchItem(index, { heightMm: event.target.value })
-                            }
-                            inputMode="decimal"
-                            className="font-mono"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-sm">Depth mm</Label>
-                          <Input
-                            value={item.depthMm}
-                            onChange={(event) => patchItem(index, { depthMm: event.target.value })}
-                            inputMode="decimal"
-                            className="font-mono"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-sm">Est. price</Label>
-                          <Input
-                            value={item.unitPrice}
-                            onChange={(event) =>
-                              patchItem(index, { unitPrice: event.target.value })
-                            }
-                            inputMode="decimal"
-                            className="font-mono"
-                            placeholder="—"
-                          />
-                        </div>
-                      </div>
-
-                      <Input
-                        value={item.specNotes}
-                        onChange={(event) => patchItem(index, { specNotes: event.target.value })}
-                        placeholder="Material, finish, glass type, colour…"
-                        aria-label={`Item ${index + 1} specification notes`}
-                        maxLength={500}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <datalist id="crm-visit-units">
-                  {UNITS.map((unit) => (
-                    <option key={unit} value={unit} />
-                  ))}
-                </datalist>
-
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => setItems((current) => [...current, emptyMeasurement()])}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add item
-                  </Button>
-                  {items.length > 0 ? (
+            <div className="space-y-3">
+              {items.map((item, index) => (
+                <div
+                  key={index}
+                  className="space-y-2 rounded-[var(--card-radius)] border border-[var(--border)] p-3"
+                >
+                  <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)_2rem]">
+                    <Input
+                      value={item.category}
+                      onChange={(event) => patchItem(index, { category: event.target.value })}
+                      placeholder="Category"
+                      aria-label={`Item ${index + 1} category`}
+                      maxLength={80}
+                    />
+                    <Input
+                      value={item.description}
+                      onChange={(event) =>
+                        patchItem(index, { description: event.target.value })
+                      }
+                      placeholder="What is it? e.g. Aluminium sliding window"
+                      aria-label={`Item ${index + 1} description`}
+                      maxLength={300}
+                    />
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
+                      className="h-9 w-9 px-0"
+                      aria-label={`Remove item ${index + 1}`}
+                      disabled={items.length === 1}
                       onClick={() =>
-                        setItems((current) => [...current, { ...current[current.length - 1] }])
+                        setItems((current) => current.filter((_, i) => i !== index))
                       }
                     >
-                      Duplicate last
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  ) : null}
-                </div>
-              </section>
+                  </div>
 
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  Photos & files
-                </h3>
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-[var(--card-radius)] border border-dashed border-[var(--border)] p-4 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">
-                  <Camera className="h-4 w-4" />
-                  {uploading ? "Uploading…" : "Add photos of every work area"}
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,application/pdf"
-                    className="sr-only"
-                    disabled={uploading}
-                    onChange={(event) => {
-                      const files = Array.from(event.target.files ?? []);
-                      if (files.length > 0) void uploadFiles(files);
-                      event.target.value = "";
-                    }}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
+                    <div className="space-y-1">
+                      <Label className="text-sm">Qty</Label>
+                      <Input
+                        value={item.quantity}
+                        onChange={(event) =>
+                          patchItem(index, { quantity: event.target.value })
+                        }
+                        inputMode="decimal"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm">Unit</Label>
+                      <Input
+                        value={item.unit}
+                        onChange={(event) => patchItem(index, { unit: event.target.value })}
+                        list="crm-visit-units"
+                        maxLength={20}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm">Width mm</Label>
+                      <Input
+                        value={item.widthMm}
+                        onChange={(event) => patchItem(index, { widthMm: event.target.value })}
+                        inputMode="decimal"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm">Height mm</Label>
+                      <Input
+                        value={item.heightMm}
+                        onChange={(event) =>
+                          patchItem(index, { heightMm: event.target.value })
+                        }
+                        inputMode="decimal"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm">Depth mm</Label>
+                      <Input
+                        value={item.depthMm}
+                        onChange={(event) => patchItem(index, { depthMm: event.target.value })}
+                        inputMode="decimal"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm">Est. price</Label>
+                      <Input
+                        value={item.unitPrice}
+                        onChange={(event) =>
+                          patchItem(index, { unitPrice: event.target.value })
+                        }
+                        inputMode="decimal"
+                        className="font-mono"
+                        placeholder="—"
+                      />
+                    </div>
+                  </div>
+
+                  <Input
+                    value={item.specNotes}
+                    onChange={(event) => patchItem(index, { specNotes: event.target.value })}
+                    placeholder="Material, finish, glass type, colour…"
+                    aria-label={`Item ${index + 1} specification notes`}
+                    maxLength={500}
                   />
-                </label>
+                </div>
+              ))}
+            </div>
 
-                {photos.length > 0 ? (
-                  <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {photos.map((photo, index) => (
-                      <li
-                        key={photo.url}
-                        className="space-y-1 rounded-[var(--card-radius)] border border-[var(--border)] p-1.5"
-                      >
-                        <a href={photo.url} target="_blank" rel="noreferrer" className="block">
-                          {photo.kind === "PHOTO" ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={photo.url}
-                              alt={photo.caption ?? photo.fileName ?? "Site photo"}
-                              className="h-24 w-full rounded object-cover"
-                            />
-                          ) : (
-                            <span className="flex h-24 items-center justify-center rounded bg-[var(--surface-muted)] px-2 text-center text-sm">
-                              {photo.fileName ?? "File"}
-                            </span>
-                          )}
-                        </a>
-                        <Input
-                          value={photo.caption ?? ""}
-                          onChange={(event) =>
-                            setPhotos((current) =>
-                              current.map((entry, i) =>
-                                i === index ? { ...entry, caption: event.target.value } : entry,
-                              ),
-                            )
-                          }
-                          placeholder="Caption"
-                          className="h-7 text-sm"
-                          aria-label="Photo caption"
+            <datalist id="crm-visit-units">
+              {UNITS.map((unit) => (
+                <option key={unit} value={unit} />
+              ))}
+            </datalist>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setItems((current) => [...current, emptyMeasurement()])}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add item
+              </Button>
+              {items.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setItems((current) => [...current, { ...current[current.length - 1] }])
+                  }
+                >
+                  Duplicate last
+                </Button>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Photos & files
+            </h3>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-[var(--card-radius)] border border-dashed border-[var(--border)] p-4 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">
+              <Camera className="h-4 w-4" />
+              {uploading ? "Uploading…" : "Add photos of every work area"}
+              <input
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                className="sr-only"
+                disabled={uploading}
+                onChange={(event) => {
+                  const files = Array.from(event.target.files ?? []);
+                  if (files.length > 0) void uploadFiles(files);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+
+            {photos.length > 0 ? (
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {photos.map((photo, index) => (
+                  <li
+                    key={photo.url}
+                    className="space-y-1 rounded-[var(--card-radius)] border border-[var(--border)] p-1.5"
+                  >
+                    <a href={photo.url} target="_blank" rel="noreferrer" className="block">
+                      {photo.kind === "PHOTO" ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photo.url}
+                          alt={photo.caption ?? photo.fileName ?? "Site photo"}
+                          className="h-24 w-full rounded object-cover"
                         />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-full text-sm"
-                          onClick={() =>
-                            setPhotos((current) => current.filter((_, i) => i !== index))
-                          }
-                        >
-                          Remove
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </section>
+                      ) : (
+                        <span className="flex h-24 items-center justify-center rounded bg-[var(--surface-muted)] px-2 text-center text-sm">
+                          {photo.fileName ?? "File"}
+                        </span>
+                      )}
+                    </a>
+                    <Input
+                      value={photo.caption ?? ""}
+                      onChange={(event) =>
+                        setPhotos((current) =>
+                          current.map((entry, i) =>
+                            i === index ? { ...entry, caption: event.target.value } : entry,
+                          ),
+                        )
+                      }
+                      placeholder="Caption"
+                      className="h-7 text-sm"
+                      aria-label="Photo caption"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-full text-sm"
+                      onClick={() =>
+                        setPhotos((current) => current.filter((_, i) => i !== index))
+                      }
+                    >
+                      Remove
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
 
-              <section className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="site-conditions">Site conditions</Label>
-                  <Textarea
-                    id="site-conditions"
-                    value={siteConditions}
-                    onChange={(event) => setSiteConditions(event.target.value)}
-                    rows={3}
-                    placeholder="Access, power and water, terrain, obstructions, anything that affects the price or the schedule."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="report-notes">Findings</Label>
-                  <Textarea
-                    id="report-notes"
-                    value={reportNotes}
-                    onChange={(event) => setReportNotes(event.target.value)}
-                    rows={3}
-                    placeholder="What you found, what the client asked for, what you promised."
-                  />
-                </div>
-              </section>
-            </FormShell>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
+          <section className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="site-conditions">Site conditions</Label>
+              <Textarea
+                id="site-conditions"
+                value={siteConditions}
+                onChange={(event) => setSiteConditions(event.target.value)}
+                rows={3}
+                placeholder="Access, power and water, terrain, obstructions, anything that affects the price or the schedule."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="report-notes">Findings</Label>
+              <Textarea
+                id="report-notes"
+                value={reportNotes}
+                onChange={(event) => setReportNotes(event.target.value)}
+                rows={3}
+                placeholder="What you found, what the client asked for, what you promised."
+              />
+            </div>
+          </section>
+        </div>
+      )}
+    </RecordDialog>
   );
 }

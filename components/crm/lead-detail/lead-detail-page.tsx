@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import type { CrmLeadStage } from "@prisma/client";
@@ -14,12 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { ArrowRight, Calendar, FileText, Pencil } from "@/lib/icons";
+import { ArrowRight, Calendar, FileText, Funnel, Pencil } from "@/lib/icons";
 import { updateCrmLeadStage } from "@/lib/crm/crm-v2";
 import { visitItemsToQuotationLines } from "@/lib/crm/site-visits";
 import type { CrmDocumentLineInput } from "@/lib/crm/accounting-bridge";
 
+import { PageChrome } from "@/components/layout/page-chrome";
 import { DocumentList } from "@/components/crm/documents/document-list";
+import { EntityLink } from "@/components/crm/records/entity-link";
 import { formatMoney, invoiceOutstanding } from "@/components/crm/documents/document-types";
 import { LeadFormSheet } from "@/components/crm/leads/lead-form-sheet";
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
@@ -151,61 +152,71 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
 
   return (
     <div className="space-y-4">
+      {/* Name, back and actions all live in the top app bar, the same as every
+          other page. What stays here is the part the bar cannot carry: who this
+          lead is with, and where it has got to. */}
+      <PageChrome
+        title={lead.title ?? lead.leadNo}
+        icon={Funnel}
+        backHref="/crm/leads"
+        backLabel="All leads"
+      >
+        <>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditOpen(true)}>
+            <Pencil className="h-3.5 w-3.5" />
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => setScheduleOpen(true)}
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            Schedule visit
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={!lead.clientId}
+            title={lead.clientId ? undefined : "Attach a client before quoting"}
+            onClick={() => setTab("documents")}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Documents
+          </Button>
+          {/* Converting is the one thing a qualified lead exists to do, so it
+              is the primary action until it has been done. */}
+          <Button size="sm" className="gap-1.5" onClick={() => setConvertOpen(true)}>
+            <ArrowRight className="h-3.5 w-3.5" />
+            Convert to deal
+          </Button>
+        </>
+      </PageChrome>
+
       <header className="space-y-3">
-        <Link href="/crm/leads" className="text-sm text-[var(--text-muted)] hover:underline">
-          ← All leads
-        </Link>
-
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold">{lead.title ?? lead.leadNo}</h1>
-              <StatusChip
-                status={CRM_STAGE_STATUS[lead.stage]}
-                label={CRM_STAGE_LABELS[lead.stage]}
-              />
-            </div>
-            <p className="text-sm text-[var(--text-muted)]">
-              <span className="font-mono">{lead.leadNo}</span>
-              {" · "}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="font-mono text-sm text-[var(--text-muted)]">{lead.leadNo}</span>
+          <StatusChip
+            status={CRM_STAGE_STATUS[lead.stage]}
+            label={CRM_STAGE_LABELS[lead.stage]}
+          />
+          <span className="min-w-0 truncate text-sm text-[var(--text-muted)]">
+            <EntityLink
+              href={lead.clientId ? `/crm/companies/${lead.clientId}` : null}
+              muted
+            >
               {lead.client?.name ?? "No client"}
-              {" · "}
+            </EntityLink>
+            {" · "}
+            <EntityLink
+              href={lead.assignedTo ? `/crm/reps/${lead.assignedTo.id}` : null}
+              muted
+            >
               {lead.assignedTo?.name ?? "Unassigned"}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditOpen(true)}>
-              <Pencil className="h-3.5 w-3.5" />
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={() => setScheduleOpen(true)}
-            >
-              <Calendar className="h-3.5 w-3.5" />
-              Schedule visit
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              disabled={!lead.clientId}
-              title={lead.clientId ? undefined : "Attach a client before quoting"}
-              onClick={() => setTab("documents")}
-            >
-              <FileText className="h-3.5 w-3.5" />
-              Documents
-            </Button>
-            {/* Converting is the one thing a qualified lead exists to do, so it
-                is the primary action until it has been done. */}
-            <Button size="sm" className="gap-1.5" onClick={() => setConvertOpen(true)}>
-              <ArrowRight className="h-3.5 w-3.5" />
-              Convert to deal
-            </Button>
-          </div>
+            </EntityLink>
+          </span>
         </div>
 
         <StageProgress

@@ -15,15 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/searchable-select";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -262,285 +255,272 @@ export function CompanyFormSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent size="lg" className="w-full overflow-y-auto p-6">
-          <SheetHeader>
-            <SheetTitle>{isEdit ? "Edit company" : "New company"}</SheetTitle>
-            <SheetDescription>
-              The account everything else hangs off — people, sites, deals and invoices.
-            </SheetDescription>
-          </SheetHeader>
+      <RecordDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={isEdit ? "Edit company" : "New company"}
+        description="The account everything else hangs off — people, sites, deals and invoices."
+        errors={errors}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const found = validate();
+          setErrors(found);
+          if (found.length === 0) save.mutate(false);
+        }}
+        footer={<>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={save.isPending}>
+            {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create company"}
+          </Button>
+        </>}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="company-name">Registered name *</Label>
+            <Input
+              id="company-name"
+              value={form.name}
+              onChange={(event) => patch({ name: event.target.value })}
+              maxLength={200}
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company-trading">Trading as</Label>
+            <Input
+              id="company-trading"
+              value={form.tradingName}
+              onChange={(event) => patch({ tradingName: event.target.value })}
+              placeholder="Only if it differs from the registered name"
+              maxLength={200}
+            />
+          </div>
+        </div>
 
-          <div className="mt-6">
-            <FormShell
-              variant="bare"
-              errors={errors}
-              requiredHint="A company name is required."
-              onSubmit={(event) => {
-                event.preventDefault();
-                const found = validate();
-                setErrors(found);
-                if (found.length === 0) save.mutate(false);
-              }}
-              actions={
-                <>
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={save.isPending}>
-                    {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create company"}
-                  </Button>
-                </>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="company-type">Relationship</Label>
+            <Select
+              value={form.companyType}
+              onValueChange={(companyType) => patch({ companyType })}
+            >
+              <SelectTrigger id="company-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COMPANY_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company-status">Account status</Label>
+            <Select
+              value={form.accountStatus}
+              onValueChange={(accountStatus) => patch({ accountStatus })}
+            >
+              <SelectTrigger id="company-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACCOUNT_STATUSES.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="company-reg">Company registration number</Label>
+            <Input
+              id="company-reg"
+              value={form.registrationNumber}
+              onChange={(event) => patch({ registrationNumber: event.target.value })}
+              maxLength={80}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company-tax">Tax number</Label>
+            <Input
+              id="company-tax"
+              value={form.taxNumber}
+              onChange={(event) => patch({ taxNumber: event.target.value })}
+              maxLength={80}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="company-website">Website</Label>
+            <Input
+              id="company-website"
+              value={form.website}
+              onChange={(event) => patch({ website: event.target.value })}
+              placeholder="example.co.zw"
+              maxLength={300}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company-industry">Industry</Label>
+            <Input
+              id="company-industry"
+              value={form.industry}
+              onChange={(event) => patch({ industry: event.target.value })}
+              placeholder="e.g. Mining, Retail, Logistics"
+              maxLength={120}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="company-email">Main email</Label>
+            <Input
+              id="company-email"
+              type="email"
+              value={form.email}
+              onChange={(event) => patch({ email: event.target.value })}
+              maxLength={200}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company-phone">Main phone</Label>
+            <Input
+              id="company-phone"
+              value={form.phone}
+              onChange={(event) => patch({ phone: event.target.value })}
+              maxLength={40}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="company-address">Street address</Label>
+          <Input
+            id="company-address"
+            value={form.addressLine}
+            onChange={(event) => patch({ addressLine: event.target.value })}
+            maxLength={300}
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="company-city">City</Label>
+            <Input
+              id="company-city"
+              value={form.city}
+              onChange={(event) => patch({ city: event.target.value })}
+              maxLength={120}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company-country">Country</Label>
+            <Input
+              id="company-country"
+              value={form.country}
+              onChange={(event) => patch({ country: event.target.value })}
+              maxLength={120}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="company-billing">Billing address</Label>
+          <Textarea
+            id="company-billing"
+            value={form.billingAddress}
+            onChange={(event) => patch({ billingAddress: event.target.value })}
+            placeholder="Leave blank if invoices go to the street address above"
+            rows={3}
+            maxLength={500}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <SearchableSelect
+            label="Part of a larger group?"
+            value={form.parentClientId}
+            options={parentOptions}
+            placeholder={
+              companiesQuery.isLoading ? "Loading companies…" : "Search for the parent company"
+            }
+            onValueChange={(parentClientId) => patch({ parentClientId })}
+          />
+        </div>
+
+        {form.parentClientId ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="company-relation">This company is the parent&apos;s…</Label>
+            <Select
+              value={form.parentRelation || "__none"}
+              onValueChange={(value) =>
+                patch({ parentRelation: value === "__none" ? "" : value })
               }
             >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-name">Registered name *</Label>
-                  <Input
-                    id="company-name"
-                    value={form.name}
-                    onChange={(event) => patch({ name: event.target.value })}
-                    maxLength={200}
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-trading">Trading as</Label>
-                  <Input
-                    id="company-trading"
-                    value={form.tradingName}
-                    onChange={(event) => patch({ tradingName: event.target.value })}
-                    placeholder="Only if it differs from the registered name"
-                    maxLength={200}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-type">Relationship</Label>
-                  <Select
-                    value={form.companyType}
-                    onValueChange={(companyType) => patch({ companyType })}
-                  >
-                    <SelectTrigger id="company-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COMPANY_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-status">Account status</Label>
-                  <Select
-                    value={form.accountStatus}
-                    onValueChange={(accountStatus) => patch({ accountStatus })}
-                  >
-                    <SelectTrigger id="company-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACCOUNT_STATUSES.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-reg">Company registration number</Label>
-                  <Input
-                    id="company-reg"
-                    value={form.registrationNumber}
-                    onChange={(event) => patch({ registrationNumber: event.target.value })}
-                    maxLength={80}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-tax">Tax number</Label>
-                  <Input
-                    id="company-tax"
-                    value={form.taxNumber}
-                    onChange={(event) => patch({ taxNumber: event.target.value })}
-                    maxLength={80}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-website">Website</Label>
-                  <Input
-                    id="company-website"
-                    value={form.website}
-                    onChange={(event) => patch({ website: event.target.value })}
-                    placeholder="example.co.zw"
-                    maxLength={300}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-industry">Industry</Label>
-                  <Input
-                    id="company-industry"
-                    value={form.industry}
-                    onChange={(event) => patch({ industry: event.target.value })}
-                    placeholder="e.g. Mining, Retail, Logistics"
-                    maxLength={120}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-email">Main email</Label>
-                  <Input
-                    id="company-email"
-                    type="email"
-                    value={form.email}
-                    onChange={(event) => patch({ email: event.target.value })}
-                    maxLength={200}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-phone">Main phone</Label>
-                  <Input
-                    id="company-phone"
-                    value={form.phone}
-                    onChange={(event) => patch({ phone: event.target.value })}
-                    maxLength={40}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="company-address">Street address</Label>
-                <Input
-                  id="company-address"
-                  value={form.addressLine}
-                  onChange={(event) => patch({ addressLine: event.target.value })}
-                  maxLength={300}
-                />
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-city">City</Label>
-                  <Input
-                    id="company-city"
-                    value={form.city}
-                    onChange={(event) => patch({ city: event.target.value })}
-                    maxLength={120}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-country">Country</Label>
-                  <Input
-                    id="company-country"
-                    value={form.country}
-                    onChange={(event) => patch({ country: event.target.value })}
-                    maxLength={120}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="company-billing">Billing address</Label>
-                <Textarea
-                  id="company-billing"
-                  value={form.billingAddress}
-                  onChange={(event) => patch({ billingAddress: event.target.value })}
-                  placeholder="Leave blank if invoices go to the street address above"
-                  rows={3}
-                  maxLength={500}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <SearchableSelect
-                  label="Part of a larger group?"
-                  value={form.parentClientId}
-                  options={parentOptions}
-                  placeholder={
-                    companiesQuery.isLoading ? "Loading companies…" : "Search for the parent company"
-                  }
-                  onValueChange={(parentClientId) => patch({ parentClientId })}
-                />
-              </div>
-
-              {form.parentClientId ? (
-                <div className="space-y-1.5">
-                  <Label htmlFor="company-relation">This company is the parent&apos;s…</Label>
-                  <Select
-                    value={form.parentRelation || "__none"}
-                    onValueChange={(value) =>
-                      patch({ parentRelation: value === "__none" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger id="company-relation">
-                      <SelectValue placeholder="Not specified" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">Not specified</SelectItem>
-                      {PARENT_RELATIONS.map((relation) => (
-                        <SelectItem key={relation.value} value={relation.value}>
-                          {relation.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="company-owner">Owner</Label>
-                <Select
-                  value={form.assignedToId || "__unassigned"}
-                  onValueChange={(value) =>
-                    patch({ assignedToId: value === "__unassigned" ? "" : value })
-                  }
-                >
-                  <SelectTrigger id="company-owner">
-                    <SelectValue placeholder="Unassigned" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__unassigned">Unassigned</SelectItem>
-                    {owners.map((owner) => (
-                      <SelectItem key={owner.id} value={owner.id}>
-                        {owner.name ?? "Unnamed"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="company-notes">Notes</Label>
-                <Textarea
-                  id="company-notes"
-                  value={form.notes}
-                  onChange={(event) => patch({ notes: event.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <CustomFieldInputs
-                definitions={definitions}
-                values={customValues}
-                onChange={setCustomValues}
-              />
-            </FormShell>
+              <SelectTrigger id="company-relation">
+                <SelectValue placeholder="Not specified" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Not specified</SelectItem>
+                {PARENT_RELATIONS.map((relation) => (
+                  <SelectItem key={relation.value} value={relation.value}>
+                    {relation.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </SheetContent>
-      </Sheet>
+        ) : null}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="company-owner">Owner</Label>
+          <Select
+            value={form.assignedToId || "__unassigned"}
+            onValueChange={(value) =>
+              patch({ assignedToId: value === "__unassigned" ? "" : value })
+            }
+          >
+            <SelectTrigger id="company-owner">
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__unassigned">Unassigned</SelectItem>
+              {owners.map((owner) => (
+                <SelectItem key={owner.id} value={owner.id}>
+                  {owner.name ?? "Unnamed"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="company-notes">Notes</Label>
+          <Textarea
+            id="company-notes"
+            value={form.notes}
+            onChange={(event) => patch({ notes: event.target.value })}
+            rows={3}
+          />
+        </div>
+
+        <CustomFieldInputs
+          definitions={definitions}
+          values={customValues}
+          onChange={setCustomValues}
+        />
+      </RecordDialog>
 
       <DuplicateWarningDialog
         open={Boolean(duplicates)}

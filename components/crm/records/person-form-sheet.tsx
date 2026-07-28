@@ -15,15 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/searchable-select";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -240,185 +233,172 @@ export function PersonFormSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent size="lg" className="w-full overflow-y-auto p-6">
-          <SheetHeader>
-            <SheetTitle>{isEdit ? "Edit person" : "New person"}</SheetTitle>
-            <SheetDescription>
-              A contact you can attach to any number of deals and sites without re-typing them.
-            </SheetDescription>
-          </SheetHeader>
+      <RecordDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={isEdit ? "Edit person" : "New person"}
+        description="A contact you can attach to any number of deals and sites without re-typing them."
+        errors={errors}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const found = validate();
+          setErrors(found);
+          if (found.length === 0) save.mutate(false);
+        }}
+        footer={<>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={save.isPending}>
+            {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create person"}
+          </Button>
+        </>}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="person-first">First name *</Label>
+            <Input
+              id="person-first"
+              value={form.firstName}
+              onChange={(event) => patch({ firstName: event.target.value })}
+              maxLength={120}
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="person-last">Last name</Label>
+            <Input
+              id="person-last"
+              value={form.lastName}
+              onChange={(event) => patch({ lastName: event.target.value })}
+              maxLength={120}
+            />
+          </div>
+        </div>
 
-          <div className="mt-6">
-            <FormShell
-              variant="bare"
-              errors={errors}
-              requiredHint="A first name is required."
-              onSubmit={(event) => {
-                event.preventDefault();
-                const found = validate();
-                setErrors(found);
-                if (found.length === 0) save.mutate(false);
-              }}
-              actions={
-                <>
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={save.isPending}>
-                    {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create person"}
-                  </Button>
-                </>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="person-email">Email</Label>
+            <Input
+              id="person-email"
+              type="email"
+              value={form.email}
+              onChange={(event) => patch({ email: event.target.value })}
+              maxLength={200}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="person-phone">Phone</Label>
+            <Input
+              id="person-phone"
+              value={form.phone}
+              onChange={(event) => patch({ phone: event.target.value })}
+              maxLength={40}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <SearchableSelect
+            label="Company"
+            value={form.clientId}
+            options={companyOptions}
+            placeholder={companiesQuery.isLoading ? "Loading companies…" : "Search companies"}
+            onValueChange={(clientId) => patch({ clientId })}
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="person-title">Job title</Label>
+            <Input
+              id="person-title"
+              value={form.jobTitle}
+              onChange={(event) => patch({ jobTitle: event.target.value })}
+              maxLength={120}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="person-type">Contact type</Label>
+            <Select
+              value={form.contactType}
+              onValueChange={(value) => patch({ contactType: value })}
+            >
+              <SelectTrigger id="person-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTACT_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="person-channel">Preferred channel</Label>
+            <Select
+              value={form.preferredChannel || "__none"}
+              onValueChange={(value) =>
+                patch({ preferredChannel: value === "__none" ? "" : value })
               }
             >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="person-first">First name *</Label>
-                  <Input
-                    id="person-first"
-                    value={form.firstName}
-                    onChange={(event) => patch({ firstName: event.target.value })}
-                    maxLength={120}
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="person-last">Last name</Label>
-                  <Input
-                    id="person-last"
-                    value={form.lastName}
-                    onChange={(event) => patch({ lastName: event.target.value })}
-                    maxLength={120}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="person-email">Email</Label>
-                  <Input
-                    id="person-email"
-                    type="email"
-                    value={form.email}
-                    onChange={(event) => patch({ email: event.target.value })}
-                    maxLength={200}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="person-phone">Phone</Label>
-                  <Input
-                    id="person-phone"
-                    value={form.phone}
-                    onChange={(event) => patch({ phone: event.target.value })}
-                    maxLength={40}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <SearchableSelect
-                  label="Company"
-                  value={form.clientId}
-                  options={companyOptions}
-                  placeholder={companiesQuery.isLoading ? "Loading companies…" : "Search companies"}
-                  onValueChange={(clientId) => patch({ clientId })}
-                />
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="person-title">Job title</Label>
-                  <Input
-                    id="person-title"
-                    value={form.jobTitle}
-                    onChange={(event) => patch({ jobTitle: event.target.value })}
-                    maxLength={120}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="person-type">Contact type</Label>
-                  <Select
-                    value={form.contactType}
-                    onValueChange={(value) => patch({ contactType: value })}
-                  >
-                    <SelectTrigger id="person-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CONTACT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="person-channel">Preferred channel</Label>
-                  <Select
-                    value={form.preferredChannel || "__none"}
-                    onValueChange={(value) =>
-                      patch({ preferredChannel: value === "__none" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger id="person-channel">
-                      <SelectValue placeholder="No preference" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">No preference</SelectItem>
-                      {CHANNELS.map((channel) => (
-                        <SelectItem key={channel.value} value={channel.value}>
-                          {channel.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="person-owner">Owner</Label>
-                  <Select
-                    value={form.assignedToId || "__unassigned"}
-                    onValueChange={(value) =>
-                      patch({ assignedToId: value === "__unassigned" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger id="person-owner">
-                      <SelectValue placeholder="Unassigned" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__unassigned">Unassigned</SelectItem>
-                      {owners.map((owner) => (
-                        <SelectItem key={owner.id} value={owner.id}>
-                          {owner.name ?? "Unnamed"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="person-notes">Notes</Label>
-                <Textarea
-                  id="person-notes"
-                  value={form.notes}
-                  onChange={(event) => patch({ notes: event.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <CustomFieldInputs
-                definitions={definitions}
-                values={customValues}
-                onChange={setCustomValues}
-              />
-            </FormShell>
+              <SelectTrigger id="person-channel">
+                <SelectValue placeholder="No preference" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">No preference</SelectItem>
+                {CHANNELS.map((channel) => (
+                  <SelectItem key={channel.value} value={channel.value}>
+                    {channel.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </SheetContent>
-      </Sheet>
+          <div className="space-y-1.5">
+            <Label htmlFor="person-owner">Owner</Label>
+            <Select
+              value={form.assignedToId || "__unassigned"}
+              onValueChange={(value) =>
+                patch({ assignedToId: value === "__unassigned" ? "" : value })
+              }
+            >
+              <SelectTrigger id="person-owner">
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__unassigned">Unassigned</SelectItem>
+                {owners.map((owner) => (
+                  <SelectItem key={owner.id} value={owner.id}>
+                    {owner.name ?? "Unnamed"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="person-notes">Notes</Label>
+          <Textarea
+            id="person-notes"
+            value={form.notes}
+            onChange={(event) => patch({ notes: event.target.value })}
+            rows={3}
+          />
+        </div>
+
+        <CustomFieldInputs
+          definitions={definitions}
+          values={customValues}
+          onChange={setCustomValues}
+        />
+      </RecordDialog>
 
       <DuplicateWarningDialog
         open={Boolean(duplicates)}

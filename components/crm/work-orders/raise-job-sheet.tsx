@@ -14,14 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 
@@ -120,120 +113,109 @@ export function RaiseJobSheet({
   });
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Raise a job</SheetTitle>
-          <SheetDescription>
-            The checklist comes straight off the quote, so nothing is retyped.
-          </SheetDescription>
-        </SheetHeader>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Raise a job"
+      description="The checklist comes straight off the quote, so nothing is retyped."
+      errors={errors}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!title.trim()) {
+          setErrors(["Give the job a title the crew will recognise"]);
+          return;
+        }
+        setErrors([]);
+        create.mutate();
+      }}
+      footer={<>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={create.isPending}>
+          {create.isPending ? "Raising…" : "Raise job"}
+        </Button>
+      </>}
+    >
+      <div className="space-y-1.5">
+        <Label htmlFor="job-title">Title *</Label>
+        <Input
+          id="job-title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Install 14 panels — Msasa depot"
+        />
+      </div>
 
-        <FormShell
-          variant="bare"
-          errors={errors}
-          requiredHint="A title is required."
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!title.trim()) {
-              setErrors(["Give the job a title the crew will recognise"]);
-              return;
-            }
-            setErrors([]);
-            create.mutate();
-          }}
-          actions={
-            <>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "Raising…" : "Raise job"}
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-1.5">
-            <Label htmlFor="job-title">Title *</Label>
-            <Input
-              id="job-title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Install 14 panels — Msasa depot"
-            />
-          </div>
+      {quotationDocuments.length ? (
+        <div className="space-y-1.5">
+          <Label>Checklist from</Label>
+          <Select value={documentId} onValueChange={setDocumentId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Nothing — I'll add items later" />
+            </SelectTrigger>
+            <SelectContent>
+              {quotationDocuments.map((document) => (
+                <SelectItem key={document.id} value={document.id}>
+                  {document.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--text-muted)]">
+          No quote on this deal, so the job starts with an empty checklist.
+        </p>
+      )}
 
-          {quotationDocuments.length ? (
-            <div className="space-y-1.5">
-              <Label>Checklist from</Label>
-              <Select value={documentId} onValueChange={setDocumentId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Nothing — I'll add items later" />
-                </SelectTrigger>
-                <SelectContent>
-                  {quotationDocuments.map((document) => (
-                    <SelectItem key={document.id} value={document.id}>
-                      {document.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <p className="text-sm text-[var(--text-muted)]">
-              No quote on this deal, so the job starts with an empty checklist.
-            </p>
-          )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="job-start">Starts</Label>
+          <Input
+            id="job-start"
+            type="datetime-local"
+            value={scheduledStart}
+            onChange={(event) => setScheduledStart(event.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Crew lead</Label>
+          <Select value={assignedToId} onValueChange={setAssignedToId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              {(team?.data ?? []).map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name ?? user.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="job-start">Starts</Label>
-              <Input
-                id="job-start"
-                type="datetime-local"
-                value={scheduledStart}
-                onChange={(event) => setScheduledStart(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Crew lead</Label>
-              <Select value={assignedToId} onValueChange={setAssignedToId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(team?.data ?? []).map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name ?? user.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="job-address">Address</Label>
+        <Input
+          id="job-address"
+          value={addressLine}
+          onChange={(event) => setAddressLine(event.target.value)}
+          placeholder="Leave blank to use the site's"
+        />
+      </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="job-address">Address</Label>
-            <Input
-              id="job-address"
-              value={addressLine}
-              onChange={(event) => setAddressLine(event.target.value)}
-              placeholder="Leave blank to use the site's"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="job-access">Getting in</Label>
-            <Textarea
-              id="job-access"
-              rows={2}
-              value={accessNotes}
-              onChange={(event) => setAccessNotes(event.target.value)}
-              placeholder="Ask for the security office, gate code 4471…"
-            />
-          </div>
-        </FormShell>
-      </SheetContent>
-    </Sheet>
+      <div className="space-y-1.5">
+        <Label htmlFor="job-access">Getting in</Label>
+        <Textarea
+          id="job-access"
+          rows={2}
+          value={accessNotes}
+          onChange={(event) => setAccessNotes(event.target.value)}
+          placeholder="Ask for the security office, gate code 4471…"
+        />
+      </div>
+    </RecordDialog>
   );
 }

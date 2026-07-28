@@ -34,6 +34,7 @@ import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet
 import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { EntityLink } from "./entity-link";
 import { DealStageBar } from "./deal-stage-bar";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { RecordHistoryTab } from "./record-history-tab";
@@ -219,9 +220,19 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
         }}
         subtitle={
           <>
-            {deal.client?.name ?? "No company"}
+            <EntityLink
+              href={deal.clientId ? `/crm/companies/${deal.clientId}` : null}
+              muted
+            >
+              {deal.client?.name ?? "No company"}
+            </EntityLink>
             {" · "}
-            {deal.assignedTo?.name ?? "Unassigned"}
+            <EntityLink
+              href={deal.assignedTo ? `/crm/reps/${deal.assignedTo.id}` : null}
+              muted
+            >
+              {deal.assignedTo?.name ?? "Unassigned"}
+            </EntityLink>
             {stale ? " · going cold" : ""}
           </>
         }
@@ -381,7 +392,9 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
 
             {deal.site ? (
               <RailSection title="Site">
-                <p className="text-sm">{deal.site.name}</p>
+                <p className="text-sm">
+                  <EntityLink href={`/crm/sites/${deal.site.id}`}>{deal.site.name}</EntityLink>
+                </p>
                 <p className="text-sm text-[var(--text-muted)]">
                   {[deal.site.addressLine, deal.site.city].filter(Boolean).join(", ")}
                 </p>
@@ -402,7 +415,12 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 <ul className="space-y-1.5">
                   {deal.contacts.map((contact) => (
                     <li key={contact.id} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="min-w-0 truncate">{contact.person.fullName}</span>
+                      <EntityLink
+                        href={`/crm/people/${contact.person.id}`}
+                        className="min-w-0 truncate"
+                      >
+                        {contact.person.fullName}
+                      </EntityLink>
                       <Badge variant="outline" className="shrink-0 text-sm">
                         {ROLE_LABELS[contact.role] ?? contact.role}
                       </Badge>

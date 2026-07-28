@@ -18,6 +18,7 @@ import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { EntityLink } from "./entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { SiteFormSheet } from "./site-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
@@ -100,7 +101,17 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
     );
   }
 
-  const subtitle = [site.client?.name, site.city].filter(Boolean).join(" · ");
+  const subtitle = (
+    <>
+      {site.client ? (
+        <EntityLink href={`/crm/companies/${site.client.id}`} muted>
+          {site.client.name}
+        </EntityLink>
+      ) : null}
+      {site.client && site.city ? " · " : null}
+      {site.city}
+    </>
+  );
   const mapsHref =
     site.latitude !== null && site.longitude !== null
       ? `https://www.google.com/maps?q=${site.latitude},${site.longitude}`

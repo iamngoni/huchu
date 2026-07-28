@@ -16,6 +16,12 @@ import type { LucideIcon } from "@/lib/icons";
 export type PageIdentity = {
   title: string;
   icon?: LucideIcon;
+  /**
+   * Where "up" is, for a page that sits under a list. Rendered in the bar
+   * immediately before the title, because that is where the page's name is —
+   * a back link stranded in the body is a second header in a different place.
+   */
+  back?: { href: string; label: string };
 };
 
 type PageChromeContextValue = {
@@ -69,19 +75,28 @@ function usePageChrome() {
 function PageChrome({
   title,
   icon,
+  backHref,
+  backLabel,
   children,
 }: {
   title: string;
   icon?: LucideIcon;
+  /** Where "up" goes. Both this and `backLabel` are needed for a back link. */
+  backHref?: string;
+  backLabel?: string;
   /** The page's actions, rendered in the top app bar. */
   children?: React.ReactNode;
 }) {
   const { setActions, setIdentity } = usePageChrome();
 
   React.useEffect(() => {
-    setIdentity({ title, icon });
+    setIdentity({
+      title,
+      icon,
+      back: backHref && backLabel ? { href: backHref, label: backLabel } : undefined,
+    });
     return () => setIdentity(null);
-  }, [title, icon, setIdentity]);
+  }, [title, icon, backHref, backLabel, setIdentity]);
 
   React.useEffect(() => {
     // Left undefined, this component is only claiming the title — some other

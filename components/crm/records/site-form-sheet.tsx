@@ -7,15 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/searchable-select";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -202,172 +195,158 @@ export function SiteFormSheet({
   const patch = (next: Partial<FormState>) => setForm((prev) => ({ ...prev, ...next }));
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent size="lg" className="w-full overflow-y-auto p-6">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "Edit site" : "New site"}</SheetTitle>
-          <SheetDescription>
-            A place your crew actually goes to. Whatever you record here is what they&apos;ll read
-            on the way there.
-          </SheetDescription>
-        </SheetHeader>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? "Edit site" : "New site"}
+      description="A place your crew actually goes to. Whatever you record here is what they&apos;ll read on the way there."
+      errors={errors}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const found = validate();
+        setErrors(found);
+        if (found.length === 0) save.mutate();
+      }}
+      footer={<>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create site"}
+        </Button>
+      </>}
+    >
+      <div className="space-y-1.5">
+        <Label htmlFor="site-name">Site name *</Label>
+        <Input
+          id="site-name"
+          value={form.name}
+          onChange={(event) => patch({ name: event.target.value })}
+          placeholder="e.g. Msasa depot — back yard"
+          maxLength={200}
+          autoFocus
+        />
+      </div>
 
-        <div className="mt-6">
-          <FormShell
-            variant="bare"
-            errors={errors}
-            requiredHint="A site name is required."
-            onSubmit={(event) => {
-              event.preventDefault();
-              const found = validate();
-              setErrors(found);
-              if (found.length === 0) save.mutate();
-            }}
-            actions={
-              <>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={save.isPending}>
-                  {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create site"}
-                </Button>
-              </>
-            }
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="site-name">Site name *</Label>
-              <Input
-                id="site-name"
-                value={form.name}
-                onChange={(event) => patch({ name: event.target.value })}
-                placeholder="e.g. Msasa depot — back yard"
-                maxLength={200}
-                autoFocus
-              />
-            </div>
+      <div className="space-y-1.5">
+        <SearchableSelect
+          label="Company"
+          value={form.clientId}
+          options={companyOptions}
+          placeholder={companiesQuery.isLoading ? "Loading companies…" : "Search companies"}
+          onValueChange={(clientId) =>
+            // Contacts are drawn from the chosen company, so switching it
+            // invalidates whoever was picked under the old one.
+            patch({ clientId, primaryContactId: "" })
+          }
+        />
+      </div>
 
-            <div className="space-y-1.5">
-              <SearchableSelect
-                label="Company"
-                value={form.clientId}
-                options={companyOptions}
-                placeholder={companiesQuery.isLoading ? "Loading companies…" : "Search companies"}
-                onValueChange={(clientId) =>
-                  // Contacts are drawn from the chosen company, so switching it
-                  // invalidates whoever was picked under the old one.
-                  patch({ clientId, primaryContactId: "" })
-                }
-              />
-            </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="site-address">Street address</Label>
+        <Input
+          id="site-address"
+          value={form.addressLine}
+          onChange={(event) => patch({ addressLine: event.target.value })}
+          maxLength={300}
+        />
+      </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="site-address">Street address</Label>
-              <Input
-                id="site-address"
-                value={form.addressLine}
-                onChange={(event) => patch({ addressLine: event.target.value })}
-                maxLength={300}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="site-city">City</Label>
-                <Input
-                  id="site-city"
-                  value={form.city}
-                  onChange={(event) => patch({ city: event.target.value })}
-                  maxLength={120}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="site-country">Country</Label>
-                <Input
-                  id="site-country"
-                  value={form.country}
-                  onChange={(event) => patch({ country: event.target.value })}
-                  maxLength={120}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="site-latitude">Latitude</Label>
-                <Input
-                  id="site-latitude"
-                  inputMode="decimal"
-                  className="font-mono"
-                  value={form.latitude}
-                  onChange={(event) => patch({ latitude: event.target.value })}
-                  placeholder="-17.8252"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="site-longitude">Longitude</Label>
-                <Input
-                  id="site-longitude"
-                  inputMode="decimal"
-                  className="font-mono"
-                  value={form.longitude}
-                  onChange={(event) => patch({ longitude: event.target.value })}
-                  placeholder="31.0335"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <SearchableSelect
-                label="Contact on site"
-                value={form.primaryContactId}
-                options={personOptions}
-                placeholder={peopleQuery.isLoading ? "Loading people…" : "Search people"}
-                onValueChange={(primaryContactId) => patch({ primaryContactId })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="site-access">Getting in</Label>
-              <Textarea
-                id="site-access"
-                value={form.accessInstructions}
-                onChange={(event) => patch({ accessInstructions: event.target.value })}
-                placeholder="Which gate, who to ask for, where the keys live, what hours it's open."
-                rows={3}
-                maxLength={2000}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="site-conditions">What it&apos;s like on the ground</Label>
-              <Textarea
-                id="site-conditions"
-                value={form.siteConditions}
-                onChange={(event) => patch({ siteConditions: event.target.value })}
-                placeholder="Terrain, power, safety gear needed, anything that changes how long the job takes."
-                rows={3}
-                maxLength={4000}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="site-notes">Notes</Label>
-              <Textarea
-                id="site-notes"
-                value={form.notes}
-                onChange={(event) => patch({ notes: event.target.value })}
-                rows={3}
-              />
-            </div>
-
-            <CustomFieldInputs
-              definitions={definitions}
-              values={customValues}
-              onChange={setCustomValues}
-            />
-          </FormShell>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="site-city">City</Label>
+          <Input
+            id="site-city"
+            value={form.city}
+            onChange={(event) => patch({ city: event.target.value })}
+            maxLength={120}
+          />
         </div>
-      </SheetContent>
-    </Sheet>
+        <div className="space-y-1.5">
+          <Label htmlFor="site-country">Country</Label>
+          <Input
+            id="site-country"
+            value={form.country}
+            onChange={(event) => patch({ country: event.target.value })}
+            maxLength={120}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="site-latitude">Latitude</Label>
+          <Input
+            id="site-latitude"
+            inputMode="decimal"
+            className="font-mono"
+            value={form.latitude}
+            onChange={(event) => patch({ latitude: event.target.value })}
+            placeholder="-17.8252"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="site-longitude">Longitude</Label>
+          <Input
+            id="site-longitude"
+            inputMode="decimal"
+            className="font-mono"
+            value={form.longitude}
+            onChange={(event) => patch({ longitude: event.target.value })}
+            placeholder="31.0335"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <SearchableSelect
+          label="Contact on site"
+          value={form.primaryContactId}
+          options={personOptions}
+          placeholder={peopleQuery.isLoading ? "Loading people…" : "Search people"}
+          onValueChange={(primaryContactId) => patch({ primaryContactId })}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="site-access">Getting in</Label>
+        <Textarea
+          id="site-access"
+          value={form.accessInstructions}
+          onChange={(event) => patch({ accessInstructions: event.target.value })}
+          placeholder="Which gate, who to ask for, where the keys live, what hours it's open."
+          rows={3}
+          maxLength={2000}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="site-conditions">What it&apos;s like on the ground</Label>
+        <Textarea
+          id="site-conditions"
+          value={form.siteConditions}
+          onChange={(event) => patch({ siteConditions: event.target.value })}
+          placeholder="Terrain, power, safety gear needed, anything that changes how long the job takes."
+          rows={3}
+          maxLength={4000}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="site-notes">Notes</Label>
+        <Textarea
+          id="site-notes"
+          value={form.notes}
+          onChange={(event) => patch({ notes: event.target.value })}
+          rows={3}
+        />
+      </div>
+
+      <CustomFieldInputs
+        definitions={definitions}
+        values={customValues}
+        onChange={setCustomValues}
+      />
+    </RecordDialog>
   );
 }

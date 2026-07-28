@@ -8,6 +8,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -24,7 +25,7 @@ import { usePageChrome } from "@/components/layout/page-chrome";
 import { GlobalSearch } from "@/components/layout/global-search";
 import { CrmMembers } from "@/components/crm/crm-members";
 import { NotificationCenter } from "@/components/notifications/notification-center";
-import { MoreHorizontal, type LucideIcon } from "@/lib/icons";
+import { ArrowLeft, MoreHorizontal, type LucideIcon } from "@/lib/icons";
 import { navSections } from "@/lib/navigation";
 import { canAccessCapabilityWithToken } from "@/lib/platform/gating/token-check";
 
@@ -65,6 +66,7 @@ export function Navbar() {
   // does it: a capitalised binding assigned from a call reads to the lint rule
   // as a component defined during render, which would reset its state.
   const pageIcon = identity?.icon ?? routeIcon(pathname);
+  const back = identity?.back;
   // The CRM is the one module that is genuinely a shared book, so it is the
   // one that shows you who else is in it.
   const showMembers = pathname === "/crm" || pathname.startsWith("/crm/");
@@ -76,6 +78,15 @@ export function Navbar() {
           <div className="flex h-14 items-center gap-1.5 md:hidden">
             <SidebarTrigger />
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              {back ? (
+                <Link
+                  href={back.href}
+                  aria-label={`Back to ${back.label}`}
+                  className="-ml-1 flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+                >
+                  <ArrowLeft className="size-4" />
+                </Link>
+              ) : null}
               {pageIcon
                 ? createElement(pageIcon, {
                     className: "h-4 w-4 shrink-0 text-[var(--text-muted)]",
@@ -92,6 +103,15 @@ export function Navbar() {
           <div className="hidden h-14 items-center gap-3 md:flex justify-between">
             <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger />
+              {back ? (
+                <Link
+                  href={back.href}
+                  className="ml-1 flex shrink-0 items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-1 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+                >
+                  <ArrowLeft className="size-4" />
+                  <span className="hidden lg:inline">{back.label}</span>
+                </Link>
+              ) : null}
               <div className="flex min-w-0 items-center gap-2 pl-1">
                 {pageIcon
                   ? createElement(pageIcon, {

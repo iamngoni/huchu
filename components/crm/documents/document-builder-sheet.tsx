@@ -8,14 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { Plus, Trash2 } from "@/lib/icons";
@@ -162,251 +155,239 @@ export function DocumentBuilderSheet({
   const isQuotation = mode === "quotation";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent size="xl" className="w-full overflow-y-auto p-6">
-        <SheetHeader>
-          <SheetTitle>{isQuotation ? "New quotation" : "New invoice"}</SheetTitle>
-          <SheetDescription>
-            {fromQuotationId
-              ? "Converting the accepted quotation — the lines carry over exactly as quoted."
-              : isQuotation
-                ? "Price up the work. The client can approve it from a link without signing in."
-                : "Bill the work. Payments recorded against this invoice produce receipts."}
-          </SheetDescription>
-        </SheetHeader>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isQuotation ? "New quotation" : "New invoice"}
+      description={fromQuotationId
+      ? "Converting the accepted quotation — the lines carry over exactly as quoted."
+      : isQuotation
+        ? "Price up the work. The client can approve it from a link without signing in."
+        : "Bill the work. Payments recorded against this invoice produce receipts."}
+      size="xl"
+      errors={errors}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const found = validate();
+        setErrors(found);
+        if (found.length === 0) create.mutate();
+      }}
+      footer={<>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={create.isPending}>
+          {create.isPending
+            ? "Saving…"
+            : isQuotation
+              ? sendApproval
+                ? "Create & share"
+                : "Create quotation"
+              : "Issue invoice"}
+        </Button>
+      </>}
+    >
+      {fromQuotationId ? (
+        <p className="rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3 text-sm">
+          Lines are taken from the source quotation and can&apos;t be edited here — that keeps
+          the invoice matching what the client accepted. Cancel and start a fresh invoice if
+          the scope has changed.
+        </p>
+      ) : (
+        <section className="space-y-3">
+          <div className="hidden gap-2 px-1 text-sm font-medium text-[var(--text-muted)] sm:grid sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem]">
+            <span>Description</span>
+            <span className="text-right">Qty</span>
+            <span className="text-right">Unit price</span>
+            <span className="text-right">Disc %</span>
+            <span className="text-right">Tax %</span>
+            <span className="text-right">Line total</span>
+            <span />
+          </div>
 
-        <div className="mt-6">
-          <FormShell
-            variant="bare"
-            errors={errors}
-            requiredHint="Every line needs a description, a quantity, and a unit price."
-            onSubmit={(event) => {
-              event.preventDefault();
-              const found = validate();
-              setErrors(found);
-              if (found.length === 0) create.mutate();
-            }}
-            actions={
-              <>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={create.isPending}>
-                  {create.isPending
-                    ? "Saving…"
-                    : isQuotation
-                      ? sendApproval
-                        ? "Create & share"
-                        : "Create quotation"
-                      : "Issue invoice"}
-                </Button>
-              </>
-            }
-          >
-            {fromQuotationId ? (
-              <p className="rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3 text-sm">
-                Lines are taken from the source quotation and can&apos;t be edited here — that keeps
-                the invoice matching what the client accepted. Cancel and start a fresh invoice if
-                the scope has changed.
-              </p>
-            ) : (
-              <section className="space-y-3">
-                <div className="hidden gap-2 px-1 text-sm font-medium text-[var(--text-muted)] sm:grid sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem]">
-                  <span>Description</span>
-                  <span className="text-right">Qty</span>
-                  <span className="text-right">Unit price</span>
-                  <span className="text-right">Disc %</span>
-                  <span className="text-right">Tax %</span>
-                  <span className="text-right">Line total</span>
-                  <span />
-                </div>
+          {lines.map((line, index) => {
+            const quantity = toNumber(line.quantity, 1);
+            const listPrice = toNumber(line.unitPrice);
+            const discount = Math.min(Math.max(toNumber(line.discountPercent), 0), 100);
+            const net = round2(quantity * round2(listPrice * (1 - discount / 100)));
 
-                {lines.map((line, index) => {
-                  const quantity = toNumber(line.quantity, 1);
-                  const listPrice = toNumber(line.unitPrice);
-                  const discount = Math.min(Math.max(toNumber(line.discountPercent), 0), 100);
-                  const net = round2(quantity * round2(listPrice * (1 - discount / 100)));
-
-                  return (
-                    <div
-                      key={index}
-                      className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem] sm:items-center"
-                    >
-                      <Input
-                        value={line.description}
-                        onChange={(event) => patchLine(index, { description: event.target.value })}
-                        placeholder="What are you charging for?"
-                        aria-label={`Line ${index + 1} description`}
-                        maxLength={300}
-                      />
-                      <Input
-                        value={line.quantity}
-                        onChange={(event) => patchLine(index, { quantity: event.target.value })}
-                        inputMode="decimal"
-                        className="text-right font-mono"
-                        aria-label={`Line ${index + 1} quantity`}
-                      />
-                      <Input
-                        value={line.unitPrice}
-                        onChange={(event) => patchLine(index, { unitPrice: event.target.value })}
-                        inputMode="decimal"
-                        className="text-right font-mono"
-                        placeholder="0.00"
-                        aria-label={`Line ${index + 1} unit price`}
-                      />
-                      <Input
-                        value={line.discountPercent}
-                        onChange={(event) =>
-                          patchLine(index, { discountPercent: event.target.value })
-                        }
-                        inputMode="decimal"
-                        className="text-right font-mono"
-                        placeholder="0"
-                        aria-label={`Line ${index + 1} discount percent`}
-                      />
-                      <Input
-                        value={line.taxRate}
-                        onChange={(event) => patchLine(index, { taxRate: event.target.value })}
-                        inputMode="decimal"
-                        className="text-right font-mono"
-                        placeholder="0"
-                        aria-label={`Line ${index + 1} tax percent`}
-                      />
-                      <span className="px-1 text-right font-mono text-sm tabular-nums">
-                        {net.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-9 w-9 px-0"
-                        aria-label={`Remove line ${index + 1}`}
-                        disabled={lines.length === 1}
-                        onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  );
-                })}
-
+            return (
+              <div
+                key={index}
+                className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem] sm:items-center"
+              >
+                <Input
+                  value={line.description}
+                  onChange={(event) => patchLine(index, { description: event.target.value })}
+                  placeholder="What are you charging for?"
+                  aria-label={`Line ${index + 1} description`}
+                  maxLength={300}
+                />
+                <Input
+                  value={line.quantity}
+                  onChange={(event) => patchLine(index, { quantity: event.target.value })}
+                  inputMode="decimal"
+                  className="text-right font-mono"
+                  aria-label={`Line ${index + 1} quantity`}
+                />
+                <Input
+                  value={line.unitPrice}
+                  onChange={(event) => patchLine(index, { unitPrice: event.target.value })}
+                  inputMode="decimal"
+                  className="text-right font-mono"
+                  placeholder="0.00"
+                  aria-label={`Line ${index + 1} unit price`}
+                />
+                <Input
+                  value={line.discountPercent}
+                  onChange={(event) =>
+                    patchLine(index, { discountPercent: event.target.value })
+                  }
+                  inputMode="decimal"
+                  className="text-right font-mono"
+                  placeholder="0"
+                  aria-label={`Line ${index + 1} discount percent`}
+                />
+                <Input
+                  value={line.taxRate}
+                  onChange={(event) => patchLine(index, { taxRate: event.target.value })}
+                  inputMode="decimal"
+                  className="text-right font-mono"
+                  placeholder="0"
+                  aria-label={`Line ${index + 1} tax percent`}
+                />
+                <span className="px-1 text-right font-mono text-sm tabular-nums">
+                  {net.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => setLines((prev) => [...prev, emptyLine()])}
+                  className="h-9 w-9 px-0"
+                  aria-label={`Remove line ${index + 1}`}
+                  disabled={lines.length === 1}
+                  onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add line
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-              </section>
-            )}
-
-            {!fromQuotationId ? (
-              <section className="ml-auto w-full max-w-sm space-y-1.5 rounded-[var(--card-radius)] border border-[var(--border)] p-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">List total</span>
-                  <span className="font-mono tabular-nums">
-                    {formatMoney(totals.listTotal, currency)}
-                  </span>
-                </div>
-                {totals.lineDiscount > 0 ? (
-                  <div className="flex justify-between">
-                    <span className="text-[var(--text-muted)]">Line discounts</span>
-                    <span className="font-mono tabular-nums">
-                      −{formatMoney(totals.lineDiscount, currency)}
-                    </span>
-                  </div>
-                ) : null}
-                <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="doc-discount" className="text-[var(--text-muted)]">
-                    Document discount %
-                  </Label>
-                  <Input
-                    id="doc-discount"
-                    value={documentDiscount}
-                    onChange={(event) => setDocumentDiscount(event.target.value)}
-                    inputMode="decimal"
-                    className="h-8 w-20 text-right font-mono"
-                    placeholder="0"
-                  />
-                </div>
-                {totals.docDiscountAmount > 0 ? (
-                  <div className="flex justify-between">
-                    <span className="text-[var(--text-muted)]">Document discount</span>
-                    <span className="font-mono tabular-nums">
-                      −{formatMoney(totals.docDiscountAmount, currency)}
-                    </span>
-                  </div>
-                ) : null}
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Subtotal</span>
-                  <span className="font-mono tabular-nums">
-                    {formatMoney(totals.subTotal, currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Tax</span>
-                  <span className="font-mono tabular-nums">
-                    {formatMoney(totals.taxTotal, currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t border-[var(--border)] pt-1.5 text-base font-semibold">
-                  <span>Total</span>
-                  <span className="font-mono tabular-nums">
-                    {formatMoney(totals.total, currency)}
-                  </span>
-                </div>
-              </section>
-            ) : null}
-
-            <section className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="doc-date">{isQuotation ? "Valid until" : "Due date"}</Label>
-                <Input
-                  id="doc-date"
-                  type="date"
-                  value={isQuotation ? validUntil : dueDate}
-                  onChange={(event) =>
-                    isQuotation ? setValidUntil(event.target.value) : setDueDate(event.target.value)
-                  }
-                />
               </div>
-            </section>
+            );
+          })}
 
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-notes">Notes</Label>
-              <Textarea
-                id="doc-notes"
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                rows={3}
-                placeholder="Terms, lead times, exclusions — anything the client should read."
-              />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setLines((prev) => [...prev, emptyLine()])}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add line
+          </Button>
+        </section>
+      )}
+
+      {!fromQuotationId ? (
+        <section className="ml-auto w-full max-w-sm space-y-1.5 rounded-[var(--card-radius)] border border-[var(--border)] p-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">List total</span>
+            <span className="font-mono tabular-nums">
+              {formatMoney(totals.listTotal, currency)}
+            </span>
+          </div>
+          {totals.lineDiscount > 0 ? (
+            <div className="flex justify-between">
+              <span className="text-[var(--text-muted)]">Line discounts</span>
+              <span className="font-mono tabular-nums">
+                −{formatMoney(totals.lineDiscount, currency)}
+              </span>
             </div>
+          ) : null}
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="doc-discount" className="text-[var(--text-muted)]">
+              Document discount %
+            </Label>
+            <Input
+              id="doc-discount"
+              value={documentDiscount}
+              onChange={(event) => setDocumentDiscount(event.target.value)}
+              inputMode="decimal"
+              className="h-8 w-20 text-right font-mono"
+              placeholder="0"
+            />
+          </div>
+          {totals.docDiscountAmount > 0 ? (
+            <div className="flex justify-between">
+              <span className="text-[var(--text-muted)]">Document discount</span>
+              <span className="font-mono tabular-nums">
+                −{formatMoney(totals.docDiscountAmount, currency)}
+              </span>
+            </div>
+          ) : null}
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">Subtotal</span>
+            <span className="font-mono tabular-nums">
+              {formatMoney(totals.subTotal, currency)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">Tax</span>
+            <span className="font-mono tabular-nums">
+              {formatMoney(totals.taxTotal, currency)}
+            </span>
+          </div>
+          <div className="flex justify-between border-t border-[var(--border)] pt-1.5 text-base font-semibold">
+            <span>Total</span>
+            <span className="font-mono tabular-nums">
+              {formatMoney(totals.total, currency)}
+            </span>
+          </div>
+        </section>
+      ) : null}
 
-            {isQuotation ? (
-              <label className="flex cursor-pointer items-start gap-2.5">
-                <Checkbox
-                  checked={sendApproval}
-                  onCheckedChange={(checked) => setSendApproval(checked === true)}
-                  className="mt-0.5"
-                />
-                <span className="text-sm">
-                  Create an approval link
-                  <span className="block text-[var(--text-muted)]">
-                    The client can accept or decline from the link without an account.
-                  </span>
-                </span>
-              </label>
-            ) : null}
-          </FormShell>
+      <section className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="doc-date">{isQuotation ? "Valid until" : "Due date"}</Label>
+          <Input
+            id="doc-date"
+            type="date"
+            value={isQuotation ? validUntil : dueDate}
+            onChange={(event) =>
+              isQuotation ? setValidUntil(event.target.value) : setDueDate(event.target.value)
+            }
+          />
         </div>
-      </SheetContent>
-    </Sheet>
+      </section>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="doc-notes">Notes</Label>
+        <Textarea
+          id="doc-notes"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          rows={3}
+          placeholder="Terms, lead times, exclusions — anything the client should read."
+        />
+      </div>
+
+      {isQuotation ? (
+        <label className="flex cursor-pointer items-start gap-2.5">
+          <Checkbox
+            checked={sendApproval}
+            onCheckedChange={(checked) => setSendApproval(checked === true)}
+            className="mt-0.5"
+          />
+          <span className="text-sm">
+            Create an approval link
+            <span className="block text-[var(--text-muted)]">
+              The client can accept or decline from the link without an account.
+            </span>
+          </span>
+        </label>
+      ) : null}
+    </RecordDialog>
   );
 }

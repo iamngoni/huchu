@@ -14,14 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { FormShell } from "@/components/shared/form-shell";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 
@@ -140,112 +133,99 @@ export function VisitScheduleSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent size="md" className="w-full overflow-y-auto p-6">
-        <SheetHeader>
-          <SheetTitle>Schedule a site visit</SheetTitle>
-          <SheetDescription>
-            The visit is where the job gets specified — measurements taken here become the
-            quotation.
-          </SheetDescription>
-        </SheetHeader>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Schedule a site visit"
+      description="The visit is where the job gets specified — measurements taken here become the quotation."
+      size="md"
+      errors={errors}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const found = validate();
+        setErrors(found);
+        if (found.length === 0) book.mutate();
+      }}
+      footer={<>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={book.isPending}>
+          {book.isPending ? "Scheduling…" : "Schedule visit"}
+        </Button>
+      </>}
+    >
+      <div className="space-y-1.5">
+        <Label htmlFor="visit-title">Title</Label>
+        <Input
+          id="visit-title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          maxLength={200}
+        />
+      </div>
 
-        <div className="mt-6">
-          <FormShell
-            variant="bare"
-            errors={errors}
-            requiredHint="A start time and an assignee are required."
-            onSubmit={(event) => {
-              event.preventDefault();
-              const found = validate();
-              setErrors(found);
-              if (found.length === 0) book.mutate();
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="visit-start">Starts *</Label>
+          <Input
+            id="visit-start"
+            type="datetime-local"
+            value={start}
+            onChange={(event) => {
+              setStart(event.target.value);
+              if (event.target.value) setEnd(addHours(event.target.value, 2));
             }}
-            actions={
-              <>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={book.isPending}>
-                  {book.isPending ? "Scheduling…" : "Schedule visit"}
-                </Button>
-              </>
-            }
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="visit-title">Title</Label>
-              <Input
-                id="visit-title"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                maxLength={200}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="visit-start">Starts *</Label>
-                <Input
-                  id="visit-start"
-                  type="datetime-local"
-                  value={start}
-                  onChange={(event) => {
-                    setStart(event.target.value);
-                    if (event.target.value) setEnd(addHours(event.target.value, 2));
-                  }}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="visit-end">Ends</Label>
-                <Input
-                  id="visit-end"
-                  type="datetime-local"
-                  value={end}
-                  onChange={(event) => setEnd(event.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="visit-location">Location</Label>
-              <Input
-                id="visit-location"
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                placeholder="Street address, or where to meet on site"
-                maxLength={300}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="visit-assignee">Assigned to *</Label>
-              <Select value={assignedToId} onValueChange={setAssignedToId}>
-                <SelectTrigger id="visit-assignee">
-                  <SelectValue placeholder="Who's going?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {owners.map((owner) => (
-                    <SelectItem key={owner.id} value={owner.id}>
-                      {owner.name ?? "Unnamed"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="visit-notes">Notes</Label>
-              <Textarea
-                id="visit-notes"
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                rows={3}
-                placeholder="Access arrangements, who to ask for, what to bring."
-              />
-            </div>
-          </FormShell>
+          />
         </div>
-      </SheetContent>
-    </Sheet>
+        <div className="space-y-1.5">
+          <Label htmlFor="visit-end">Ends</Label>
+          <Input
+            id="visit-end"
+            type="datetime-local"
+            value={end}
+            onChange={(event) => setEnd(event.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="visit-location">Location</Label>
+        <Input
+          id="visit-location"
+          value={location}
+          onChange={(event) => setLocation(event.target.value)}
+          placeholder="Street address, or where to meet on site"
+          maxLength={300}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="visit-assignee">Assigned to *</Label>
+        <Select value={assignedToId} onValueChange={setAssignedToId}>
+          <SelectTrigger id="visit-assignee">
+            <SelectValue placeholder="Who's going?" />
+          </SelectTrigger>
+          <SelectContent>
+            {owners.map((owner) => (
+              <SelectItem key={owner.id} value={owner.id}>
+                {owner.name ?? "Unnamed"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="visit-notes">Notes</Label>
+        <Textarea
+          id="visit-notes"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          rows={3}
+          placeholder="Access arrangements, who to ask for, what to bring."
+        />
+      </div>
+    </RecordDialog>
   );
 }

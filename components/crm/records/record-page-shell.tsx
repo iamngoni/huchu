@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PageChrome } from "@/components/layout/page-chrome";
-import { ArrowLeft, DotsThree, type LucideIcon } from "@/lib/icons";
+import { DotsThree, type LucideIcon } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 export type RecordTab = {
@@ -110,19 +110,11 @@ export function RecordPageShell({
 
   return (
     <div className="space-y-4">
-      <PageChrome title={title} icon={icon}>
+      <PageChrome title={title} icon={icon} backHref={backHref} backLabel={backLabel}>
         {barActions}
       </PageChrome>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <Link
-          href={backHref}
-          className="flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-        >
-          <ArrowLeft className="size-4" />
-          {backLabel}
-        </Link>
-
         {leading ? <span className="flex-none">{leading}</span> : null}
 
         {reference ? (
