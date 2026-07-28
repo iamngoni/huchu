@@ -295,7 +295,7 @@ export function GlobalCommandBar() {
                   typeLabel: group.label,
                   reference: result.reference,
                   subtitle: result.subtitle,
-                  facts: [],
+                  facts: result.facts,
                 }}
               />
             ),
