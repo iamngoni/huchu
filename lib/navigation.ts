@@ -18,6 +18,7 @@ import {
   Fuel,
   Funnel,
   History,
+  Zap,
   LocalShipping,
   ManageAccounts,
   NoteAdd,
@@ -367,6 +368,7 @@ export const navSections: NavSection[] = [
       { id: "work", label: "Work" },
       { id: "documents", label: "Sales documents" },
       { id: "learn", label: "Insights" },
+      { id: "workflows", label: "Workflows" },
       { id: "setup", label: "CRM setup" },
     ],
     items: [
@@ -393,6 +395,21 @@ export const navSections: NavSection[] = [
 
       { href: "/crm/insights", icon: BarChart3, label: "Insights", group: "learn" },
       { href: "/crm/reports", icon: ChartLine, label: "Sales reports", group: "learn" },
+
+      {
+        href: "/crm/workflows",
+        icon: Zap,
+        label: "Workflows",
+        roles: ["SUPERADMIN", "MANAGER"],
+        group: "workflows",
+      },
+      {
+        href: "/crm/workflows/runs",
+        icon: History,
+        label: "Workflow activity",
+        roles: ["SUPERADMIN", "MANAGER"],
+        group: "workflows",
+      },
 
       { href: "/crm/import", icon: Upload, label: "Import", group: "setup" },
       {

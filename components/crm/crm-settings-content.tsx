@@ -14,7 +14,6 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { CRM_CHANNEL_LABELS, CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
 import { CustomFieldsPanel } from "@/components/crm/settings/custom-fields-panel";
 import { PipelinesPanel } from "@/components/crm/settings/pipelines-panel";
-import { AutomationsPanel } from "@/components/crm/settings/automations-panel";
 import { NavRail, NavRailItem } from "@/components/ui/nav-rail";
 import { CataloguePanel } from "@/components/inventory/catalogue-panel";
 import type { CrmLeadChannel } from "@prisma/client";
@@ -411,12 +410,6 @@ const SECTIONS: SettingsSection[] = [
     label: "Catalogue",
     description: "What the business sells — shared with Stock & Inventory and Retail.",
     render: () => <CataloguePanel />,
-  },
-  {
-    id: "automations",
-    label: "Automations",
-    description: "Small rules that do the obvious thing when something changes.",
-    render: () => <AutomationsPanel />,
   },
   {
     id: "commissions",
