@@ -9,6 +9,44 @@ import { automationSchema } from "@/lib/crm/automation";
 
 const updateSchema = automationSchema.partial();
 
+/**
+ * One workflow, with enough of its history to say whether it works.
+ *
+ * There was no GET here at all: the editor fetched this URL, Next answered
+ * 405, and the page rendered "Workflow not found" — so no workflow could be
+ * opened or edited. Reading is gated on seeing the CRM rather than on managing
+ * settings, because looking at what a rule does is not changing it.
+ */
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const sessionResult = await validateSession(request);
+    if (sessionResult instanceof NextResponse) return sessionResult;
+    const { session } = sessionResult;
+    const { id } = await params;
+
+    if (!(await canUser(session, "records.read"))) {
+      return errorResponse(denialMessage("records.read"), 403);
+    }
+
+    const automation = await prisma.crmAutomation.findFirst({
+      where: { id, companyId: session.user.companyId },
+      include: {
+        runs: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          select: { id: true, status: true, createdAt: true, result: true },
+        },
+      },
+    });
+    if (!automation) return errorResponse("Workflow not found", 404);
+
+    return successResponse(automation);
+  } catch (error) {
+    console.error("[API] GET /api/v2/crm/automations/[id] error:", error);
+    return errorResponse("Failed to load the workflow");
+  }
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const sessionResult = await validateSession(request);

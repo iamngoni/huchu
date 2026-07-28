@@ -15,6 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RecordDialog } from "@/components/crm/records/record-dialog";
+import {
+  RecordPicker,
+  type PickedRecord,
+} from "@/components/crm/records/record-picker";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 
@@ -77,6 +81,9 @@ export function VisitScheduleSheet({
   const [location, setLocation] = useState("");
   const [assignedToId, setAssignedToId] = useState(currentUserId ?? "");
   const [notes, setNotes] = useState("");
+  // Only asked for when the sheet was not opened from a record. A van going
+  // somewhere the office cannot tie to a deal is a cost with no reason.
+  const [about, setAbout] = useState<PickedRecord | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
 
   useEffect(() => {
@@ -88,6 +95,7 @@ export function VisitScheduleSheet({
     setLocation(defaultLocation ?? "");
     setAssignedToId(currentUserId ?? "");
     setNotes("");
+    setAbout(null);
     setErrors([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -97,10 +105,10 @@ export function VisitScheduleSheet({
       fetchJson<{ data: { id: string } }>("/api/v2/crm/appointments", {
         method: "POST",
         body: JSON.stringify({
-          leadId: subject.leadId ?? undefined,
-          dealId: subject.dealId ?? undefined,
-          clientId: subject.clientId ?? undefined,
-          siteId: subject.siteId ?? undefined,
+          leadId: subject.leadId ?? (about?.type === "LEAD" ? about.id : undefined),
+          dealId: subject.dealId ?? (about?.type === "DEAL" ? about.id : undefined),
+          clientId: subject.clientId ?? (about?.type === "COMPANY" ? about.id : undefined),
+          siteId: subject.siteId ?? (about?.type === "SITE" ? about.id : undefined),
           title: title.trim() || "Site visit",
           scheduledStart: new Date(start).toISOString(),
           scheduledEnd: end ? new Date(end).toISOString() : undefined,
@@ -124,11 +132,18 @@ export function VisitScheduleSheet({
     onError: (error) => setErrors([getApiErrorMessage(error)]),
   });
 
+  const hasSubject = Boolean(
+    subject.leadId || subject.dealId || subject.clientId || subject.siteId,
+  );
+
   const validate = (): string[] => {
     const found: string[] = [];
     if (!start) found.push("Pick when the visit starts.");
     if (end && new Date(end) <= new Date(start)) found.push("The visit has to end after it starts.");
     if (!assignedToId) found.push("Someone has to be going — assign the visit.");
+    if (!hasSubject && !about) {
+      found.push("Say what the visit is for — a deal, a lead, a company or a site.");
+    }
     return found;
   };
 
@@ -155,6 +170,19 @@ export function VisitScheduleSheet({
         </Button>
       </>}
     >
+      {hasSubject ? null : (
+        <div className="space-y-1.5">
+          <Label htmlFor="visit-about">What is the visit for?</Label>
+          <RecordPicker
+            id="visit-about"
+            value={about}
+            onChange={setAbout}
+            types={["DEAL", "LEAD", "COMPANY", "SITE"]}
+            placeholder="Search deals, leads, companies…"
+          />
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <Label htmlFor="visit-title">Title</Label>
         <Input

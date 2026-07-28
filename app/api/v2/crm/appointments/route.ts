@@ -55,7 +55,11 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         lead: { select: { id: true, leadNo: true, title: true } },
+        // The deal was stored and never read back, so a visit booked against
+        // one showed on this list with nothing saying which job it was for.
+        deal: { select: { id: true, dealNo: true, title: true } },
         client: { select: { id: true, name: true } },
+        site: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, name: true } },
       },
       orderBy: { scheduledStart: "asc" },
