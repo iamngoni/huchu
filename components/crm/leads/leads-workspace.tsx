@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { Funnel, Plus } from "@/lib/icons";
 import { PageChrome } from "@/components/layout/page-chrome";
+import { ViewToolbar } from "@/components/crm/records/view-toolbar";
 import {
   bulkUpdateCrmLeads,
   fetchCrmLeads,
@@ -199,53 +200,60 @@ export function LeadsWorkspace({
         {newLeadAction}
       </PageChrome>
 
-      {/* One row: which leads, what is hidden, and in what order. The view
-          carries its own layout, so there is no separate Table/Board switch to
-          contradict it. Stage stays out here rather than inside Filter because
-          on a board it is not a filter at all — it decides which columns
-          exist. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <ViewPicker
-          views={views}
-          activeKey={activeViewKey}
-          filters={filters}
-          sort={sort}
-          onSelect={(view) => {
-            setActiveViewKey(view.key);
-            setViewType(view.layout);
-            setFilters(view.filters);
-            setSort(view.sort ?? DEFAULT_LEAD_SORT);
-            setPage(1);
-          }}
-          onSaved={() => queryClient.invalidateQueries({ queryKey: ["crm", "saved-views"] })}
-        />
+      {/* The same toolbar grammar as every other record page: what you are
+          looking at, how it is narrowed, then the display controls on the
+          right. The view carries its own layout, so there is no separate
+          Table/Board switch to contradict it. Stage sits with the filters
+          because on a board it decides which columns exist. */}
+      <ViewToolbar
+        start={
+          <>
+            <ViewPicker
+              views={views}
+              activeKey={activeViewKey}
+              filters={filters}
+              sort={sort}
+              onSelect={(view) => {
+                setActiveViewKey(view.key);
+                setViewType(view.layout);
+                setFilters(view.filters);
+                setSort(view.sort ?? DEFAULT_LEAD_SORT);
+                setPage(1);
+              }}
+              onSaved={() =>
+                queryClient.invalidateQueries({ queryKey: ["crm", "saved-views"] })
+              }
+            />
 
-        <LeadsFilters
-          filters={filters}
-          onChange={applyFilters}
-          owners={owners}
-          sources={sources}
-        />
+            <LeadsFilters
+              filters={filters}
+              onChange={applyFilters}
+              owners={owners}
+              sources={sources}
+            />
 
-        {/* A board is already ordered by stage, so sorting it means nothing. */}
-        {viewType === "TABLE" ? (
-          <LeadsSortButton
-            sort={sort}
-            onChange={(next) => {
-              setSort(next);
-              setPage(1);
-            }}
+            <LeadStageFilter filters={filters} onChange={applyFilters} />
+
+            {/* A board is already ordered by stage, so sorting it means nothing. */}
+            {viewType === "TABLE" ? (
+              <LeadsSortButton
+                sort={sort}
+                onChange={(next) => {
+                  setSort(next);
+                  setPage(1);
+                }}
+              />
+            ) : null}
+          </>
+        }
+        end={
+          <ColumnPicker
+            columns={viewType === "TABLE" ? LEAD_TABLE_COLUMNS : LEAD_CARD_FIELDS}
+            state={viewType === "TABLE" ? tableColumns : boardFields}
+            label={viewType === "TABLE" ? "Columns" : "Card fields"}
           />
-        ) : null}
-
-        <ColumnPicker
-          columns={viewType === "TABLE" ? LEAD_TABLE_COLUMNS : LEAD_CARD_FIELDS}
-          state={viewType === "TABLE" ? tableColumns : boardFields}
-          label={viewType === "TABLE" ? "Columns" : "Card fields"}
-        />
-
-        <LeadStageFilter filters={filters} onChange={applyFilters} />
-      </div>
+        }
+      />
 
       {leadsQuery.error && viewType === "TABLE" ? (
         <Alert variant="destructive">

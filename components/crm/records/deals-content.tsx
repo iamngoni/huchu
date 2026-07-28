@@ -223,6 +223,13 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
       createLabel="New deal"
       onCreate={() => setCreateOpen(true)}
       error={dealsQuery.error}
+      display={
+        <ColumnPicker
+          columns={layout === "BOARD" ? DEAL_CARD_FIELDS : DEAL_TABLE_COLUMNS}
+          state={layout === "BOARD" ? boardFields : tableColumns}
+          label={layout === "BOARD" ? "Card fields" : "Columns"}
+        />
+      }
       filters={
         <>
           <SegmentedControl
@@ -280,11 +287,6 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
             ]}
           />
 
-          <ColumnPicker
-            columns={layout === "BOARD" ? DEAL_CARD_FIELDS : DEAL_TABLE_COLUMNS}
-            state={layout === "BOARD" ? boardFields : tableColumns}
-            label={layout === "BOARD" ? "Card fields" : "Columns"}
-          />
         </>
       }
     >
