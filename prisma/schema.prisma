@@ -50,6 +50,8 @@ model Company {
   subscriptions                 CompanySubscription[]
   featureFlags                  CompanyFeatureFlag[]
   userPermissionOverrides       UserPermissionOverride[]
+  crmTemplates                  CrmTemplate[]
+  crmTemplateEvents             CrmTemplateEvent[]
   provisioningEvents            ProvisioningEvent[]
   subdomainReservations         SubdomainReservation[]
   branding                      CompanyBranding?
@@ -922,6 +924,7 @@ model User {
   featureFlags                      UserFeatureFlag[]
   permissionOverrides               UserPermissionOverride[]       @relation("UserPermissionOverrideUser")
   permissionOverridesGranted        UserPermissionOverride[]       @relation("UserPermissionOverrideGrantedBy")
+  crmTemplatesCreated               CrmTemplate[]                  @relation("CrmTemplateCreatedBy")
   schoolTeacherProfiles             SchoolTeacherProfile[]
   schoolResultModerationActions     SchoolResultModerationAction[] @relation("SchoolResultModerationActionActor")
   schoolLeaveRequestsApproved       SchoolLeaveRequest[]           @relation("SchoolLeaveRequestApprovedBy")
@@ -6814,6 +6817,66 @@ model CrmSavedView {
 
   @@index([companyId, entity, isShared])
   @@index([companyId, createdById])
+}
+
+/// A document somebody designed: a form, a quote, an invoice, an email.
+///
+/// One model rather than four because the difference between them is which
+/// blocks they use, not how they are stored — and four tables is four places
+/// to add analytics, sharing and record links to.
+model CrmTemplate {
+  id             String   @id @default(uuid())
+  companyId      String
+  name           String
+  kind           String
+  /// The Notion-style properties above the body.
+  attributes     Json?
+  /// The body, as an ordered block list.
+  blocks         Json
+  /// Shared templates are the team's; unshared ones are the author's drafts.
+  isShared       Boolean  @default(true)
+  isActive       Boolean  @default(true)
+  /// Which record type this is for, and optionally which record.
+  linkedEntity   String?
+  linkedRecordId String?
+  /// Public form links. Null for templates that are never published.
+  publicToken    String?  @unique
+  /// Counted rather than derived: a view is not a row worth keeping, and
+  /// "how many people opened this" should not cost a table scan.
+  viewCount      Int      @default(0)
+  submitCount    Int      @default(0)
+  lastViewedAt   DateTime?
+  lastSubmitAt   DateTime?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?                @relation("CrmTemplateCreatedBy", fields: [createdById], references: [id])
+  events    CrmTemplateEvent[]
+
+  @@unique([companyId, name, kind])
+  @@index([companyId, kind, isActive])
+  @@index([companyId, linkedEntity, linkedRecordId])
+}
+
+/// One thing that happened to a template, for its analytics tab.
+model CrmTemplateEvent {
+  id         String   @id @default(uuid())
+  companyId  String
+  templateId String
+  /// VIEW, SUBMIT, SEND, DOWNLOAD.
+  type       String
+  /// Where it came from, when that is known.
+  source     String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  company  Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  template CrmTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, templateId, createdAt])
+  @@index([templateId, type, createdAt])
 }
 
 model CrmIntakeForm {
