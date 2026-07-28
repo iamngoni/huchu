@@ -27,6 +27,7 @@ import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { CompanyFormSheet } from "./company-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
+import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
 const ACCOUNT_STATUS_PRESENTATION: Record<string, { label: string; status: CanonicalUiStatus }> = {
   ACTIVE: { label: "Active", status: "passing" },
@@ -349,6 +350,11 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
           value: "history",
           label: "History",
           content: <RecordHistoryTab activities={company.activities} />,
+        },
+        {
+          value: "changes",
+          label: "Field history",
+          content: <FieldHistoryTab entity="CLIENT" recordId={companyId} />,
         },
       ]}
       rail={

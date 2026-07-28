@@ -12,6 +12,7 @@ import {
 import { recordFieldChanges } from "@/lib/crm/history";
 import { recordMarkFields } from "@/lib/crm/record-mark";
 import { isCompanyUser } from "../../_helpers";
+import { diffFields } from "@/lib/crm/field-history";
 
 // stageId and status are deliberately absent: a stage move has side effects
 // (stageEnteredAt, probability, won/lost stamps) and belongs to the stage
@@ -173,6 +174,25 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (errors.length > 0) return errorResponse("Validation failed", 400, errors);
       customFields = mergeCustomFields(existing.customFields, values, data.clearCustomFields ?? []);
     }
+
+    // Written before the update so the diff compares against what was read,
+    // and one row per field that actually moved — "somebody updated the deal"
+    // is the sentence nobody needs.
+    await prisma.crmFieldChange.createMany({
+      data: diffFields(
+        "DEAL",
+        existing as Record<string, unknown>,
+        data as Record<string, unknown>,
+      ).map((change) => ({
+        companyId,
+        entity: "DEAL",
+        recordId: id,
+        field: change.field,
+        oldValue: change.oldValue,
+        newValue: change.newValue,
+        changedById: session.user.id,
+      })),
+    });
 
     const updated = await prisma.crmDeal.update({
       where: { id },

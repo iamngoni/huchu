@@ -34,6 +34,7 @@ import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { PersonFormSheet } from "./person-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
+import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
 const ROLE_LABELS: Record<string, string> = {
   PRIMARY: "Primary contact",
@@ -342,6 +343,11 @@ export function PersonDetailPage({ personId }: { personId: string }) {
           value: "history",
           label: "History",
           content: <RecordHistoryTab activities={person.activities} />,
+        },
+        {
+          value: "changes",
+          label: "Field history",
+          content: <FieldHistoryTab entity="PERSON" recordId={personId} />,
         },
       ]}
       rail={

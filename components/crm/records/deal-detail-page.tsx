@@ -51,6 +51,7 @@ import { EntityLink } from "./entity-link";
 import { DealStageBar } from "./deal-stage-bar";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { RecordHistoryTab } from "./record-history-tab";
+import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
 const STATUS_PRESENTATION: Record<string, CanonicalUiStatus> = {
   OPEN: "in_progress",
@@ -443,6 +444,11 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             value: "history",
             label: "History",
             content: <RecordHistoryTab activities={deal.activities} />,
+          },
+          {
+            value: "changes",
+            label: "Field history",
+            content: <FieldHistoryTab entity="DEAL" recordId={dealId} />,
           },
         ]}
         rail={

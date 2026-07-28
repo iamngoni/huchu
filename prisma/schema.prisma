@@ -52,6 +52,7 @@ model Company {
   userPermissionOverrides       UserPermissionOverride[]
   crmTemplates                  CrmTemplate[]
   crmTemplateEvents             CrmTemplateEvent[]
+  crmFieldChanges               CrmFieldChange[]
   provisioningEvents            ProvisioningEvent[]
   subdomainReservations         SubdomainReservation[]
   branding                      CompanyBranding?
@@ -925,6 +926,7 @@ model User {
   permissionOverrides               UserPermissionOverride[]       @relation("UserPermissionOverrideUser")
   permissionOverridesGranted        UserPermissionOverride[]       @relation("UserPermissionOverrideGrantedBy")
   crmTemplatesCreated               CrmTemplate[]                  @relation("CrmTemplateCreatedBy")
+  crmFieldChanges                   CrmFieldChange[]               @relation("CrmFieldChangeChangedBy")
   schoolTeacherProfiles             SchoolTeacherProfile[]
   schoolResultModerationActions     SchoolResultModerationAction[] @relation("SchoolResultModerationActionActor")
   schoolLeaveRequestsApproved       SchoolLeaveRequest[]           @relation("SchoolLeaveRequestApprovedBy")
@@ -6824,6 +6826,32 @@ model CrmSavedView {
 /// One model rather than four because the difference between them is which
 /// blocks they use, not how they are stored — and four tables is four places
 /// to add analytics, sharing and record links to.
+/// One field on one record, changed once.
+///
+/// The activity feed says "Nicolas updated the deal", which is the sentence
+/// nobody needs. What somebody wants when a number looks wrong is which number,
+/// what it was, and who moved it — and that is a row per field, not per save.
+model CrmFieldChange {
+  id        String   @id @default(uuid())
+  companyId String
+  /// LEAD, DEAL, PERSON, CLIENT, SITE — the same vocabulary as comments.
+  entity    String
+  recordId  String
+  field     String
+  /// Stored as text on purpose: this table is read by people, not joined on,
+  /// and a Json column would make "what did the stage used to be" a cast.
+  oldValue  String?
+  newValue  String?
+  changedById String?
+  createdAt DateTime @default(now())
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  changedBy User?   @relation("CrmFieldChangeChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([companyId, entity, recordId, createdAt])
+  @@index([companyId, entity, recordId, field])
+}
+
 model CrmTemplate {
   id             String   @id @default(uuid())
   companyId      String
