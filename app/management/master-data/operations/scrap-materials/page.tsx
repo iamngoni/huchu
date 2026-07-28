@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { MasterDataShell } from "@/components/management/master-data/master-data-shell";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { DataTableColumn } from "@corelithzw/react";
+import {
+  DetailFact,
+  MasterDataPage,
+} from "@/components/management/master-data/master-data-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable, type DataTableQueryState } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useReservedId } from "@/hooks/use-reserved-id";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { Pencil, Plus, Trash2 } from "@/lib/icons";
 
 type MaterialRecord = {
   id: string;
@@ -79,12 +79,10 @@ async function fetchMaterials(search?: string) {
 export default function ScrapMaterialsMasterDataPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [queryState, setQueryState] = useState<DataTableQueryState>({
-    mode: "paginated",
-    page: 1,
-    pageSize: 25,
-    search: "",
-  });
+  const [search, setSearch] = useState("");
+  // The material list is filtered on the server; deferring the needle keeps
+  // one request per pause rather than one per keystroke.
+  const deferredSearch = useDeferredValue(search);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MaterialRecord | null>(null);
   const [editing, setEditing] = useState<MaterialRecord | null>(null);
@@ -100,8 +98,8 @@ export default function ScrapMaterialsMasterDataPage() {
   const resolvedCode = editing ? form.code : reservedId;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["management", "master-data", "scrap-materials", queryState.search],
-    queryFn: () => fetchMaterials(queryState.search),
+    queryKey: ["management", "master-data", "scrap-materials", deferredSearch],
+    queryFn: () => fetchMaterials(deferredSearch),
   });
 
   const materials = data?.data ?? [];
@@ -171,135 +169,130 @@ export default function ScrapMaterialsMasterDataPage() {
     },
   });
 
-  const columns = useMemo<ColumnDef<MaterialRecord>[]>(
+  const columns = useMemo<DataTableColumn<MaterialRecord>[]>(
     () => [
       {
-        id: "material",
+        key: "material",
         header: "Material",
-        accessorFn: (row) => `${row.code} ${row.name}`,
-        cell: ({ row }) => (
+        sortable: true,
+        sortAccessor: (row) => row.name,
+        render: (row) => (
           <div>
-            <div className="font-semibold">{row.original.name}</div>
-            <div className="font-mono text-sm text-muted-foreground">{row.original.code}</div>
+            <div className="font-semibold">{row.name}</div>
+            <div className="font-mono text-sm text-[var(--text-muted)]">{row.code}</div>
           </div>
         ),
       },
       {
-        id: "category",
+        key: "category",
         header: "Category",
-        cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge>,
-        size: 120,
+        width: 120,
+        render: (row) => <Badge variant="secondary">{row.category}</Badge>,
       },
       {
-        id: "price",
+        key: "price",
         header: "Default Buy Price / kg",
-        cell: ({ row }) => (
+        align: "right",
+        width: 150,
+        render: (row) => (
           <NumericCell>
-            {row.original.currency} {row.original.defaultPricePerKg.toFixed(2)}
+            {row.currency} {row.defaultPricePerKg.toFixed(2)}
           </NumericCell>
         ),
-        size: 130,
       },
       {
-        id: "activity",
-        header: "Activity",
-        cell: ({ row }) => (
-          <div className="text-sm text-muted-foreground">
-            <div>Prices {row.original._count.prices}</div>
-            <div>Purchases {row.original._count.purchases}</div>
-            <div>Sales {row.original._count.sales}</div>
-          </div>
-        ),
-        size: 140,
-      },
-      {
-        id: "status",
+        key: "status",
         header: "Status",
-        cell: ({ row }) => (
-          <Badge variant={row.original.isActive ? "secondary" : "outline"}>
-            {row.original.isActive ? "Active" : "Inactive"}
+        width: 100,
+        render: (row) => (
+          <Badge variant={row.isActive ? "secondary" : "outline"}>
+            {row.isActive ? "Active" : "Inactive"}
           </Badge>
         ),
-        size: 100,
-      },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="outline"
-              onClick={() => {
-                setEditing(row.original);
-                setForm({
-                  code: row.original.code,
-                  name: row.original.name,
-                  category: row.original.category,
-                  defaultPricePerKg: String(row.original.defaultPricePerKg),
-                  currency: row.original.currency,
-                  isActive: row.original.isActive ? "true" : "false",
-                  notes: row.original.notes ?? "",
-                });
-                setFormOpen(true);
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="destructive"
-              onClick={() => setDeleteTarget(row.original)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ),
-        size: 96,
       },
     ],
     [],
   );
 
   return (
-    <MasterDataShell
-      activeTab="scrap-materials"
+    <MasterDataPage<MaterialRecord>
       title="Scrap Materials"
-      actions={
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditing(null);
-            setForm(emptyForm);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          New Material
-        </Button>
+      description="The material catalogue: what the yard buys and sells, and its default price."
+      createLabel="New material"
+      onCreate={() => {
+        setEditing(null);
+        setForm(emptyForm);
+        setFormOpen(true);
+      }}
+      columns={columns}
+      data={materials}
+      rowKey={(row) => row.id}
+      isLoading={isLoading}
+      error={error}
+      emptyLabel="No materials configured yet"
+      search={
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search code, material, or notes"
+          aria-label="Search materials"
+          className="h-9 w-full sm:w-64"
+        />
       }
+      renderDetail={(row) => (
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <DetailFact label="Material">{row.name}</DetailFact>
+            <DetailFact label="Code">
+              <span className="font-mono">{row.code}</span>
+            </DetailFact>
+            <DetailFact label="Category">{row.category}</DetailFact>
+            <DetailFact label="Default buy price / kg">
+              <NumericCell>
+                {row.currency} {row.defaultPricePerKg.toFixed(2)}
+              </NumericCell>
+            </DetailFact>
+            <DetailFact label="Activity">
+              Prices {row._count.prices} · Purchases {row._count.purchases} · Sales{" "}
+              {row._count.sales}
+            </DetailFact>
+            {row.notes ? <DetailFact label="Notes">{row.notes}</DetailFact> : null}
+            <DetailFact label="Status">{row.isActive ? "Active" : "Inactive"}</DetailFact>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditing(row);
+                setForm({
+                  code: row.code,
+                  name: row.name,
+                  category: row.category,
+                  defaultPricePerKg: String(row.defaultPricePerKg),
+                  currency: row.currency,
+                  isActive: row.isActive ? "true" : "false",
+                  notes: row.notes ?? "",
+                });
+                setFormOpen(true);
+              }}
+            >
+              Edit
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              onClick={() => setDeleteTarget(row)}
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      )}
     >
-      {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Unable to load materials</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <DataTable
-        data={materials}
-        columns={columns}
-        queryState={queryState}
-        onQueryStateChange={(next) => setQueryState((prev) => ({ ...prev, ...next }))}
-        features={{ sorting: true, globalFilter: true, pagination: true }}
-        pagination={{ enabled: true, server: false }}
-        searchPlaceholder="Search code, material, or notes"
-        tableClassName="text-sm"
-        emptyState={isLoading ? "Loading materials..." : "No materials configured yet"}
-      />
-
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent size="lg">
           <DialogHeader>
@@ -412,6 +405,6 @@ export default function ScrapMaterialsMasterDataPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </MasterDataShell>
+    </MasterDataPage>
   );
 }

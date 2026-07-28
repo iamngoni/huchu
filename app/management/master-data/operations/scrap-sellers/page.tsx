@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { MasterDataShell } from "@/components/management/master-data/master-data-shell";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { DataTableColumn } from "@corelithzw/react";
+import {
+  DetailFact,
+  MasterDataPage,
+} from "@/components/management/master-data/master-data-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable, type DataTableQueryState } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { Pencil, Plus, Trash2 } from "@/lib/icons";
 
 type SellerRecord = {
   id: string;
@@ -71,20 +71,17 @@ async function fetchSellers(search?: string) {
 export default function ScrapSellersMasterDataPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [queryState, setQueryState] = useState<DataTableQueryState>({
-    mode: "paginated",
-    page: 1,
-    pageSize: 25,
-    search: "",
-  });
+  const [search, setSearch] = useState("");
+  // Server-side filter; deferring keeps one request per pause, not keystroke.
+  const deferredSearch = useDeferredValue(search);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SellerRecord | null>(null);
   const [editing, setEditing] = useState<SellerRecord | null>(null);
   const [form, setForm] = useState<SellerForm>(emptyForm);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["management", "master-data", "scrap-sellers", queryState.search],
-    queryFn: () => fetchSellers(queryState.search),
+    queryKey: ["management", "master-data", "scrap-sellers", deferredSearch],
+    queryFn: () => fetchSellers(deferredSearch),
   });
 
   const sellers = data?.data ?? [];
@@ -153,123 +150,119 @@ export default function ScrapSellersMasterDataPage() {
     },
   });
 
-  const columns = useMemo<ColumnDef<SellerRecord>[]>(
+  const columns = useMemo<DataTableColumn<SellerRecord>[]>(
     () => [
       {
-        id: "seller",
+        key: "seller",
         header: "Supplier (Seller)",
-        accessorFn: (row) => `${row.fullName} ${row.phone} ${row.nationalId}`,
-        cell: ({ row }) => (
+        sortable: true,
+        sortAccessor: (row) => row.fullName,
+        render: (row) => (
           <div>
-            <div className="font-semibold">{row.original.fullName}</div>
-            <div className="text-sm text-muted-foreground">{row.original.phone}</div>
+            <div className="font-semibold">{row.fullName}</div>
+            <div className="text-sm text-[var(--text-muted)]">{row.phone}</div>
           </div>
         ),
       },
       {
-        id: "nationalId",
+        key: "nationalId",
         header: "National ID / Passport",
-        cell: ({ row }) => <span className="font-mono text-sm">{row.original.nationalId}</span>,
-        size: 160,
+        width: 160,
+        render: (row) => <span className="font-mono text-sm">{row.nationalId}</span>,
       },
+      { key: "address", header: "Address", render: (row) => row.address ?? "" },
       {
-        id: "address",
-        header: "Address",
-        accessorFn: (row) => row.address ?? "",
-      },
-      {
-        id: "purchases",
+        key: "purchases",
         header: "Purchases",
-        cell: ({ row }) => <span className="font-mono text-sm">{row.original._count.purchases}</span>,
-        size: 90,
+        width: 100,
+        align: "right",
+        render: (row) => <span className="font-mono text-sm">{row._count.purchases}</span>,
       },
       {
-        id: "status",
+        key: "status",
         header: "Status",
-        cell: ({ row }) => (
-          <Badge variant={row.original.isActive ? "secondary" : "outline"}>
-            {row.original.isActive ? "Active" : "Inactive"}
+        width: 100,
+        render: (row) => (
+          <Badge variant={row.isActive ? "secondary" : "outline"}>
+            {row.isActive ? "Active" : "Inactive"}
           </Badge>
         ),
-        size: 100,
-      },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="outline"
-              onClick={() => {
-                setEditing(row.original);
-                setForm({
-                  fullName: row.original.fullName,
-                  phone: row.original.phone,
-                  nationalId: row.original.nationalId,
-                  address: row.original.address ?? "",
-                  notes: row.original.notes ?? "",
-                  isActive: row.original.isActive ? "true" : "false",
-                });
-                setFormOpen(true);
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="destructive"
-              onClick={() => setDeleteTarget(row.original)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ),
-        size: 96,
       },
     ],
     [],
   );
 
   return (
-    <MasterDataShell
-      activeTab="scrap-sellers"
+    <MasterDataPage<SellerRecord>
       title="Scrap Suppliers"
-      actions={
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditing(null);
-            setForm(emptyForm);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          New Supplier
-        </Button>
+      description="Who the yard buys from — identity, contact and purchase history."
+      createLabel="New supplier"
+      onCreate={() => {
+        setEditing(null);
+        setForm(emptyForm);
+        setFormOpen(true);
+      }}
+      columns={columns}
+      data={sellers}
+      rowKey={(row) => row.id}
+      isLoading={isLoading}
+      error={error}
+      emptyLabel="No suppliers created yet"
+      search={
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search supplier, phone, ID/passport, or address"
+          aria-label="Search suppliers"
+          className="h-9 w-full sm:w-64"
+        />
       }
+      renderDetail={(row) => (
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <DetailFact label="Supplier">{row.fullName}</DetailFact>
+            <DetailFact label="Phone">{row.phone}</DetailFact>
+            <DetailFact label="National ID / Passport">
+              <span className="font-mono">{row.nationalId}</span>
+            </DetailFact>
+            {row.address ? <DetailFact label="Address">{row.address}</DetailFact> : null}
+            {row.notes ? <DetailFact label="Notes">{row.notes}</DetailFact> : null}
+            <DetailFact label="Purchases">{row._count.purchases}</DetailFact>
+            <DetailFact label="Status">{row.isActive ? "Active" : "Inactive"}</DetailFact>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditing(row);
+                setForm({
+                  fullName: row.fullName,
+                  phone: row.phone,
+                  nationalId: row.nationalId,
+                  address: row.address ?? "",
+                  notes: row.notes ?? "",
+                  isActive: row.isActive ? "true" : "false",
+                });
+                setFormOpen(true);
+              }}
+            >
+              Edit
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              onClick={() => setDeleteTarget(row)}
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      )}
     >
-      {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Unable to load suppliers</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <DataTable
-        data={sellers}
-        columns={columns}
-        queryState={queryState}
-        onQueryStateChange={(next) => setQueryState((prev) => ({ ...prev, ...next }))}
-        features={{ sorting: true, globalFilter: true, pagination: true }}
-        pagination={{ enabled: true, server: false }}
-        searchPlaceholder="Search supplier, phone, ID/passport, or address"
-        tableClassName="text-sm"
-        emptyState={isLoading ? "Loading suppliers..." : "No suppliers created yet"}
-      />
-
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent size="lg">
           <DialogHeader>
@@ -333,6 +326,6 @@ export default function ScrapSellersMasterDataPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </MasterDataShell>
+    </MasterDataPage>
   );
 }
