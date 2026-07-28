@@ -221,6 +221,7 @@ export async function POST(request: NextRequest) {
           source: data.source ?? undefined,
           sourceChannel: data.sourceChannel ?? "MANUAL",
           emoji: data.emoji,
+          accent: data.accent,
           avatarUrl: data.avatarUrl,
           customFields: values,
           stageEnteredAt: now,

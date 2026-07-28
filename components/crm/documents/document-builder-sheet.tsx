@@ -24,6 +24,7 @@ import {
 } from "./document-math";
 import { formatMoney } from "./document-types";
 import { CataloguePicker } from "./catalogue-picker";
+import { refreshAfterDocumentChange } from "@/lib/crm/refresh";
 
 export function DocumentBuilderSheet({
   open,
@@ -119,9 +120,7 @@ export function DocumentBuilderSheet({
       );
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["crm-record", basePath] });
-      queryClient.invalidateQueries({ queryKey: ["crm", "leads"] });
-      queryClient.invalidateQueries({ queryKey: ["crm", "board"] });
+      refreshAfterDocumentChange(queryClient);
       toast({
         title: mode === "quotation" ? "Quotation created" : "Invoice issued",
         // Report the server's total, not the preview — per-line rounding can

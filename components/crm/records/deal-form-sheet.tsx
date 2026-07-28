@@ -41,6 +41,7 @@ const FORECAST_CATEGORIES = [
 
 type FormState = {
   emoji: string;
+  accent: string;
   avatarUrl: string;
   title: string;
   clientId: string;
@@ -57,6 +58,7 @@ type FormState = {
 
 const EMPTY: FormState = {
   emoji: "",
+  accent: "",
   avatarUrl: "",
   title: "",
   clientId: "",
@@ -201,6 +203,7 @@ export function DealFormSheet({
             : null,
           assignedToId: form.assignedToId || null,
           emoji: form.emoji.trim() || null,
+          accent: form.accent.trim() || null,
           avatarUrl: form.avatarUrl.trim() || null,
           customFields: customValues,
         }),

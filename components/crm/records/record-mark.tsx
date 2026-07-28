@@ -2,7 +2,7 @@
 
 import { createElement } from "react";
 
-import { Avatar } from "@corelithzw/react";
+import { Avatar, Emoji, IconTile } from "@corelithzw/react";
 import {
   Building2,
   Checklist,
@@ -16,7 +16,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "@/lib/icons";
-import { cn } from "@/lib/utils";
+import { recordAccent } from "@/lib/ui/record-accent";
 
 /**
  * The mark that stands for a record in a list, a card or a page header.
@@ -80,19 +80,17 @@ export const KIND_EMOJI: Record<RecordKind, string> = {
   receipt: "🧾",
 };
 
-const SIZE: Record<"sm" | "md" | "lg", string> = {
-  sm: "size-7 text-sm",
-  md: "size-9 text-base",
-  lg: "size-11 text-lg",
-};
-
 const AVATAR_SIZE = { sm: "sm", md: "sm", lg: "md" } as const;
+const TILE_SIZE = { sm: "sm", md: "md", lg: "lg" } as const;
+/** Emoji artwork is sized in pixels, matched to the tile it sits in. */
+const EMOJI_PX = { sm: 16, md: 18, lg: 22 } as const;
 
 export function RecordMark({
   kind,
   name,
   emoji,
   avatarUrl,
+  accent,
   size = "sm",
   className,
 }: {
@@ -103,10 +101,18 @@ export function RecordMark({
   emoji?: string | null;
   /** An uploaded display picture. Beats everything else. */
   avatarUrl?: string | null;
+  /**
+   * The record's chosen colour. Left off, a hue is derived from its name —
+   * which is what stops a list being a column of identical grey squares
+   * without anybody having to colour two hundred rows by hand.
+   */
+  accent?: string | null;
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
   const isPerson = kind === "person" || kind === "rep";
+
+  const hue = recordAccent(accent, name);
 
   if (avatarUrl) {
     return (
@@ -120,26 +126,31 @@ export function RecordMark({
   }
 
   if (isPerson) {
-    return <Avatar size={AVATAR_SIZE[size]} name={name || "?"} className={className} />;
-  }
-
-  const box = cn(
-    "inline-flex flex-none items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-muted)] text-[var(--text-muted)]",
-    SIZE[size],
-    className,
-  );
-
-  if (emoji) {
     return (
-      <span className={box} role="img" aria-label={name ?? undefined}>
-        {emoji}
-      </span>
+      <Avatar
+        size={AVATAR_SIZE[size]}
+        name={name || "?"}
+        accent={hue}
+        className={className}
+      />
     );
   }
 
   return (
-    <span className={box} aria-hidden="true">
-      {createElement(KIND_ICON[kind], { className: "size-4" })}
-    </span>
+    <IconTile
+      accent={hue}
+      size={TILE_SIZE[size]}
+      className={className}
+      role={emoji ? "img" : undefined}
+      aria-label={emoji ? (name ?? undefined) : undefined}
+    >
+      {emoji ? (
+        // `label=""` because the tile already carries the accessible name —
+        // otherwise a screen reader reads the glyph's name and the record's.
+        <Emoji emoji={emoji} label="" size={EMOJI_PX[size]} />
+      ) : (
+        createElement(KIND_ICON[kind], { className: "size-4" })
+      )}
+    </IconTile>
   );
 }

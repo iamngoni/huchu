@@ -9,7 +9,6 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { fetchJson } from "@/lib/api-client";
 import { navSections } from "@/lib/navigation";
 import { filterNavSectionsByEnabledFeatures } from "@/lib/platform/gating/nav-filter";
-import { useTheme } from "@/lib/ui/theme";
 import { resolveViewIcon } from "@/lib/ui/view-icons";
 import {
   AddressBook,
@@ -25,7 +24,6 @@ import {
   Search,
   Users,
   Wallet,
-  Zap,
   type LucideIcon,
 } from "@/lib/icons";
 import type { SearchResult, SearchResultType } from "@/lib/crm/search";
@@ -124,7 +122,6 @@ export function GlobalCommandBar() {
   const router = useRouter();
   const { data: session } = useSession();
   const { toggleSidebar } = useSidebar();
-  const theme = useTheme();
 
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -403,7 +400,7 @@ export function GlobalCommandBar() {
     }
 
     // 6. The app's own switches.
-    const general: CommandItem[] = [
+    const generalItems: CommandItem[] = [
       {
         id: "action-sidebar",
         group: "general",
@@ -417,21 +414,6 @@ export function GlobalCommandBar() {
           />
         ),
         primary: { label: "Collapse", run: toggleSidebar },
-      },
-      {
-        id: "action-theme",
-        group: "general",
-        label: theme.isDark ? "Change to light theme" : "Change to dark theme",
-        icon: Zap,
-        keywords: "dark light theme appearance",
-        preview: (
-          <ActionPreview
-            icon={Zap}
-            title={theme.isDark ? "Change to light theme" : "Change to dark theme"}
-            body="Remembered on this device. Set it back to follow the system from Preferences."
-          />
-        ),
-        primary: { label: "Switch", run: theme.toggle },
       },
       {
         id: "action-help",
@@ -461,7 +443,8 @@ export function GlobalCommandBar() {
         ),
         primary: { label: "Open", run: () => go("/crm/leads") },
       },
-    ].filter(
+    ];
+    const general = generalItems.filter(
       (item) => needle.length < 2 || `${item.label} ${item.keywords ?? ""}`.toLowerCase().includes(needle),
     );
 
@@ -477,8 +460,6 @@ export function GlobalCommandBar() {
     now,
     recents,
     searchQuery.data,
-    theme.isDark,
-    theme.toggle,
     todayQuery.data,
     toggleSidebar,
   ]);

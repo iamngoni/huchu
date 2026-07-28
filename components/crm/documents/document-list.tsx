@@ -34,6 +34,7 @@ import {
   invoiceOutstanding,
   type LeadDocument,
 } from "./document-types";
+import { refreshAfterDocumentChange } from "@/lib/crm/refresh";
 
 function KindIcon({ type }: { type: LeadDocument["type"] }) {
   const Icon = type === "RECEIPT" ? ReceiptLong : FileText;
@@ -84,7 +85,7 @@ export function DocumentList({
         // showing the link is still useful.
         toast({ title: "Approval link ready", description: url });
       }
-      queryClient.invalidateQueries({ queryKey: ["crm-record", basePath] });
+      refreshAfterDocumentChange(queryClient);
     },
     onError: (error) =>
       toast({

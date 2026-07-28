@@ -198,6 +198,7 @@ export async function POST(request: NextRequest) {
         clientId: data.clientId ?? undefined,
         assignedToId: data.assignedToId ?? undefined,
         emoji: data.emoji,
+        accent: data.accent,
         avatarUrl: data.avatarUrl,
         customFields: values,
         createdById: session.user.id,

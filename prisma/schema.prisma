@@ -6404,6 +6404,9 @@ model CrmClient {
   id                 String              @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
   avatarUrl          String?
+  /// A colour for this record, Notion-style. One of the design system's
+  /// accent names; null means it takes its colour from its own name.
+  accent         String?
   /// A single emoji standing in for this record, shown where a picture would
   /// be. Falls back to the entity's own icon when unset.
   emoji              String?
@@ -6478,6 +6481,10 @@ model CrmClient {
 
 model CrmLead {
   id             String         @id @default(uuid())
+  /// The same mark and colour every other record carries.
+  emoji          String?
+  avatarUrl      String?
+  accent         String?
   companyId      String
   leadNo         String
   title          String?
@@ -7418,6 +7425,9 @@ model CrmPerson {
   id                 String               @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
   avatarUrl          String?
+  /// A colour for this record, Notion-style. One of the design system's
+  /// accent names; null means it takes its colour from its own name.
+  accent         String?
   /// A single emoji standing in for this record, shown where a picture would
   /// be. Falls back to the entity's own icon when unset.
   emoji              String?
@@ -7502,6 +7512,9 @@ model CrmSite {
   id                 String   @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
   avatarUrl   String?
+  /// A colour for this record, Notion-style. One of the design system's
+  /// accent names; null means it takes its colour from its own name.
+  accent         String?
   /// A single emoji standing in for this record. Falls back to the entity icon.
   emoji       String?
   companyId          String
@@ -7549,6 +7562,9 @@ model CrmDeal {
   id                String               @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
   avatarUrl   String?
+  /// A colour for this record, Notion-style. One of the design system's
+  /// accent names; null means it takes its colour from its own name.
+  accent         String?
   /// A single emoji standing in for this record. Falls back to the entity icon.
   emoji       String?
   companyId         String

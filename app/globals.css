@@ -867,32 +867,7 @@
   --shadow-popover: 0 4px 6px -1px rgba(15,23,42,0.1), 0 2px 4px -2px rgba(15,23,42,0.1);
 }
 
-@media (prefers-color-scheme: dark) {
-  .pos-terminal {
-    --pos-lcd-bg: #1a2030;
-    --pos-lcd-bg-active: #1e2a40;
-    --pos-lcd-border: rgba(255,255,255,0.10);
-    --pos-lcd-text: #f0f9ff;
-    --pos-lcd-label: rgba(240,249,255,0.55);
-    --pos-key-bg: #1f2632;
-    --pos-key-border: rgba(255,255,255,0.10);
-    --pos-key-shadow: #0a0d14;
-    --pos-key-text: #f0f9ff;
-    --pos-tender-idle-bg: #1f2632;
-    --pos-tender-idle-border: rgba(255,255,255,0.10);
-    --pos-tender-idle-shadow: #0a0d14;
-    --pos-tender-idle-text: rgba(240,249,255,0.78);
-    --pos-status-success-bg: rgba(34,197,94,0.14);
-    --pos-status-success-ring: rgba(34,197,94,0.42);
-    --pos-status-success-text: #4ade80;
-    --pos-status-warning-bg: rgba(245,158,11,0.14);
-    --pos-status-warning-ring: rgba(245,158,11,0.42);
-    --pos-status-warning-text: #fbbf24;
-    --pos-status-danger-bg: rgba(239,68,68,0.14);
-    --pos-status-danger-ring: rgba(239,68,68,0.42);
-    --pos-status-danger-text: #fca5a5;
-    --pos-status-info-bg: rgba(47,107,255,0.18);
-    --pos-status-info-ring: rgba(47,107,255,0.45);
-    --pos-status-info-text: #93b4ff;
-  }
-}
+/* No `prefers-color-scheme` block. The product is light-only: reading the
+   operating system's preference put a dark terminal in front of anyone whose
+   laptop was set that way, which nobody had asked for. A dark POS skin, if it
+   is wanted, is an explicit choice on the terminal — not an inference. */

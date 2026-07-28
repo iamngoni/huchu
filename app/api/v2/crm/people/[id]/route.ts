@@ -185,6 +185,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       where: { id },
       data: {
         emoji: data.emoji,
+        accent: data.accent,
         avatarUrl: data.avatarUrl,
         firstName: data.firstName,
         lastName: data.lastName,

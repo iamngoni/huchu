@@ -146,6 +146,7 @@ export async function POST(request: NextRequest) {
         notes: data.notes ?? undefined,
         tags: data.tags ?? [],
         emoji: data.emoji,
+        accent: data.accent,
         avatarUrl: data.avatarUrl,
         customFields: values,
         createdById: session.user.id,

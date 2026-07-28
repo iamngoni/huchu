@@ -133,16 +133,6 @@ export default async function RootLayout({
         data-portal-path={hostContext.portalPath ?? undefined}
         style={brandingVars as React.CSSProperties}
       >
-        {/* The design system's dark tokens key on `body.is-dark`. Applying the
-            saved choice from React would mean a frame of the wrong theme on
-            every load, so it runs before paint. Deliberately inline and tiny —
-            a flash of white on a dark workspace is the one bug people notice
-            on every single page view. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var c=localStorage.getItem("huchu.theme");var d=c==="dark"||((!c||c==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.body.classList.add("is-dark");}catch(e){}})();`,
-          }}
-        />
         <Analytics />
         <div className="app-root">
           <AppProviders>
