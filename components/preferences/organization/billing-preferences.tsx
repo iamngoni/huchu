@@ -9,6 +9,8 @@ import {
   type BillingPreferences as BillingPreferencesResponse,
 } from "@/lib/preferences/api";
 
+import { PricingPanel } from "./pricing-panel";
+
 function formatMoney(value: number | null | undefined, currency = "USD") {
   if (typeof value !== "number" || Number.isNaN(value)) return "Not set";
   const symbol = currency === "USD" ? "$" : currency;
@@ -154,6 +156,9 @@ export function BillingPreferences() {
           <p className="t-body t-muted">No add-ons are enabled for this workspace.</p>
         )}
       </Card>
+
+      {/* The plan says what it costs; this says what made it cost that. */}
+      <PricingPanel />
     </div>
   );
 }

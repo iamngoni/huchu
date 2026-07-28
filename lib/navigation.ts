@@ -363,8 +363,11 @@ export const navSections: NavSection[] = [
     // each and told you nothing on the way past.
     flattenGroups: true,
     groups: [
-      { id: "pipeline", label: "Pipeline" },
-      { id: "records", label: "Records" },
+      // Attio's word, and the right one: these are the kinds of thing the CRM
+      // keeps, and somebody looking for People is looking for an object, not
+      // for "records" as opposed to "pipeline". Splitting leads and deals away
+      // from people and companies drew a line the data does not have.
+      { id: "objects", label: "Objects" },
       { id: "work", label: "Work" },
       { id: "documents", label: "Sales documents" },
       { id: "learn", label: "Insights" },
@@ -374,14 +377,14 @@ export const navSections: NavSection[] = [
     items: [
       { href: "/crm", icon: Dashboard, label: "CRM overview" },
 
-      { href: "/crm/leads", icon: Funnel, label: "Leads", group: "pipeline" },
-      { href: "/crm/deals", icon: Funnel, label: "Deals", group: "pipeline" },
-      { href: "/crm/forms", icon: NoteAdd, label: "Intake forms", group: "pipeline" },
+      { href: "/crm/leads", icon: Funnel, label: "Leads", group: "objects" },
+      { href: "/crm/deals", icon: Funnel, label: "Deals", group: "objects" },
+      { href: "/crm/forms", icon: NoteAdd, label: "Intake forms", group: "work" },
 
-      { href: "/crm/people", icon: Users, label: "People", group: "records" },
-      { href: "/crm/companies", icon: Building2, label: "Companies", group: "records" },
-      { href: "/crm/sites", icon: MapPin, label: "Sites", group: "records" },
-      { href: "/crm/reps", icon: UserRound, label: "Sales reps", group: "records" },
+      { href: "/crm/people", icon: Users, label: "People", group: "objects" },
+      { href: "/crm/companies", icon: Building2, label: "Companies", group: "objects" },
+      { href: "/crm/sites", icon: MapPin, label: "Sites", group: "objects" },
+      { href: "/crm/reps", icon: UserRound, label: "Sales reps", group: "objects" },
 
       { href: "/crm/tasks", icon: Checklist, label: "Tasks", group: "work" },
       { href: "/crm/appointments", icon: CalendarCheck, label: "Site visits", group: "work" },
