@@ -103,3 +103,39 @@ export const DEAL_STAGE_DOT: Record<string, string> = {
   WON: "bg-[var(--tone-success)]",
   LOST: "bg-[var(--tone-danger)]",
 };
+
+/**
+ * A stage's colour, resolved from the token stored on the pipeline stage.
+ *
+ * Two classes per colour rather than one: a dot for the header and a band for
+ * the rule that runs along the top of the column. The band is what makes the
+ * colour readable down a board — a dot alone is four pixels the eye has to
+ * find twice, once per column.
+ *
+ * Unknown tokens fall back to the brand rather than to nothing, so a stage
+ * somebody coloured with a token we have since renamed still reads as a stage.
+ */
+export const STAGE_COLOR: Record<string, { dot: string; band: string }> = {
+  "status-info-border": { dot: "bg-[var(--tone-info)]", band: "bg-[var(--tone-info)]" },
+  "status-success-border": { dot: "bg-[var(--tone-success)]", band: "bg-[var(--tone-success)]" },
+  "status-warning-border": { dot: "bg-[var(--tone-warn)]", band: "bg-[var(--tone-warn)]" },
+  "status-error-border": { dot: "bg-[var(--tone-danger)]", band: "bg-[var(--tone-danger)]" },
+  brand: { dot: "bg-[var(--brand)]", band: "bg-[var(--brand)]" },
+  accent: { dot: "bg-[var(--accent-500)]", band: "bg-[var(--accent-500)]" },
+};
+
+export function stageColor(token: string | null | undefined) {
+  return (token && STAGE_COLOR[token]) || STAGE_COLOR.brand;
+}
+
+/** The fixed lead stages, in the same two-class shape as `stageColor`. */
+export const LEAD_STAGE_COLOR: Record<string, { dot: string; band: string }> = {
+  NEW: { dot: "bg-[var(--tone-info)]", band: "bg-[var(--tone-info)]" },
+  CONTACTED: { dot: "bg-[var(--accent-500)]", band: "bg-[var(--accent-500)]" },
+  QUALIFIED: { dot: "bg-[var(--brand)]", band: "bg-[var(--brand)]" },
+  SITE_VISIT: { dot: "bg-[var(--warning-400)]", band: "bg-[var(--warning-400)]" },
+  QUOTED: { dot: "bg-[var(--tone-warn)]", band: "bg-[var(--tone-warn)]" },
+  INVOICED: { dot: "bg-[var(--warning-600)]", band: "bg-[var(--warning-600)]" },
+  WON: { dot: "bg-[var(--tone-success)]", band: "bg-[var(--tone-success)]" },
+  LOST: { dot: "bg-[var(--tone-danger)]", band: "bg-[var(--tone-danger)]" },
+};

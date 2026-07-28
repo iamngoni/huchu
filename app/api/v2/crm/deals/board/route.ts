@@ -45,7 +45,13 @@ export async function GET(request: NextRequest) {
             stages: {
               where: { archivedAt: null },
               orderBy: { position: "asc" },
-              select: { id: true, name: true, status: true, position: true },
+              select: {
+                id: true,
+                name: true,
+                status: true,
+                position: true,
+                colorToken: true,
+              },
             },
           },
         })
@@ -57,7 +63,13 @@ export async function GET(request: NextRequest) {
             stages: {
               where: { archivedAt: null },
               orderBy: { position: "asc" },
-              select: { id: true, name: true, status: true, position: true },
+              select: {
+                id: true,
+                name: true,
+                status: true,
+                position: true,
+                colorToken: true,
+              },
             },
           },
         });

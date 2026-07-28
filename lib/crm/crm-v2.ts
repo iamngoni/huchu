@@ -266,7 +266,13 @@ export type CrmDealBoardCard = {
 };
 
 export type CrmDealBoardColumn = {
-  stage: { id: string; name: string; status: "OPEN" | "WON" | "LOST"; position: number };
+  stage: {
+    id: string;
+    name: string;
+    status: "OPEN" | "WON" | "LOST";
+    position: number;
+    colorToken: string | null;
+  };
   count: number;
   totalValue: number;
   hasMore: boolean;

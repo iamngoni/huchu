@@ -5,8 +5,10 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import type { CrmLeadStage } from "@prisma/client";
 
 import type { CrmBoardColumn } from "@/lib/crm/crm-v2";
-import { LEAD_STAGE_DOT } from "@/lib/crm/tones";
+import { LEAD_STAGE_COLOR, stageColor } from "@/lib/crm/tones";
 import { cn } from "@/lib/utils";
+
+import { BoardColumnHeader } from "@/components/crm/records/board-column-header";
 
 import { LeadCard } from "./lead-card";
 import { CRM_STAGE_LABELS, formatLeadValue } from "./stage-config";
@@ -37,24 +39,28 @@ export function BoardColumn({
           : "bg-transparent",
       )}
     >
-      <header className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-[var(--surface-base)] px-1 py-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-2 flex-none rounded-full",
-              LEAD_STAGE_DOT[column.stage] ?? "bg-[var(--text-subtle)]",
-            )}
-          />
-          <h3 className="truncate text-sm font-medium">{CRM_STAGE_LABELS[column.stage]}</h3>
-          <span className="font-mono text-sm text-[var(--text-subtle)]">{column.count}</span>
-        </div>
-        {column.totalValue > 0 ? (
-          <span className="font-mono text-sm text-[var(--text-muted)]">
-            {formatLeadValue(column.totalValue, currency)}
-          </span>
-        ) : null}
-      </header>
+      <BoardColumnHeader
+        name={CRM_STAGE_LABELS[column.stage]}
+        count={column.count}
+        color={LEAD_STAGE_COLOR[column.stage] ?? stageColor(null)}
+        meta={
+          column.totalValue > 0 ? (
+            <span className="font-mono text-sm text-[var(--text-muted)]">
+              {formatLeadValue(column.totalValue, currency)}
+            </span>
+          ) : null
+        }
+        actions={
+          column.hasMore
+            ? [
+                {
+                  label: `Open all ${column.count} as a list`,
+                  onSelect: () => onViewAll(column.stage),
+                },
+              ]
+            : undefined
+        }
+      />
 
       <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto px-1 pb-2">
         <SortableContext
@@ -77,16 +83,6 @@ export function BoardColumn({
           >
             Drop a lead here
           </p>
-        ) : null}
-
-        {column.hasMore ? (
-          <button
-            type="button"
-            onClick={() => onViewAll(column.stage)}
-            className="rounded px-2 py-1.5 text-sm text-[var(--text-muted)] underline hover:text-[var(--text)]"
-          >
-            View all {column.count} in table
-          </button>
         ) : null}
       </div>
     </div>

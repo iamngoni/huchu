@@ -38,11 +38,12 @@ import {
   type CrmDealBoardCard,
   type CrmDealBoardColumn,
 } from "@/lib/crm/crm-v2";
-import { DEAL_STAGE_DOT } from "@/lib/crm/tones";
+import { stageColor } from "@/lib/crm/tones";
 import { cn } from "@/lib/utils";
 
 import { isOverdue } from "@/components/crm/leads/stage-config";
 
+import { BoardColumnHeader } from "./board-column-header";
 import { RecordMark } from "./record-mark";
 
 /**
@@ -155,7 +156,17 @@ function DealCard({ deal }: { deal: CrmDealBoardCard }) {
   );
 }
 
-function DealColumn({ column, currency }: { column: CrmDealBoardColumn; currency: string }) {
+function DealColumn({
+  column,
+  currency,
+  onAdd,
+  onViewAll,
+}: {
+  column: CrmDealBoardColumn;
+  currency: string;
+  onAdd?: (stageId: string) => void;
+  onViewAll?: (stageId: string) => void;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: `stage:${column.stage.id}` });
 
   return (
@@ -168,24 +179,26 @@ function DealColumn({ column, currency }: { column: CrmDealBoardColumn; currency
           : "bg-transparent",
       )}
     >
-      <header className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-[var(--surface-base)] px-1 py-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-2 flex-none rounded-full",
-              DEAL_STAGE_DOT[column.stage.status] ?? "bg-[var(--text-subtle)]",
-            )}
-          />
-          <h3 className="truncate text-sm font-medium">{column.stage.name}</h3>
-          <span className="font-mono text-sm text-[var(--text-subtle)]">{column.count}</span>
-        </div>
-        {column.totalValue > 0 ? (
-          <span className="font-mono text-sm text-[var(--text-muted)]">
-            {money(column.totalValue, currency)}
-          </span>
-        ) : null}
-      </header>
+      <BoardColumnHeader
+        name={column.stage.name}
+        count={column.count}
+        color={stageColor(column.stage.colorToken)}
+        meta={
+          column.totalValue > 0 ? (
+            <span className="font-mono text-sm text-[var(--text-muted)]">
+              {money(column.totalValue, currency)}
+            </span>
+          ) : null
+        }
+        onAdd={onAdd ? () => onAdd(column.stage.id) : undefined}
+        addLabel={`New deal in ${column.stage.name}`}
+        actions={[
+          {
+            label: "Open this stage as a list",
+            onSelect: () => onViewAll?.(column.stage.id),
+          },
+        ]}
+      />
 
       <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto px-1 pb-2">
         <SortableContext
@@ -264,10 +277,16 @@ export function DealsBoard({
   pipelineId,
   search,
   className,
+  onAdd,
+  onViewAll,
 }: {
   pipelineId: string | null;
   search?: string;
   className?: string;
+  /** Start a deal already in this stage. */
+  onAdd?: (stageId: string) => void;
+  /** Open one stage as a list, for the columns past the fifty-card cap. */
+  onViewAll?: (stageId: string) => void;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -378,7 +397,13 @@ export function DealsBoard({
     >
       <div className={cn("scroll-rail flex gap-3 overflow-x-auto pb-2", className)}>
         {board.columns.map((column) => (
-          <DealColumn key={column.stage.id} column={column} currency={currency} />
+          <DealColumn
+            key={column.stage.id}
+            column={column}
+            currency={currency}
+            onAdd={onAdd}
+            onViewAll={onViewAll}
+          />
         ))}
       </div>
 
