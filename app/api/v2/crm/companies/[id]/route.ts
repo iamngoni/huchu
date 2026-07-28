@@ -12,9 +12,11 @@ import {
   type FieldDefinition,
 } from "@/lib/crm/custom-fields";
 import { recordFieldChanges } from "@/lib/crm/history";
+import { recordMarkFields } from "@/lib/crm/record-mark";
 import { isCompanyUser } from "../../_helpers";
 
 const updateCompanySchema = z.object({
+  ...recordMarkFields,
   name: z.string().trim().min(1).max(200).optional(),
   tradingName: z.string().trim().max(200).nullable().optional(),
   companyType: z.enum(["CUSTOMER", "PROSPECT", "SUPPLIER", "PARTNER", "OTHER"]).optional(),
@@ -147,6 +149,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const updated = await prisma.crmClient.update({
       where: { id },
       data: {
+        emoji: data.emoji,
+        avatarUrl: data.avatarUrl,
         name: data.name,
         tradingName: data.tradingName,
         companyType: data.companyType,

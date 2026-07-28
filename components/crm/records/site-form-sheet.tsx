@@ -19,8 +19,11 @@ import {
 } from "@/lib/crm/crm-v2";
 
 import { CustomFieldInputs } from "./custom-field-inputs";
+import { RecordMarkField } from "./record-mark-field";
 
 type FormState = {
+  emoji: string;
+  avatarUrl: string;
   name: string;
   clientId: string;
   addressLine: string;
@@ -35,6 +38,8 @@ type FormState = {
 };
 
 const EMPTY: FormState = {
+  emoji: "",
+  avatarUrl: "",
   name: "",
   clientId: "",
   addressLine: "",
@@ -160,6 +165,8 @@ export function SiteFormSheet({
           accessInstructions: form.accessInstructions.trim() || null,
           siteConditions: form.siteConditions.trim() || null,
           notes: form.notes.trim() || null,
+          emoji: form.emoji.trim() || null,
+          avatarUrl: form.avatarUrl.trim() || null,
           customFields: customValues,
         }),
       }),
@@ -341,6 +348,21 @@ export function SiteFormSheet({
           rows={3}
         />
       </div>
+
+      <RecordMarkField
+
+        kind="site"
+
+        name={form.name}
+
+        emoji={form.emoji}
+
+        avatarUrl={form.avatarUrl}
+
+        onChange={(next) => setForm((previous) => ({ ...previous, ...next }))}
+
+      />
+
 
       <CustomFieldInputs
         definitions={definitions}

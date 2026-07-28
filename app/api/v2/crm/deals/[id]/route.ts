@@ -10,12 +10,14 @@ import {
   type FieldDefinition,
 } from "@/lib/crm/custom-fields";
 import { recordFieldChanges } from "@/lib/crm/history";
+import { recordMarkFields } from "@/lib/crm/record-mark";
 import { isCompanyUser } from "../../_helpers";
 
 // stageId and status are deliberately absent: a stage move has side effects
 // (stageEnteredAt, probability, won/lost stamps) and belongs to the stage
 // route. Zod drops them if a client sends them anyway.
 const updateDealSchema = z.object({
+  ...recordMarkFields,
   title: z.string().trim().min(1).max(200).optional(),
   clientId: z.string().uuid().nullable().optional(),
   primaryContactId: z.string().uuid().nullable().optional(),
@@ -175,6 +177,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const updated = await prisma.crmDeal.update({
       where: { id },
       data: {
+        emoji: data.emoji,
+        avatarUrl: data.avatarUrl,
         title: data.title,
         clientId: data.clientId,
         primaryContactId: data.primaryContactId,

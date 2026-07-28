@@ -11,6 +11,7 @@ import { useDebounced } from "@/hooks/use-debounced";
 
 import { CompanyFormSheet } from "./company-form-sheet";
 import { RecordListPager, type RecordListRow } from "./record-list";
+import { RecordMark } from "./record-mark";
 import {
   GroupedRecordList,
   bucketByLetter,
@@ -62,6 +63,15 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
       companies.map((company) => ({
         id: company.id,
         href: `/crm/companies/${company.id}`,
+        leading: (
+          <RecordMark
+            kind="company"
+            name={company.name}
+            emoji={company.emoji}
+            avatarUrl={company.avatarUrl}
+            size="md"
+          />
+        ),
         title: company.name,
         subtitle:
           [company.clientNo, [company.city, company.country].filter(Boolean).join(", ")]

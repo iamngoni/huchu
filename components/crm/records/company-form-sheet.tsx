@@ -27,6 +27,7 @@ import {
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
 
 import { CustomFieldInputs } from "./custom-field-inputs";
+import { RecordMarkField } from "./record-mark-field";
 import { DuplicateWarningDialog, type DuplicateEntry } from "./duplicate-warning-dialog";
 
 const COMPANY_TYPES = [
@@ -52,6 +53,8 @@ const PARENT_RELATIONS = [
 ];
 
 type FormState = {
+  emoji: string;
+  avatarUrl: string;
   name: string;
   tradingName: string;
   companyType: string;
@@ -73,6 +76,8 @@ type FormState = {
 };
 
 const EMPTY: FormState = {
+  emoji: "",
+  avatarUrl: "",
   name: "",
   tradingName: "",
   companyType: "CUSTOMER",
@@ -200,6 +205,8 @@ export function CompanyFormSheet({
     parentRelation: form.parentClientId ? form.parentRelation || null : null,
     notes: form.notes.trim() || null,
     assignedToId: form.assignedToId || null,
+    emoji: form.emoji.trim() || null,
+    avatarUrl: form.avatarUrl.trim() || null,
     customFields: customValues,
     force,
   });
@@ -514,6 +521,21 @@ export function CompanyFormSheet({
             rows={3}
           />
         </div>
+
+        <RecordMarkField
+
+          kind="company"
+
+          name={form.name}
+
+          emoji={form.emoji}
+
+          avatarUrl={form.avatarUrl}
+
+          onChange={(next) => setForm((previous) => ({ ...previous, ...next }))}
+
+        />
+
 
         <CustomFieldInputs
           definitions={definitions}

@@ -19,6 +19,7 @@ import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { RecordMark } from "./record-mark";
 import { EntityLink } from "./entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { CompanyFormSheet } from "./company-form-sheet";
@@ -41,6 +42,8 @@ const RELATION_LABELS: Record<string, string> = {
 
 type CompanyDetail = {
   id: string;
+  avatarUrl: string | null;
+  emoji: string | null;
   clientNo: string;
   name: string;
   tradingName: string | null;
@@ -189,6 +192,15 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
         { label: "Edit", onSelect: () => setEditOpen(true) },
         { label: "Merge a duplicate", onSelect: () => setMergeOpen(true) },
       ]}
+      leading={
+        <RecordMark
+          kind="company"
+          name={company.name}
+          emoji={company.emoji}
+          avatarUrl={company.avatarUrl}
+          size="md"
+        />
+      }
       title={company.name}
       reference={company.clientNo}
       status={ACCOUNT_STATUS_PRESENTATION[company.accountStatus] ?? null}
@@ -353,6 +365,8 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
       onOpenChange={setEditOpen}
       record={{
         id: company.id,
+        emoji: company.emoji ?? "",
+        avatarUrl: company.avatarUrl ?? "",
         name: company.name,
         tradingName: company.tradingName ?? "",
         companyType: company.companyType,

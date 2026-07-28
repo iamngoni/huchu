@@ -6367,6 +6367,11 @@ enum CrmViewType {
 /// extended in place. The UI calls it "Company".
 model CrmClient {
   id                 String              @id @default(uuid())
+  /// A picture chosen for this record. Wins over the emoji when set.
+  avatarUrl          String?
+  /// A single emoji standing in for this record, shown where a picture would
+  /// be. Falls back to the entity's own icon when unset.
+  emoji              String?
   companyId          String
   clientNo           String
   name               String
@@ -7230,6 +7235,11 @@ enum CrmForecastCategory {
 
 model CrmPerson {
   id                 String               @id @default(uuid())
+  /// A picture chosen for this record. Wins over the emoji when set.
+  avatarUrl          String?
+  /// A single emoji standing in for this record, shown where a picture would
+  /// be. Falls back to the entity's own icon when unset.
+  emoji              String?
   companyId          String
   personNo           String
   firstName          String
@@ -7309,6 +7319,10 @@ model CrmPersonCompany {
 
 model CrmSite {
   id                 String   @id @default(uuid())
+  /// A picture chosen for this record. Wins over the emoji when set.
+  avatarUrl   String?
+  /// A single emoji standing in for this record. Falls back to the entity icon.
+  emoji       String?
   companyId          String
   siteNo             String
   name               String
@@ -7352,6 +7366,10 @@ model CrmSite {
 /// enquiry that may produce one.
 model CrmDeal {
   id                String               @id @default(uuid())
+  /// A picture chosen for this record. Wins over the emoji when set.
+  avatarUrl   String?
+  /// A single emoji standing in for this record. Falls back to the entity icon.
+  emoji       String?
   companyId         String
   dealNo            String
   title             String

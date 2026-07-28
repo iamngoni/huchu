@@ -374,6 +374,10 @@ export function fetchCrmInsightsSummary(params: { from?: string; to?: string } =
 export type CrmPersonRecord = {
   id: string;
   personNo: string;
+  /** A picture chosen for this record. Beats the emoji. */
+  avatarUrl: string | null;
+  /** The record's own emoji, when somebody has given it one. */
+  emoji: string | null;
   firstName: string;
   lastName: string | null;
   fullName: string;
@@ -398,6 +402,10 @@ export type CrmPersonRecord = {
 export type CrmCompanyRecord = {
   id: string;
   clientNo: string;
+  /** A picture chosen for this record. Beats the emoji. */
+  avatarUrl: string | null;
+  /** The record's own emoji, when somebody has given it one. */
+  emoji: string | null;
   name: string;
   tradingName: string | null;
   companyType: string;
@@ -458,6 +466,10 @@ export type CrmDealRecord = {
 export type CrmSiteRecord = {
   id: string;
   siteNo: string;
+  /** A picture chosen for this record. Beats the emoji. */
+  avatarUrl: string | null;
+  /** The record's own emoji, when somebody has given it one. */
+  emoji: string | null;
   name: string;
   addressLine: string | null;
   city: string | null;

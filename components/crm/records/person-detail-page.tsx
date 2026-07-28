@@ -17,6 +17,7 @@ import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { RecordMark } from "./record-mark";
 import { EntityLink } from "./entity-link";
 import { Users } from "@/lib/icons";
 
@@ -55,6 +56,8 @@ const CHANNEL_LABELS: Record<string, string> = {
 
 type PersonDetail = {
   id: string;
+  avatarUrl: string | null;
+  emoji: string | null;
   personNo: string;
   fullName: string;
   firstName: string;
@@ -187,6 +190,15 @@ export function PersonDetailPage({ personId }: { personId: string }) {
       backHref="/crm/people"
       backLabel="All people"
       actions={[{ label: "Merge a duplicate", onSelect: () => setMergeOpen(true) }]}
+      leading={
+        <RecordMark
+          kind="person"
+          name={person.fullName}
+          emoji={person.emoji}
+          avatarUrl={person.avatarUrl}
+          size="md"
+        />
+      }
       title={person.fullName}
       reference={person.personNo}
       subtitle={subtitle}
@@ -303,6 +315,8 @@ export function PersonDetailPage({ personId }: { personId: string }) {
       onOpenChange={setEditOpen}
       record={{
         id: person.id,
+        emoji: person.emoji ?? "",
+        avatarUrl: person.avatarUrl ?? "",
         firstName: person.firstName,
         lastName: person.lastName ?? "",
         jobTitle: person.jobTitle ?? "",

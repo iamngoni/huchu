@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Avatar, Badge } from "@corelithzw/react";
+import { Badge } from "@corelithzw/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -18,6 +18,7 @@ import { fetchCrmRep, type CrmRepDetail } from "@/lib/crm/crm-v2";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
 import { RecordList, type RecordListRow } from "@/components/crm/records/record-list";
+import { RecordMark } from "@/components/crm/records/record-mark";
 import { HistoryFeed, type HistoryEvent } from "@/components/crm/records/history-feed";
 import {
   RailSection,
@@ -172,7 +173,7 @@ export function RepDetailPage({ repId }: { repId: string }) {
       backHref="/crm/reps"
       backLabel="Sales reps"
       title={rep.name ?? rep.email ?? "Unnamed"}
-      leading={<Avatar size="sm" name={rep.name ?? rep.email ?? "?"} />}
+      leading={<RecordMark kind="rep" name={rep.name ?? rep.email} />}
       status={
         rep.isActive ? null : { label: "Deactivated", status: "inactive" as const }
       }

@@ -34,6 +34,7 @@ import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet
 import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { RecordMark } from "./record-mark";
 import { EntityLink } from "./entity-link";
 import { DealStageBar } from "./deal-stage-bar";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
@@ -67,6 +68,8 @@ type DealDetail = {
   expectedCloseDate: string | null;
   stageEnteredAt: string;
   lostReason: string | null;
+  avatarUrl: string | null;
+  emoji: string | null;
   customFields: Record<string, unknown> | null;
   clientId: string | null;
   client: { id: string; name: string } | null;
@@ -212,6 +215,15 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
       icon={Funnel}
         backHref="/crm/deals"
         backLabel="All deals"
+        leading={
+          <RecordMark
+            kind="deal"
+            name={deal.title}
+            emoji={deal.emoji}
+            avatarUrl={deal.avatarUrl}
+            size="md"
+          />
+        }
         title={deal.title}
         reference={deal.dealNo}
         status={{

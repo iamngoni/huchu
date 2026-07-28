@@ -14,6 +14,7 @@ import { normalizeEmail, normalizePhoneE164 } from "@/lib/crm/phone";
 import { extractDomain, findCompanyDuplicates } from "@/lib/crm/duplicates";
 import { listIdFilter, listRecordIds } from "@/lib/crm/lists";
 import { buildCustomFieldValues, type FieldDefinition } from "@/lib/crm/custom-fields";
+import { recordMarkFields } from "@/lib/crm/record-mark";
 import {
   boolParam,
   buildCompanyWhere,
@@ -26,6 +27,7 @@ import {
 import { isCompanyUser } from "../_helpers";
 
 const createCompanySchema = z.object({
+  ...recordMarkFields,
   name: z.string().trim().min(1).max(200),
   tradingName: z.string().trim().max(200).nullable().optional(),
   companyType: z.enum(["CUSTOMER", "PROSPECT", "SUPPLIER", "PARTNER", "OTHER"]).optional(),
@@ -183,6 +185,8 @@ export async function POST(request: NextRequest) {
         notes: data.notes ?? undefined,
         tags: data.tags ?? [],
         assignedToId: data.assignedToId ?? undefined,
+        emoji: data.emoji,
+        avatarUrl: data.avatarUrl,
         customFields: values,
       },
       include: { assignedTo: { select: { id: true, name: true } } },

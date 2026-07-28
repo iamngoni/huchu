@@ -9,6 +9,7 @@ import { useDebounced } from "@/hooks/use-debounced";
 
 import { PersonFormSheet } from "./person-form-sheet";
 import { RecordListPager, type RecordListRow } from "./record-list";
+import { RecordMark } from "./record-mark";
 import {
   GroupedRecordList,
   bucketByLetter,
@@ -27,16 +28,6 @@ const CONTACT_TYPE_LABELS: Record<string, string> = {
   REFERRAL_PARTNER: "Referral partner",
   OTHER: "Other",
 };
-
-/** Two letters is enough to tell rows apart while you scan. */
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) {
   const [search, setSearch] = useState("");
@@ -59,9 +50,13 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
         id: person.id,
         href: `/crm/people/${person.id}`,
         leading: (
-          <span className="flex size-9 items-center justify-center rounded-full bg-[var(--surface-muted)] text-sm font-medium text-[var(--text-muted)]">
-            {initials(person.fullName)}
-          </span>
+          <RecordMark
+            kind="person"
+            name={person.fullName}
+            emoji={person.emoji}
+            avatarUrl={person.avatarUrl}
+            size="md"
+          />
         ),
         title: person.fullName,
         subtitle:

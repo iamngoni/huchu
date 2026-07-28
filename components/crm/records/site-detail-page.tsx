@@ -18,6 +18,7 @@ import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { RecordMark } from "./record-mark";
 import { EntityLink } from "./entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { SiteFormSheet } from "./site-form-sheet";
@@ -32,6 +33,8 @@ const VISIT_STATUS: Record<string, { label: string; status: CanonicalUiStatus }>
 
 type SiteDetail = {
   id: string;
+  avatarUrl: string | null;
+  emoji: string | null;
   siteNo: string;
   name: string;
   addressLine: string | null;
@@ -124,6 +127,15 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
       backHref="/crm/sites"
       actions={[{ label: "Edit", onSelect: () => setEditOpen(true) }]}
       backLabel="All sites"
+      leading={
+        <RecordMark
+          kind="site"
+          name={site.name}
+          emoji={site.emoji}
+          avatarUrl={site.avatarUrl}
+          size="md"
+        />
+      }
       title={site.name}
       reference={site.siteNo}
       subtitle={subtitle}
@@ -262,6 +274,8 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
         // form holds ids and strings. Map rather than loosen the form's type.
         record={{
           id: site.id,
+          emoji: site.emoji ?? "",
+          avatarUrl: site.avatarUrl ?? "",
           name: site.name,
           clientId: site.client?.id ?? "",
           addressLine: site.addressLine ?? "",
