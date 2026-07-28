@@ -30,6 +30,7 @@ import {
 import { DotsThree, Grid3x3, Plus, Trash2, X } from "@/lib/icons";
 import {
   WIDGET_SPANS,
+  packRows,
   widgetDefinition,
   widgetsForScope,
   type OverviewScope,
@@ -58,12 +59,15 @@ const SPAN_LABEL: Record<WidgetSpan, string> = {
 function WidgetFrame({
   instance,
   editing,
+  interactiveWhileEditing,
   children,
   onResize,
   onRemove,
 }: {
   instance: WidgetInstance;
   editing: boolean;
+  /** The widget is written in, not just read — leave it clickable. */
+  interactiveWhileEditing?: boolean;
   children: ReactNode;
   onResize: (span: WidgetSpan) => void;
   onRemove: () => void;
@@ -135,7 +139,12 @@ function WidgetFrame({
         </div>
       ) : null}
 
-      <div className={cn(editing && "pointer-events-none")}>{children}</div>
+      {/* Cards are inert while rearranging so a click lands on the tile rather
+          than inside it — except the ones somebody edits in place, which is
+          the whole point of being in edit mode. */}
+      <div className={cn(editing && !interactiveWhileEditing && "pointer-events-none")}>
+        {children}
+      </div>
     </section>
   );
 }
@@ -183,7 +192,9 @@ export function WidgetGrid({
     const from = widgets.findIndex((widget) => widget.id === active.id);
     const to = widgets.findIndex((widget) => widget.id === over.id);
     if (from === -1 || to === -1) return;
-    onChange(arrayMove(widgets, from, to));
+    // Packed rather than left where it landed: order is what somebody is
+    // choosing, and widths follow from it so a row is never left ragged.
+    onChange(packRows(arrayMove(widgets, from, to)));
   };
 
   return (
@@ -195,14 +206,19 @@ export function WidgetGrid({
               key={instance.id}
               instance={instance}
               editing={editing}
+              interactiveWhileEditing={instance.type === "custom-note"}
               onResize={(span) =>
                 onChange(
-                  widgets.map((widget) =>
-                    widget.id === instance.id ? { ...widget, span } : widget,
+                  packRows(
+                    widgets.map((widget) =>
+                      widget.id === instance.id ? { ...widget, span } : widget,
+                    ),
                   ),
                 )
               }
-              onRemove={() => onChange(widgets.filter((widget) => widget.id !== instance.id))}
+              onRemove={() =>
+                onChange(packRows(widgets.filter((widget) => widget.id !== instance.id)))
+              }
             >
               {renderWidget(instance)}
             </WidgetFrame>
@@ -248,16 +264,18 @@ export function WidgetGrid({
                   key={definition.type}
                   type="button"
                   onClick={() => {
-                    onChange([
-                      ...widgets,
-                      {
-                        // Unique within the layout — the id is the drag key,
-                        // and two widgets of one type would otherwise collide.
-                        id: `${definition.type}-${widgets.length + 1}`,
-                        type: definition.type,
-                        span: definition.defaultSpan,
-                      },
-                    ]);
+                    onChange(
+                      packRows([
+                        ...widgets,
+                        {
+                          // Unique within the layout — the id is the drag key,
+                          // and two widgets of one type would otherwise collide.
+                          id: `${definition.type}-${widgets.length + 1}`,
+                          type: definition.type,
+                          span: definition.defaultSpan,
+                        },
+                      ]),
+                    );
                     setAdding(false);
                   }}
                   className="rounded-[var(--radius-md)] border border-[var(--border)] p-2.5 text-left hover:border-[var(--interactive-primary)] hover:bg-[var(--surface-hover)]"

@@ -12,6 +12,7 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { Check, Grid3x3, RotateCcw } from "@/lib/icons";
 import type { OverviewScope, WidgetInstance } from "@/lib/crm/widgets";
 
+import { CustomNoteWidget } from "./widgets/custom-note-widget";
 import { renderHomeWidget, type HomeData } from "./widgets/home-widgets";
 import { WidgetGrid } from "./widgets/widget-grid";
 
@@ -84,12 +85,19 @@ export function CrmOverview() {
   if (layoutQuery.isLoading || dataQuery.isLoading) {
     return (
       <div className="grid grid-cols-12 gap-4" aria-busy="true">
-        {[4, 4, 4, 8, 4, 6, 6].map((span, index) => (
-          <Skeleton
-            key={index}
-            height={140}
-            className={`col-span-12 lg:col-span-${span}`}
-          />
+        {/* Spelled out: Tailwind cannot see a computed `lg:col-span-${n}`, so
+            the loading grid was one column wide in production and seven
+            columns wide in development. */}
+        {[
+          "lg:col-span-4",
+          "lg:col-span-4",
+          "lg:col-span-4",
+          "lg:col-span-8",
+          "lg:col-span-4",
+          "lg:col-span-6",
+          "lg:col-span-6",
+        ].map((span, index) => (
+          <Skeleton key={index} height={140} className={`col-span-12 ${span}`} />
         ))}
       </div>
     );
@@ -188,7 +196,23 @@ export function CrmOverview() {
         widgets={widgets}
         editing={editing}
         onChange={setDraft}
-        renderWidget={(instance) => renderHomeWidget(instance.type, data)}
+        renderWidget={(instance) =>
+          instance.type === "custom-note" ? (
+            <CustomNoteWidget
+              instance={instance}
+              editing={editing}
+              onChange={(config) =>
+                setDraft(
+                  widgets.map((widget) =>
+                    widget.id === instance.id ? { ...widget, config } : widget,
+                  ),
+                )
+              }
+            />
+          ) : (
+            renderHomeWidget(instance.type, data)
+          )
+        }
       />
     </div>
   );
