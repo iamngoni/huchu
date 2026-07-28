@@ -12,11 +12,20 @@ import { ClientDate } from "@/components/ui/client-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "@/lib/icons";
 import { useDebounced } from "@/hooks/use-debounced";
 import { fetchCrmDeals, fetchCrmPipelines, type CrmDealRecord } from "@/lib/crm/crm-v2";
 import { isDealStale } from "@/lib/crm/pipelines";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
+import { DealsBoard } from "./deals-board";
 import { DealFormSheet } from "./deal-form-sheet";
 import { RecordListShell } from "./record-list-shell";
 
@@ -40,6 +49,12 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
   const [createOpen, setCreateOpen] = useState(openCreate);
   const debouncedSearch = useDebounced(search, 300);
 
+  // Which pipeline, and whether to work it as a board or read it as a list.
+  // Both live in state rather than the URL because they are how you are
+  // looking at the page, not what the page is.
+  const [pipelineId, setPipelineId] = useState<string | null>(null);
+  const [layout, setLayout] = useState<"BOARD" | "LIST">("BOARD");
+
   const pipelinesQuery = useQuery({
     queryKey: ["crm", "pipelines"],
     queryFn: () => fetchCrmPipelines(),
@@ -61,7 +76,14 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
 
   const rows = useMemo(() => dealsQuery.data?.data ?? [], [dealsQuery.data]);
   const total = dealsQuery.data?.pagination?.total ?? rows.length;
-  const pipelineCount = pipelinesQuery.data?.data.length ?? 0;
+  const pipelines = useMemo(() => pipelinesQuery.data?.data ?? [], [pipelinesQuery.data]);
+  // Nothing chosen means the default one, which is what the board falls back
+  // to server-side; naming it here keeps the picker's label honest.
+  const activePipeline =
+    pipelines.find((pipeline) => pipeline.id === pipelineId) ??
+    pipelines.find((pipeline) => pipeline.isDefault) ??
+    pipelines[0] ??
+    null;
 
   const columns = useMemo<ColumnDef<CrmDealRecord>[]>(
     () => [
@@ -196,14 +218,55 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
               { value: "ALL", label: "All" },
             ]}
           />
-          <Button asChild size="sm" variant="outline">
-            <Link href="/crm/settings?tab=pipelines">
-              {pipelineCount} pipeline{pipelineCount === 1 ? "" : "s"}
-            </Link>
-          </Button>
+          {/* A pipeline is a different shape of work, not a filter over one
+              shape — supply-only and supply-and-fit do not share stages — so
+              picking one swaps the board rather than narrowing it. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" className="gap-1.5">
+                {activePipeline?.name ?? "Pipeline"}
+                <ChevronDown className="size-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+              {pipelines.map((pipeline) => (
+                <DropdownMenuItem
+                  key={pipeline.id}
+                  onClick={() => setPipelineId(pipeline.id)}
+                >
+                  {pipeline.name}
+                  {pipeline.isDefault ? (
+                    <span className="ml-2 text-sm text-[var(--text-muted)]">default</span>
+                  ) : null}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/crm/settings?tab=pipelines">Manage pipelines</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <SegmentedControl
+            value={layout}
+            onValueChange={(value) => setLayout(value as typeof layout)}
+            size="sm"
+            ariaLabel="Board or list"
+            options={[
+              { value: "BOARD", label: "Board" },
+              { value: "LIST", label: "List" },
+            ]}
+          />
         </>
       }
     >
+      {layout === "BOARD" ? (
+        <DealsBoard
+          pipelineId={activePipeline?.id ?? null}
+          search={debouncedSearch}
+          className="min-h-[24rem]"
+        />
+      ) : (
       <DataTable
         // The shell above owns search; a second box in the table toolbar is the
         // duplicate-control failure the cookbook's one-filter-pathway rule exists to stop.
@@ -250,6 +313,7 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
               : "No deals match this filter."
         }
       />
+      )}
 
       <DealFormSheet open={createOpen} onOpenChange={setCreateOpen} />
     </RecordListShell>

@@ -248,6 +248,60 @@ export function fetchCrmLeadsBoard(filters: LeadViewFilters = {}) {
   );
 }
 
+export type CrmDealBoardCard = {
+  id: string;
+  dealNo: string;
+  title: string;
+  value: number | null;
+  currency: string;
+  status: "OPEN" | "WON" | "LOST";
+  stageId: string;
+  stageEnteredAt: string;
+  expectedCloseDate: string | null;
+  emoji: string | null;
+  avatarUrl: string | null;
+  client: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  nextFollowUp: { id: string; title: string; dueAt: string } | null;
+};
+
+export type CrmDealBoardColumn = {
+  stage: { id: string; name: string; status: "OPEN" | "WON" | "LOST"; position: number };
+  count: number;
+  totalValue: number;
+  hasMore: boolean;
+  deals: CrmDealBoardCard[];
+};
+
+export type CrmDealBoard = {
+  pipeline: { id: string; name: string };
+  columns: CrmDealBoardColumn[];
+  cardsPerColumn: number;
+};
+
+export function fetchCrmDealsBoard(params: {
+  pipelineId?: string | null;
+  mineOnly?: boolean;
+  q?: string;
+} = {}) {
+  const search = new URLSearchParams();
+  if (params.pipelineId) search.set("pipelineId", params.pipelineId);
+  if (params.mineOnly) search.set("mineOnly", "1");
+  if (params.q) search.set("q", params.q);
+  const query = search.toString();
+  // Bare body, like the leads board — no envelope to unwrap.
+  return fetchJson<CrmDealBoard>(
+    `/api/v2/crm/deals/board${query ? `?${query}` : ""}`,
+  );
+}
+
+export function updateCrmDealStage(dealId: string, stageId: string) {
+  return fetchJson<{ id: string; stageId: string }>(
+    `/api/v2/crm/deals/${dealId}/stage`,
+    { method: "POST", body: JSON.stringify({ stageId }) },
+  );
+}
+
 export type CrmBulkLeadAction =
   | { action: "assign"; ids: string[]; assignedToId: string | null }
   | { action: "stage"; ids: string[]; stage: CrmLeadStage; lostReason?: string };
