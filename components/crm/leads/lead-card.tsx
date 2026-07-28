@@ -9,7 +9,9 @@ import { formatSlaRemaining, stageSla } from "@/lib/crm/sla";
 import type { CrmBoardCard } from "@/lib/crm/crm-v2";
 import { cn } from "@/lib/utils";
 
-import { formatDaysAgo, formatLeadValue, initialsOf, isOverdue } from "./stage-config";
+import { RecordMark } from "@/components/crm/records/record-mark";
+
+import { formatDaysAgo, formatLeadValue, isOverdue } from "./stage-config";
 
 export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
   const overdue = isOverdue(lead.nextFollowUp?.dueAt);
@@ -43,12 +45,13 @@ export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
         <span className="font-mono text-sm">
           {formatLeadValue(lead.estimatedValue, lead.currency)}
         </span>
-        <span
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-sm font-medium"
-          title={lead.assignedTo?.name ?? "Unassigned"}
-        >
-          {initialsOf(lead.assignedTo?.name)}
-        </span>
+        {/* A rep is a person, so the same avatar they get everywhere else. */}
+        <RecordMark
+          kind="rep"
+          name={lead.assignedTo?.name ?? "Unassigned"}
+          size="sm"
+          className="shrink-0"
+        />
       </div>
 
       <div

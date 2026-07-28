@@ -68,10 +68,3 @@ export function isOverdue(dueAt: string | null | undefined): boolean {
   return !Number.isNaN(due.getTime()) && due.getTime() < Date.now();
 }
 
-/** Initials for an owner avatar; falls back to a dash when unassigned. */
-export function initialsOf(name: string | null | undefined): string {
-  const trimmed = name?.trim();
-  if (!trimmed) return "—";
-  const parts = trimmed.split(/\s+/).slice(0, 2);
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "—";
-}

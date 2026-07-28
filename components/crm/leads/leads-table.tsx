@@ -24,6 +24,8 @@ import type { CrmLeadListRecord } from "@/lib/crm/crm-v2";
 import type { LeadSort } from "@/lib/crm/views";
 import { cn } from "@/lib/utils";
 
+import { RecordMark } from "@/components/crm/records/record-mark";
+
 import type { LeadFilterOwner } from "./leads-filters";
 import {
   CRM_CHANNEL_LABELS,
@@ -31,7 +33,6 @@ import {
   CRM_STAGE_LABELS,
   CRM_STAGE_STATUS,
   formatLeadValue,
-  initialsOf,
   isOverdue,
 } from "./stage-config";
 
@@ -41,12 +42,7 @@ function OwnerCell({ owner }: { owner: CrmLeadListRecord["assignedTo"] }) {
   }
   return (
     <div className="flex items-center gap-2">
-      <span
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-sm font-medium"
-        aria-hidden="true"
-      >
-        {initialsOf(owner.name)}
-      </span>
+      <RecordMark kind="rep" name={owner.name} size="sm" />
       <span className="truncate text-sm">{owner.name ?? "Unnamed"}</span>
     </div>
   );

@@ -10,10 +10,21 @@ import { cn } from "@/lib/utils";
 import { LeadCard } from "./lead-card";
 import { CRM_STAGE_LABELS, formatLeadValue } from "./stage-config";
 
-/** Won and lost columns are tinted so the ends of the pipeline read at a glance. */
-const COLUMN_TONE: Partial<Record<CrmLeadStage, string>> = {
-  WON: "bg-[var(--status-success-bg)]/40",
-  LOST: "bg-[var(--surface-muted)]/60",
+/**
+ * The stage's own colour, as a dot on the column header rather than a wash
+ * over the whole lane. A tinted column changes the background every card sits
+ * on, which makes the cards themselves harder to compare down the row; a dot
+ * says the same thing in the one place you are already reading.
+ */
+const STAGE_DOT: Partial<Record<CrmLeadStage, string>> = {
+  NEW: "bg-[var(--tone-info)]",
+  CONTACTED: "bg-[var(--tone-info)]",
+  QUALIFIED: "bg-[var(--brand)]",
+  SITE_VISIT: "bg-[var(--brand)]",
+  QUOTED: "bg-[var(--tone-warn)]",
+  INVOICED: "bg-[var(--tone-warn)]",
+  WON: "bg-[var(--tone-success)]",
+  LOST: "bg-[var(--tone-danger)]",
 };
 
 export function BoardColumn({
@@ -31,17 +42,28 @@ export function BoardColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex w-72 shrink-0 flex-col rounded-[var(--card-radius)] border border-[var(--border)]",
+        "flex w-72 shrink-0 flex-col rounded-[var(--card-radius)]",
         "transition-colors duration-[var(--motion-duration-fast,120ms)]",
-        COLUMN_TONE[column.stage] ?? "bg-[var(--surface-muted)]/30",
-        isOver &&
-          "border-[var(--action-primary-bg)] bg-[var(--action-primary-bg)]/[0.06] ring-1 ring-[var(--action-primary-bg)]",
+        // No frame in the resting state — the cards are the objects, and a
+        // border round each lane draws eight boxes the eye has to get past
+        // first. It appears only while something is being dragged over it,
+        // where it is doing a job.
+        isOver
+          ? "bg-[var(--action-primary-bg)]/[0.06] ring-1 ring-[var(--action-primary-bg)]"
+          : "bg-transparent",
       )}
     >
-      <header className="flex items-baseline justify-between gap-2 border-b border-[var(--border)] px-3 py-2.5">
-        <div className="flex items-baseline gap-2">
-          <h3 className="text-sm font-medium">{CRM_STAGE_LABELS[column.stage]}</h3>
-          <span className="font-mono text-sm text-[var(--text-muted)]">{column.count}</span>
+      <header className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-[var(--surface-base)] px-1 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "size-2 flex-none rounded-full",
+              STAGE_DOT[column.stage] ?? "bg-[var(--text-subtle)]",
+            )}
+          />
+          <h3 className="truncate text-sm font-medium">{CRM_STAGE_LABELS[column.stage]}</h3>
+          <span className="font-mono text-sm text-[var(--text-subtle)]">{column.count}</span>
         </div>
         {column.totalValue > 0 ? (
           <span className="font-mono text-sm text-[var(--text-muted)]">
@@ -50,7 +72,7 @@ export function BoardColumn({
         ) : null}
       </header>
 
-      <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2">
+      <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto px-1 pb-2">
         <SortableContext
           items={column.leads.map((lead) => lead.id)}
           strategy={verticalListSortingStrategy}
