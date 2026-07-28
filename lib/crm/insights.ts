@@ -51,18 +51,19 @@ export async function getPipelineValue(companyId: string, opts: { repId?: string
       ...(opts.repId ? { assignedToId: opts.repId } : {}),
       stage: { notIn: ["WON", "LOST"] },
     },
-    select: { stage: true, estimatedValue: true, probability: true },
+    select: { stage: true, estimatedValue: true },
   });
 
-  let weighted = 0;
+  // No weighted figure here. It used to count a lead with no probability set
+  // as worth nothing, which meant the weighted total fell as the pipeline
+  // filled up — the opposite of what it appeared to say. `forecast()` in
+  // reports.ts does the weighting properly, with a stated default and a count
+  // of how many rows are relying on it.
   let gross = 0;
   for (const lead of leads) {
-    const value = lead.estimatedValue ?? 0;
-    gross += value;
-    const p = (lead.probability ?? 0) / 100;
-    weighted += value * p;
+    gross += lead.estimatedValue ?? 0;
   }
-  return { openLeads: leads.length, grossValue: Math.round(gross * 100) / 100, weightedValue: Math.round(weighted * 100) / 100 };
+  return { openLeads: leads.length, grossValue: Math.round(gross * 100) / 100 };
 }
 
 export async function getSourceAttribution(companyId: string, opts: Range) {

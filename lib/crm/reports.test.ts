@@ -158,6 +158,20 @@ describe("forecast", () => {
     expect(forecast([{ value: 10_000, probability: null }]).weighted).toBe(5_000);
   });
 
+  it("says how much of the figure is resting on that default", () => {
+    const result = forecast([
+      { value: 10_000, probability: 80 },
+      { value: 10_000, probability: null },
+      { value: 5_000, probability: null },
+    ]);
+    expect(result.estimated).toBe(2);
+    expect(result.count).toBe(3);
+  });
+
+  it("reports nothing estimated when every deal carries a probability", () => {
+    expect(forecast([{ value: 10_000, probability: 0 }]).estimated).toBe(0);
+  });
+
   it("clamps a nonsense probability instead of inflating the number", () => {
     expect(forecast([{ value: 10_000, probability: 400 }]).weighted).toBe(10_000);
     expect(forecast([{ value: 10_000, probability: -50 }]).weighted).toBe(0);

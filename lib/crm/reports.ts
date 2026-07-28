@@ -140,13 +140,15 @@ export function summarizeGroups(groups: GroupedOutcome[]): GroupedPerformance[] 
 export function forecast(
   open: { value: number | null; probability: number | null }[],
   defaultProbability = 50,
-): { weighted: number; unweighted: number; count: number } {
+): { weighted: number; unweighted: number; count: number; estimated: number } {
   let weighted = 0;
   let unweighted = 0;
+  let estimated = 0;
 
   for (const deal of open) {
     const value = deal.value ?? 0;
     const probability = deal.probability ?? defaultProbability;
+    if (deal.probability === null) estimated += 1;
     unweighted += value;
     weighted += (value * Math.min(100, Math.max(0, probability))) / 100;
   }
@@ -155,6 +157,10 @@ export function forecast(
     weighted: Math.round(weighted * 100) / 100,
     unweighted: Math.round(unweighted * 100) / 100,
     count: open.length,
+    // How many of those probabilities nobody actually set. A weighted figure
+    // where this equals `count` is the default probability wearing a suit, and
+    // the reader deserves to know that before betting on it.
+    estimated,
   };
 }
 

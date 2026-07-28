@@ -41,7 +41,7 @@ type ReportData = {
   counts: { won: number; lost: number; open: number };
   winRate: number;
   medianCycleDays: number | null;
-  forecast: { weighted: number; unweighted: number };
+  forecast: { weighted: number; unweighted: number; count: number; estimated: number };
   byOwner: GroupRow[];
   bySource: GroupRow[];
   activity: Array<{ label: string; start: string; count: number }>;
@@ -169,7 +169,11 @@ export function CrmInsightsContent() {
           <StatHero
             label="Weighted forecast"
             value={money(data.forecast.weighted)}
-            subtitle={`${money(data.forecast.unweighted)} if every open deal lands · ${data.counts.open} open`}
+            subtitle={
+              data.forecast.estimated === 0
+                ? `${money(data.forecast.unweighted)} if every open deal lands · ${data.counts.open} open`
+                : `${money(data.forecast.unweighted)} if every open deal lands · ${data.forecast.estimated} of ${data.forecast.count} open deals have no likelihood set, so they are counted at the default`
+            }
             change={
               decided === 0
                 ? "Nothing decided in this period yet"

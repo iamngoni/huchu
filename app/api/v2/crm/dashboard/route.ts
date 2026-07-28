@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hasCrmFullAccess } from "@/lib/crm/scope";
 import { ageingBucket } from "@/lib/crm/collections";
 import { ensureDefaultPipeline } from "@/lib/crm/pipelines";
+import { stageSla, workingMinutesBetween } from "@/lib/crm/sla";
 
 /**
  * Everything the CRM home needs, in one round trip.
@@ -57,6 +58,9 @@ export async function GET(request: NextRequest) {
       taskCounts,
       legacyOverdue,
       quotations,
+      quotesWithCustomers,
+      openLeads,
+      answeredLeads,
       openInvoices,
       workOrders,
       upcomingVisits,
@@ -121,6 +125,47 @@ export async function GET(request: NextRequest) {
         },
       }),
 
+      // Every quote still sitting with a customer, not just the ones raised
+      // inside the reporting window. A quote sent seven weeks ago and never
+      // answered is exactly the one worth chasing, and the 30-day cut was
+      // hiding it.
+      prisma.crmLeadDocument.findMany({
+        where: {
+          companyId,
+          type: "QUOTATION",
+          approval: { status: "PENDING" },
+        },
+        select: { id: true, amount: true, currency: true, createdAt: true },
+      }),
+
+      // Leads nobody has answered yet. Deliberately the first-contact clock
+      // and nothing else: later stages measure from when the lead entered
+      // them, which is only recoverable from the activity log, and a
+      // dashboard tile is not worth that join. This is the one the business
+      // actually runs on — a new enquiry gets answered inside the half hour.
+      prisma.crmLead.findMany({
+        where: {
+          companyId,
+          stage: { notIn: ["WON", "LOST"] },
+          firstContactAt: null,
+          ...scope,
+        },
+        select: { id: true, createdAt: true },
+      }),
+
+      // How fast we actually answered, over the period. Only leads that were
+      // answered count — an unanswered lead has no response time, and folding
+      // it in as a zero would flatter the number.
+      prisma.crmLead.findMany({
+        where: {
+          companyId,
+          createdAt: { gte: periodStart },
+          firstContactAt: { not: null },
+          ...scope,
+        },
+        select: { createdAt: true, firstContactAt: true },
+      }),
+
       prisma.salesInvoice.findMany({
         where: {
           companyId,
@@ -152,10 +197,6 @@ export async function GET(request: NextRequest) {
     ]);
 
     const grossValue = openDeals.reduce((sum, deal) => sum + (deal.value ?? 0), 0);
-    const weightedValue = openDeals.reduce(
-      (sum, deal) => sum + ((deal.value ?? 0) * (deal.probability ?? 0)) / 100,
-      0,
-    );
 
     // "Stale" is the stage's own inactivity budget, not a global number — a
     // deal can sit in Quoted for a fortnight and be fine, but three days in New
@@ -231,13 +272,43 @@ export async function GET(request: NextRequest) {
     const wonValue = wonThisPeriod._sum.value ?? 0;
     const previousWonValue = wonPreviousPeriod._sum.value ?? 0;
 
+    // Counted in working hours, so a lead that arrived at five on Friday is
+    // not half a week late by Monday morning.
+    const firstContactStates = openLeads.map((lead) => stageSla("NEW", lead.createdAt, now));
+    const breachedLeads = firstContactStates.filter((state) => state.breached);
+    const atRiskLeads = firstContactStates.filter((state) => state.atRisk);
+
+    // Median, not mean: one lead answered three weeks late drags an average
+    // somewhere no actual lead has ever been.
+    const responseMinutes = answeredLeads
+      .map((lead) =>
+        workingMinutesBetween(lead.createdAt, lead.firstContactAt as Date),
+      )
+      .sort((a, b) => a - b);
+    const medianResponseMinutes =
+      responseMinutes.length === 0
+        ? null
+        : Math.round(responseMinutes[Math.floor(responseMinutes.length / 2)]);
+
+    const closedThisPeriod = wonThisPeriod._count._all + lostThisPeriod;
+
+    // The currency most of the open money is actually in. Mixed books are
+    // possible but rare, and a bare number with no unit is worse than one
+    // labelled with the currency nearly everything is in.
+    const currencyTally = new Map<string, number>();
+    for (const doc of [...quotesWithCustomers, ...openInvoices]) {
+      currencyTally.set(doc.currency, (currencyTally.get(doc.currency) ?? 0) + 1);
+    }
+    const currency =
+      [...currencyTally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
+
     return successResponse({
       scope: isManager ? "TEAM" : "MINE",
       periodDays,
+      currency,
       pipeline: {
         openDeals: openDeals.length,
         grossValue,
-        weightedValue,
         byStage,
         stale: stale.length,
         closingThisWeek: closingThisWeek.length,
@@ -253,6 +324,20 @@ export async function GET(request: NextRequest) {
             ? Math.round(((wonValue - previousWonValue) / previousWonValue) * 100)
             : null,
         previousValue: previousWonValue,
+        // Of everything that actually closed in the period. Counting open
+        // deals in the denominator would make the rate fall every time
+        // somebody added a lead, which is the opposite of the truth.
+        winRatePercent:
+          closedThisPeriod > 0
+            ? Math.round((wonThisPeriod._count._all / closedThisPeriod) * 100)
+            : null,
+        closed: closedThisPeriod,
+      },
+      speed: {
+        breachedLeads: breachedLeads.length,
+        atRiskLeads: atRiskLeads.length,
+        medianResponseMinutes,
+        answered: answeredLeads.length,
       },
       tasks: {
         overdue: tasksOverdue,
@@ -263,7 +348,18 @@ export async function GET(request: NextRequest) {
       documents: {
         quotationsRaised: quotations.length,
         quotedValue: quotations.reduce((sum, doc) => sum + doc.amount, 0),
-        awaitingApproval: quotations.filter((doc) => doc.approval?.status === "PENDING").length,
+        awaitingApproval: quotesWithCustomers.length,
+        awaitingValue: quotesWithCustomers.reduce((sum, doc) => sum + doc.amount, 0),
+        // The oldest quote nobody has answered — the number that says whether
+        // "awaiting a decision" means "sent this morning" or "forgotten".
+        oldestAwaitingDays:
+          quotesWithCustomers.length === 0
+            ? null
+            : Math.floor(
+                (now.getTime() -
+                  Math.min(...quotesWithCustomers.map((doc) => doc.createdAt.getTime()))) /
+                  (24 * 3600 * 1000),
+              ),
         pendingDiscountApprovals: pendingApprovals,
       },
       collections: {

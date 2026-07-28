@@ -32,7 +32,7 @@ type ReportResponse = {
     counts: { won: number; lost: number; open: number };
     winRate: number;
     medianCycleDays: number | null;
-    forecast: { weighted: number; unweighted: number; count: number };
+    forecast: { weighted: number; unweighted: number; count: number; estimated: number };
     byOwner: GroupedPerformance[];
     bySource: GroupedPerformance[];
     activity: { period: string; count: number }[];
@@ -91,7 +91,11 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
             <StatCard
               label="Weighted forecast"
               value={formatMoney(report.forecast.weighted, currency)}
-              footer={`${formatMoney(report.forecast.unweighted, currency)} if everything lands`}
+              footer={
+                report.forecast.estimated === 0
+                  ? `${formatMoney(report.forecast.unweighted, currency)} if everything lands`
+                  : `${formatMoney(report.forecast.unweighted, currency)} if everything lands · ${report.forecast.estimated} of ${report.forecast.count} at a default likelihood`
+              }
             />
             <StatCard
               label="Typical cycle"

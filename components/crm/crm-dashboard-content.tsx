@@ -20,10 +20,10 @@ import {
 type DashboardData = {
   scope: "TEAM" | "MINE";
   periodDays: number;
+  currency: string;
   pipeline: {
     openDeals: number;
     grossValue: number;
-    weightedValue: number;
     byStage: Array<{ id: string; name: string; status: string; count: number; value: number }>;
     stale: number;
     closingThisWeek: number;
@@ -34,12 +34,22 @@ type DashboardData = {
     lost: number;
     valueDeltaPercent: number | null;
     previousValue: number;
+    winRatePercent: number | null;
+    closed: number;
+  };
+  speed: {
+    breachedLeads: number;
+    atRiskLeads: number;
+    medianResponseMinutes: number | null;
+    answered: number;
   };
   tasks: { overdue: number; today: number; open: number; legacyOverdue: number };
   documents: {
     quotationsRaised: number;
     quotedValue: number;
     awaitingApproval: number;
+    awaitingValue: number;
+    oldestAwaitingDays: number | null;
     pendingDiscountApprovals: number;
   };
   collections: {
@@ -51,8 +61,24 @@ type DashboardData = {
   delivery: { workOrders: Record<string, number>; upcomingVisits: number };
 };
 
-function money(value: number): string {
-  return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+function money(value: number, currency: string): string {
+  // With the currency, always. A dashboard that says "6,168" has told you a
+  // digit string, not an amount.
+  return value.toLocaleString(undefined, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  });
+}
+
+/** "18m", "2h 10m", "3 days" — working time, in the largest unit that is true. */
+function duration(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round((minutes / 60) * 10) / 10;
+  // Nine working hours to a day, matching the SLA clock.
+  if (hours < 9) return `${hours}h`;
+  const days = Math.round((minutes / (9 * 60)) * 10) / 10;
+  return `${days} working day${days === 1 ? "" : "s"}`;
 }
 
 /**
@@ -90,7 +116,8 @@ export function CrmDashboardContent() {
     );
   }
 
-  const { pipeline, won, tasks, documents, collections, delivery } = data;
+  const { pipeline, won, speed, tasks, documents, collections, delivery } = data;
+  const currency = data.currency;
   const needsAttention = tasks.overdue + tasks.legacyOverdue;
   const nothingYet = pipeline.openDeals === 0 && won.count === 0 && documents.quotationsRaised === 0;
 
@@ -113,17 +140,23 @@ export function CrmDashboardContent() {
 
   return (
     <div className="space-y-5">
-      {/* Hero: weighted pipeline is the one number that answers "how are we
-          doing". Gross sits underneath it because the two are always read
-          together and a weighted figure alone invites the wrong question. */}
+      {/* The hero used to be a probability-weighted pipeline figure. Nobody
+          sets those probabilities, so it was mostly the sum of whatever
+          defaults happened to be in the column — a number that changed for
+          reasons no one could explain and that nothing could be decided on.
+          What actually closed is a fact, and it compares to last month. */}
       <StatHero
-        label="Weighted pipeline"
-        value={money(pipeline.weightedValue)}
-        subtitle={`${pipeline.openDeals} open deal${pipeline.openDeals === 1 ? "" : "s"} · ${money(pipeline.grossValue)} gross`}
+        label={`Won in the last ${data.periodDays} days`}
+        value={money(won.value, currency)}
+        subtitle={
+          won.winRatePercent === null
+            ? `${won.count} deal${won.count === 1 ? "" : "s"} · nothing else closed to compare against`
+            : `${won.count} of ${won.closed} closed · ${won.winRatePercent}% win rate`
+        }
         change={
           won.valueDeltaPercent === null
-            ? `${money(won.value)} won in the last ${data.periodDays} days`
-            : `${won.valueDeltaPercent >= 0 ? "+" : ""}${won.valueDeltaPercent}% won vs the previous ${data.periodDays} days`
+            ? `${money(won.previousValue, currency)} in the previous ${data.periodDays} days`
+            : `${won.valueDeltaPercent >= 0 ? "+" : ""}${won.valueDeltaPercent}% against the previous ${data.periodDays} days`
         }
         trend={
           won.valueDeltaPercent === null
@@ -139,35 +172,54 @@ export function CrmDashboardContent() {
         }
       />
 
+      {/* Four questions, in the order they cost you money: are we answering
+          people, is anything sitting with a customer unanswered, what is in
+          flight, and what have we not been paid for. */}
       <KpiGrid cols={4}>
         <KpiGrid.Item
-          label="Needs chasing"
-          value={needsAttention}
-          delta={tasks.today > 0 ? `${tasks.today} due today` : "nothing due today"}
-          tone={needsAttention > 0 ? "danger" : "neutral"}
-          onClick={() => router.push("/crm/follow-ups")}
+          label="Waiting on a first call"
+          value={speed.breachedLeads}
+          delta={
+            speed.medianResponseMinutes === null
+              ? "no answered leads yet"
+              : `usually answered in ${duration(speed.medianResponseMinutes)}`
+          }
+          tone={speed.breachedLeads > 0 ? "danger" : speed.atRiskLeads > 0 ? "warn" : "success"}
+          onClick={() => router.push("/crm/leads")}
         />
         <KpiGrid.Item
-          label="Quoted"
-          value={money(documents.quotedValue)}
-          delta={`${documents.quotationsRaised} in ${data.periodDays} days`}
+          label="Out with customers"
+          value={money(documents.awaitingValue, currency)}
+          delta={
+            documents.awaitingApproval === 0
+              ? "no quotes waiting on a decision"
+              : documents.oldestAwaitingDays === null
+                ? `${documents.awaitingApproval} quote${documents.awaitingApproval === 1 ? "" : "s"}`
+                : `${documents.awaitingApproval} quote${documents.awaitingApproval === 1 ? "" : "s"} · oldest ${documents.oldestAwaitingDays} days`
+          }
+          tone={
+            documents.oldestAwaitingDays !== null && documents.oldestAwaitingDays > 7
+              ? "warn"
+              : "neutral"
+          }
+          onClick={() => router.push("/crm/quotes")}
+        />
+        <KpiGrid.Item
+          label="In the pipeline"
+          value={money(pipeline.grossValue, currency)}
+          delta={`${pipeline.openDeals} open · ${pipeline.closingThisWeek} due to close this week`}
           onClick={() => router.push("/crm/deals")}
         />
         <KpiGrid.Item
           label="Owed to us"
-          value={money(collections.outstanding)}
+          value={money(collections.outstanding, currency)}
           delta={
-            collections.overdue > 0 ? `${money(collections.overdue)} overdue` : "all within terms"
+            collections.overdue > 0
+              ? `${money(collections.overdue, currency)} overdue`
+              : "all within terms"
           }
           tone={collections.overdue > 0 ? "warn" : "neutral"}
           onClick={() => router.push("/crm/collections")}
-        />
-        <KpiGrid.Item
-          label="Won"
-          value={won.count}
-          delta={won.lost > 0 ? `${won.lost} lost` : "none lost"}
-          tone={won.count > 0 ? "success" : "neutral"}
-          onClick={() => router.push("/crm/insights")}
         />
       </KpiGrid>
 
@@ -222,7 +274,7 @@ export function CrmDashboardContent() {
             subtitle={
               collections.invoiceCount === 0
                 ? "Nothing outstanding from a CRM quote."
-                : `${collections.invoiceCount} open · ${money(collections.outstanding)} outstanding`
+                : `${collections.invoiceCount} open · ${money(collections.outstanding, currency)} outstanding`
             }
             status={<ChevronRight className="size-4 text-[var(--text-subtle)]" />}
             onClick={() => router.push("/crm/collections")}
@@ -281,7 +333,7 @@ export function CrmDashboardContent() {
                         aria-hidden="true"
                       />
                       <span className="ml-auto shrink-0 font-mono text-sm text-[var(--text-muted)]">
-                        {stage.count} · {money(stage.value)}
+                        {stage.count} · {money(stage.value, currency)}
                       </span>
                     </Link>
                   </li>
@@ -307,7 +359,7 @@ export function CrmDashboardContent() {
                   >
                     <span>{AGEING_LABELS[bucket]}</span>
                     <span className="font-mono text-sm text-[var(--text-muted)]">
-                      {row ? `${row.count} · ${money(row.value)}` : "—"}
+                      {row ? `${row.count} · ${money(row.value, currency)}` : "—"}
                     </span>
                   </li>
                 );
