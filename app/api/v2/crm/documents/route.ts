@@ -128,11 +128,33 @@ export async function GET(request: NextRequest) {
     const type = TYPES.find((value) => value === requestedType);
     const q = searchParams.get("q")?.trim();
 
+    const clientId = searchParams.get("clientId")?.trim();
+    const ownerId = searchParams.get("ownerId")?.trim();
+    const recordFilters: Prisma.CrmLeadDocumentWhereInput[] = [];
+    if (clientId) {
+      recordFilters.push({
+        OR: [{ lead: { clientId } }, { deal: { clientId } }],
+      });
+    }
+    if (ownerId) {
+      recordFilters.push({
+        OR: [{ lead: { assignedToId: ownerId } }, { deal: { assignedToId: ownerId } }],
+      });
+    }
+
     const where: Prisma.CrmLeadDocumentWhereInput = {
       companyId: session.user.companyId,
       ...(type ? { type } : {}),
       ...(searchParams.get("leadId") ? { leadId: searchParams.get("leadId")! } : {}),
       ...(searchParams.get("dealId") ? { dealId: searchParams.get("dealId")! } : {}),
+      // A document belongs to a lead or a deal, so "this company's paperwork"
+      // has to be asked through them. Both sides are checked because a company
+      // with quotes on leads and invoices on deals would otherwise show half
+      // its history and look like it had lost the rest.
+      //
+      // Collected into AND rather than written as sibling ORs: two OR keys on
+      // one object clobber each other, which would silently widen the filter.
+      ...(recordFilters.length > 0 ? { AND: recordFilters } : {}),
       ...(q
         ? {
             OR: [

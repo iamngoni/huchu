@@ -9,6 +9,7 @@ import { useDebounced } from "@/hooks/use-debounced";
 
 import { SiteFormSheet } from "./site-form-sheet";
 import { RecordList, RecordListPager, type RecordListRow } from "./record-list";
+import { RecordMark } from "./record-mark";
 import { RecordListShell } from "./record-list-shell";
 
 const PAGE_SIZE = 50;
@@ -32,6 +33,15 @@ export function SitesContent({ openCreate = false }: { openCreate?: boolean }) {
     () =>
       sites.map((site) => ({
         id: site.id,
+        leading: (
+          <RecordMark
+            kind="site"
+            name={site.name}
+            emoji={site.emoji}
+            avatarUrl={site.avatarUrl}
+            size="md"
+          />
+        ),
         href: `/crm/sites/${site.id}`,
         title: site.name,
         subtitle:

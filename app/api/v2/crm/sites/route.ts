@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
 import { listIdFilter, listRecordIds } from "@/lib/crm/lists";
 import { buildCustomFieldValues, type FieldDefinition } from "@/lib/crm/custom-fields";
+import { recordMarkFields } from "@/lib/crm/record-mark";
 import {
   boolParam,
   buildRecordOrderBy,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/crm/records";
 
 const createSiteSchema = z.object({
+  ...recordMarkFields,
   name: z.string().trim().min(1).max(200),
   clientId: z.string().uuid().nullable().optional(),
   addressLine: z.string().trim().max(300).nullable().optional(),
@@ -143,6 +145,8 @@ export async function POST(request: NextRequest) {
         siteConditions: data.siteConditions ?? undefined,
         notes: data.notes ?? undefined,
         tags: data.tags ?? [],
+        emoji: data.emoji,
+        avatarUrl: data.avatarUrl,
         customFields: values,
         createdById: session.user.id,
       },

@@ -132,7 +132,7 @@ export function DocumentList({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="divide-y divide-[var(--border-subtle)]">
+        <ul className="space-y-1">
           {documents.map((doc) => {
             const status = documentStatus(doc);
             const outstanding = doc.invoice ? invoiceOutstanding(doc.invoice) : 0;

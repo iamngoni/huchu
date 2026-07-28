@@ -5,7 +5,7 @@ import { errorResponse, successResponse, validateSession } from "@/lib/api-utils
 import { prisma } from "@/lib/prisma";
 import { hasCrmFullAccess } from "@/lib/crm/scope";
 import { updateCommentSchema } from "@/lib/crm/collaboration";
-import { extractMentionedUserIds } from "@/lib/crm/mentions";
+import { extractMentionedUserIds } from "@/lib/crm/rich-text";
 
 const authorSelect = { select: { id: true, name: true, email: true } } as const;
 

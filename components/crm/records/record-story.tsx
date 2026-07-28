@@ -1,0 +1,282 @@
+"use client";
+
+import { useMemo, useState, type ReactNode } from "react";
+
+import { Avatar } from "@corelithzw/react";
+import { Button } from "@/components/ui/button";
+import { ClientDate } from "@/components/ui/client-date";
+import {
+  ArrowRight,
+  Calendar,
+  Checklist,
+  ChatCircle,
+  FileText,
+  Mail,
+  MapPin,
+  NoteAdd,
+  Payments,
+  Phone,
+  Send,
+  User,
+} from "@/lib/icons";
+import { RichTextRenderer } from "@/components/crm/collaboration/rich-text-renderer";
+import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 25;
+
+/**
+ * One thing that happened, whatever kind of thing it was.
+ *
+ * The feed's whole job is to be the record's story, and a story told from one
+ * table is not the story — it is whichever chapter that table happened to
+ * keep. Site visits, tasks, comments and documents each live in their own
+ * table for good reasons, and none of those reasons are the reader's problem.
+ */
+export type StoryEvent = {
+  id: string;
+  kind:
+    | "note"
+    | "call"
+    | "email"
+    | "whatsapp"
+    | "meeting"
+    | "stage"
+    | "document"
+    | "payment"
+    | "task"
+    | "visit"
+    | "comment"
+    | "intake"
+    | "system";
+  /** The sentence: "Nicolas Sharp created a task". */
+  title: string;
+  /** What was said, if anything was. */
+  body?: string | null;
+  occurredAt: string;
+  actorName?: string | null;
+  /** People on it, for an email or a meeting. */
+  participants?: string[];
+  /** Files, shown as chips. */
+  attachments?: Array<{ name: string; href?: string }>;
+  /** A quiet trailing note — "Created 8 days ago", a due date. */
+  meta?: string | null;
+  href?: string;
+};
+
+const KIND_ICON: Record<StoryEvent["kind"], typeof NoteAdd> = {
+  note: NoteAdd,
+  call: Phone,
+  email: Mail,
+  whatsapp: Send,
+  meeting: Calendar,
+  stage: ArrowRight,
+  document: FileText,
+  payment: Payments,
+  task: Checklist,
+  visit: MapPin,
+  comment: ChatCircle,
+  intake: User,
+  system: ArrowRight,
+};
+
+/**
+ * Which events are context and which are news.
+ *
+ * A stage change is worth knowing and worth passing over quickly; a note
+ * somebody wrote is the thing you came to read. The quiet ones keep their
+ * place in the order but not the reader's attention.
+ */
+const QUIET: ReadonlySet<StoryEvent["kind"]> = new Set([
+  "stage",
+  "system",
+  "document",
+  "payment",
+]);
+
+/** Events that carry a body worth boxing rather than running as one line. */
+const BOXED: ReadonlySet<StoryEvent["kind"]> = new Set([
+  "email",
+  "note",
+  "comment",
+  "visit",
+]);
+
+function dayKey(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10);
+}
+
+function dayLabel(iso: string, now: Date): string {
+  const date = new Date(iso);
+  const yesterday = new Date(now.getTime() - 86_400_000);
+  if (dayKey(iso) === dayKey(now.toISOString())) return "Today";
+  if (dayKey(iso) === dayKey(yesterday.toISOString())) return "Yesterday";
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  });
+}
+
+function StoryRow({ event }: { event: StoryEvent }) {
+  const Icon = KIND_ICON[event.kind];
+  const quiet = QUIET.has(event.kind);
+  const boxed = BOXED.has(event.kind) && Boolean(event.body);
+
+  const content = (
+    <>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        {event.actorName ? (
+          <Avatar size="sm" name={event.actorName} className="translate-y-1" />
+        ) : null}
+        <span className={cn("text-sm", quiet && "text-[var(--text-muted)]")}>{event.title}</span>
+        {/* The day is already the section heading, so the row only needs the
+            time — but ClientDate is what keeps the server and first client
+            render identical, so it stays rather than a bare toLocaleTimeString. */}
+        <span className="text-sm text-[var(--text-subtle)]">
+          <ClientDate value={event.occurredAt} mode="datetime" />
+        </span>
+      </div>
+
+      {event.participants && event.participants.length > 0 ? (
+        <p className="mt-0.5 text-sm text-[var(--text-muted)]">
+          {event.participants.join(", ")}
+        </p>
+      ) : null}
+
+      {event.body ? (
+        // Bodies are written in the CRM's one text format, so a note that
+        // mentions a colleague or links a deal reads the same on a timeline as
+        // it does in the comment thread it might have been written in.
+        <RichTextRenderer
+          body={event.body}
+          className={cn("mt-1", quiet && "text-[var(--text-muted)]")}
+        />
+      ) : null}
+
+      {event.attachments && event.attachments.length > 0 ? (
+        <ul className="mt-2 flex flex-wrap gap-1.5">
+          {event.attachments.slice(0, 3).map((file, index) => (
+            <li key={`${file.name}-${index}`}>
+              <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-2 py-1 text-sm">
+                <FileText className="size-3.5 text-[var(--text-subtle)]" />
+                <span className="max-w-40 truncate">{file.name}</span>
+              </span>
+            </li>
+          ))}
+          {event.attachments.length > 3 ? (
+            <li className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--border)] px-2 py-1 text-sm text-[var(--text-muted)]">
+              +{event.attachments.length - 3}
+            </li>
+          ) : null}
+        </ul>
+      ) : null}
+
+      {event.meta ? (
+        <p className="mt-1 text-sm text-[var(--text-subtle)]">{event.meta}</p>
+      ) : null}
+    </>
+  );
+
+  return (
+    <li className="relative flex gap-3 pb-4 last:pb-0">
+      {/* The rail. Drawn per row rather than once behind the list so the last
+          row's line stops at its own icon instead of running into the gap. */}
+      <span
+        aria-hidden="true"
+        className="absolute bottom-0 left-[11px] top-6 w-px bg-[var(--border-subtle)] last:hidden"
+      />
+
+      <span
+        className={cn(
+          "relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full",
+          quiet
+            ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
+            : "bg-[var(--surface-subtle)] text-[var(--text)]",
+        )}
+      >
+        <Icon className="size-3.5" />
+      </span>
+
+      <div className="min-w-0 flex-1">
+        {boxed ? (
+          <div className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
+            {content}
+          </div>
+        ) : (
+          content
+        )}
+      </div>
+    </li>
+  );
+}
+
+/**
+ * A record's whole story, day by day.
+ *
+ * Callers merge their own sources into `events` rather than this component
+ * fetching them, because which sources exist depends on what the record is —
+ * a site has visits and no quotes, a person has comments and no stages.
+ */
+export function RecordStory({
+  events,
+  emptyMessage = "Nothing has happened here yet.",
+  header,
+}: {
+  events: StoryEvent[];
+  emptyMessage?: string;
+  header?: ReactNode;
+}) {
+  const [visible, setVisible] = useState(PAGE_SIZE);
+
+  const groups = useMemo(() => {
+    const sorted = [...events].sort(
+      (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
+    );
+    const shown = sorted.slice(0, visible);
+    const map = new Map<string, StoryEvent[]>();
+    for (const event of shown) {
+      const key = dayKey(event.occurredAt);
+      const bucket = map.get(key);
+      if (bucket) bucket.push(event);
+      else map.set(key, [event]);
+    }
+    return [...map.entries()];
+  }, [events, visible]);
+
+  if (events.length === 0) {
+    return <p className="py-6 text-center text-sm text-[var(--text-muted)]">{emptyMessage}</p>;
+  }
+
+  // One instant for every heading, so a feed rendered across midnight does not
+  // label half its rows "Today" and half by date.
+  const now = new Date();
+
+  return (
+    <div className="space-y-5">
+      {header}
+
+      {groups.map(([key, entries]) => (
+        <section key={key} className="space-y-2">
+          <h4 className="text-sm font-semibold">{dayLabel(entries[0].occurredAt, now)}</h4>
+          <ul className="relative">
+            {entries.map((event) => (
+              <StoryRow key={`${event.kind}-${event.id}`} event={event} />
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      {visible < events.length ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full"
+          onClick={() => setVisible((current) => current + PAGE_SIZE)}
+        >
+          Show older
+        </Button>
+      ) : null}
+    </div>
+  );
+}

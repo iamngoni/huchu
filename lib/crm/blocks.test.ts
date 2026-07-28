@@ -1,0 +1,108 @@
+import { describe, it, expect } from "vitest";
+
+import {
+  emptyBlock,
+  fieldBlocks,
+  templateProblems,
+  type Block,
+  type LeafBlock,
+} from "./blocks";
+import {
+  resolveVariables,
+  sampleValues,
+  unknownVariables,
+  usedVariables,
+} from "./template-variables";
+
+function field(
+  id: string,
+  over: Partial<Extract<Block, { type: "field" }>> = {},
+): Extract<LeafBlock, { type: "field" }> {
+  return {
+    ...(emptyBlock("field", id) as Extract<Block, { type: "field" }>),
+    label: "Question",
+    ...over,
+  };
+}
+
+describe("fieldBlocks", () => {
+  it("finds questions nested inside a side-by-side block", () => {
+    const blocks: Block[] = [
+      { id: "c", type: "columns", left: [field("a")], right: [field("b")] },
+    ];
+    expect(fieldBlocks(blocks).map((block) => block.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("templateProblems", () => {
+  it("reports every problem at once, not the first one", () => {
+    // A builder that reports one problem, gets fixed, then reports the next is
+    // one people stop trusting to tell them when they are done.
+    const blocks: Block[] = [
+      field("a", { label: "", key: "same" }),
+      field("b", { label: "Pick", key: "same", fieldType: "select", options: [] }),
+    ];
+    const problems = templateProblems("FORM", blocks);
+    expect(problems.length).toBeGreaterThan(1);
+  });
+
+  it("catches two questions writing to the same key", () => {
+    const blocks: Block[] = [field("a", { key: "email" }), field("b", { key: "email" })];
+    expect(templateProblems("FORM", blocks).join(" ")).toContain("overwrite");
+  });
+
+  it("refuses a block that does not belong on this kind", () => {
+    const blocks: Block[] = [emptyBlock("lineItems", "l")];
+    expect(templateProblems("FORM", blocks)).not.toHaveLength(0);
+  });
+
+  it("accepts line items on a quote", () => {
+    expect(templateProblems("QUOTE", [emptyBlock("lineItems", "l")])).toHaveLength(0);
+  });
+
+  it("says so when a form asks nothing", () => {
+    expect(templateProblems("FORM", []).join(" ")).toContain("collects nothing");
+  });
+});
+
+describe("variables", () => {
+  it("finds what a body uses", () => {
+    expect(usedVariables("Dear {{contact.name}}, re {{record.title}}")).toEqual([
+      "contact.name",
+      "record.title",
+    ]);
+  });
+
+  it("flags a variable nothing will ever fill", () => {
+    expect(unknownVariables("Hi {{contact.nickname}}")).toEqual(["contact.nickname"]);
+  });
+
+  it("fills what it knows", () => {
+    expect(
+      resolveVariables("Dear {{contact.firstName}}", { "contact.firstName": "Tendai" }),
+    ).toBe("Dear Tendai");
+  });
+
+  it("shows a dash for a fact nobody had, not a blank", () => {
+    // A blank mid-sentence reads as a typo somebody made; a dash reads as
+    // missing information, which is what it is.
+    expect(resolveVariables("Phone: {{contact.phone}}", {})).toBe("Phone: —");
+  });
+
+  it("leaves an unknown variable visible so a draft shows the typo", () => {
+    expect(resolveVariables("Hi {{contact.nickname}}", {})).toBe("Hi {{contact.nickname}}");
+  });
+
+  it("tolerates whitespace inside the braces", () => {
+    expect(resolveVariables("{{ company.name }}", { "company.name": "Ridgeline" })).toBe(
+      "Ridgeline",
+    );
+  });
+
+  it("previews every catalogue entry without a record", () => {
+    const values = sampleValues();
+    expect(resolveVariables("{{company.name}} · {{document.total}}", values)).not.toContain(
+      "—",
+    );
+  });
+});

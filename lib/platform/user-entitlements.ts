@@ -320,6 +320,31 @@ export async function clearUserFeatureOverrides(userId: string): Promise<void> {
   });
 }
 
+/**
+ * Drop one feature's override so the person follows their role again.
+ *
+ * `setManagedUserFeatureOverride` already deletes a row that happens to match
+ * the current role default, but that is a different intent: it means "make it
+ * true", and it silently becomes "and stop tracking the role" only because the
+ * two agreed today. Clearing has to be its own verb for the permissions screen
+ * to offer three honest states instead of two.
+ */
+export async function clearManagedUserFeatureOverride(
+  userId: string,
+  featureKey: string,
+): Promise<void> {
+  const normalizedUserId = userId.trim();
+  const normalizedFeatureKey = normalizeFeatureKey(featureKey);
+  if (!normalizedUserId || !normalizedFeatureKey) return;
+
+  await prisma.userFeatureFlag.deleteMany({
+    where: {
+      userId: normalizedUserId,
+      feature: { key: CATALOG_BY_KEY.get(normalizedFeatureKey)?.key ?? normalizedFeatureKey },
+    },
+  });
+}
+
 export async function getEffectiveFeaturesForUser(input: {
   companyId: string;
   userId: string;

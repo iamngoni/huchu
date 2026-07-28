@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth";
 import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
-import { PageChrome } from "@/components/layout/page-chrome";
 import { LeadsWorkspace } from "@/components/crm/leads/leads-workspace";
 import { parseLeadFiltersFromParams } from "@/lib/crm/views";
 import { authOptions } from "@/lib/auth";
@@ -25,10 +24,10 @@ export default async function CrmLeadsPage({ searchParams }: { searchParams: Sea
 
   return (
     <CrmPage>
-      <PageChrome title="Leads" />
       <LeadsWorkspace
         initialFilters={parseLeadFiltersFromParams(params)}
         initialView={view}
+        initialViewId={params.get("savedView")}
       />
     </CrmPage>
   );

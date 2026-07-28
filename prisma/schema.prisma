@@ -49,6 +49,10 @@ model Company {
   disciplinaryActions           DisciplinaryAction[]
   subscriptions                 CompanySubscription[]
   featureFlags                  CompanyFeatureFlag[]
+  userPermissionOverrides       UserPermissionOverride[]
+  crmTemplates                  CrmTemplate[]
+  crmTemplateEvents             CrmTemplateEvent[]
+  crmFieldChanges               CrmFieldChange[]
   provisioningEvents            ProvisioningEvent[]
   subdomainReservations         SubdomainReservation[]
   branding                      CompanyBranding?
@@ -192,6 +196,8 @@ model Company {
   crmPipelineStages             CrmPipelineStage[]
   crmFieldDefinitions           CrmFieldDefinition[]
   crmLists                      CrmList[]
+  crmOverviewLayouts            CrmOverviewLayout[]
+  crmCustomWidgets              CrmCustomWidget[]
   crmListMembers                CrmListMember[]
   crmTasks                      CrmTask[]
   crmComments                   CrmComment[]
@@ -362,6 +368,29 @@ model UserFeatureFlag {
   @@unique([userId, featureId])
   @@index([featureId])
   @@index([userId, isEnabled])
+}
+
+/// A permission one person has, or has had taken away, against what their role
+/// would otherwise give them. Feature access already has UserFeatureFlag; this
+/// is its twin for the capabilities a module gates on, so the admin screen can
+/// show one list instead of two systems that disagree.
+model UserPermissionOverride {
+  id            String   @id @default(uuid())
+  companyId     String
+  userId        String
+  permissionKey String
+  isAllowed     Boolean
+  grantedById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user      User    @relation("UserPermissionOverrideUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User?   @relation("UserPermissionOverrideGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, permissionKey])
+  @@index([companyId, permissionKey])
+  @@index([userId])
 }
 
 model FeatureBundle {
@@ -894,6 +923,10 @@ model User {
   notificationPreference            UserNotificationPreference?
   webPushSubscriptions              WebPushSubscription[]
   featureFlags                      UserFeatureFlag[]
+  permissionOverrides               UserPermissionOverride[]       @relation("UserPermissionOverrideUser")
+  permissionOverridesGranted        UserPermissionOverride[]       @relation("UserPermissionOverrideGrantedBy")
+  crmTemplatesCreated               CrmTemplate[]                  @relation("CrmTemplateCreatedBy")
+  crmFieldChanges                   CrmFieldChange[]               @relation("CrmFieldChangeChangedBy")
   schoolTeacherProfiles             SchoolTeacherProfile[]
   schoolResultModerationActions     SchoolResultModerationAction[] @relation("SchoolResultModerationActionActor")
   schoolLeaveRequestsApproved       SchoolLeaveRequest[]           @relation("SchoolLeaveRequestApprovedBy")
@@ -956,6 +989,8 @@ model User {
   crmFieldDefinitionsCreated        CrmFieldDefinition[]           @relation("CrmFieldDefinitionCreatedBy")
   crmLeadsConverted                 CrmLead[]                      @relation("CrmLeadConvertedBy")
   crmListsCreated                   CrmList[]                      @relation("CrmListCreatedBy")
+  crmOverviewLayouts                CrmOverviewLayout[]            @relation("CrmOverviewLayoutUser")
+  crmCustomWidgetsCreated           CrmCustomWidget[]              @relation("CrmCustomWidgetCreatedBy")
   crmListMembersAdded               CrmListMember[]                @relation("CrmListMemberAddedBy")
   crmTasksAssigned                  CrmTask[]                      @relation("CrmTaskAssignedTo")
   crmTasksCreated                   CrmTask[]                      @relation("CrmTaskCreatedBy")
@@ -6367,6 +6402,11 @@ enum CrmViewType {
 /// extended in place. The UI calls it "Company".
 model CrmClient {
   id                 String              @id @default(uuid())
+  /// A picture chosen for this record. Wins over the emoji when set.
+  avatarUrl          String?
+  /// A single emoji standing in for this record, shown where a picture would
+  /// be. Falls back to the entity's own icon when unset.
+  emoji              String?
   companyId          String
   clientNo           String
   name               String
@@ -6696,6 +6736,66 @@ model CrmSiteVisitItem {
 
 /// A named, reusable set of lead filters + sort. Private to its creator unless
 /// `isShared`, in which case the whole company sees it.
+/// A person's arrangement of widgets on an overview page.
+///
+/// Keyed by scope rather than by page, so "the deal overview" is one layout
+/// shared by every deal — nobody wants to arrange a dashboard once per record.
+/// A row with a null `userId` is the company's default, which is what a new
+/// person sees before they have moved anything.
+model CrmOverviewLayout {
+  id        String   @id @default(uuid())
+  companyId String
+  /// Null for the layout everyone starts from.
+  userId    String?
+  /// HOME, or RECORD_<ENTITY> for a record page's overview.
+  scope     String
+  /// Ordered widget instances: { id, type, span, config }.
+  widgets   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?   @relation("CrmOverviewLayoutUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId, scope])
+  @@index([companyId, scope])
+}
+
+/// A widget somebody built themselves, over one of our models.
+///
+/// Deliberately a saved query rather than saved code: an entity, a filter set,
+/// how to aggregate it, and how to draw it. That is enough for the shapes
+/// people actually ask for — a count, a sum, a breakdown, a short list — and
+/// it cannot do anything the API would not already let them do.
+model CrmCustomWidget {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  description String?
+  /// LEAD | DEAL | PERSON | COMPANY | TASK | DOCUMENT
+  entity      String
+  /// COUNT | SUM | AVERAGE | BREAKDOWN | LIST
+  aggregate   String
+  /// Which numeric field SUM and AVERAGE work over.
+  valueField  String?
+  /// Which field BREAKDOWN groups by.
+  groupField  String?
+  /// Same filter shape the saved views use.
+  filters     Json
+  /// NUMBER | BAR | PIE | LIST
+  display     String   @default("NUMBER")
+  isShared    Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("CrmCustomWidgetCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId, entity])
+  @@index([companyId, createdById])
+}
+
 model CrmSavedView {
   id          String      @id @default(uuid())
   companyId   String
@@ -6719,6 +6819,92 @@ model CrmSavedView {
 
   @@index([companyId, entity, isShared])
   @@index([companyId, createdById])
+}
+
+/// A document somebody designed: a form, a quote, an invoice, an email.
+///
+/// One model rather than four because the difference between them is which
+/// blocks they use, not how they are stored — and four tables is four places
+/// to add analytics, sharing and record links to.
+/// One field on one record, changed once.
+///
+/// The activity feed says "Nicolas updated the deal", which is the sentence
+/// nobody needs. What somebody wants when a number looks wrong is which number,
+/// what it was, and who moved it — and that is a row per field, not per save.
+model CrmFieldChange {
+  id        String   @id @default(uuid())
+  companyId String
+  /// LEAD, DEAL, PERSON, CLIENT, SITE — the same vocabulary as comments.
+  entity    String
+  recordId  String
+  field     String
+  /// Stored as text on purpose: this table is read by people, not joined on,
+  /// and a Json column would make "what did the stage used to be" a cast.
+  oldValue  String?
+  newValue  String?
+  changedById String?
+  createdAt DateTime @default(now())
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  changedBy User?   @relation("CrmFieldChangeChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([companyId, entity, recordId, createdAt])
+  @@index([companyId, entity, recordId, field])
+}
+
+model CrmTemplate {
+  id             String   @id @default(uuid())
+  companyId      String
+  name           String
+  kind           String
+  /// The Notion-style properties above the body.
+  attributes     Json?
+  /// The body, as an ordered block list.
+  blocks         Json
+  /// Shared templates are the team's; unshared ones are the author's drafts.
+  isShared       Boolean  @default(true)
+  isActive       Boolean  @default(true)
+  /// Which record type this is for, and optionally which record.
+  linkedEntity   String?
+  linkedRecordId String?
+  /// Public form links. Null for templates that are never published.
+  publicToken    String?  @unique
+  /// Counted rather than derived: a view is not a row worth keeping, and
+  /// "how many people opened this" should not cost a table scan.
+  viewCount      Int      @default(0)
+  submitCount    Int      @default(0)
+  lastViewedAt   DateTime?
+  lastSubmitAt   DateTime?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?                @relation("CrmTemplateCreatedBy", fields: [createdById], references: [id])
+  events    CrmTemplateEvent[]
+
+  @@unique([companyId, name, kind])
+  @@index([companyId, kind, isActive])
+  @@index([companyId, linkedEntity, linkedRecordId])
+}
+
+/// One thing that happened to a template, for its analytics tab.
+model CrmTemplateEvent {
+  id         String   @id @default(uuid())
+  companyId  String
+  templateId String
+  /// VIEW, SUBMIT, SEND, DOWNLOAD.
+  type       String
+  /// Where it came from, when that is known.
+  source     String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  company  Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  template CrmTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, templateId, createdAt])
+  @@index([templateId, type, createdAt])
 }
 
 model CrmIntakeForm {
@@ -7230,6 +7416,11 @@ enum CrmForecastCategory {
 
 model CrmPerson {
   id                 String               @id @default(uuid())
+  /// A picture chosen for this record. Wins over the emoji when set.
+  avatarUrl          String?
+  /// A single emoji standing in for this record, shown where a picture would
+  /// be. Falls back to the entity's own icon when unset.
+  emoji              String?
   companyId          String
   personNo           String
   firstName          String
@@ -7309,6 +7500,10 @@ model CrmPersonCompany {
 
 model CrmSite {
   id                 String   @id @default(uuid())
+  /// A picture chosen for this record. Wins over the emoji when set.
+  avatarUrl   String?
+  /// A single emoji standing in for this record. Falls back to the entity icon.
+  emoji       String?
   companyId          String
   siteNo             String
   name               String
@@ -7352,6 +7547,10 @@ model CrmSite {
 /// enquiry that may produce one.
 model CrmDeal {
   id                String               @id @default(uuid())
+  /// A picture chosen for this record. Wins over the emoji when set.
+  avatarUrl   String?
+  /// A single emoji standing in for this record. Falls back to the entity icon.
+  emoji       String?
   companyId         String
   dealNo            String
   title             String

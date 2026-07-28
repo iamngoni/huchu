@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Avatar, Badge } from "@corelithzw/react";
+import { Badge } from "@corelithzw/react";
 
 import { useDebounced } from "@/hooks/use-debounced";
 import { fetchCrmReps } from "@/lib/crm/crm-v2";
 
 import { RecordList, type RecordListRow } from "@/components/crm/records/record-list";
+import { RecordMark } from "@/components/crm/records/record-mark";
 import { RecordListShell } from "@/components/crm/records/record-list-shell";
 import { formatMoney } from "@/components/crm/documents/document-types";
 
@@ -52,7 +53,7 @@ export function RepsContent() {
       return {
         id: rep.id,
         href: `/crm/reps/${rep.id}`,
-        leading: <Avatar size="md" name={rep.name ?? rep.email ?? "?"} />,
+        leading: <RecordMark kind="rep" name={rep.name ?? rep.email} size="md" />,
         title: rep.name ?? rep.email ?? "Unnamed",
         subtitle: [
           `${rep.openLeads} lead${rep.openLeads === 1 ? "" : "s"}`,

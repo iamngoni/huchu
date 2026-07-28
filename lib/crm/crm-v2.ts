@@ -248,6 +248,100 @@ export function fetchCrmLeadsBoard(filters: LeadViewFilters = {}) {
   );
 }
 
+export type CrmDealBoardCard = {
+  id: string;
+  dealNo: string;
+  title: string;
+  value: number | null;
+  currency: string;
+  status: "OPEN" | "WON" | "LOST";
+  stageId: string;
+  stageEnteredAt: string;
+  expectedCloseDate: string | null;
+  emoji: string | null;
+  avatarUrl: string | null;
+  client: { id: string; name: string } | null;
+  assignedTo: CrmLeadOwner | null;
+  nextFollowUp: { id: string; title: string; dueAt: string } | null;
+};
+
+export type CrmDealBoardColumn = {
+  stage: {
+    id: string;
+    name: string;
+    status: "OPEN" | "WON" | "LOST";
+    position: number;
+    colorToken: string | null;
+  };
+  count: number;
+  totalValue: number;
+  hasMore: boolean;
+  deals: CrmDealBoardCard[];
+};
+
+export type CrmDealBoard = {
+  pipeline: { id: string; name: string };
+  columns: CrmDealBoardColumn[];
+  cardsPerColumn: number;
+};
+
+export function fetchCrmDealsBoard(params: {
+  pipelineId?: string | null;
+  mineOnly?: boolean;
+  q?: string;
+} = {}) {
+  const search = new URLSearchParams();
+  if (params.pipelineId) search.set("pipelineId", params.pipelineId);
+  if (params.mineOnly) search.set("mineOnly", "1");
+  if (params.q) search.set("q", params.q);
+  const query = search.toString();
+  // Bare body, like the leads board — no envelope to unwrap.
+  return fetchJson<CrmDealBoard>(
+    `/api/v2/crm/deals/board${query ? `?${query}` : ""}`,
+  );
+}
+
+export function updateCrmDealStage(dealId: string, stageId: string) {
+  return fetchJson<{ id: string; stageId: string }>(
+    `/api/v2/crm/deals/${dealId}/stage`,
+    { method: "POST", body: JSON.stringify({ stageId }) },
+  );
+}
+
+export type CrmListRecord = {
+  id: string;
+  entity: string;
+  name: string;
+  description: string | null;
+  isShared: boolean;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { members: number };
+};
+
+export function fetchCrmLists(entity?: string) {
+  return fetchJson<Envelope<CrmListRecord[]>>(`/api/v2/crm/lists${qs({ entity })}`);
+}
+
+export function fetchCrmList(listId: string) {
+  return fetchJson<CrmListRecord & { recordIds: string[] }>(
+    `/api/v2/crm/lists/${listId}`,
+  );
+}
+
+export function createCrmList(body: {
+  entity: string;
+  name: string;
+  description?: string | null;
+  isShared?: boolean;
+}) {
+  return fetchJson<CrmListRecord>(`/api/v2/crm/lists`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export type CrmBulkLeadAction =
   | { action: "assign"; ids: string[]; assignedToId: string | null }
   | { action: "stage"; ids: string[]; stage: CrmLeadStage; lostReason?: string };
@@ -374,6 +468,10 @@ export function fetchCrmInsightsSummary(params: { from?: string; to?: string } =
 export type CrmPersonRecord = {
   id: string;
   personNo: string;
+  /** A picture chosen for this record. Beats the emoji. */
+  avatarUrl: string | null;
+  /** The record's own emoji, when somebody has given it one. */
+  emoji: string | null;
   firstName: string;
   lastName: string | null;
   fullName: string;
@@ -398,6 +496,10 @@ export type CrmPersonRecord = {
 export type CrmCompanyRecord = {
   id: string;
   clientNo: string;
+  /** A picture chosen for this record. Beats the emoji. */
+  avatarUrl: string | null;
+  /** The record's own emoji, when somebody has given it one. */
+  emoji: string | null;
   name: string;
   tradingName: string | null;
   companyType: string;
@@ -458,6 +560,10 @@ export type CrmDealRecord = {
 export type CrmSiteRecord = {
   id: string;
   siteNo: string;
+  /** A picture chosen for this record. Beats the emoji. */
+  avatarUrl: string | null;
+  /** The record's own emoji, when somebody has given it one. */
+  emoji: string | null;
   name: string;
   addressLine: string | null;
   city: string | null;

@@ -3,14 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CrmLeadStage } from "@prisma/client";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown, X } from "@/lib/icons";
-import type { LeadViewFilters } from "@/lib/crm/views";
+import { ChevronDown, Funnel, SortAscending, X } from "@/lib/icons";
+import { LEAD_STAGE_DOT } from "@/lib/crm/tones";
+import { ToneSelect } from "@/components/crm/records/tone-select";
+import type { LeadSort, LeadViewFilters } from "@/lib/crm/views";
 import { cn } from "@/lib/utils";
 
 import {
@@ -47,7 +49,7 @@ function MultiFilter({ label, options, selected, onChange, extra }: MultiFilterP
         <Button variant="outline" size="sm" className="gap-1.5">
           {label}
           {activeCount > 0 ? (
-            <Badge variant="secondary" className="px-1.5 py-0 text-sm">
+            <Badge tone="info" size="sm">
               {activeCount}
             </Badge>
           ) : null}
@@ -121,7 +123,7 @@ function ValueRangeFilter({
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
           Value
-          {active ? <Badge variant="secondary" className="px-1.5 py-0 text-sm">1</Badge> : null}
+          {active ? <Badge tone="info" size="sm">1</Badge> : null}
           <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </Button>
       </PopoverTrigger>
@@ -189,7 +191,7 @@ function DateRangeFilter({
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
           Created
-          {active ? <Badge variant="secondary" className="px-1.5 py-0 text-sm">1</Badge> : null}
+          {active ? <Badge tone="info" size="sm">1</Badge> : null}
           <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </Button>
       </PopoverTrigger>
@@ -255,13 +257,15 @@ export function LeadStageFilter({
       CRM_LEAD_STAGES.map((stage: CrmLeadStage) => ({
         value: stage,
         label: CRM_STAGE_LABELS[stage],
+        dot: LEAD_STAGE_DOT[stage],
       })),
     [],
   );
 
   return (
-    <MultiFilter
+    <ToneSelect
       label="Stage"
+      placeholder="All stages"
       options={stageOptions}
       selected={filters.stages ?? []}
       onChange={(next) =>
@@ -338,80 +342,177 @@ export function LeadsFilters({
     filters.q ? 1 : 0,
   ].reduce<number>((sum, entry) => sum + (entry ?? 0), 0);
 
+  // Every narrowing control lives behind one button, the way the reference
+  // does it. Nine controls strung across a row read as nine decisions to make
+  // before you can look at anything; one button with a count reads as "seven
+  // things are hidden from you right now", which is the fact that matters.
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <Input
-        value={searchDraft}
-        onChange={(event) => setSearchDraft(event.target.value)}
-        placeholder="Search leads, contacts, clients…"
-        className="h-9 w-full sm:w-64"
-        aria-label="Search leads"
-      />
-
-      <MultiFilter
-        label="Owner"
-        options={ownerOptions}
-        selected={filters.assignedToIds ?? []}
-        onChange={(next) => patch({ assignedToIds: next.length ? next : undefined })}
-        extra={{
-          label: "Unassigned",
-          checked: Boolean(filters.unassigned),
-          onChange: (checked) => patch({ unassigned: checked || undefined }),
-        }}
-      />
-
-      <MultiFilter
-        label="Channel"
-        options={channelOptions}
-        selected={filters.channels ?? []}
-        onChange={(next) =>
-          patch({ channels: next.length ? (next as LeadViewFilters["channels"]) : undefined })
-        }
-      />
-
-      {sourceOptions.length > 0 ? (
-        <MultiFilter
-          label="Source"
-          options={sourceOptions}
-          selected={filters.sources ?? []}
-          onChange={(next) => patch({ sources: next.length ? next : undefined })}
-        />
-      ) : null}
-
-      <ValueRangeFilter
-        valueMin={filters.valueMin}
-        valueMax={filters.valueMax}
-        onChange={(next) => patch(next)}
-      />
-
-      <DateRangeFilter
-        createdFrom={filters.createdFrom}
-        createdTo={filters.createdTo}
-        onChange={(next) => patch(next)}
-      />
-
-      <Button
-        variant={filters.mineOnly ? "default" : "outline"}
-        size="sm"
-        onClick={() => patch({ mineOnly: filters.mineOnly ? undefined : true })}
-      >
-        My leads
-      </Button>
-
-      <Button
-        variant={filters.overdueOnly ? "default" : "outline"}
-        size="sm"
-        onClick={() => patch({ overdueOnly: filters.overdueOnly ? undefined : true })}
-      >
-        Overdue
-      </Button>
-
-      {activeCount > 0 ? (
-        <Button variant="ghost" size="sm" className="gap-1" onClick={() => onChange({})}>
-          <X className="h-3.5 w-3.5" />
-          Clear all
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className={cn("h-9 gap-2", className)}>
+          <Funnel className="size-4 opacity-70" />
+          Filter
+          {activeCount > 0 ? (
+            <Badge tone="info" size="sm">
+              {activeCount}
+            </Badge>
+          ) : null}
         </Button>
-      ) : null}
-    </div>
+      </PopoverTrigger>
+
+      <PopoverContent align="start" className="w-[22rem] space-y-3 p-3">
+        <Input
+          value={searchDraft}
+          onChange={(event) => setSearchDraft(event.target.value)}
+          placeholder="Search leads, contacts, clients…"
+          className="h-9 w-full"
+          aria-label="Search leads"
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <MultiFilter
+            label="Owner"
+            options={ownerOptions}
+            selected={filters.assignedToIds ?? []}
+            onChange={(next) => patch({ assignedToIds: next.length ? next : undefined })}
+            extra={{
+              label: "Unassigned",
+              checked: Boolean(filters.unassigned),
+              onChange: (checked) => patch({ unassigned: checked || undefined }),
+            }}
+          />
+
+          <MultiFilter
+            label="Channel"
+            options={channelOptions}
+            selected={filters.channels ?? []}
+            onChange={(next) =>
+              patch({ channels: next.length ? (next as LeadViewFilters["channels"]) : undefined })
+            }
+          />
+
+          {sourceOptions.length > 0 ? (
+            <MultiFilter
+              label="Source"
+              options={sourceOptions}
+              selected={filters.sources ?? []}
+              onChange={(next) => patch({ sources: next.length ? next : undefined })}
+            />
+          ) : null}
+
+          <ValueRangeFilter
+            valueMin={filters.valueMin}
+            valueMax={filters.valueMax}
+            onChange={(next) => patch(next)}
+          />
+
+          <DateRangeFilter
+            createdFrom={filters.createdFrom}
+            createdTo={filters.createdTo}
+            onChange={(next) => patch(next)}
+          />
+
+          <Button
+            variant={filters.mineOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => patch({ mineOnly: filters.mineOnly ? undefined : true })}
+          >
+            My leads
+          </Button>
+
+          <Button
+            variant={filters.overdueOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => patch({ overdueOnly: filters.overdueOnly ? undefined : true })}
+          >
+            Overdue
+          </Button>
+        </div>
+
+        {activeCount > 0 ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-center gap-1"
+            onClick={() => onChange({})}
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear all
+          </Button>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/**
+ * Sort, beside the filter button.
+ *
+ * Only meaningful on a list — a board is already ordered by stage, and the
+ * cards inside a column carry their own order — so the workspace hides it
+ * when a board view is showing rather than offering a control that does
+ * nothing.
+ */
+const SORT_FIELDS: Array<{ value: LeadSort["field"]; label: string }> = [
+  { value: "updatedAt", label: "Last touched" },
+  { value: "createdAt", label: "When it came in" },
+  { value: "estimatedValue", label: "Value" },
+  { value: "stage", label: "Stage" },
+  { value: "title", label: "Title" },
+  { value: "leadNo", label: "Reference" },
+];
+
+export function LeadsSortButton({
+  sort,
+  onChange,
+  className,
+}: {
+  sort: LeadSort;
+  onChange: (next: LeadSort) => void;
+  className?: string;
+}) {
+  const current = SORT_FIELDS.find((field) => field.value === sort.field);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className={cn("h-9 gap-2", className)}>
+          <SortAscending className="size-4 opacity-70" />
+          Sort
+          <span className="text-[var(--text-muted)]">{current?.label}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-2">
+        <div className="space-y-0.5">
+          {SORT_FIELDS.map((field) => (
+            <button
+              key={field.value}
+              type="button"
+              onClick={() => onChange({ ...sort, field: field.value })}
+              className={cn(
+                "flex w-full items-center rounded px-2 py-1.5 text-left text-sm hover:bg-[var(--surface-hover)]",
+                field.value === sort.field && "font-medium text-[var(--interactive-primary)]",
+              )}
+            >
+              {field.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-2 flex gap-1 border-t border-[var(--border-subtle)] pt-2">
+          {(["desc", "asc"] as const).map((direction) => (
+            <Button
+              key={direction}
+              variant={sort.direction === direction ? "default" : "ghost"}
+              size="sm"
+              className="flex-1"
+              onClick={() => onChange({ ...sort, direction })}
+            >
+              {direction === "desc" ? "Newest first" : "Oldest first"}
+            </Button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

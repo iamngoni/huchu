@@ -116,7 +116,7 @@ export function StockLocationsPanel() {
               </span>
             </h3>
 
-            <ul className="divide-y divide-[var(--border-subtle)]">
+            <ul className="space-y-1">
               {site.rows.map((location) => (
                 <li key={location.id}>
                   <Link

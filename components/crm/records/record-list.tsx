@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { Button, EmptyState, Skeleton } from "@corelithzw/react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DataTableFloatingActions } from "@/components/ui/data-table-floating-actions";
 import { ChevronRight } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,7 @@ export function RecordList({
   emptyBody,
   emptyAction,
   className,
+  selection,
 }: {
   rows: RecordListRow[];
   isLoading?: boolean;
@@ -60,6 +63,17 @@ export function RecordList({
   emptyBody?: string;
   emptyAction?: ReactNode;
   className?: string;
+  /**
+   * Turns the list into something you can act on in bulk. Left off, the rows
+   * stay plain links — most lists are read, not operated on, and a column of
+   * checkboxes nobody uses is a column of noise.
+   */
+  selection?: {
+    selectedIds: string[];
+    onChange: (next: string[]) => void;
+    /** The bar's buttons. Rendered beside the count once anything is picked. */
+    actions?: (context: { ids: string[]; clear: () => void }) => ReactNode;
+  };
 }) {
   if (isLoading) {
     return (
@@ -75,18 +89,45 @@ export function RecordList({
     return <EmptyState title={emptyTitle} body={emptyBody} action={emptyAction} />;
   }
 
+  const selectedIds = selection?.selectedIds ?? [];
+  const toggle = (id: string) =>
+    selection?.onChange(
+      selectedIds.includes(id)
+        ? selectedIds.filter((entry) => entry !== id)
+        : [...selectedIds, id],
+    );
+
   return (
+    <>
     <ul
-      className={cn(
-        "divide-y divide-[var(--border-subtle)]",
-        className,
-      )}
+      // Space between rows, not rules. A divider draws a line the reader has
+      // to cross for every row; a gap does the same separating without adding
+      // anything to look at, and the rows stop reading as a ruled ledger.
+      className={cn("space-y-1", className)}
     >
       {rows.map((row) => (
-        <li key={row.id} className="relative flex items-center gap-3 pr-3">
+        <li
+          key={row.id}
+          className={cn(
+            "relative flex items-center gap-3 rounded-[var(--radius-md)] pr-3",
+            selectedIds.includes(row.id) && "bg-[var(--surface-subtle)]",
+          )}
+        >
+          {selection ? (
+            <span className="flex-none pl-3">
+              <Checkbox
+                checked={selectedIds.includes(row.id)}
+                onCheckedChange={() => toggle(row.id)}
+                aria-label={`Select ${typeof row.title === "string" ? row.title : "this row"}`}
+              />
+            </span>
+          ) : null}
           <Link
             href={row.href}
-            className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 hover:bg-[var(--surface-muted)]"
+            className={cn(
+              "flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] py-2.5 pr-3 hover:bg-[var(--surface-muted)]",
+              selection ? "pl-2" : "pl-3",
+            )}
           >
             {row.leading ? <span className="flex-none">{row.leading}</span> : null}
 
@@ -135,6 +176,19 @@ export function RecordList({
         </li>
       ))}
     </ul>
+
+    {selection && selectedIds.length > 0 ? (
+      <DataTableFloatingActions
+        count={selectedIds.length}
+        onClear={() => selection.onChange([])}
+      >
+        {selection.actions?.({
+          ids: selectedIds,
+          clear: () => selection.onChange([]),
+        })}
+      </DataTableFloatingActions>
+    ) : null}
+    </>
   );
 }
 

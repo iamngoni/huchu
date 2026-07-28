@@ -38,7 +38,7 @@ export function VisitsTab({
           anything substantial.
         </p>
       ) : (
-        <ul className="divide-y divide-[var(--border-subtle)]">
+        <ul className="space-y-1">
           {appointments.map((visit) => {
             const status = VISIT_STATUS[visit.status];
             return (

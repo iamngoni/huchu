@@ -13,7 +13,7 @@ import {
   isValidParent,
   type CollabRecord,
 } from "@/lib/crm/collaboration";
-import { extractMentionedUserIds, renderMentionText } from "@/lib/crm/mentions";
+import { extractMentionedUserIds, toPlainText } from "@/lib/crm/rich-text";
 import { emitCrmNotification } from "@/lib/notifications";
 import { crmRecordExists } from "../_helpers";
 
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     });
 
     const viewPath = collabRecordPath(record);
-    const preview = renderMentionText(data.body).slice(0, 160);
+    const preview = toPlainText(data.body).slice(0, 160);
     const author = session.user.name ?? "Someone";
 
     if (validMentions.length) {

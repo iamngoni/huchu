@@ -258,7 +258,7 @@ export function VisitReportSheet({
             <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
               On-site checklist
             </h3>
-            <ul className="divide-y divide-[var(--border-subtle)]">
+            <ul className="space-y-1">
               {checklist.map((entry, index) => (
                 <li key={entry.key} className="space-y-1.5 p-2.5">
                   <label className="flex cursor-pointer items-center gap-2.5 text-sm">

@@ -27,6 +27,7 @@ import {
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
 
 import { CustomFieldInputs } from "./custom-field-inputs";
+import { RecordMarkField } from "./record-mark-field";
 import { DuplicateWarningDialog, type DuplicateEntry } from "./duplicate-warning-dialog";
 
 const CONTACT_TYPES = [
@@ -48,6 +49,8 @@ const CHANNELS = [
 ];
 
 type FormState = {
+  emoji: string;
+  avatarUrl: string;
   firstName: string;
   lastName: string;
   jobTitle: string;
@@ -63,6 +66,8 @@ type FormState = {
 };
 
 const EMPTY: FormState = {
+  emoji: "",
+  avatarUrl: "",
   firstName: "",
   lastName: "",
   jobTitle: "",
@@ -178,6 +183,8 @@ export function PersonFormSheet({
     notes: form.notes.trim() || null,
     clientId: form.clientId || null,
     assignedToId: form.assignedToId || null,
+    emoji: form.emoji.trim() || null,
+    avatarUrl: form.avatarUrl.trim() || null,
     customFields: customValues,
     force,
   });
@@ -392,6 +399,21 @@ export function PersonFormSheet({
             rows={3}
           />
         </div>
+
+        <RecordMarkField
+
+          kind="person"
+
+          name={[form.firstName, form.lastName].filter(Boolean).join(" ")}
+
+          emoji={form.emoji}
+
+          avatarUrl={form.avatarUrl}
+
+          onChange={(next) => setForm((previous) => ({ ...previous, ...next }))}
+
+        />
+
 
         <CustomFieldInputs
           definitions={definitions}

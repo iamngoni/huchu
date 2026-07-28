@@ -13,17 +13,28 @@ import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/c
 import { formatMoney } from "@/components/crm/documents/document-types";
 import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
-import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline";
+import { RecordStory } from "@/components/crm/records/record-story";
+import { buildStory } from "@/lib/crm/story";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { RecordMark } from "./record-mark";
+import { RecordAttributes } from "./record-attributes";
 import { EntityLink } from "./entity-link";
-import { Users } from "@/lib/icons";
+import {
+  AddressBook,
+  Building2,
+  Mail,
+  Phone,
+  UserRound,
+  Users,
+} from "@/lib/icons";
 
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { PersonFormSheet } from "./person-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
+import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
 const ROLE_LABELS: Record<string, string> = {
   PRIMARY: "Primary contact",
@@ -55,6 +66,8 @@ const CHANNEL_LABELS: Record<string, string> = {
 
 type PersonDetail = {
   id: string;
+  avatarUrl: string | null;
+  emoji: string | null;
   personNo: string;
   fullName: string;
   firstName: string;
@@ -91,17 +104,6 @@ type PersonDetail = {
   /** Present only when this person was merged away. */
   redirectTo?: string;
 };
-
-function DetailRow({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="flex items-start justify-between gap-2 py-1.5">
-      <dt className="w-32 shrink-0 text-sm text-[var(--text-muted)]">{label}</dt>
-      <dd className="min-w-0 flex-1 text-right text-sm">
-        {value ? value : <span className="text-[var(--text-muted)]">—</span>}
-      </dd>
-    </div>
-  );
-}
 
 export function PersonDetailPage({ personId }: { personId: string }) {
   const router = useRouter();
@@ -187,16 +189,114 @@ export function PersonDetailPage({ personId }: { personId: string }) {
       backHref="/crm/people"
       backLabel="All people"
       actions={[{ label: "Merge a duplicate", onSelect: () => setMergeOpen(true) }]}
+      leading={
+        <RecordMark
+          kind="person"
+          name={person.fullName}
+          emoji={person.emoji}
+          avatarUrl={person.avatarUrl}
+          size="md"
+        />
+      }
       title={person.fullName}
       reference={person.personNo}
       subtitle={subtitle}
       activeTab={tab}
       onTabChange={setTab}
+      attributes={
+        <RecordAttributes
+          attributes={[
+            {
+              id: "email",
+              label: "Email",
+              icon: Mail,
+              display: person.email ? (
+                <a href={`mailto:${person.email}`} className="text-sm hover:underline">
+                  {person.email}
+                </a>
+              ) : undefined,
+              value: person.email,
+            },
+            {
+              id: "phone",
+              label: "Phone",
+              icon: Phone,
+              display: person.phone ? (
+                <a href={`tel:${person.phone}`} className="text-sm hover:underline">
+                  {person.phone}
+                </a>
+              ) : undefined,
+              value: person.phone,
+            },
+            {
+              id: "company",
+              label: "Company",
+              icon: Building2,
+              display: person.client ? (
+                <EntityLink
+                  href={`/crm/companies/${person.client.id}`}
+                  className="text-sm"
+                >
+                  {person.client.name}
+                </EntityLink>
+              ) : undefined,
+              value: null,
+              placeholder: "No company",
+            },
+            {
+              id: "owner",
+              label: "Owner",
+              icon: UserRound,
+              display: (
+                <EntityLink
+                  href={person.assignedTo ? `/crm/reps/${person.assignedTo.id}` : null}
+                  className="text-sm"
+                >
+                  {person.assignedTo?.name ?? "Unassigned"}
+                </EntityLink>
+              ),
+            },
+            {
+              id: "contactType",
+              label: "Contact type",
+              icon: AddressBook,
+              value: CONTACT_TYPE_LABELS[person.contactType] ?? person.contactType,
+            },
+            {
+              id: "role",
+              label: "Job title",
+              value: person.jobTitle,
+              placeholder: "Not recorded",
+            },
+            {
+              id: "prefers",
+              label: "Prefers",
+              value: person.preferredChannel
+                ? CHANNEL_LABELS[person.preferredChannel] ?? person.preferredChannel
+                : null,
+              placeholder: "No preference",
+            },
+            {
+              id: "city",
+              label: "City",
+              value: person.city,
+              placeholder: "Not recorded",
+            },
+          ]}
+        />
+      }
       tabs={[
         {
           value: "timeline",
           label: "Timeline",
-          content: <ActivityTimeline activities={person.activities} />,
+          content: (
+            <RecordStory
+              events={buildStory({
+                activities: person.activities,
+                createdLabel: "Person added",
+              })}
+            />
+          ),
         },
         {
           value: "deals",
@@ -244,38 +344,14 @@ export function PersonDetailPage({ personId }: { personId: string }) {
           label: "History",
           content: <RecordHistoryTab activities={person.activities} />,
         },
+        {
+          value: "changes",
+          label: "Field history",
+          content: <FieldHistoryTab entity="PERSON" recordId={personId} />,
+        },
       ]}
       rail={
         <>
-          <RailSection title="Contact">
-            <dl className="divide-y divide-[var(--border)]">
-              <DetailRow label="Email" value={person.email} />
-              <DetailRow label="Phone" value={person.phone} />
-              <DetailRow
-                label="Prefers"
-                value={
-                  person.preferredChannel
-                    ? CHANNEL_LABELS[person.preferredChannel] ?? person.preferredChannel
-                    : null
-                }
-              />
-              <DetailRow
-                label="Contact type"
-                value={CONTACT_TYPE_LABELS[person.contactType] ?? person.contactType}
-              />
-            </dl>
-          </RailSection>
-
-          <RailSection title="Company">
-            {person.client ? (
-              <EntityLink href={`/crm/companies/${person.client.id}`} className="text-sm">
-                {person.client.name}
-              </EntityLink>
-            ) : (
-              <p className="text-sm text-[var(--text-muted)]">No company</p>
-            )}
-          </RailSection>
-
           {person.companyLinks.length > 1 ? (
             <RailSection title="Companies">
               <ul className="space-y-1.5">
@@ -303,6 +379,8 @@ export function PersonDetailPage({ personId }: { personId: string }) {
       onOpenChange={setEditOpen}
       record={{
         id: person.id,
+        emoji: person.emoji ?? "",
+        avatarUrl: person.avatarUrl ?? "",
         firstName: person.firstName,
         lastName: person.lastName ?? "",
         jobTitle: person.jobTitle ?? "",

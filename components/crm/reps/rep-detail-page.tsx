@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Avatar, Badge } from "@corelithzw/react";
+import { Badge } from "@corelithzw/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -13,16 +13,24 @@ import {
 import { ClientDate } from "@/components/ui/client-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { UserRound } from "@/lib/icons";
+import {
+  Calendar,
+  Checklist,
+  Mail,
+  Payments,
+  Phone,
+  ShieldCheck,
+  UserRound,
+} from "@/lib/icons";
 import { fetchCrmRep, type CrmRepDetail } from "@/lib/crm/crm-v2";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
 import { RecordList, type RecordListRow } from "@/components/crm/records/record-list";
+import { RecordMark } from "@/components/crm/records/record-mark";
+import { RecordAttributes } from "@/components/crm/records/record-attributes";
 import { HistoryFeed, type HistoryEvent } from "@/components/crm/records/history-feed";
-import {
-  RailSection,
-  RecordPageShell,
-} from "@/components/crm/records/record-page-shell";
+import { RecordPageShell } from "@/components/crm/records/record-page-shell";
+import { RepSettingsTab } from "@/components/crm/reps/rep-settings-tab";
 
 const ROLE_LABELS: Record<string, string> = {
   SUPERADMIN: "Owner",
@@ -172,12 +180,69 @@ export function RepDetailPage({ repId }: { repId: string }) {
       backHref="/crm/reps"
       backLabel="Sales reps"
       title={rep.name ?? rep.email ?? "Unnamed"}
-      leading={<Avatar size="sm" name={rep.name ?? rep.email ?? "?"} />}
+      leading={<RecordMark kind="rep" name={rep.name ?? rep.email} />}
       status={
         rep.isActive ? null : { label: "Deactivated", status: "inactive" as const }
       }
       subtitle={ROLE_LABELS[rep.role] ?? rep.role}
       activeTab={tab}
+      attributes={
+        <RecordAttributes
+          attributes={[
+            {
+              id: "role",
+              label: "Role",
+              icon: ShieldCheck,
+              value: ROLE_LABELS[rep.role] ?? rep.role,
+            },
+            {
+              id: "email",
+              label: "Email",
+              icon: Mail,
+              display: rep.email ? (
+                <a href={`mailto:${rep.email}`} className="text-sm hover:underline">
+                  {rep.email}
+                </a>
+              ) : undefined,
+              value: rep.email,
+            },
+            {
+              id: "phone",
+              label: "Phone",
+              icon: Phone,
+              display: rep.phone ? (
+                <a href={`tel:${rep.phone}`} className="text-sm hover:underline">
+                  {rep.phone}
+                </a>
+              ) : undefined,
+              value: rep.phone,
+            },
+            {
+              id: "pipeline",
+              label: "Open pipeline",
+              icon: Payments,
+              value: formatMoney(openPipeline, "USD"),
+              mono: true,
+            },
+            {
+              id: "workload",
+              label: "Carrying",
+              icon: Checklist,
+              value: `${detail.deals.length} deals · ${detail.leads.length} leads · ${detail.tasks.length} tasks`,
+            },
+            {
+              id: "since",
+              label: "On the team since",
+              icon: Calendar,
+              display: (
+                <span className="text-sm">
+                  <ClientDate value={rep.createdAt} mode="date" />
+                </span>
+              ),
+            },
+          ]}
+        />
+      }
       onTabChange={setTab}
       tabs={[
         {
@@ -281,53 +346,17 @@ export function RepDetailPage({ repId }: { repId: string }) {
             />
           ),
         },
+        {
+          value: "settings",
+          label: "Settings",
+          content: (
+            <RepSettingsTab
+              repId={rep.id}
+              repName={rep.name ?? rep.email ?? "This person"}
+            />
+          ),
+        },
       ]}
-      rail={
-        <>
-          <RailSection title="Contact">
-            {rep.email ? (
-              <a href={`mailto:${rep.email}`} className="block truncate text-sm hover:underline">
-                {rep.email}
-              </a>
-            ) : null}
-            {rep.phone ? (
-              <a href={`tel:${rep.phone}`} className="block text-sm hover:underline">
-                {rep.phone}
-              </a>
-            ) : null}
-            {!rep.email && !rep.phone ? (
-              <p className="text-sm text-[var(--text-muted)]">Nothing on file.</p>
-            ) : null}
-          </RailSection>
-
-          <RailSection title="Workload">
-            <dl className="space-y-1.5 text-sm">
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--text-muted)]">Open pipeline</dt>
-                <dd className="font-mono">{formatMoney(openPipeline, "USD")}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--text-muted)]">Open deals</dt>
-                <dd className="font-mono">{detail.deals.length}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--text-muted)]">Open leads</dt>
-                <dd className="font-mono">{detail.leads.length}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--text-muted)]">Open tasks</dt>
-                <dd className="font-mono">{detail.tasks.length}</dd>
-              </div>
-            </dl>
-          </RailSection>
-
-          <RailSection title="On the team since">
-            <p className="text-sm">
-              <ClientDate value={rep.createdAt} mode="date" />
-            </p>
-          </RailSection>
-        </>
-      }
     />
   );
 }

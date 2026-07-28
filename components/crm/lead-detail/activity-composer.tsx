@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextComposer } from "@/components/crm/collaboration/rich-text-composer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
@@ -90,22 +90,19 @@ export function ActivityComposer({ target }: { target: ActivityTarget }) {
         size="sm"
         ariaLabel="Activity type"
       />
-      <Textarea
+      <RichTextComposer
         value={text}
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={(event) => {
-          // Cmd/Ctrl+Enter submits — this box gets used dozens of times a day.
-          if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && text.trim()) {
-            event.preventDefault();
-            log.mutate();
-          }
+        onChange={setText}
+        // Cmd/Ctrl+Enter submits — this box gets used dozens of times a day.
+        onSubmit={() => {
+          if (text.trim()) log.mutate();
         }}
         placeholder={PLACEHOLDERS[type]}
         rows={3}
       />
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-[var(--text-muted)]">
-          First line becomes the heading. ⌘/Ctrl + Enter to save.
+          First line becomes the heading. Type @ to link a person or record. ⌘/Ctrl + Enter to save.
         </p>
         <Button
           size="sm"

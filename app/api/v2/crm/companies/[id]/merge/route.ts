@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { can, denialMessage } from "@/lib/crm/permissions";
+import { canUser, denialMessage } from "@/lib/crm/permissions";
 import {
   COMPANY_MERGE_FIELDS,
   mergeLists,
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const companyId = session.user.companyId;
     const { id } = await params;
 
-    if (!can(session, "records.merge")) {
+    if (!(await canUser(session, "records.merge"))) {
       return errorResponse(denialMessage("records.merge"), 403);
     }
 

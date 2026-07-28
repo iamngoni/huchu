@@ -19,6 +19,19 @@ export function canMutateUserManagement(session: AuthenticatedSession): boolean 
   return session.user.role === "SUPERADMIN";
 }
 
+/**
+ * Permissions are a wider door than the rest of user management on purpose.
+ *
+ * Creating accounts and resetting passwords are superadmin work because they
+ * make new ways into the workspace. Deciding whether a rep on your team may
+ * export a list is the job of whoever runs that team, and routing it through
+ * one superadmin is how people end up over-permissioned: it is easier to ask
+ * once for everything than four times for the right things.
+ */
+export function canManageUserPermissions(session: AuthenticatedSession): boolean {
+  return session.user.role === "SUPERADMIN" || session.user.role === "MANAGER";
+}
+
 export function getManagedRolesForSession(session: AuthenticatedSession): UserRole[] {
   return getAllowedUserRolesForWorkspace({
     workspaceProfile: (session.user as { workspaceProfile?: string }).workspaceProfile,
@@ -44,7 +57,9 @@ export async function appendUserManagementEvent(input: {
     | "USER_RESET_PASSWORD"
     | "USER_CHANGE_ROLE"
     | "USER_SET_FEATURE_ACCESS"
-    | "USER_RESET_FEATURE_ACCESS";
+    | "USER_RESET_FEATURE_ACCESS"
+    | "USER_SET_PERMISSION"
+    | "USER_DELETE";
   message: string;
   payload: Record<string, unknown>;
 }): Promise<void> {

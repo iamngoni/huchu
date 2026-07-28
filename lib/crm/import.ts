@@ -59,6 +59,88 @@ export const IMPORT_FIELDS: Record<ImportEntity, ImportField[]> = {
   ],
 };
 
+/**
+ * What is actually in a column, so a mapping can be checked rather than
+ * trusted.
+ *
+ * The wizard guesses which column is which from the headers, and a guess that
+ * is right nine times out of ten is exactly the kind that gets waved through
+ * on the tenth. Showing the first few real values turns "Phone → mobile" from
+ * a claim into something somebody can see is wrong before importing four
+ * thousand rows of it.
+ */
+export type ColumnPreview = {
+  /** The first distinct values, in file order. */
+  samples: string[];
+  /** How many rows have nothing in this column. */
+  blanks: number;
+  total: number;
+  /** Distinct value count, capped — a hint that a column is a category. */
+  distinct: number;
+};
+
+export function columnPreview(
+  table: { headers: string[]; rows: string[][] },
+  header: string,
+  limit = 3,
+): ColumnPreview | null {
+  const index = table.headers.indexOf(header);
+  if (index === -1) return null;
+
+  const samples: string[] = [];
+  const seen = new Set<string>();
+  let blanks = 0;
+
+  for (const row of table.rows) {
+    const raw = (row[index] ?? "").trim();
+    if (!raw) {
+      blanks += 1;
+      continue;
+    }
+    if (!seen.has(raw)) {
+      seen.add(raw);
+      if (samples.length < limit) samples.push(raw);
+    }
+  }
+
+  return { samples, blanks, total: table.rows.length, distinct: seen.size };
+}
+
+/**
+ * Whether the values in a column look like the field they are mapped to.
+ *
+ * Deliberately shallow: it catches an email column with no `@` and a number
+ * column full of words, and says nothing about the rest. A validator that
+ * guesses harder starts refusing legitimate data, and a wizard that argues
+ * with a correct mapping is worse than one that stays quiet.
+ */
+export function mappingWarnings(fieldKey: string, preview: ColumnPreview): string[] {
+  const warnings: string[] = [];
+  const { samples, blanks, total } = preview;
+  if (samples.length === 0) {
+    return total > 0 ? ["Every row is blank in this column."] : [];
+  }
+
+  const lowered = fieldKey.toLowerCase();
+
+  if (lowered.includes("email") && !samples.some((value) => value.includes("@"))) {
+    warnings.push("None of these look like email addresses.");
+  }
+
+  if (
+    (lowered.includes("value") || lowered.includes("amount") || lowered.includes("price")) &&
+    samples.every((value) => parseImportNumber(value) === null)
+  ) {
+    warnings.push("None of these look like numbers.");
+  }
+
+  if (blanks > 0 && total > 0 && blanks / total > 0.5) {
+    warnings.push(`Blank in ${Math.round((blanks / total) * 100)}% of rows.`);
+  }
+
+  return warnings;
+}
+
 export type ImportRowIssue = { field: string; message: string };
 
 export type ImportRowPlan = {

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import {
@@ -240,10 +241,13 @@ export function UsersPreferences() {
         key: "user",
         header: "User",
         render: (row) => (
-          <div>
+          <Link
+            href={`/preferences/organization/users/${row.id}`}
+            className="block underline decoration-[var(--border)] underline-offset-2 hover:decoration-[var(--text)]"
+          >
             <div>{row.name}</div>
             <div className="t-caption t-muted">{row.email}</div>
-          </div>
+          </Link>
         ),
       },
       {
@@ -281,6 +285,14 @@ export function UsersPreferences() {
                     variant="secondary"
                     size="sm"
                     startIcon={<ShieldCheck className="size-4" aria-hidden="true" />}
+                    asChild
+                  >
+                    <Link href={`/preferences/organization/users/${row.id}`}>Permissions</Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     loading={statusMutation.isPending}
                     onClick={() => toggleStatus(row)}
                   >

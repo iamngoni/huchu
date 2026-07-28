@@ -18,11 +18,11 @@ import {
   type CrmCommentRecord,
 } from "@/lib/crm/crm-v2";
 import type { CollabEntity } from "@/lib/crm/collaboration";
-import { segmentMentions } from "@/lib/crm/mentions";
 import { Bell, BellRing, Check, PushPin, Trash2 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
-import { MentionTextarea } from "./mention-textarea";
+import { RichTextComposer } from "./rich-text-composer";
+import { RichTextRenderer } from "./rich-text-renderer";
 
 function initials(name: string | null, email: string): string {
   const source = name?.trim() || email;
@@ -32,23 +32,6 @@ function initials(name: string | null, email: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
-}
-
-/** Render stored mention markup as highlighted names. */
-function CommentBody({ body }: { body: string }) {
-  return (
-    <p className="whitespace-pre-wrap text-sm text-[var(--text-primary)]">
-      {segmentMentions(body).map((segment, index) =>
-        segment.kind === "mention" ? (
-          <span key={index} className="rounded bg-[var(--accent-subtle)] px-1 font-medium">
-            @{segment.text}
-          </span>
-        ) : (
-          <span key={index}>{segment.text}</span>
-        ),
-      )}
-    </p>
-  );
 }
 
 export function CommentThread({
@@ -199,7 +182,7 @@ export function CommentThread({
         </div>
 
         <div className="mt-2">
-          <CommentBody body={comment.body} />
+          <RichTextRenderer body={comment.body} />
         </div>
 
         {resolved && comment.resolvedBy ? (
@@ -213,7 +196,7 @@ export function CommentThread({
           <div className="mt-2">
             {replyTo === comment.id ? (
               <div className="space-y-2">
-                <MentionTextarea
+                <RichTextComposer
                   value={replyBody}
                   onChange={setReplyBody}
                   rows={2}
@@ -309,7 +292,7 @@ export function CommentThread({
       </div>
 
       <div className="space-y-2">
-        <MentionTextarea
+        <RichTextComposer
           value={body}
           onChange={setBody}
           placeholder="Leave a note. Type @ to bring someone in."

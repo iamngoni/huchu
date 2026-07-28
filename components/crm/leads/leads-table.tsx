@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -22,7 +22,10 @@ import {
 import { ChevronDown } from "@/lib/icons";
 import type { CrmLeadListRecord } from "@/lib/crm/crm-v2";
 import type { LeadSort } from "@/lib/crm/views";
+import type { ColumnOption } from "@/lib/ui/visible-columns";
 import { cn } from "@/lib/utils";
+
+import { RecordMark } from "@/components/crm/records/record-mark";
 
 import type { LeadFilterOwner } from "./leads-filters";
 import {
@@ -31,9 +34,26 @@ import {
   CRM_STAGE_LABELS,
   CRM_STAGE_STATUS,
   formatLeadValue,
-  initialsOf,
   isOverdue,
 } from "./stage-config";
+
+/**
+ * Every column this table knows how to draw, for the picker.
+ *
+ * Kept beside the definitions rather than in a shared file so the two cannot
+ * drift: a column somebody can turn on that the table does not render is worse
+ * than no picker at all.
+ */
+export const LEAD_TABLE_COLUMNS: ColumnOption[] = [
+  { id: "leadNo", label: "Lead", required: true },
+  { id: "client", label: "Client" },
+  { id: "stage", label: "Stage" },
+  { id: "value", label: "Value" },
+  { id: "owner", label: "Owner" },
+  { id: "nextTask", label: "Next task" },
+  { id: "source", label: "Source" },
+  { id: "updatedAt", label: "Updated" },
+];
 
 function OwnerCell({ owner }: { owner: CrmLeadListRecord["assignedTo"] }) {
   if (!owner) {
@@ -41,12 +61,7 @@ function OwnerCell({ owner }: { owner: CrmLeadListRecord["assignedTo"] }) {
   }
   return (
     <div className="flex items-center gap-2">
-      <span
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-sm font-medium"
-        aria-hidden="true"
-      >
-        {initialsOf(owner.name)}
-      </span>
+      <RecordMark kind="rep" name={owner.name} size="sm" />
       <span className="truncate text-sm">{owner.name ?? "Unnamed"}</span>
     </div>
   );
@@ -83,6 +98,7 @@ export function LeadsTable({
   onSortChange,
   onBulkAssign,
   onBulkStage,
+  hiddenColumns,
 }: {
   leads: CrmLeadListRecord[];
   total: number;
@@ -95,9 +111,10 @@ export function LeadsTable({
   onSortChange: (sort: LeadSort) => void;
   onBulkAssign: (ids: string[], assignedToId: string | null, done: () => void) => void;
   onBulkStage: (ids: string[], stage: CrmLeadStage, done: () => void) => void;
+  /** Column ids the reader has switched off. */
+  hiddenColumns?: string[];
 }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<CrmLeadListRecord[]>([]);
 
   const columns = useMemo<ColumnDef<CrmLeadListRecord>[]>(
     () => [
@@ -193,12 +210,18 @@ export function LeadsTable({
     [],
   );
 
+  const hiddenSet = useMemo(() => new Set(hiddenColumns ?? []), [hiddenColumns]);
+  const visibleColumns = useMemo(
+    () => columns.filter((column) => !hiddenSet.has(String(column.id))),
+    [columns, hiddenSet],
+  );
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <DataTable
       data={leads}
-      columns={columns}
+      columns={visibleColumns}
       edgeToEdge
       stickyHeader
       queryState={{
@@ -222,7 +245,6 @@ export function LeadsTable({
       pagination={{ enabled: true, server: true, total, totalPages }}
       rowSelection={{
         enabled: true,
-        onSelectionChange: setSelected,
         bulkActions: ({ selectedRows, clearSelection }) => {
           const ids = selectedRows.map((lead) => lead.id);
           return (
@@ -270,10 +292,6 @@ export function LeadsTable({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <span className="text-sm text-[var(--text-muted)]">
-                {selected.length} selected
-              </span>
             </div>
           );
         },

@@ -11,7 +11,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { Calendar, FileText, Funnel, Plus } from "@/lib/icons";
+import {
+  Building2,
+  Calendar,
+  FileText,
+  Funnel,
+  MapPin,
+  Payments,
+  Plus,
+  TrendingUp,
+  UserRound,
+} from "@/lib/icons";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
 import { isDealStale } from "@/lib/crm/pipelines";
 import { visitItemsToQuotationLines } from "@/lib/crm/site-visits";
@@ -24,7 +34,8 @@ import type { LeadDocument } from "@/components/crm/documents/document-types";
 import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityComposer } from "@/components/crm/lead-detail/activity-composer";
-import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline";
+import { RecordStory } from "@/components/crm/records/record-story";
+import { buildStory } from "@/lib/crm/story";
 import { VisitsTab } from "@/components/crm/lead-detail/visits-tab";
 import type { LeadActivity, LeadAppointment, LeadFollowUp } from "@/components/crm/lead-detail/lead-types";
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
@@ -34,10 +45,13 @@ import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet
 import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
 
 import { CustomFieldDisplay } from "./custom-field-display";
+import { RecordMark } from "./record-mark";
+import { RecordAttributes } from "./record-attributes";
 import { EntityLink } from "./entity-link";
 import { DealStageBar } from "./deal-stage-bar";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { RecordHistoryTab } from "./record-history-tab";
+import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
 const STATUS_PRESENTATION: Record<string, CanonicalUiStatus> = {
   OPEN: "in_progress",
@@ -67,6 +81,8 @@ type DealDetail = {
   expectedCloseDate: string | null;
   stageEnteredAt: string;
   lostReason: string | null;
+  avatarUrl: string | null;
+  emoji: string | null;
   customFields: Record<string, unknown> | null;
   clientId: string | null;
   client: { id: string; name: string } | null;
@@ -212,6 +228,15 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
       icon={Funnel}
         backHref="/crm/deals"
         backLabel="All deals"
+        leading={
+          <RecordMark
+            kind="deal"
+            name={deal.title}
+            emoji={deal.emoji}
+            avatarUrl={deal.avatarUrl}
+            size="md"
+          />
+        }
         title={deal.title}
         reference={deal.dealNo}
         status={{
@@ -243,6 +268,98 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
           { label: "Open documents", onSelect: () => setTab("documents") },
         ]}
         activeTab={tab}
+        attributes={
+          <RecordAttributes
+            attributes={[
+              {
+                id: "value",
+                label: "Value",
+                icon: Payments,
+                value:
+                  deal.value !== null ? formatMoney(deal.value, deal.currency) : null,
+                placeholder: "Not sized",
+                mono: true,
+              },
+              {
+                id: "stage",
+                label: "Stage",
+                icon: Funnel,
+                display: (
+                  <span className="text-sm">
+                    {deal.stage.name}
+                    <span className="text-[var(--text-muted)]">
+                      {" · "}
+                      {deal.pipeline.name}
+                    </span>
+                  </span>
+                ),
+              },
+              {
+                id: "owner",
+                label: "Owner",
+                icon: UserRound,
+                display: (
+                  <EntityLink
+                    href={deal.assignedTo ? `/crm/reps/${deal.assignedTo.id}` : null}
+                    className="text-sm"
+                  >
+                    {deal.assignedTo?.name ?? "Unassigned"}
+                  </EntityLink>
+                ),
+              },
+              {
+                id: "company",
+                label: "Company",
+                icon: Building2,
+                display: deal.client ? (
+                  <EntityLink href={`/crm/companies/${deal.client.id}`} className="text-sm">
+                    {deal.client.name}
+                  </EntityLink>
+                ) : undefined,
+                value: null,
+                placeholder: "No company",
+              },
+              {
+                id: "close",
+                label: "Expected close",
+                icon: Calendar,
+                display: deal.expectedCloseDate ? (
+                  <span className="text-sm">
+                    <ClientDate value={deal.expectedCloseDate} mode="date" />
+                  </span>
+                ) : undefined,
+                value: null,
+                placeholder: "No date set",
+              },
+              {
+                id: "probability",
+                label: "Likelihood",
+                icon: TrendingUp,
+                value: `${deal.probability ?? 0}%`,
+                mono: true,
+              },
+              {
+                id: "forecast",
+                label: "Forecast",
+                value: deal.forecastCategory.toLowerCase().replace("_", " "),
+              },
+              ...(deal.site
+                ? [
+                    {
+                      id: "site",
+                      label: "Site",
+                      icon: MapPin,
+                      display: (
+                        <EntityLink href={`/crm/sites/${deal.site.id}`} className="text-sm">
+                          {deal.site.name}
+                        </EntityLink>
+                      ),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        }
         onTabChange={setTab}
         tabs={[
           {
@@ -251,7 +368,16 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             content: (
               <div className="space-y-4">
                 <ActivityComposer target={{ kind: "deal", id: dealId }} />
-                <ActivityTimeline activities={deal.activities} />
+                <RecordStory
+                  events={buildStory({
+                    activities: deal.activities,
+                    tasks: deal.followUps,
+                    visits: deal.appointments,
+                    documents: deal.documents,
+                    createdLabel: `Deal ${deal.dealNo} opened`,
+                  })}
+                  emptyMessage="Nothing has happened on this deal yet."
+                />
               </div>
             ),
           },
@@ -319,27 +445,19 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             label: "History",
             content: <RecordHistoryTab activities={deal.activities} />,
           },
+          {
+            value: "changes",
+            label: "Field history",
+            content: <FieldHistoryTab entity="DEAL" recordId={dealId} />,
+          },
         ]}
         rail={
           <>
-            <RailSection title="Deal">
-              <p className="font-mono text-2xl">
-                {deal.value !== null ? formatMoney(deal.value, deal.currency) : "Not sized"}
-              </p>
-              <p className="text-sm text-[var(--text-muted)]">
-                {deal.probability ?? 0}% likely · {deal.forecastCategory.toLowerCase().replace("_", " ")}
-              </p>
-              {deal.expectedCloseDate ? (
-                <p className="text-sm text-[var(--text-muted)]">
-                  Expected <ClientDate value={deal.expectedCloseDate} mode="date" />
-                </p>
-              ) : null}
-              {deal.lostReason ? (
-                <p className="mt-1 text-sm text-[var(--status-error-text)]">
-                  Lost: {deal.lostReason}
-                </p>
-              ) : null}
-            </RailSection>
+            {deal.lostReason ? (
+              <RailSection title="Why it was lost">
+                <p className="text-sm text-[var(--status-error-text)]">{deal.lostReason}</p>
+              </RailSection>
+            ) : null}
 
             <RailSection title="Stage">
               <DealStageBar

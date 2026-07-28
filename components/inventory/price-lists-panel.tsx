@@ -136,7 +136,7 @@ export function PriceListsPanel() {
           }
         />
       ) : (
-        <ul className="divide-y divide-[var(--border-subtle)]">
+        <ul className="space-y-1">
           {lists.map((list) => (
             <li key={list.id} className="flex items-center gap-3 px-3 py-3">
               <button

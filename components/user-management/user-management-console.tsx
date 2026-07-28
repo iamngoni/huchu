@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -28,10 +29,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  FeatureAccessDialog,
-  type FeatureAccessTarget,
-} from "@/components/user-management/feature-access-dialog";
 import {
   changeManagedUserRole,
   createManagedUser,
@@ -116,6 +113,7 @@ function toManagedRole(
 }
 
 export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
+  const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
@@ -181,7 +179,6 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
       role: ManagedUserRole;
     }) | null
   >(null);
-  const [featureTarget, setFeatureTarget] = React.useState<FeatureAccessTarget | null>(null);
 
   React.useEffect(() => {
     if (mode === "create" && canMutate) {
@@ -427,13 +424,10 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
             if (actionsVisible.featureAccess) {
               rowActions.push({
                 key: "feature",
-                label: "Feature Access",
+                label: "Permissions",
                 icon: ShieldCheck,
                 onClick: () =>
-                  setFeatureTarget({
-                    userId: row.original.id,
-                    userEmail: row.original.email,
-                  }),
+                  router.push(`/preferences/organization/users/${row.original.id}`),
               });
             }
 
@@ -494,6 +488,7 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
       canMutate,
       managedRoles,
       mode,
+      router,
     ],
   );
 
@@ -548,18 +543,6 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
               <ArrowRightLeft className="h-4 w-4" />
               <span>Change Role</span>
             </DropdownMenuItem>
-            {actionsVisible.featureAccess ? (
-              <DropdownMenuItem
-                onClick={() =>
-                  setFeatureTarget({
-                    userId: "",
-                    userEmail: "",
-                  })}
-              >
-                <ShieldCheck className="h-4 w-4" />
-                <span>Manage Feature Access</span>
-              </DropdownMenuItem>
-            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
@@ -594,10 +577,10 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
 
       {canMutate && mode === "directory" && !canManageFeatureAccess ? (
         <Alert>
-          <AlertTitle>Feature access controls unavailable</AlertTitle>
+          <AlertTitle>Permission controls unavailable</AlertTitle>
           <AlertDescription>
-            Enable the <span className="font-mono text-xs">{USER_FEATURE_ACCESS_KEY}</span> feature to
-            manage per-user feature access templates and overrides.
+            Enable the <span className="font-mono">{USER_FEATURE_ACCESS_KEY}</span> feature to
+            manage per-user permissions.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -1048,15 +1031,6 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {canManageFeatureAccess ? (
-        <FeatureAccessDialog
-          target={featureTarget}
-          users={users}
-          onTargetChange={setFeatureTarget}
-          onClose={() => setFeatureTarget(null)}
-        />
-      ) : null}
     </ManagementShell>
   );
 }

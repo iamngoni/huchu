@@ -28,6 +28,7 @@ import {
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
 
 import { CustomFieldInputs } from "./custom-field-inputs";
+import { RecordMarkField } from "./record-mark-field";
 
 const CURRENCIES = ["USD", "ZWL", "ZAR", "GBP", "EUR"];
 
@@ -39,6 +40,8 @@ const FORECAST_CATEGORIES = [
 ];
 
 type FormState = {
+  emoji: string;
+  avatarUrl: string;
   title: string;
   clientId: string;
   primaryContactId: string;
@@ -53,6 +56,8 @@ type FormState = {
 };
 
 const EMPTY: FormState = {
+  emoji: "",
+  avatarUrl: "",
   title: "",
   clientId: "",
   primaryContactId: "",
@@ -195,6 +200,8 @@ export function DealFormSheet({
             ? new Date(form.expectedCloseDate).toISOString()
             : null,
           assignedToId: form.assignedToId || null,
+          emoji: form.emoji.trim() || null,
+          avatarUrl: form.avatarUrl.trim() || null,
           customFields: customValues,
         }),
       }),
@@ -407,6 +414,21 @@ export function DealFormSheet({
           </SelectContent>
         </Select>
       </div>
+
+      <RecordMarkField
+
+        kind="deal"
+
+        name={form.title}
+
+        emoji={form.emoji}
+
+        avatarUrl={form.avatarUrl}
+
+        onChange={(next) => setForm((previous) => ({ ...previous, ...next }))}
+
+      />
+
 
       <CustomFieldInputs
         definitions={definitions}

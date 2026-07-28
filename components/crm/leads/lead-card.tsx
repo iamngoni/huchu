@@ -9,9 +9,19 @@ import { formatSlaRemaining, stageSla } from "@/lib/crm/sla";
 import type { CrmBoardCard } from "@/lib/crm/crm-v2";
 import { cn } from "@/lib/utils";
 
-import { formatDaysAgo, formatLeadValue, initialsOf, isOverdue } from "./stage-config";
+import { RecordMark } from "@/components/crm/records/record-mark";
+import { useBoardField } from "@/components/crm/records/board-fields";
+
+import { formatDaysAgo, formatLeadValue, isOverdue } from "./stage-config";
 
 export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
+  const showReference = useBoardField("reference");
+  const showClient = useBoardField("client");
+  const showValue = useBoardField("value");
+  const showOwner = useBoardField("owner");
+  const showSla = useBoardField("sla");
+  const showOverdue = useBoardField("overdue");
+
   const overdue = isOverdue(lead.nextFollowUp?.dueAt);
   // Time in stage against what the stage is allowed, counted in working hours.
   // "3 days in stage" over a weekend is not the same fact as three working
@@ -19,18 +29,27 @@ export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
   const sla = stageSla(lead.stage, lead.stageEnteredAt);
   const slaLabel = formatSlaRemaining(sla);
 
+  const subtitle = [
+    showReference ? (lead.deal?.dealNo ?? lead.leadNo) : null,
+    showClient ? (lead.client?.name ?? lead.contactName ?? "No client") : null,
+  ].filter(Boolean);
+
   return (
     <div className="space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{lead.title ?? lead.leadNo}</p>
-          <p className="truncate text-sm text-[var(--text-muted)]">
-            <span className="font-mono">{lead.deal?.dealNo ?? lead.leadNo}</span>
-            {" · "}
-            {lead.client?.name ?? lead.contactName ?? "No client"}
-          </p>
+          {subtitle.length > 0 ? (
+            <p className="truncate text-sm text-[var(--text-muted)]">
+              {showReference ? (
+                <span className="font-mono">{lead.deal?.dealNo ?? lead.leadNo}</span>
+              ) : null}
+              {subtitle.length > 1 ? " · " : null}
+              {showClient ? (lead.client?.name ?? lead.contactName ?? "No client") : null}
+            </p>
+          ) : null}
         </div>
-        {overdue ? (
+        {overdue && showOverdue ? (
           <span
             className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[var(--status-error-border)]"
             title={`Overdue: ${lead.nextFollowUp?.title ?? "task"}`}
@@ -39,34 +58,45 @@ export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
         ) : null}
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-sm">
-          {formatLeadValue(lead.estimatedValue, lead.currency)}
-        </span>
-        <span
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-sm font-medium"
-          title={lead.assignedTo?.name ?? "Unassigned"}
-        >
-          {initialsOf(lead.assignedTo?.name)}
-        </span>
-      </div>
+      {showValue || showOwner ? (
+        <div className="flex items-center justify-between gap-2">
+          {showValue ? (
+            <span className="font-mono text-sm">
+              {formatLeadValue(lead.estimatedValue, lead.currency)}
+            </span>
+          ) : (
+            <span />
+          )}
+          {/* A rep is a person, so the same avatar they get everywhere else. */}
+          {showOwner ? (
+            <RecordMark
+              kind="rep"
+              name={lead.assignedTo?.name ?? "Unassigned"}
+              size="sm"
+              className="shrink-0"
+            />
+          ) : null}
+        </div>
+      ) : null}
 
-      <div
-        className={cn(
-          "flex items-center gap-1 text-sm",
-          sla.breached
-            ? "font-medium text-[var(--status-danger-fg)]"
-            : sla.atRisk
-              ? "font-medium text-[var(--status-warning-fg)]"
-              : "text-[var(--text-muted)]",
-        )}
-      >
-        <Clock className="h-3 w-3" />
-        <span>
-          {formatDaysAgo(lead.stageEnteredAt)} in stage
-          {slaLabel ? ` · ${slaLabel}` : ""}
-        </span>
-      </div>
+      {showSla ? (
+        <div
+          className={cn(
+            "flex items-center gap-1 text-sm",
+            sla.breached
+              ? "font-medium text-[var(--status-danger-fg)]"
+              : sla.atRisk
+                ? "font-medium text-[var(--status-warning-fg)]"
+                : "text-[var(--text-muted)]",
+          )}
+        >
+          <Clock className="h-3 w-3" />
+          <span>
+            {formatDaysAgo(lead.stageEnteredAt)} in stage
+            {slaLabel ? ` · ${slaLabel}` : ""}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

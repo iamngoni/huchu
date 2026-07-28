@@ -13,6 +13,7 @@ import { reserveIdentifier } from "@/lib/id-generator";
 import { ensureDefaultPipeline, firstOpenStage } from "@/lib/crm/pipelines";
 import { listIdFilter, listRecordIds } from "@/lib/crm/lists";
 import { buildCustomFieldValues, type FieldDefinition } from "@/lib/crm/custom-fields";
+import { recordMarkFields } from "@/lib/crm/record-mark";
 import {
   boolParam,
   buildDealWhere,
@@ -26,6 +27,7 @@ import {
 import { isCompanyUser } from "../_helpers";
 
 const createDealSchema = z.object({
+  ...recordMarkFields,
   title: z.string().trim().min(1).max(200),
   clientId: z.string().uuid().nullable().optional(),
   primaryContactId: z.string().uuid().nullable().optional(),
@@ -218,6 +220,8 @@ export async function POST(request: NextRequest) {
           services: data.services ?? [],
           source: data.source ?? undefined,
           sourceChannel: data.sourceChannel ?? "MANUAL",
+          emoji: data.emoji,
+          avatarUrl: data.avatarUrl,
           customFields: values,
           stageEnteredAt: now,
           createdById: session.user.id,

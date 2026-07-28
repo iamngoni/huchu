@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { EmptyState, Skeleton } from "@corelithzw/react";
 import { cn } from "@/lib/utils";
@@ -154,6 +154,7 @@ export function GroupedRecordList({
   /** The A–Z rail. Worth it past about thirty rows, pointless below. */
   showJumpStrip = false,
   className,
+  selection,
 }: {
   sections: RecordListSection[];
   isLoading?: boolean;
@@ -162,6 +163,13 @@ export function GroupedRecordList({
   emptyAction?: ReactNode;
   showJumpStrip?: boolean;
   className?: string;
+  /**
+   * Passed straight through to each section's list. The selection spans
+   * sections — picking three people under B and two under M is one selection
+   * of five, because the letters are how the page is arranged, not what the
+   * records are.
+   */
+  selection?: ComponentProps<typeof RecordList>["selection"];
 }) {
   if (isLoading) {
     return (
@@ -196,7 +204,7 @@ export function GroupedRecordList({
             </h3>
 
             {section.rows.length > 0 ? (
-              <RecordList rows={section.rows} />
+              <RecordList rows={section.rows} selection={selection} />
             ) : (
               <p className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-subtle)] px-3 py-4 text-sm text-[var(--text-muted)]">
                 {section.emptyBody ?? "Nothing yet."}

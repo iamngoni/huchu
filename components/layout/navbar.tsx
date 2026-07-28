@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { usePageChrome } from "@/components/layout/page-chrome";
-import { GlobalSearch } from "@/components/layout/global-search";
+import { GlobalCommandBar } from "@/components/layout/command-bar/global-command-bar";
 import { CrmMembers } from "@/components/crm/crm-members";
 import { NotificationCenter } from "@/components/notifications/notification-center";
 import { ArrowLeft, MoreHorizontal, type LucideIcon } from "@/lib/icons";
@@ -95,7 +95,7 @@ export function Navbar() {
                 : null}
               <h1 className="truncate text-sm font-semibold text-foreground">{title}</h1>
             </div>
-            <GlobalSearch compact />
+            <GlobalCommandBar />
             {showNotificationCenter ? <NotificationCenter /> : null}
             <MobileNavbarActions actions={actions} />
           </div>
@@ -125,7 +125,7 @@ export function Navbar() {
 
             <div className="flex shrink-0 items-center gap-2">
               {showMembers ? <CrmMembers className="mr-1" /> : null}
-              <GlobalSearch />
+              <GlobalCommandBar />
               {showNotificationCenter ? <NotificationCenter /> : null}
               {actions ? (
                 <div className="flex items-center gap-2">{actions}</div>

@@ -6,7 +6,6 @@ import type { CrmLeadStage } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { Funnel, Plus } from "@/lib/icons";
@@ -15,16 +14,31 @@ import {
   bulkUpdateCrmLeads,
   fetchCrmLeads,
   fetchCrmSavedViews,
-  type CrmSavedViewRecord,
 } from "@/lib/crm/crm-v2";
 import { DEFAULT_LEAD_SORT, type LeadSort, type LeadViewFilters } from "@/lib/crm/views";
+import { useVisibleColumns } from "@/lib/ui/visible-columns";
+import { ColumnPicker } from "@/components/ui/column-picker";
+import {
+  BoardFieldsProvider,
+  LEAD_CARD_FIELDS,
+} from "@/components/crm/records/board-fields";
 
 import { LeadsBoard } from "./leads-board";
-import { LeadsFilters, LeadStageFilter, type LeadFilterOwner } from "./leads-filters";
-import { LeadsTable } from "./leads-table";
+import {
+  LeadsFilters,
+  LeadsSortButton,
+  LeadStageFilter,
+  type LeadFilterOwner,
+} from "./leads-filters";
+import { LEAD_TABLE_COLUMNS, LeadsTable } from "./leads-table";
 import { LeadFormSheet } from "./lead-form-sheet";
 import { LostReasonDialog } from "./lost-reason-dialog";
-import { SavedViewsBar } from "./saved-views-bar";
+import {
+  BUILT_IN_VIEWS,
+  savedViewToLeadView,
+  ViewPicker,
+  type LeadView,
+} from "./view-picker";
 
 const PAGE_SIZE = 50;
 
@@ -33,19 +47,29 @@ type PendingLostBulk = { ids: string[]; done: () => void };
 export function LeadsWorkspace({
   initialFilters = {},
   initialView = "BOARD",
+  initialViewId = null,
 }: {
   /** Parsed from the page's query string, so links like /crm/leads?stages=QUOTED land pre-filtered. */
   initialFilters?: LeadViewFilters;
   initialView?: "TABLE" | "BOARD";
+  /** From `?view=`, so the sidebar's saved-view links land on that view. */
+  initialViewId?: string | null;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [viewType, setViewType] = useState<"TABLE" | "BOARD">(initialView);
+
+  // A table's columns and a board's card facts are the same question asked of
+  // two surfaces, so they get one control and two remembered answers.
+  const tableColumns = useVisibleColumns("crm.leads.table", LEAD_TABLE_COLUMNS);
+  const boardFields = useVisibleColumns("crm.leads.board", LEAD_CARD_FIELDS);
   const [filters, setFilters] = useState<LeadViewFilters>(initialFilters);
   const [sort, setSort] = useState<LeadSort>(DEFAULT_LEAD_SORT);
   const [page, setPage] = useState(1);
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [activeViewKey, setActiveViewKey] = useState<string>(
+    initialViewId ?? BUILT_IN_VIEWS[0].key,
+  );
   const [createOpen, setCreateOpen] = useState(false);
   const [pendingLostBulk, setPendingLostBulk] = useState<PendingLostBulk | null>(null);
 
@@ -79,10 +103,30 @@ export function LeadsWorkspace({
     () => (sourcesQuery.data?.data ?? []).filter((s) => s.isActive).map((s) => s.name),
     [sourcesQuery.data],
   );
-  const savedViews = useMemo<CrmSavedViewRecord[]>(
-    () => savedViewsQuery.data?.data ?? [],
+  // Built-ins first, then whatever has been saved — one list, so the picker
+  // does not have to know which is which beyond whether it can be renamed.
+  const views = useMemo<LeadView[]>(
+    () => [
+      ...BUILT_IN_VIEWS,
+      ...(savedViewsQuery.data?.data ?? []).map(savedViewToLeadView),
+    ],
     [savedViewsQuery.data],
   );
+
+  // A saved view arriving by link is only known once the list has loaded, so
+  // its filters are applied during render the moment it appears rather than in
+  // an effect that would paint the wrong leads first.
+  const [appliedViewKey, setAppliedViewKey] = useState<string | null>(null);
+  if (initialViewId && appliedViewKey !== initialViewId) {
+    const linked = views.find((view) => view.key === initialViewId);
+    if (linked) {
+      setAppliedViewKey(initialViewId);
+      setActiveViewKey(linked.key);
+      setViewType(linked.layout);
+      setFilters(linked.filters);
+      setSort(linked.sort ?? DEFAULT_LEAD_SORT);
+    }
+  }
 
   const refreshLeadLists = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["crm", "leads"] });
@@ -155,43 +199,53 @@ export function LeadsWorkspace({
         {newLeadAction}
       </PageChrome>
 
-      {/* Which slice of the pipeline, and how you want to look at it. Stage
-          rides with the saved views because on the board it decides which
-          columns exist at all — that is not the same kind of control as
-          "leads worth over $5,000". */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <SavedViewsBar
-            views={savedViews}
-            filters={filters}
+      {/* One row: which leads, what is hidden, and in what order. The view
+          carries its own layout, so there is no separate Table/Board switch to
+          contradict it. Stage stays out here rather than inside Filter because
+          on a board it is not a filter at all — it decides which columns
+          exist. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <ViewPicker
+          views={views}
+          activeKey={activeViewKey}
+          filters={filters}
+          sort={sort}
+          onSelect={(view) => {
+            setActiveViewKey(view.key);
+            setViewType(view.layout);
+            setFilters(view.filters);
+            setSort(view.sort ?? DEFAULT_LEAD_SORT);
+            setPage(1);
+          }}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["crm", "saved-views"] })}
+        />
+
+        <LeadsFilters
+          filters={filters}
+          onChange={applyFilters}
+          owners={owners}
+          sources={sources}
+        />
+
+        {/* A board is already ordered by stage, so sorting it means nothing. */}
+        {viewType === "TABLE" ? (
+          <LeadsSortButton
             sort={sort}
-            activeViewId={activeViewId}
-            onSelectView={(view) => {
-              setActiveViewId(view.id);
-              setFilters(view.filters);
-              if (view.sort) setSort(view.sort);
+            onChange={(next) => {
+              setSort(next);
               setPage(1);
             }}
           />
-          <LeadStageFilter filters={filters} onChange={applyFilters} />
-        </div>
+        ) : null}
 
-        <SegmentedControl
-          value={viewType}
-          onValueChange={(value) => setViewType(value as "TABLE" | "BOARD")}
-          options={[
-            { value: "TABLE", label: "Table" },
-            { value: "BOARD", label: "Board" },
-          ]}
+        <ColumnPicker
+          columns={viewType === "TABLE" ? LEAD_TABLE_COLUMNS : LEAD_CARD_FIELDS}
+          state={viewType === "TABLE" ? tableColumns : boardFields}
+          label={viewType === "TABLE" ? "Columns" : "Card fields"}
         />
-      </div>
 
-      <LeadsFilters
-        filters={filters}
-        onChange={applyFilters}
-        owners={owners}
-        sources={sources}
-      />
+        <LeadStageFilter filters={filters} onChange={applyFilters} />
+      </div>
 
       {leadsQuery.error && viewType === "TABLE" ? (
         <Alert variant="destructive">
@@ -216,9 +270,12 @@ export function LeadsWorkspace({
           }}
           onBulkAssign={handleBulkAssign}
           onBulkStage={handleBulkStage}
+          hiddenColumns={tableColumns.hidden}
         />
       ) : (
-        <LeadsBoard filters={filters} className="min-h-0 flex-1" />
+        <BoardFieldsProvider hidden={boardFields.hidden}>
+          <LeadsBoard filters={filters} className="min-h-0 flex-1" />
+        </BoardFieldsProvider>
       )}
 
       <LeadFormSheet

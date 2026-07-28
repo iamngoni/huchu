@@ -1,0 +1,516 @@
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+
+import { useSidebar } from "@/components/ui/sidebar";
+import { fetchJson } from "@/lib/api-client";
+import { navSections } from "@/lib/navigation";
+import { filterNavSectionsByEnabledFeatures } from "@/lib/platform/gating/nav-filter";
+import { useTheme } from "@/lib/ui/theme";
+import { resolveViewIcon } from "@/lib/ui/view-icons";
+import {
+  AddressBook,
+  ArrowRight,
+  Building2,
+  Checklist,
+  Funnel,
+  HelpCircle,
+  MapPin,
+  Package,
+  PanelLeft,
+  Receipt,
+  Search,
+  Users,
+  Wallet,
+  Zap,
+  type LucideIcon,
+} from "@/lib/icons";
+import type { SearchResult, SearchResultType } from "@/lib/crm/search";
+
+import { CommandBar } from "./command-bar";
+import type { CommandGroup, CommandItem } from "./command-bar-types";
+import {
+  ActionPreview,
+  DateChip,
+  MeetingPreview,
+  RecordPreview,
+  type MeetingPreviewData,
+} from "./command-previews";
+
+type SearchGroup = { type: SearchResultType; label: string; results: SearchResult[] };
+
+const TYPE_ICONS: Record<SearchResultType, LucideIcon> = {
+  PERSON: Users,
+  COMPANY: Building2,
+  DEAL: Funnel,
+  LEAD: AddressBook,
+  SITE: MapPin,
+  QUOTATION: Receipt,
+  INVOICE: Receipt,
+  RECEIPT: Receipt,
+  PRODUCT: Package,
+  CUSTOMER: Wallet,
+};
+
+type AppointmentRow = {
+  id: string;
+  appointmentNo: string;
+  title: string;
+  status: string;
+  scheduledStart: string;
+  scheduledEnd: string | null;
+  location: string | null;
+  notes: string | null;
+  client: { id: string; name: string } | null;
+  assignedTo: { id: string; name: string | null } | null;
+};
+
+const RECENT_KEY = "crm.search.recent";
+const MAX_RECENT = 6;
+
+type RecentEntry = {
+  href: string;
+  title: string;
+  subtitle: string | null;
+  type: SearchResultType;
+};
+
+function loadRecents(): RecentEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_KEY);
+    return raw ? (JSON.parse(raw) as RecentEntry[]).slice(0, MAX_RECENT) : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberRecent(entry: RecentEntry) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = loadRecents().filter((item) => item.href !== entry.href);
+    window.localStorage.setItem(
+      RECENT_KEY,
+      JSON.stringify([entry, ...existing].slice(0, MAX_RECENT)),
+    );
+  } catch {
+    // A full or blocked localStorage should not break search.
+  }
+}
+
+/** "In 10 minutes", "Started 5 minutes ago" — the only bit of a meeting that changes while you look at it. */
+function relativeStart(iso: string, now: number): string {
+  const minutes = Math.round((new Date(iso).getTime() - now) / 60_000);
+  if (minutes > 90) return `In ${Math.round(minutes / 60)} hours`;
+  if (minutes > 1) return `In ${minutes} minutes`;
+  if (minutes >= -1) return "Now";
+  if (minutes > -60) return `Started ${Math.abs(minutes)} minutes ago`;
+  return "Earlier today";
+}
+
+/**
+ * Everything the command bar can offer, assembled.
+ *
+ * Four sources, in the order somebody needs them: what is happening now, what
+ * they typed, the things they create most, and the app's own switches. The
+ * order is fixed rather than ranked because a bar whose first row moves around
+ * is one you have to read before pressing Enter — and the whole point of the
+ * first row is that you do not.
+ */
+export function GlobalCommandBar() {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const { toggleSidebar } = useSidebar();
+  const theme = useTheme();
+
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const [debounced, setDebounced] = React.useState("");
+  const [recents, setRecents] = React.useState<RecentEntry[]>([]);
+  // One instant per opening, so "in 10 minutes" does not tick while reading
+  // and React's purity rule is not broken by a Date.now() in render.
+  const [now, setNow] = React.useState(0);
+
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        setOpen((current) => !current);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setRecents(loadRecents());
+      setQuery("");
+      setDebounced("");
+    }
+  }
+
+  React.useEffect(() => {
+    if (open) setNow(Date.now());
+  }, [open]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebounced(query.trim()), 200);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const searchQuery = useQuery({
+    queryKey: ["global-search", debounced],
+    queryFn: () =>
+      fetchJson<{ groups: SearchGroup[]; total: number }>(
+        `/api/v2/crm/search?q=${encodeURIComponent(debounced)}`,
+      ),
+    enabled: open && debounced.length >= 2,
+    placeholderData: (previous) => previous,
+  });
+
+  // Today's appointments, for the NOW band. Asked for only while the bar is
+  // open: it is a band at the top of a palette, not a reason to poll.
+  const todayQuery = useQuery({
+    queryKey: ["command-bar", "today"],
+    queryFn: () => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      return fetchJson<{ data: AppointmentRow[] }>(
+        `/api/v2/crm/appointments?from=${start.toISOString()}&to=${end.toISOString()}`,
+      );
+    },
+    enabled: open,
+    staleTime: 60_000,
+  });
+
+  const enabledFeatures = (session?.user as { enabledFeatures?: string[] } | undefined)
+    ?.enabledFeatures;
+
+  const go = React.useCallback(
+    (href: string, entry?: RecentEntry) => {
+      if (entry) rememberRecent(entry);
+      router.push(href);
+    },
+    [router],
+  );
+
+  const needle = debounced.toLowerCase();
+
+  const groups = React.useMemo<CommandGroup[]>(() => {
+    const built: CommandGroup[] = [];
+    const matches = (text: string) =>
+      needle.length < 2 || text.toLowerCase().includes(needle);
+
+    // 1. What is happening now.
+    const upcoming = (todayQuery.data?.data ?? [])
+      .filter((appointment) => {
+        const start = new Date(appointment.scheduledStart).getTime();
+        // The last hour and the next four: a meeting you are late for is as
+        // relevant as one you are early for.
+        return start > now - 60 * 60_000 && start < now + 4 * 60 * 60_000;
+      })
+      .filter((appointment) => matches(appointment.title))
+      .slice(0, 3);
+
+    if (upcoming.length > 0) {
+      built.push({
+        id: "now",
+        label: "Now",
+        items: upcoming.map((appointment): CommandItem => {
+          const meeting: MeetingPreviewData = {
+            title: appointment.title,
+            startsAt: appointment.scheduledStart,
+            endsAt: appointment.scheduledEnd,
+            location: appointment.location,
+            locality: appointment.client?.name ?? null,
+            description: appointment.notes,
+            link: null,
+            status: appointment.status.toLowerCase(),
+            participants: appointment.assignedTo?.name
+              ? [
+                  {
+                    id: appointment.assignedTo.id,
+                    name: appointment.assignedTo.name,
+                    email: null,
+                    attending: true,
+                  },
+                ]
+              : [],
+          };
+
+          return {
+            id: `appointment-${appointment.id}`,
+            group: "now",
+            label: appointment.title,
+            mark: <DateChip value={appointment.scheduledStart} />,
+            hint: relativeStart(appointment.scheduledStart, now),
+            dot: "success",
+            preview: <MeetingPreview meeting={meeting} />,
+            primary: {
+              label: "Open visit",
+              run: () => go(`/crm/appointments?open=${appointment.id}`),
+            },
+            secondary: {
+              label: "Create note",
+              run: () =>
+                go(
+                  appointment.client
+                    ? `/crm/companies/${appointment.client.id}`
+                    : "/crm/appointments",
+                ),
+            },
+          };
+        }),
+      });
+    }
+
+    // 2. What they typed.
+    for (const group of searchQuery.data?.groups ?? []) {
+      if (group.results.length === 0) continue;
+      built.push({
+        id: `search-${group.type}`,
+        label: group.label,
+        items: group.results.slice(0, 5).map((result): CommandItem => {
+          const entry: RecentEntry = {
+            href: result.href,
+            title: result.title,
+            subtitle: result.subtitle,
+            type: result.type,
+          };
+          return {
+            id: `result-${result.type}-${result.id}`,
+            group: group.label,
+            label: result.title,
+            icon: TYPE_ICONS[result.type],
+            hint: result.reference,
+            preview: (
+              <RecordPreview
+                record={{
+                  title: result.title,
+                  typeLabel: group.label,
+                  reference: result.reference,
+                  subtitle: result.subtitle,
+                  facts: [],
+                }}
+              />
+            ),
+            primary: { label: "Open", run: () => go(result.href, entry) },
+          };
+        }),
+      });
+    }
+
+    // 3. Where they were, when they have not typed.
+    if (needle.length < 2 && recents.length > 0) {
+      built.push({
+        id: "recent",
+        label: "Recently viewed",
+        items: recents.map((entry): CommandItem => ({
+          id: `recent-${entry.href}`,
+          group: "recent",
+          label: entry.title,
+          icon: TYPE_ICONS[entry.type] ?? ArrowRight,
+          hint: entry.subtitle,
+          preview: (
+            <RecordPreview
+              record={{
+                title: entry.title,
+                typeLabel: "Recently viewed",
+                reference: null,
+                subtitle: entry.subtitle,
+                facts: [],
+              }}
+            />
+          ),
+          primary: { label: "Open", run: () => go(entry.href, entry) },
+        })),
+      });
+    }
+
+    // 4. The things people make.
+    const creates: Array<{ label: string; href: string; icon: LucideIcon }> = [
+      { label: "New task", href: "/crm/tasks?new=1", icon: Checklist },
+      { label: "New deal", href: "/crm/deals?new=1", icon: Funnel },
+      { label: "New person", href: "/crm/people?new=1", icon: Users },
+      { label: "New company", href: "/crm/companies?new=1", icon: Building2 },
+      { label: "Search tasks", href: "/crm/tasks", icon: Search },
+    ].filter((entry) => matches(entry.label));
+
+    if (creates.length > 0) {
+      built.push({
+        id: "create",
+        label: "Tasks suggestions",
+        items: creates.map((entry): CommandItem => ({
+          id: `create-${entry.href}`,
+          group: "create",
+          label: entry.label,
+          icon: entry.icon,
+          preview: (
+            <ActionPreview
+              icon={entry.icon}
+              title={entry.label}
+              body="Opens the page with its form ready."
+            />
+          ),
+          primary: { label: "Go", run: () => go(entry.href) },
+        })),
+      });
+    }
+
+    // 5. Everywhere they may go.
+    const destinations = filterNavSectionsByEnabledFeatures(navSections, enabledFeatures)
+      .flatMap((section) =>
+        section.items.map((item) => ({
+          href: item.href,
+          label: item.label,
+          section: section.title,
+        })),
+      )
+      .filter((destination) => matches(`${destination.label} ${destination.section}`))
+      .slice(0, needle.length < 2 ? 0 : 6);
+
+    if (destinations.length > 0) {
+      built.push({
+        id: "pages",
+        label: "Pages",
+        items: destinations.map((destination): CommandItem => {
+          const Icon = resolveViewIcon(destination.href, destination.label);
+          return {
+            id: `page-${destination.href}`,
+            group: "pages",
+            label: destination.label,
+            icon: Icon,
+            hint: destination.section,
+            preview: (
+              <ActionPreview
+                icon={Icon}
+                title={destination.label}
+                body={`In ${destination.section}.`}
+              />
+            ),
+            primary: { label: "Go", run: () => go(destination.href) },
+          };
+        }),
+      });
+    }
+
+    // 6. The app's own switches.
+    const general: CommandItem[] = [
+      {
+        id: "action-sidebar",
+        group: "general",
+        label: "Collapse sidebar",
+        icon: PanelLeft,
+        preview: (
+          <ActionPreview
+            icon={PanelLeft}
+            title="Collapse sidebar"
+            body="Gives the page its full width. The same key brings it back."
+          />
+        ),
+        primary: { label: "Collapse", run: toggleSidebar },
+      },
+      {
+        id: "action-theme",
+        group: "general",
+        label: theme.isDark ? "Change to light theme" : "Change to dark theme",
+        icon: Zap,
+        keywords: "dark light theme appearance",
+        preview: (
+          <ActionPreview
+            icon={Zap}
+            title={theme.isDark ? "Change to light theme" : "Change to dark theme"}
+            body="Remembered on this device. Set it back to follow the system from Preferences."
+          />
+        ),
+        primary: { label: "Switch", run: theme.toggle },
+      },
+      {
+        id: "action-help",
+        group: "general",
+        label: "Open help",
+        icon: HelpCircle,
+        preview: (
+          <ActionPreview
+            icon={HelpCircle}
+            title="Open help"
+            body="Guides, shortcuts and what each module does."
+          />
+        ),
+        primary: { label: "Open", run: () => go("/help") },
+      },
+      {
+        id: "action-advanced-search",
+        group: "general",
+        label: "Advanced search",
+        icon: Search,
+        preview: (
+          <ActionPreview
+            icon={Search}
+            title="Advanced search"
+            body="The full search page, with filters and saved queries."
+          />
+        ),
+        primary: { label: "Open", run: () => go("/crm/leads") },
+      },
+    ].filter(
+      (item) => needle.length < 2 || `${item.label} ${item.keywords ?? ""}`.toLowerCase().includes(needle),
+    );
+
+    if (general.length > 0) {
+      built.push({ id: "general", label: "General suggestions", items: general });
+    }
+
+    return built;
+  }, [
+    enabledFeatures,
+    go,
+    needle,
+    now,
+    recents,
+    searchQuery.data,
+    theme.isDark,
+    theme.toggle,
+    todayQuery.data,
+    toggleSidebar,
+  ]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Search"
+        className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] px-2.5 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-subtle)] hover:text-[var(--text)]"
+      >
+        <Search className="size-4" aria-hidden="true" />
+        <span className="hidden lg:inline">Search</span>
+        <kbd className="hidden rounded border border-[var(--border)] px-1 font-sans lg:inline">
+          ⌘K
+        </kbd>
+      </button>
+
+      <CommandBar
+        open={open}
+        onOpenChange={setOpen}
+        query={query}
+        onQueryChange={setQuery}
+        groups={groups}
+        loading={searchQuery.isFetching}
+        emptyMessage={
+          debounced.length >= 2
+            ? `Nothing matches “${debounced}”.`
+            : "Type to search records, or pick an action."
+        }
+      />
+    </>
+  );
+}

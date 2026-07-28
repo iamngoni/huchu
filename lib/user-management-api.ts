@@ -163,3 +163,90 @@ export async function resetManagedUserFeatureAccess(
     body: JSON.stringify(input),
   });
 }
+
+export type PermissionState = "DEFAULT" | "ALLOW" | "DENY";
+export type PermissionKind = "FEATURE" | "CAPABILITY";
+
+export type PermissionEntry = {
+  id: string;
+  kind: PermissionKind;
+  key: string;
+  label: string;
+  description: string;
+  roleDefault: boolean;
+  state: PermissionState;
+  effective: boolean;
+};
+
+export type PermissionGroup = {
+  id: string;
+  label: string;
+  description: string;
+  entries: PermissionEntry[];
+};
+
+export type ManagedUserDetail = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  phone: string | null;
+  image: string | null;
+};
+
+export type ManagedUserDetailResponse = {
+  user: ManagedUserDetail;
+  groups: PermissionGroup[];
+  overrideCount: number;
+  canEditPermissions: boolean;
+  canMutateAccount: boolean;
+};
+
+export type ManagedUserAuditRow = {
+  id: string;
+  kind: "ACCOUNT" | "ACTIVITY";
+  eventType: string;
+  message: string;
+  actor: string | null;
+  createdAt: string;
+};
+
+export type SetUserPermissionInput = {
+  userId: string;
+  kind: PermissionKind;
+  key: string;
+  state: PermissionState;
+};
+
+export async function fetchManagedUserDetail(userId: string) {
+  return fetchJson<ManagedUserDetailResponse>(`/api/users/${userId}`);
+}
+
+export async function fetchManagedUserAudit(userId: string) {
+  return fetchJson<{ data: ManagedUserAuditRow[] }>(`/api/users/${userId}/audit`);
+}
+
+export async function setUserPermission(input: SetUserPermissionInput) {
+  return fetchJson<{
+    groups: PermissionGroup[];
+    overrideCount: number;
+    permission: PermissionEntry | null;
+  }>("/api/users/permissions", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function resetUserPermissions(userId: string) {
+  return fetchJson<{ groups: PermissionGroup[]; overrideCount: number }>(
+    "/api/users/permissions",
+    { method: "DELETE", body: JSON.stringify({ userId }) },
+  );
+}
+
+export async function deleteManagedUser(userId: string) {
+  return fetchJson<{ deleted: boolean }>(`/api/users/${userId}`, { method: "DELETE" });
+}

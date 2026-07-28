@@ -1,0 +1,206 @@
+import type { StoryEvent } from "@/components/crm/records/record-story";
+
+/**
+ * Turning a record's several tables into one story.
+ *
+ * The activity table alone is not the story — it is whichever chapter that
+ * table happened to keep. A site visit is in appointments, a task is in
+ * follow-ups, a quote is in documents, and none of those live where the
+ * activity rows do. The reader does not care which table anything came from;
+ * they care what happened, in order.
+ *
+ * These are pure so the merge is testable without a page around it.
+ */
+
+type ActivityLike = {
+  id: string;
+  type: string;
+  subject: string;
+  body: string | null;
+  occurredAt: string;
+  createdBy?: { id: string; name: string | null } | null;
+};
+
+type TaskLike = {
+  id: string;
+  title: string;
+  notes?: string | null;
+  dueAt: string;
+  status: string;
+  completedAt?: string | null;
+  createdAt?: string;
+};
+
+type VisitLike = {
+  id: string;
+  title: string;
+  appointmentNo?: string;
+  status: string;
+  scheduledStart: string;
+  reportNotes?: string | null;
+  location?: string | null;
+  photos?: unknown;
+};
+
+type DocumentLike = {
+  id: string;
+  type: string;
+  amount?: number | null;
+  currency?: string;
+  createdAt: string;
+  version?: number;
+};
+
+type CommentLike = {
+  id: string;
+  body: string;
+  createdAt: string;
+  author?: { id: string; name: string | null } | null;
+};
+
+/** Activity types map onto the story's kinds; anything unknown reads as system. */
+const ACTIVITY_KIND: Record<string, StoryEvent["kind"]> = {
+  NOTE: "note",
+  CALL: "call",
+  EMAIL: "email",
+  WHATSAPP: "whatsapp",
+  MEETING: "meeting",
+  STAGE_CHANGE: "stage",
+  INTAKE_SUBMISSION: "intake",
+  DOCUMENT_CREATED: "document",
+  DOCUMENT_SENT: "document",
+  DOCUMENT_APPROVED: "document",
+  DOCUMENT_DECLINED: "document",
+  PAYMENT_RECORDED: "payment",
+  SYSTEM: "system",
+};
+
+export function activityEvents(activities: ActivityLike[]): StoryEvent[] {
+  return activities.map((activity) => ({
+    id: activity.id,
+    kind: ACTIVITY_KIND[activity.type] ?? "system",
+    title: activity.subject,
+    body: activity.body,
+    occurredAt: activity.occurredAt,
+    actorName: activity.createdBy?.name ?? null,
+  }));
+}
+
+/**
+ * Tasks appear twice on purpose — once when they were made and once when they
+ * were finished. Those are two different facts about the record, and a feed
+ * that only shows the second cannot tell you how long the first waited.
+ */
+export function taskEvents(tasks: TaskLike[]): StoryEvent[] {
+  const events: StoryEvent[] = [];
+  for (const task of tasks) {
+    if (task.createdAt) {
+      events.push({
+        id: `${task.id}-created`,
+        kind: "task",
+        title: `Task created — ${task.title}`,
+        body: task.notes ?? null,
+        occurredAt: task.createdAt,
+        meta: `Due ${new Date(task.dueAt).toLocaleDateString()}`,
+      });
+    }
+    if (task.completedAt) {
+      events.push({
+        id: `${task.id}-done`,
+        kind: "task",
+        title: `Task completed — ${task.title}`,
+        occurredAt: task.completedAt,
+      });
+    }
+  }
+  return events;
+}
+
+export function visitEvents(visits: VisitLike[]): StoryEvent[] {
+  return visits.map((visit) => {
+    const photoCount = Array.isArray(visit.photos) ? visit.photos.length : 0;
+    return {
+      id: visit.id,
+      kind: "visit" as const,
+      title:
+        visit.status === "COMPLETED"
+          ? `Site visit — ${visit.title}`
+          : `Site visit booked — ${visit.title}`,
+      body: visit.reportNotes ?? null,
+      occurredAt: visit.scheduledStart,
+      meta: [
+        visit.appointmentNo,
+        visit.location,
+        photoCount > 0 ? `${photoCount} photo${photoCount === 1 ? "" : "s"}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    };
+  });
+}
+
+export function documentEvents(documents: DocumentLike[]): StoryEvent[] {
+  return documents.map((document) => ({
+    id: document.id,
+    kind: document.type === "RECEIPT" ? ("payment" as const) : ("document" as const),
+    title: `${document.type.charAt(0)}${document.type.slice(1).toLowerCase()} raised${
+      document.version && document.version > 1 ? ` (v${document.version})` : ""
+    }`,
+    occurredAt: document.createdAt,
+    meta:
+      typeof document.amount === "number"
+        ? document.amount.toLocaleString(undefined, {
+            style: "currency",
+            currency: document.currency ?? "USD",
+            maximumFractionDigits: 0,
+          })
+        : null,
+  }));
+}
+
+export function commentEvents(comments: CommentLike[]): StoryEvent[] {
+  return comments.map((comment) => ({
+    id: comment.id,
+    kind: "comment" as const,
+    // The body carries any @mentions as written; the renderer resolves them.
+    title: `${comment.author?.name ?? "Someone"} commented`,
+    body: comment.body,
+    occurredAt: comment.createdAt,
+    actorName: comment.author?.name ?? null,
+  }));
+}
+
+/** Everything a record knows about itself, in one ordered list. */
+export function buildStory(sources: {
+  activities?: ActivityLike[];
+  tasks?: TaskLike[];
+  visits?: VisitLike[];
+  documents?: DocumentLike[];
+  comments?: CommentLike[];
+  createdAt?: string;
+  createdLabel?: string;
+}): StoryEvent[] {
+  const events = [
+    ...activityEvents(sources.activities ?? []),
+    ...taskEvents(sources.tasks ?? []),
+    ...visitEvents(sources.visits ?? []),
+    ...documentEvents(sources.documents ?? []),
+    ...commentEvents(sources.comments ?? []),
+  ];
+
+  // The first fact about any record is that it started existing. Without it a
+  // feed that has scrolled to its end just stops, and the reader cannot tell
+  // whether they have reached the beginning or the page gave up.
+  if (sources.createdAt) {
+    events.push({
+      id: "record-created",
+      kind: "system",
+      title: sources.createdLabel ?? "Record created",
+      occurredAt: sources.createdAt,
+    });
+  }
+
+  return events.sort(
+    (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
+  );
+}

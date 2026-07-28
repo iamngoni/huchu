@@ -19,6 +19,7 @@ import {
 import { SidebarAccountMenu } from "@/components/layout/app-sidebar/sidebar-account-menu";
 import { getActiveNavHref } from "@/components/layout/app-sidebar/sidebar-helpers";
 import { SidebarNavSections } from "@/components/layout/app-sidebar/sidebar-nav-sections";
+import { SidebarCrmCollections } from "@/components/layout/app-sidebar/sidebar-crm-collections";
 import { SidebarQuickActions } from "@/components/layout/app-sidebar/sidebar-quick-actions";
 import { SidebarSupport } from "@/components/layout/app-sidebar/sidebar-support";
 
@@ -206,6 +207,10 @@ export function AppSidebar() {
             ) : null}
           </>
         ) : null}
+
+        {/* The user's own shelves, below the product's structure — these are
+            what this person keeps to hand, not part of the app's shape. */}
+        <SidebarCrmCollections isCollapsed={isCollapsed} />
 
         <SidebarSupport
           isCollapsed={isCollapsed}

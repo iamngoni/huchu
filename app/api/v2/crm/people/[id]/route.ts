@@ -12,9 +12,12 @@ import {
   type FieldDefinition,
 } from "@/lib/crm/custom-fields";
 import { recordFieldChanges } from "@/lib/crm/history";
+import { recordMarkFields } from "@/lib/crm/record-mark";
 import { isCompanyUser } from "../../_helpers";
+import { diffFields } from "@/lib/crm/field-history";
 
 const updatePersonSchema = z.object({
+  ...recordMarkFields,
   firstName: z.string().trim().min(1).max(120).optional(),
   lastName: z.string().trim().max(120).nullable().optional(),
   jobTitle: z.string().trim().max(120).nullable().optional(),
@@ -120,6 +123,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         email: true,
         phone: true,
         contactType: true,
+        preferredChannel: true,
+        city: true,
       },
     });
     if (!existing) return errorResponse("Person not found", 404);
@@ -159,9 +164,28 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const lastName = data.lastName !== undefined ? data.lastName : existing.lastName;
     const nameChanged = data.firstName !== undefined || data.lastName !== undefined;
 
+    // The diff is taken against what the select read, and written in the same
+    // transaction as the change — a record that moved with no row saying so is
+    // worse than no history, because it makes the history look complete.
+    await prisma.crmFieldChange.createMany({
+      data: diffFields("PERSON", existing as Record<string, unknown>, data as Record<string, unknown>).map(
+        (change) => ({
+          companyId,
+          entity: "PERSON",
+          recordId: id,
+          field: change.field,
+          oldValue: change.oldValue,
+          newValue: change.newValue,
+          changedById: session.user.id,
+        }),
+      ),
+    });
+
     const updated = await prisma.crmPerson.update({
       where: { id },
       data: {
+        emoji: data.emoji,
+        avatarUrl: data.avatarUrl,
         firstName: data.firstName,
         lastName: data.lastName,
         ...(nameChanged ? { fullName: buildFullName(firstName, lastName) } : {}),
