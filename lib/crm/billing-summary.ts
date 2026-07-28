@@ -56,21 +56,35 @@ export function summariseBilling(
     0,
   );
 
-  // A receipt dated before the first invoice was money taken up front. With no
-  // invoice at all, every receipt is a deposit — which is exactly the case of
-  // taking a deposit and billing later.
-  const firstInvoiceAt = invoices
+  // Two ways money counts as a deposit. The flagged way: the "Request a
+  // deposit" flow raises an invoice that knows it is one, and whatever has
+  // been collected against it is deposit money — the flow raises its invoice
+  // first, so no date heuristic can see it. The legacy way: a receipt dated
+  // before any invoice existed was money taken up front, and receipts with no
+  // invoice at all are exactly "deposit taken, billed later".
+  const depositInvoicePaid = invoices
+    .filter((doc) => doc.isDeposit)
+    .reduce((sum, doc) => sum + (doc.invoice?.amountPaid ?? 0), 0);
+
+  const nonDepositInvoiceTimes = invoices
+    .filter((doc) => !doc.isDeposit)
     .map((doc) => new Date(doc.createdAt).getTime())
     .filter((time) => !Number.isNaN(time))
-    .sort((a, b) => a - b)[0];
+    .sort((a, b) => a - b);
+  const firstInvoiceAt = nonDepositInvoiceTimes[0];
 
-  const deposits = receipts
+  const preInvoiceReceipts = receipts
     .filter((doc) => {
       if (firstInvoiceAt === undefined) return true;
       const at = new Date(doc.createdAt).getTime();
       return !Number.isNaN(at) && at < firstInvoiceAt;
     })
     .reduce((sum, doc) => sum + (doc.receipt?.amount ?? doc.amount), 0);
+
+  // A receipt against the deposit invoice is also dated before the balance
+  // invoice, so counting both would report the same money twice — the flagged
+  // figure wins and the heuristic only adds what predates ALL invoices.
+  const deposits = depositInvoicePaid > 0 ? depositInvoicePaid : preInvoiceReceipts;
 
   // The latest quote supersedes the ones before it — a deal that was requoted
   // twice was not offered three times over.

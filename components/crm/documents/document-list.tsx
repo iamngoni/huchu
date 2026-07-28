@@ -65,6 +65,7 @@ export function DocumentList({
   const [builder, setBuilder] = useState<{
     mode: "quotation" | "invoice";
     fromQuotationId?: string;
+    deposit?: boolean;
   } | null>(null);
   const [paymentFor, setPaymentFor] = useState<LeadDocument | null>(null);
   const [depositFor, setDepositFor] = useState<LeadDocument | null>(null);
@@ -298,6 +299,7 @@ export function DocumentList({
         mode={builder?.mode ?? "quotation"}
         currency={currency}
         fromQuotationId={builder?.fromQuotationId}
+        isDeposit={builder?.deposit}
         prefillLines={
           depositLine ?? (builder?.fromQuotationId ? undefined : prefillLines)
         }
@@ -311,7 +313,7 @@ export function DocumentList({
           // The deposit is a one-line invoice, so the builder opens on it
           // rather than on the whole quote.
           setDepositLine([line]);
-          setBuilder({ mode: "invoice" });
+          setBuilder({ mode: "invoice", deposit: true });
         }}
       />
 

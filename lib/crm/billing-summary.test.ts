@@ -178,3 +178,57 @@ describe("summariseBilling", () => {
     });
   });
 });
+
+describe("deposits raised by the deposit flow", () => {
+  it("counts payment against a flagged deposit invoice as the deposit", () => {
+    // The flow raises its invoice FIRST, then receipts against it — so a
+    // "receipt before the first invoice" heuristic can never see it. The
+    // review caught exactly that: deposits stayed zero for the very flow
+    // that promised them.
+    const depositInvoice = invoice(
+      { total: 300, amountPaid: 300, status: "PAID" },
+      "2026-01-02T00:00:00.000Z",
+    );
+    depositInvoice.isDeposit = true;
+
+    const summary = summariseBilling(
+      [
+        depositInvoice,
+        receipt(300, "2026-01-03T00:00:00.000Z"),
+        invoice({ total: 700, amountPaid: 0 }, "2026-02-01T00:00:00.000Z"),
+      ],
+      "USD",
+    );
+
+    expect(summary.deposits).toBe(300);
+    expect(summary.invoiced).toBe(1000);
+    expect(summary.outstanding).toBe(700);
+  });
+
+  it("does not double-count the deposit receipt through the date heuristic", () => {
+    const depositInvoice = invoice(
+      { total: 300, amountPaid: 300, status: "PAID" },
+      "2026-01-02T00:00:00.000Z",
+    );
+    depositInvoice.isDeposit = true;
+
+    // The receipt against the deposit predates the balance invoice; if both
+    // paths counted, the band would show 600 down on a 300 deposit.
+    const summary = summariseBilling(
+      [depositInvoice, receipt(300, "2026-01-03T00:00:00.000Z")],
+      "USD",
+    );
+    expect(summary.deposits).toBe(300);
+  });
+
+  it("still recognises the legacy shape — money taken before anything was billed", () => {
+    const summary = summariseBilling(
+      [
+        receipt(200, "2026-01-01T00:00:00.000Z"),
+        invoice({ total: 1000, amountPaid: 200 }, "2026-01-10T00:00:00.000Z"),
+      ],
+      "USD",
+    );
+    expect(summary.deposits).toBe(200);
+  });
+});

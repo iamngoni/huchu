@@ -313,6 +313,8 @@ export type CreateInvoiceInput = DocumentOwnerRef & {
   currency?: string;
   notes?: string | null;
   dueDate?: Date | null;
+  /** Raised as money down against the quote — reported apart in billing. */
+  isDeposit?: boolean;
 };
 
 export async function createInvoiceForLead(input: CreateInvoiceInput) {
@@ -392,6 +394,7 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
         invoiceId: invoice.id,
         amount: totals.total,
         currency,
+        isDeposit: input.isDeposit ?? false,
         createdById: input.userId,
       },
       select: { id: true },

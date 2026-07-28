@@ -6570,6 +6570,12 @@ model CrmLeadDocument {
   supersedesId String?
   /// Why this revision exists — "customer asked for the cheaper panel".
   revisionNote String?
+  /// An invoice raised as money down against the quote, before the work. A
+  /// deposit is billed, not just received — but it means something different
+  /// from "some of the bill", and the deal's billing summary reports it apart.
+  isDeposit   Boolean         @default(false)
+  /// The document layout this renders through. Null means the company default.
+  renderTemplateId String?
   createdById String?
   createdAt   DateTime        @default(now())
 

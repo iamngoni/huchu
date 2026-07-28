@@ -35,6 +35,7 @@ export function DocumentBuilderSheet({
   currency,
   prefillLines,
   fromQuotationId,
+  isDeposit,
   onCreated,
 }: {
   open: boolean;
@@ -45,6 +46,8 @@ export function DocumentBuilderSheet({
   currency: string;
   prefillLines?: CrmDocumentLineInput[];
   fromQuotationId?: string;
+  /** This invoice is money down against the quote — stored on the document. */
+  isDeposit?: boolean;
   onCreated?: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -110,6 +113,7 @@ export function DocumentBuilderSheet({
             ...(fromQuotationId ? { fromQuotationId } : { lines: payload }),
             currency,
             notes: noteParts.join(" ") || undefined,
+            ...(mode === "invoice" && isDeposit ? { isDeposit: true } : {}),
             ...(mode === "quotation"
               ? {
                   validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,

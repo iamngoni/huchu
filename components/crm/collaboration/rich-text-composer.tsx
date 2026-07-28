@@ -118,10 +118,15 @@ export function RichTextComposer({
   const [highlighted, setHighlighted] = useState(0);
   const [preview, setPreview] = useState(false);
 
-  // What the editor's DOM currently serialises to. Redrawing on every value
-  // change would move the caret to the start on every keystroke, so a redraw
-  // only happens when the value arrived from somewhere other than typing.
-  const shown = useRef(value);
+  // What the editor's DOM currently serialises to, or null when the editor
+  // holds nothing yet — freshly mounted, or just returned from Preview, which
+  // unmounts the contenteditable. Redrawing on every value change would move
+  // the caret to the start on every keystroke, so a redraw only happens when
+  // the DOM has nothing (null) or the value arrived from somewhere other than
+  // typing. Initialising this to `value` was the review's blank-editor bug:
+  // the first draw was skipped and an existing note mounted empty, one
+  // keystroke away from being overwritten.
+  const shown = useRef<string | null>(null);
 
   const draw = useCallback((body: string) => {
     const element = ref.current;
@@ -131,7 +136,11 @@ export function RichTextComposer({
   }, []);
 
   useEffect(() => {
-    if (preview) return;
+    if (preview) {
+      // The editor is out of the DOM; whatever it showed is gone with it.
+      shown.current = null;
+      return;
+    }
     if (value === shown.current) return;
     draw(value);
   }, [draw, preview, value]);
@@ -140,11 +149,9 @@ export function RichTextComposer({
   function caretOffset(): number {
     const element = ref.current;
     const selection = window.getSelection();
-    if (!element || !selection?.anchorNode) return shown.current.length;
-    return (
-      offsetOf(element, selection.anchorNode, selection.anchorOffset) ??
-      shown.current.length
-    );
+    const length = (shown.current ?? value).length;
+    if (!element || !selection?.anchorNode) return length;
+    return offsetOf(element, selection.anchorNode, selection.anchorOffset) ?? length;
   }
 
   /** Replace the body and put the caret back where it belongs. */
@@ -221,7 +228,7 @@ export function RichTextComposer({
   }
 
   function pick(candidate: Candidate) {
-    const body = shown.current;
+    const body = shown.current ?? value;
     const result = insertReference(body, caretOffset(), query ?? "", candidate);
     setQuery(null);
     rewrite(result.body, result.caret);
@@ -230,7 +237,7 @@ export function RichTextComposer({
   function runTool(tool: Tool) {
     const element = ref.current;
     const selection = window.getSelection();
-    const body = shown.current;
+    const body = shown.current ?? value;
 
     let start = body.length;
     let end = start;
@@ -327,7 +334,7 @@ export function RichTextComposer({
             )}
             style={{ minHeight: `${rows * 1.5 + 1}rem` }}
             onInput={sync}
-            onClick={() => setQuery(activeReferenceQuery(shown.current, caretOffset()))}
+            onClick={() => setQuery(activeReferenceQuery(shown.current ?? value, caretOffset()))}
             // Plain text only: a paste from a browser brings a stylesheet's
             // worth of markup with it, and none of it survives serialising.
             onPaste={(event) => {

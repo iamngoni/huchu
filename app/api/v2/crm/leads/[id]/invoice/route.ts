@@ -15,6 +15,7 @@ const bodySchema = z
     notes: z.string().trim().max(2000).optional(),
     dueDate: z.string().datetime().optional(),
     sendApproval: z.boolean().optional(),
+    isDeposit: z.boolean().optional(),
     approvalExpiresInDays: z.number().int().min(1).max(90).optional(),
   })
   .refine((v) => v.lines || v.fromQuotationId, {
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       currency: data.currency,
       notes: data.notes ?? null,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      isDeposit: data.isDeposit ?? false,
     });
 
     let approvalToken: string | undefined;

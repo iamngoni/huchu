@@ -26,7 +26,7 @@ async function loadEditableView(
 ) {
   const view = await prisma.crmSavedView.findFirst({
     where: { id, companyId },
-    select: { id: true, createdById: true },
+    select: { id: true, createdById: true, isShared: true },
   });
   if (!view) return { view: null, allowed: false } as const;
   const allowed = view.createdById === userId || hasCrmFullAccess(role);
@@ -50,7 +50,24 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!allowed) return errorResponse("You can only edit views you created", 403);
 
     const data = updateViewSchema.parse(await request.json());
-    if (data.isShared && !(await canUser(session, "views.share"))) {
+    // Publishing needs the permission — and so does touching a view that is
+    // already published. A rename or a filter change to a shared view changes
+    // what the whole team sees; an admin who revoked `views.share` from this
+    // person has said they may not do that any more, and a request that
+    // merely omits `isShared` must not slip past the decision. The one thing
+    // still allowed without it is withdrawing the view (`isShared: false`
+    // alone), because taking your view back out of the team's sight is the
+    // opposite of publishing.
+    const withdrawingOnly =
+      data.isShared === false &&
+      data.name === undefined &&
+      data.viewType === undefined &&
+      data.filters === undefined &&
+      data.sort === undefined &&
+      data.columns === undefined &&
+      data.groupBy === undefined;
+    const touchesTheTeam = data.isShared === true || (view.isShared && !withdrawingOnly);
+    if (touchesTheTeam && !(await canUser(session, "views.share"))) {
       return errorResponse(denialMessage("views.share"), 403);
     }
 

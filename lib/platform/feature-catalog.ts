@@ -78,6 +78,10 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
   f({ key: "core.notifications.push", name: "Push Notifications", description: "Web push notifications and subscriptions.", domain: "core", defaultEnabled: true, isBillable: true, monthlyPrice: 2 }),
   f({ key: "core.multitenancy.tenant-host-enforcement", name: "Tenant Host Enforcement", description: "Tenant host-based access enforcement.", domain: "core", defaultEnabled: true, isBillable: false, monthlyPrice: 0 }),
   f({ key: "core.branding.manage", name: "Branding Management", description: "Brand identity controls for tenant workspace.", domain: "core", defaultEnabled: false, isBillable: true, monthlyPrice: 5 }),
+  // Not sold on its own: the template library rides with whichever addon gives
+  // you templates to keep in it — the CRM suite (forms, quotes, invoices) or
+  // custom branding (document layouts).
+  f({ key: "core.templates", name: "Template Library", description: "The shared library of forms, intake forms, and document layouts.", domain: "core", defaultEnabled: false, isBillable: false, monthlyPrice: 0 }),
   f({ key: "core.branding.custom-domain", name: "Custom Domain", description: "Custom domain configuration and verification.", domain: "core", defaultEnabled: false, isBillable: true, monthlyPrice: 3 }),
 
   f({ key: "ops.shift-report.submit", name: "Shift Reports", description: "Submit and manage shift reports.", domain: "operations", defaultEnabled: false, isBillable: false, monthlyPrice: 0 }),
@@ -295,6 +299,7 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
     additionalSiteMonthlyPrice: 0,
     features: [
       "core.branding.manage",
+      "core.templates",
       "core.branding.custom-domain",
     ],
   },
@@ -500,6 +505,7 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
       "crm.insights",
       "crm.commissions",
       "crm.settings",
+      "core.templates",
     ],
   },
   {
