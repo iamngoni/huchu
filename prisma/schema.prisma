@@ -192,6 +192,8 @@ model Company {
   crmPipelineStages             CrmPipelineStage[]
   crmFieldDefinitions           CrmFieldDefinition[]
   crmLists                      CrmList[]
+  crmOverviewLayouts            CrmOverviewLayout[]
+  crmCustomWidgets              CrmCustomWidget[]
   crmListMembers                CrmListMember[]
   crmTasks                      CrmTask[]
   crmComments                   CrmComment[]
@@ -956,6 +958,8 @@ model User {
   crmFieldDefinitionsCreated        CrmFieldDefinition[]           @relation("CrmFieldDefinitionCreatedBy")
   crmLeadsConverted                 CrmLead[]                      @relation("CrmLeadConvertedBy")
   crmListsCreated                   CrmList[]                      @relation("CrmListCreatedBy")
+  crmOverviewLayouts                CrmOverviewLayout[]            @relation("CrmOverviewLayoutUser")
+  crmCustomWidgetsCreated           CrmCustomWidget[]              @relation("CrmCustomWidgetCreatedBy")
   crmListMembersAdded               CrmListMember[]                @relation("CrmListMemberAddedBy")
   crmTasksAssigned                  CrmTask[]                      @relation("CrmTaskAssignedTo")
   crmTasksCreated                   CrmTask[]                      @relation("CrmTaskCreatedBy")
@@ -6701,6 +6705,66 @@ model CrmSiteVisitItem {
 
 /// A named, reusable set of lead filters + sort. Private to its creator unless
 /// `isShared`, in which case the whole company sees it.
+/// A person's arrangement of widgets on an overview page.
+///
+/// Keyed by scope rather than by page, so "the deal overview" is one layout
+/// shared by every deal — nobody wants to arrange a dashboard once per record.
+/// A row with a null `userId` is the company's default, which is what a new
+/// person sees before they have moved anything.
+model CrmOverviewLayout {
+  id        String   @id @default(uuid())
+  companyId String
+  /// Null for the layout everyone starts from.
+  userId    String?
+  /// HOME, or RECORD_<ENTITY> for a record page's overview.
+  scope     String
+  /// Ordered widget instances: { id, type, span, config }.
+  widgets   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?   @relation("CrmOverviewLayoutUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId, scope])
+  @@index([companyId, scope])
+}
+
+/// A widget somebody built themselves, over one of our models.
+///
+/// Deliberately a saved query rather than saved code: an entity, a filter set,
+/// how to aggregate it, and how to draw it. That is enough for the shapes
+/// people actually ask for — a count, a sum, a breakdown, a short list — and
+/// it cannot do anything the API would not already let them do.
+model CrmCustomWidget {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  description String?
+  /// LEAD | DEAL | PERSON | COMPANY | TASK | DOCUMENT
+  entity      String
+  /// COUNT | SUM | AVERAGE | BREAKDOWN | LIST
+  aggregate   String
+  /// Which numeric field SUM and AVERAGE work over.
+  valueField  String?
+  /// Which field BREAKDOWN groups by.
+  groupField  String?
+  /// Same filter shape the saved views use.
+  filters     Json
+  /// NUMBER | BAR | PIE | LIST
+  display     String   @default("NUMBER")
+  isShared    Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("CrmCustomWidgetCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId, entity])
+  @@index([companyId, createdById])
+}
+
 model CrmSavedView {
   id          String      @id @default(uuid())
   companyId   String
