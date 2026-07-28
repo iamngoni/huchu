@@ -23,6 +23,7 @@ import {
   type DocumentLineDraft,
 } from "./document-math";
 import { formatMoney } from "./document-types";
+import { CataloguePicker } from "./catalogue-picker";
 
 export function DocumentBuilderSheet({
   open,
@@ -216,12 +217,21 @@ export function DocumentBuilderSheet({
                 key={index}
                 className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem] sm:items-center"
               >
-                <Input
+                {/* Free text still works — a quote for something not in the
+                    catalogue is a real thing, and a builder that refuses it
+                    sends people to Word. Typing two characters offers what we
+                    sell, with its price and tax already right. */}
+                <CataloguePicker
                   value={line.description}
-                  onChange={(event) => patchLine(index, { description: event.target.value })}
+                  onChange={(value) => patchLine(index, { description: value })}
+                  onPick={(pick) =>
+                    patchLine(index, {
+                      description: pick.description,
+                      unitPrice: pick.unitPrice.toFixed(2),
+                      taxRate: String(pick.taxRate),
+                    })
+                  }
                   placeholder="What are you charging for?"
-                  aria-label={`Line ${index + 1} description`}
-                  maxLength={300}
                 />
                 <Input
                   value={line.quantity}
