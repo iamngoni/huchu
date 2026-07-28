@@ -15,8 +15,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(@types/react@19.2.8)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@corelithzw/react':
-        specifier: ^0.4.0
-        version: 0.4.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        specifier: ^0.4.1
+        version: 0.4.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -888,8 +888,8 @@ packages:
   '@chevrotain/utils@10.5.0':
     resolution: {integrity: sha512-hBzuU5+JjB2cqNZyszkDHZgOSrUUT8V3dhgRl8Q9Gp6dAj/H5+KILGjbhDpc3Iy9qmqlm/akuOI2ut9VUtzJxQ==}
 
-  '@corelithzw/react@0.4.0':
-    resolution: {integrity: sha512-vegKDbnFJYmKNJzk/rP3JrAdSZ9Kjp1xl+qob1qSW184h0WO/C4MhAPT5aSG0H85T/gLWLR/i1G7CiE0NTBtcQ==}
+  '@corelithzw/react@0.4.1':
+    resolution: {integrity: sha512-CYWghMWKs/FbtWOzlXNkT+HRyLie8jyGJFQAXOVZTMcTUsKqK7syuK5V7gFjjQvkLbpEizERD+lTffI5WZ9d/Q==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -7145,7 +7145,7 @@ snapshots:
 
   '@chevrotain/utils@10.5.0': {}
 
-  '@corelithzw/react@0.4.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+  '@corelithzw/react@0.4.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
