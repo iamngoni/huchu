@@ -198,7 +198,7 @@ function AutocompleteField({
             <span className={selected ? "text-foreground" : "text-muted-foreground"}>
               {selected?.label ?? placeholder}
             </span>
-            <ChevronDown className="h-4 w-4 opacity-60" />
+            <ChevronDown className="size-3 text-[var(--text-muted)]" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -222,11 +222,11 @@ function AutocompleteField({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-medium">{option.label}</div>
-                        <div className="truncate font-mono text-xs text-muted-foreground">
+                        <div className="truncate font-mono text-sm text-muted-foreground">
                           {option.id}
                         </div>
                         {option.description ? (
-                          <div className="truncate text-xs text-muted-foreground">{option.description}</div>
+                          <div className="truncate text-sm text-muted-foreground">{option.description}</div>
                         ) : null}
                       </div>
                       {value === option.id ? <CheckIcon className="h-4 w-4 text-primary" /> : null}
@@ -683,13 +683,13 @@ export default function TemplateSettingsPage() {
             />
 
             <div className="rounded-md border p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Selected Source Mapping
               </p>
               {createSourceOption ? (
                 <div className="mt-2 space-y-1 text-sm">
                   <p className="font-medium">{createSourceOption.label}</p>
-                  <p className="font-mono text-xs text-muted-foreground">{createSourceOption.sourceKey}</p>
+                  <p className="font-mono text-sm text-muted-foreground">{createSourceOption.sourceKey}</p>
                   <div className="flex gap-2">
                     <Badge variant="outline">{toDocumentTypeLabel(createSourceOption.documentType)}</Badge>
                     <Badge variant="secondary">{toTargetTypeLabel(createSourceOption.targetType)}</Badge>
@@ -752,7 +752,7 @@ export default function TemplateSettingsPage() {
             <div className="space-y-4">
               <div className="rounded-md border p-3 text-sm">
                 <p className="font-semibold">{editTemplate.name}</p>
-                <p className="font-mono text-xs text-muted-foreground">{editTemplate.sourceKey}</p>
+                <p className="font-mono text-sm text-muted-foreground">{editTemplate.sourceKey}</p>
               </div>
 
               <AutocompleteField
@@ -897,7 +897,7 @@ export default function TemplateSettingsPage() {
               )}
 
               <Textarea
-                className="min-h-[260px] font-mono text-xs"
+                className="min-h-[260px] font-mono text-sm"
                 value={effectiveSchemaJson}
                 onChange={(event) => setSchemaJsonDraft(event.target.value)}
               />

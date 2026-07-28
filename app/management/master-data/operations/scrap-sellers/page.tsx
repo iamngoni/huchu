@@ -162,7 +162,7 @@ export default function ScrapSellersMasterDataPage() {
         cell: ({ row }) => (
           <div>
             <div className="font-semibold">{row.original.fullName}</div>
-            <div className="text-xs text-muted-foreground">{row.original.phone}</div>
+            <div className="text-sm text-muted-foreground">{row.original.phone}</div>
           </div>
         ),
       },

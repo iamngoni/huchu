@@ -53,7 +53,7 @@ function MultiFilter({ label, options, selected, onChange, extra }: MultiFilterP
               {activeCount}
             </Badge>
           ) : null}
-          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          <ChevronDown className="size-3 text-[var(--text-muted)]" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 p-2">
@@ -124,7 +124,7 @@ function ValueRangeFilter({
         <Button variant="outline" size="sm" className="gap-1.5">
           Value
           {active ? <Badge tone="info" size="sm">1</Badge> : null}
-          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          <ChevronDown className="size-3 text-[var(--text-muted)]" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-3 p-3">
@@ -192,7 +192,7 @@ function DateRangeFilter({
         <Button variant="outline" size="sm" className="gap-1.5">
           Created
           {active ? <Badge tone="info" size="sm">1</Badge> : null}
-          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          <ChevronDown className="size-3 text-[var(--text-muted)]" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-3 p-3">

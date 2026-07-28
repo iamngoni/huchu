@@ -380,7 +380,7 @@ export default function DowntimeCodesManagementPage() {
                 placeholder={isReserving ? "Reserving code..." : "Auto-generated"}
                 required
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {editing
                   ? "Downtime code cannot be changed."
                   : reserveError ?? "Code is generated automatically and cannot be edited."}

@@ -1242,7 +1242,7 @@ export function DataTable<TData, TValue>({
         </div>
       ) : null}
       {exportEnabled && exportStatusMessage ? (
-        <p className="px-[var(--content-gutter-x)] py-1 text-xs text-muted-foreground">
+        <p className="px-[var(--content-gutter-x)] py-1 text-sm text-muted-foreground">
           {exportStatusMessage}
         </p>
       ) : null}

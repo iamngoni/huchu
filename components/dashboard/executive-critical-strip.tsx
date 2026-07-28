@@ -150,15 +150,15 @@ export function ExecutiveCriticalStrip({
               <div key={moduleSummary.module} className="surface-framed rounded-md border border-border/60 bg-background/75 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-semibold">{MODULE_LABELS[moduleSummary.module]}</p>
-                  <Badge variant={getStatusBadgeClass(moduleSummary.status)} className="text-[11px] uppercase">
+                  <Badge variant={getStatusBadgeClass(moduleSummary.status)} className="text-sm uppercase">
                     {getStatusLabel(moduleSummary.status)}
                   </Badge>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-2 text-sm text-muted-foreground">
                   {moduleSummary.topExceptionLabel || "No top exception label available."}
                 </p>
 
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
                   <span className="inline-flex items-center gap-1.5 rounded-sm bg-muted/60 px-2 py-1 font-mono tabular-nums">
                     <AlertTriangle className="h-3.5 w-3.5" />
                     {moduleSummary.openExceptions} open
@@ -173,7 +173,7 @@ export function ExecutiveCriticalStrip({
 
                 <Link
                   href={moduleSummary.reportHref}
-                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary transition-colors hover:text-primary/80"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
                 >
                   Open report
                   <ArrowRight className="h-3.5 w-3.5" />

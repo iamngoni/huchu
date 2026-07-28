@@ -253,7 +253,7 @@ export function LeadsTable({
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" className="gap-1.5">
                     Assign owner
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                    <ChevronDown className="size-3 text-[var(--text-muted)]" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
@@ -278,7 +278,7 @@ export function LeadsTable({
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" className="gap-1.5">
                     Change stage
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                    <ChevronDown className="size-3 text-[var(--text-muted)]" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">

@@ -247,7 +247,7 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="outline" className="gap-1.5">
                 {activePipeline?.name ?? "Pipeline"}
-                <ChevronDown className="size-3.5 opacity-60" />
+                <ChevronDown className="size-3 text-[var(--text-muted)]" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">

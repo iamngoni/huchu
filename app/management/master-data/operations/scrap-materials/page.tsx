@@ -180,7 +180,7 @@ export default function ScrapMaterialsMasterDataPage() {
         cell: ({ row }) => (
           <div>
             <div className="font-semibold">{row.original.name}</div>
-            <div className="font-mono text-xs text-muted-foreground">{row.original.code}</div>
+            <div className="font-mono text-sm text-muted-foreground">{row.original.code}</div>
           </div>
         ),
       },
@@ -204,7 +204,7 @@ export default function ScrapMaterialsMasterDataPage() {
         id: "activity",
         header: "Activity",
         cell: ({ row }) => (
-          <div className="text-xs text-muted-foreground">
+          <div className="text-sm text-muted-foreground">
             <div>Prices {row.original._count.prices}</div>
             <div>Purchases {row.original._count.purchases}</div>
             <div>Sales {row.original._count.sales}</div>
@@ -337,7 +337,7 @@ export default function ScrapMaterialsMasterDataPage() {
               <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="Material name" required />
             </div>
             {!editing ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {reserveError ?? "Material code is generated automatically."}
               </p>
             ) : null}

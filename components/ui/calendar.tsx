@@ -234,7 +234,7 @@ function CalendarDayButton({
         "data-[today=true]:border-[var(--border)] data-[today=true]:bg-[var(--surface-muted)]",
         // No DS token sits below --type-caption (12px); the day sub-label needs
         // to stay smaller than the numeral it hangs off.
-        "[&>span]:text-[10px] [&>span]:font-medium [&>span]:opacity-70",
+        "[&>span]:text-sm [&>span]:font-medium [&>span]:opacity-70",
         defaultClassNames.day,
         className
       )}

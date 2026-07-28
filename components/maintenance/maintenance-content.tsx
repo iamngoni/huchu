@@ -1239,10 +1239,10 @@ export function MaintenanceContent({
                               <p className="truncate text-sm font-semibold">
                                 {order.equipment.name}
                               </p>
-                              <p className="truncate text-xs text-muted-foreground">
+                              <p className="truncate text-sm text-muted-foreground">
                                 {order.issue}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-sm text-muted-foreground">
                                 {order.equipment.equipmentCode} |{" "}
                                 {formatDateTime(order.downtimeStart)}
                               </p>
@@ -1251,7 +1251,7 @@ export function MaintenanceContent({
                               <Badge variant={statusInfo.variant}>
                                 {statusInfo.label}
                               </Badge>
-                              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                              <span className="font-mono text-sm tabular-nums text-muted-foreground">
                                 {getDowntimeHours(
                                   order.downtimeStart,
                                   order.downtimeEnd,
@@ -1298,13 +1298,13 @@ export function MaintenanceContent({
                             <p className="truncate text-sm font-semibold">
                               {item.equipment.name}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-sm text-muted-foreground">
                               {item.equipment.equipmentCode} |{" "}
                               {item.equipment.site?.code ?? "-"}
                             </p>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-1">
-                            <span className="text-xs font-semibold">
+                            <span className="text-sm font-semibold">
                               {item.dueDate}
                             </span>
                             <Badge
@@ -1339,7 +1339,7 @@ export function MaintenanceContent({
                 </CardHeader>
                 <CardContent className="space-y-3 pt-4">
                   <div className="surface-framed space-y-1.5 rounded-lg bg-[var(--surface-subtle)] p-3">
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-muted-foreground">
                         Operational
                       </span>
@@ -1356,7 +1356,7 @@ export function MaintenanceContent({
                   </div>
 
                   <div className="surface-framed space-y-1.5 rounded-lg bg-[var(--surface-subtle)] p-3">
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-muted-foreground">
                         Needs Service
                       </span>
@@ -1381,7 +1381,7 @@ export function MaintenanceContent({
                   </div>
 
                   <div className="surface-framed space-y-1.5 rounded-lg bg-[var(--surface-subtle)] p-3">
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-muted-foreground">
                         Down
                       </span>
@@ -1678,7 +1678,7 @@ export function MaintenanceContent({
                             className="h-64 w-64 rounded border object-contain"
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground break-all">
+                        <p className="text-sm text-muted-foreground break-all">
                           {qrPreviewPayload}
                         </p>
                       </div>
@@ -1735,7 +1735,7 @@ export function MaintenanceContent({
                           }
                           required
                         />
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="mt-1 text-sm text-muted-foreground">
                           {editingEquipmentId
                             ? "Equipment code is immutable."
                             : reserveEquipmentCodeError ??
@@ -2082,7 +2082,7 @@ export function MaintenanceContent({
                               <div className="font-semibold">
                                 {order.equipment.name}
                               </div>
-                              <div className="text-xs text-muted-foreground">
+                              <div className="text-sm text-muted-foreground">
                                 {order.equipment.equipmentCode} |{" "}
                                 {order.equipment.site.code}
                               </div>
@@ -2341,7 +2341,7 @@ export function MaintenanceContent({
                             <div className="font-semibold">
                               {item.equipment.name}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-sm text-muted-foreground">
                               {item.equipment.equipmentCode}
                             </div>
                           </TableCell>
@@ -2386,7 +2386,7 @@ export function MaintenanceContent({
               { label: "Needs service", value: String(needsServiceCount) },
             ]}
           >
-            <table className="w-full text-xs">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left">
                   <th className="py-2">Code</th>
@@ -2435,7 +2435,7 @@ export function MaintenanceContent({
               { label: "Open orders", value: String(openWorkOrders) },
             ]}
           >
-            <table className="w-full text-xs">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left">
                   <th className="py-2">Equipment</th>
@@ -2455,7 +2455,7 @@ export function MaintenanceContent({
                         <div className="font-semibold">
                           {order.equipment.name}
                         </div>
-                        <div className="text-[10px] text-gray-500">
+                        <div className="text-sm text-gray-500">
                           {order.equipment.equipmentCode} |{" "}
                           {order.equipment.site.code}
                         </div>
@@ -2497,7 +2497,7 @@ export function MaintenanceContent({
               },
             ]}
           >
-            <table className="w-full text-xs">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left">
                   <th className="py-2">Equipment</th>
@@ -2515,7 +2515,7 @@ export function MaintenanceContent({
                   >
                     <td className="py-2">
                       <div className="font-semibold">{item.equipment.name}</div>
-                      <div className="text-[10px] text-gray-500">
+                      <div className="text-sm text-gray-500">
                         {item.equipment.equipmentCode}
                       </div>
                     </td>
@@ -2744,7 +2744,7 @@ export function MaintenanceContent({
                   placeholder={reservingSiteCode ? "Reserving..." : "Auto-generated"}
                   required
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {reserveSiteCodeError ?? "Code is auto-generated and cannot be edited."}
                 </p>
               </div>

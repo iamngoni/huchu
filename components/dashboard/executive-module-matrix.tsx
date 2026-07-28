@@ -104,8 +104,8 @@ function getStatusLabel(status: ExecutiveModuleSummary["status"]) {
 function SecondaryMetricLine({ metric }: { metric: ExecutiveSummaryMetric }) {
   return (
     <div className="grid gap-0.5">
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{metric.label}</p>
-      <p className="text-xs font-medium text-foreground">{formatMetric(metric)}</p>
+      <p className="text-sm uppercase tracking-wide text-muted-foreground">{metric.label}</p>
+      <p className="text-sm font-medium text-foreground">{formatMetric(metric)}</p>
     </div>
   );
 }
@@ -184,7 +184,7 @@ export function ExecutiveModuleMatrix({
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0 pb-3">
-                  <p className="text-xs text-muted-foreground">No summary data is available for this module.</p>
+                  <p className="text-sm text-muted-foreground">No summary data is available for this module.</p>
                 </CardContent>
               </Card>
             );
@@ -208,10 +208,10 @@ export function ExecutiveModuleMatrix({
                     </div>
                     <div>
                       <CardTitle className="text-sm">{meta.label}</CardTitle>
-                      <CardDescription className="text-[11px]">Module status and pressure metrics.</CardDescription>
+                      <CardDescription className="text-sm">Module status and pressure metrics.</CardDescription>
                     </div>
                   </div>
-                  <Badge variant={getStatusBadgeClass(summary.status)} className="text-[11px] uppercase">
+                  <Badge variant={getStatusBadgeClass(summary.status)} className="text-sm uppercase">
                     {getStatusLabel(summary.status)}
                   </Badge>
                 </div>
@@ -232,10 +232,10 @@ export function ExecutiveModuleMatrix({
                 ) : null}
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Badge variant="neutral" className="font-mono text-[11px] tabular-nums">
+                  <Badge variant="neutral" className="font-mono text-sm tabular-nums">
                     {summary.openExceptions} open exceptions
                   </Badge>
-                  <span className={cn("inline-flex items-center gap-1.5 text-xs font-mono tabular-nums", trendClass)}>
+                  <span className={cn("inline-flex items-center gap-1.5 text-sm font-mono tabular-nums", trendClass)}>
                     {trend?.direction === "up" ? <TrendingUp className="h-3.5 w-3.5" /> : null}
                     {trend?.direction === "down" ? <TrendingDown className="h-3.5 w-3.5" /> : null}
                     {trend?.direction === "flat" ? <Minus className="h-3.5 w-3.5" /> : null}
@@ -243,13 +243,13 @@ export function ExecutiveModuleMatrix({
                   </span>
                 </div>
 
-                <p className="min-h-8 text-[11px] text-muted-foreground">
+                <p className="min-h-8 text-sm text-muted-foreground">
                   {summary.topExceptionLabel || "No dominant exception label."}
                 </p>
 
                 <Link
                   href={summary.reportHref}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary transition-colors hover:text-primary/80"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
                 >
                   Open report
                   <ArrowRight className="h-3.5 w-3.5" />

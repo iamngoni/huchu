@@ -122,7 +122,7 @@ export function ToneSelect({
                 : chosen.map((option) => option.label).join(", ")}
             </span>
           </span>
-          <ChevronDown className="size-4 flex-none opacity-60" />
+          <ChevronDown className="size-3 flex-none text-[var(--text-muted)]" />
         </Button>
       </PopoverTrigger>
 

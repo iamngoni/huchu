@@ -706,7 +706,7 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
               </div>
 
               <div className="rounded-lg border border-[var(--edge-subtle)] bg-[var(--surface-subtle)] p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   Live Preview
                 </p>
                 <div className="mt-3 flex items-center gap-3">
@@ -892,13 +892,13 @@ export function BrandingSettingsSection({ section }: { section: BrandingSection 
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         DNS TXT Host
                       </p>
                       <p className="mt-1 font-mono text-sm">{currentDomain.verificationHost}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         DNS TXT Value
                       </p>
                       <p className="mt-1 font-mono text-sm">{currentDomain.verificationValue}</p>

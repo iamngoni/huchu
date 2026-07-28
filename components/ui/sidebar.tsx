@@ -255,7 +255,7 @@ const SidebarGroupLabel = React.forwardRef<
     ref={ref}
     data-sidebar="group-label"
     className={cn(
-      "px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]",
+      "px-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]",
       className,
     )}
     {...props}
