@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { can, denialMessage } from "@/lib/crm/permissions";
+import { canUser, denialMessage } from "@/lib/crm/permissions";
 import { automationSchema } from "@/lib/crm/automation";
 
 const updateSchema = automationSchema.partial();
@@ -16,7 +16,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { session } = sessionResult;
     const { id } = await params;
 
-    if (!can(session, "settings.manage")) {
+    if (!(await canUser(session, "settings.manage"))) {
       return errorResponse(denialMessage("settings.manage"), 403);
     }
 
@@ -60,7 +60,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const { session } = sessionResult;
     const { id } = await params;
 
-    if (!can(session, "settings.manage")) {
+    if (!(await canUser(session, "settings.manage"))) {
       return errorResponse(denialMessage("settings.manage"), 403);
     }
 

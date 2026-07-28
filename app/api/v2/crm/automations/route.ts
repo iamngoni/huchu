@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { can, denialMessage } from "@/lib/crm/permissions";
+import { canUser, denialMessage } from "@/lib/crm/permissions";
 import { automationSchema } from "@/lib/crm/automation";
 
 export async function GET(request: NextRequest) {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
 
-    if (!can(session, "settings.manage")) {
+    if (!(await canUser(session, "settings.manage"))) {
       return errorResponse(denialMessage("settings.manage"), 403);
     }
 

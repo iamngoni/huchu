@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { can, denialMessage } from "@/lib/crm/permissions";
+import { canUser, denialMessage } from "@/lib/crm/permissions";
 import {
   PERSON_MERGE_FIELDS,
   mergeLists,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
 
     // A merge rewrites two people's history at once, so it is a manager's call.
-    if (!can(session, "records.merge")) {
+    if (!(await canUser(session, "records.merge"))) {
       return errorResponse(denialMessage("records.merge"), 403);
     }
 

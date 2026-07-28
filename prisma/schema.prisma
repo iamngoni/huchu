@@ -49,6 +49,7 @@ model Company {
   disciplinaryActions           DisciplinaryAction[]
   subscriptions                 CompanySubscription[]
   featureFlags                  CompanyFeatureFlag[]
+  userPermissionOverrides       UserPermissionOverride[]
   provisioningEvents            ProvisioningEvent[]
   subdomainReservations         SubdomainReservation[]
   branding                      CompanyBranding?
@@ -364,6 +365,29 @@ model UserFeatureFlag {
   @@unique([userId, featureId])
   @@index([featureId])
   @@index([userId, isEnabled])
+}
+
+/// A permission one person has, or has had taken away, against what their role
+/// would otherwise give them. Feature access already has UserFeatureFlag; this
+/// is its twin for the capabilities a module gates on, so the admin screen can
+/// show one list instead of two systems that disagree.
+model UserPermissionOverride {
+  id            String   @id @default(uuid())
+  companyId     String
+  userId        String
+  permissionKey String
+  isAllowed     Boolean
+  grantedById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user      User    @relation("UserPermissionOverrideUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User?   @relation("UserPermissionOverrideGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, permissionKey])
+  @@index([companyId, permissionKey])
+  @@index([userId])
 }
 
 model FeatureBundle {
@@ -896,6 +920,8 @@ model User {
   notificationPreference            UserNotificationPreference?
   webPushSubscriptions              WebPushSubscription[]
   featureFlags                      UserFeatureFlag[]
+  permissionOverrides               UserPermissionOverride[]       @relation("UserPermissionOverrideUser")
+  permissionOverridesGranted        UserPermissionOverride[]       @relation("UserPermissionOverrideGrantedBy")
   schoolTeacherProfiles             SchoolTeacherProfile[]
   schoolResultModerationActions     SchoolResultModerationAction[] @relation("SchoolResultModerationActionActor")
   schoolLeaveRequestsApproved       SchoolLeaveRequest[]           @relation("SchoolLeaveRequestApprovedBy")

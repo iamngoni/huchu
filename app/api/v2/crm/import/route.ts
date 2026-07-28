@@ -4,7 +4,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { reserveIdentifier } from "@/lib/id-generator";
-import { can, denialMessage } from "@/lib/crm/permissions";
+import { canUser, denialMessage } from "@/lib/crm/permissions";
 import { buildFullName } from "@/lib/crm/conversion";
 import { normalizeName } from "@/lib/crm/duplicates";
 import {
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
     const { session } = sessionResult;
 
     // Import writes across the whole tenant's book, which is a manager's call.
-    if (!can(session, "records.import")) {
+    if (!(await canUser(session, "records.import"))) {
       return errorResponse(denialMessage("records.import"), 403);
     }
 

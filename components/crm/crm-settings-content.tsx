@@ -14,7 +14,6 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { CRM_CHANNEL_LABELS, CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
 import { CustomFieldsPanel } from "@/components/crm/settings/custom-fields-panel";
 import { PipelinesPanel } from "@/components/crm/settings/pipelines-panel";
-import { PermissionsPanel } from "@/components/crm/settings/permissions-panel";
 import { AutomationsPanel } from "@/components/crm/settings/automations-panel";
 import { NavRail, NavRailItem } from "@/components/ui/nav-rail";
 import { CataloguePanel } from "@/components/inventory/catalogue-panel";
@@ -424,12 +423,6 @@ const SECTIONS: SettingsSection[] = [
     label: "Commissions",
     description: "Who earns what, and at which thresholds.",
     render: () => <CommissionsPanel />,
-  },
-  {
-    id: "permissions",
-    label: "Permissions",
-    description: "What each CRM role can see and change.",
-    render: () => <PermissionsPanel />,
   },
   {
     id: "keys",
