@@ -3,6 +3,8 @@
 import * as React from "react";
 
 import { NavRail, NavRailItem } from "@/components/ui/nav-rail";
+import type { LucideIcon } from "@/lib/icons";
+import { resolveViewIcon } from "@/lib/ui/view-icons";
 import { cn } from "@/lib/utils";
 
 export type VerticalDataViewItem = {
@@ -10,6 +12,12 @@ export type VerticalDataViewItem = {
   label: string;
   description?: string;
   count?: number;
+  /**
+   * Override the icon this view gets. Left off, one is resolved from the id
+   * and label — see `lib/ui/view-icons`, which exists so a hundred rails do
+   * not each pick a different picture for "invoices".
+   */
+  icon?: LucideIcon;
 };
 
 type VerticalDataViewsProps = {
@@ -49,16 +57,20 @@ export function VerticalDataViews({
       <aside className="lg:sticky lg:top-16 lg:self-start">
         <NavRail label={accessibleLabel} orientation="responsive">
           {railLabel ? <div className="group-label">{railLabel}</div> : null}
-          {items.map((item) => (
-            <NavRailItem
-              key={item.id}
-              active={item.id === value}
-              count={item.count}
-              onClick={() => onValueChange(item.id)}
-            >
-              {item.label}
-            </NavRailItem>
-          ))}
+          {items.map((item) => {
+            const Icon = item.icon ?? resolveViewIcon(item.id, item.label);
+            return (
+              <NavRailItem
+                key={item.id}
+                active={item.id === value}
+                count={item.count}
+                icon={<Icon className="size-4" aria-hidden="true" />}
+                onClick={() => onValueChange(item.id)}
+              >
+                {item.label}
+              </NavRailItem>
+            );
+          })}
         </NavRail>
       </aside>
       <div className="min-w-0 space-y-2.5">{children}</div>

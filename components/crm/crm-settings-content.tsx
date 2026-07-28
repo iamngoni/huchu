@@ -11,6 +11,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import {
+  Coins,
+  Dataset,
+  Funnel,
+  Lock,
+  Megaphone,
+  Package,
+  type LucideIcon,
+} from "@/lib/icons";
 import { CRM_CHANNEL_LABELS, CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
 import { CustomFieldsPanel } from "@/components/crm/settings/custom-fields-panel";
 import { PipelinesPanel } from "@/components/crm/settings/pipelines-panel";
@@ -383,6 +392,7 @@ type SettingsSection = {
   id: string;
   label: string;
   description: string;
+  icon: LucideIcon;
   render: () => ReactNode;
 };
 
@@ -390,36 +400,42 @@ const SECTIONS: SettingsSection[] = [
   {
     id: "pipelines",
     label: "Pipelines",
+    icon: Funnel,
     description: "The stages a deal moves through, and what each one requires.",
     render: () => <PipelinesPanel />,
   },
   {
     id: "fields",
     label: "Custom fields",
+    icon: Dataset,
     description: "Extra fields for your business, on the form and the record page.",
     render: () => <CustomFieldsPanel />,
   },
   {
     id: "sources",
     label: "Lead sources",
+    icon: Megaphone,
     description: "Where enquiries come from, so attribution has something to count.",
     render: () => <LeadSourcesPanel />,
   },
   {
     id: "catalogue",
     label: "Catalogue",
+    icon: Package,
     description: "What the business sells — shared with Stock & Inventory and Retail.",
     render: () => <CataloguePanel />,
   },
   {
     id: "commissions",
     label: "Commissions",
+    icon: Coins,
     description: "Who earns what, and at which thresholds.",
     render: () => <CommissionsPanel />,
   },
   {
     id: "keys",
     label: "API keys",
+    icon: Lock,
     description: "Credentials for webhook and intake-form integrations.",
     render: () => <ApiKeysPanel />,
   },
@@ -446,6 +462,7 @@ export function CrmSettingsContent() {
           <NavRailItem
             key={section.id}
             active={section.id === active.id}
+            icon={<section.icon className="size-4" aria-hidden="true" />}
             onClick={() => select(section.id)}
           >
             {section.label}
