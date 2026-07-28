@@ -1,9 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Badge, Button } from "@corelithzw/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/ui/use-toast";
+import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmPeople } from "@/lib/crm/crm-v2";
 import { useDebounced } from "@/hooks/use-debounced";
 
@@ -44,6 +52,51 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
   const people = useMemo(() => peopleQuery.data?.data ?? [], [peopleQuery.data]);
   const total = peopleQuery.data?.pagination?.total ?? people.length;
 
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const teamQuery = useQuery({
+    queryKey: ["crm", "team"],
+    queryFn: () =>
+      fetchJson<{ data: Array<{ id: string; name: string | null }> }>("/api/v2/crm/team"),
+    staleTime: 5 * 60_000,
+  });
+
+  const assign = useMutation({
+    mutationFn: ({
+      ids,
+      assignedToId,
+    }: {
+      ids: string[];
+      assignedToId: string | null;
+      clear: () => void;
+    }) =>
+      fetchJson<{ updated: number; skipped: number }>("/api/v2/crm/people/bulk", {
+        method: "POST",
+        body: JSON.stringify({ action: "assign", ids, assignedToId }),
+      }),
+    onSuccess: (result, variables) => {
+      variables.clear();
+      queryClient.invalidateQueries({ queryKey: ["crm", "people"] });
+      toast({
+        title: `${result.updated} ${result.updated === 1 ? "person" : "people"} reassigned`,
+        // Saying what was left alone, rather than letting the count quietly
+        // disagree with what was selected.
+        description:
+          result.skipped > 0
+            ? `${result.skipped} skipped — they belong to someone else.`
+            : undefined,
+      });
+    },
+    onError: (error) =>
+      toast({
+        title: "Could not reassign",
+        description: getApiErrorMessage(error),
+        variant: "destructive",
+      }),
+  });
+
   const rows = useMemo<RecordListRow[]>(
     () =>
       people.map((person) => ({
@@ -80,6 +133,8 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
   // one heading per letter, and a jump strip once the page is long enough for
   // scrolling to it to be work. A search result is ranked by relevance, not
   // alphabet, so it stays a flat list.
+  const owners = useMemo(() => teamQuery.data?.data ?? [], [teamQuery.data]);
+
   const sections = useMemo<RecordListSection[]>(
     () =>
       bucketByLetter(rows, (row) => String(row.title ?? "")).map((bucket) => ({
@@ -104,6 +159,34 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
       error={peopleQuery.error}
     >
       <GroupedRecordList
+        selection={{
+          selectedIds,
+          onChange: setSelectedIds,
+          actions: ({ ids, clear }) => (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm">
+                  Assign owner
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+                {owners.map((owner) => (
+                  <DropdownMenuItem
+                    key={owner.id}
+                    onClick={() => assign.mutate({ ids, assignedToId: owner.id, clear })}
+                  >
+                    {owner.name ?? "Unnamed"}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuItem
+                  onClick={() => assign.mutate({ ids, assignedToId: null, clear })}
+                >
+                  Leave unassigned
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ),
+        }}
         sections={debouncedSearch ? [{ id: "results", label: "Results", rows }] : sections}
         showJumpStrip={!debouncedSearch && rows.length >= 30}
         isLoading={peopleQuery.isLoading}

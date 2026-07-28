@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -93,7 +93,6 @@ export function LeadsTable({
   onBulkStage: (ids: string[], stage: CrmLeadStage, done: () => void) => void;
 }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<CrmLeadListRecord[]>([]);
 
   const columns = useMemo<ColumnDef<CrmLeadListRecord>[]>(
     () => [
@@ -218,7 +217,6 @@ export function LeadsTable({
       pagination={{ enabled: true, server: true, total, totalPages }}
       rowSelection={{
         enabled: true,
-        onSelectionChange: setSelected,
         bulkActions: ({ selectedRows, clearSelection }) => {
           const ids = selectedRows.map((lead) => lead.id);
           return (
@@ -266,10 +264,6 @@ export function LeadsTable({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <span className="text-sm text-[var(--text-muted)]">
-                {selected.length} selected
-              </span>
             </div>
           );
         },

@@ -1572,7 +1572,10 @@ export function DataTable<TData, TValue>({
       {rowSelectionEnabled &&
       selectedRows.length > 0 &&
       rowSelection?.bulkActions ? (
-        <DataTableFloatingActions>
+        <DataTableFloatingActions
+          count={selectedRows.length}
+          onClear={clearSelection}
+        >
           {rowSelection.bulkActions({ selectedRows, clearSelection })}
         </DataTableFloatingActions>
       ) : null}
