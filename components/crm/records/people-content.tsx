@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Badge, Button } from "@corelithzw/react";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,12 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import { CONTACT_TYPE_COLOR, stageColor } from "@/lib/crm/tones";
 import { fetchCrmPeople } from "@/lib/crm/crm-v2";
 import { useDebounced } from "@/hooks/use-debounced";
 
 import { PersonFormSheet } from "./person-form-sheet";
 import { RecordListPager, type RecordListRow } from "./record-list";
 import { RecordMark } from "./record-mark";
+import { RecordBoard } from "./record-board";
 import {
   GroupedRecordList,
   bucketByLetter,
@@ -52,6 +55,7 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
   const people = useMemo(() => peopleQuery.data?.data ?? [], [peopleQuery.data]);
   const total = peopleQuery.data?.pagination?.total ?? people.length;
 
+  const [layout, setLayout] = useState<"LIST" | "BOARD">("LIST");
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -135,6 +139,66 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
   // alphabet, so it stays a flat list.
   const owners = useMemo(() => teamQuery.data?.data ?? [], [teamQuery.data]);
 
+  // A directory is arranged by what kind of contact somebody is, which is the
+  // one attribute on a person worth seeing them sorted into.
+  const boardColumns = useMemo(
+    () =>
+      Object.entries(CONTACT_TYPE_LABELS).map(([value, label]) => ({
+        id: value,
+        name: label,
+        color: CONTACT_TYPE_COLOR[value] ?? stageColor(null),
+      })),
+    [],
+  );
+
+  const boardCards = useMemo(
+    () =>
+      people.map((person) => ({
+        id: person.id,
+        columnId: person.contactType,
+        href: `/crm/people/${person.id}`,
+        content: (
+          <div className="flex items-start gap-2">
+            <RecordMark
+              kind="person"
+              name={person.fullName}
+              emoji={person.emoji}
+              avatarUrl={person.avatarUrl}
+              size="sm"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{person.fullName}</p>
+              <p className="truncate text-sm text-[var(--text-muted)]">
+                {[person.jobTitle, person.client?.name].filter(Boolean).join(" · ") ||
+                  person.personNo}
+              </p>
+              {person.email || person.phone ? (
+                <p className="mt-1 truncate text-sm text-[var(--text-subtle)]">
+                  {person.email ?? person.phone}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ),
+      })),
+    [people],
+  );
+
+  const moveContactType = useMutation({
+    mutationFn: ({ id, contactType }: { id: string; contactType: string }) =>
+      fetchJson(`/api/v2/crm/people/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ contactType }),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["crm", "people"] }),
+    onError: (error) =>
+      toast({
+        title: "Could not change the contact type",
+        description: getApiErrorMessage(error),
+        variant: "destructive",
+      }),
+  });
+
   const sections = useMemo<RecordListSection[]>(
     () =>
       bucketByLetter(rows, (row) => String(row.title ?? "")).map((bucket) => ({
@@ -157,7 +221,29 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
       createLabel="New person"
       onCreate={() => setCreateOpen(true)}
       error={peopleQuery.error}
+      filters={
+        <SegmentedControl
+          value={layout}
+          onValueChange={(value) => setLayout(value as typeof layout)}
+          size="sm"
+          ariaLabel="List or board"
+          options={[
+            { value: "LIST", label: "List" },
+            { value: "BOARD", label: "Board" },
+          ]}
+        />
+      }
     >
+      {layout === "BOARD" ? (
+        <RecordBoard
+          columns={boardColumns}
+          cards={boardCards}
+          isLoading={peopleQuery.isLoading}
+          emptyLabel="No one of this kind"
+          onMove={(id, contactType) => moveContactType.mutate({ id, contactType })}
+          className="min-h-[24rem]"
+        />
+      ) : (
       <GroupedRecordList
         selection={{
           selectedIds,
@@ -205,7 +291,11 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
         }
       />
 
-      <RecordListPager page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+      )}
+
+      {layout === "LIST" ? (
+        <RecordListPager page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+      ) : null}
 
       <PersonFormSheet open={createOpen} onOpenChange={setCreateOpen} />
     </RecordListShell>

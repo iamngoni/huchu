@@ -139,3 +139,26 @@ export const LEAD_STAGE_COLOR: Record<string, { dot: string; band: string }> = {
   WON: { dot: "bg-[var(--tone-success)]", band: "bg-[var(--tone-success)]" },
   LOST: { dot: "bg-[var(--tone-danger)]", band: "bg-[var(--tone-danger)]" },
 };
+
+/**
+ * Contact types, for the people board. A hue each so the columns are told
+ * apart at a glance; no judgement in any of them, because a site contact is
+ * not better or worse than a finance contact.
+ */
+export const CONTACT_TYPE_COLOR: Record<string, { dot: string; band: string }> = {
+  CUSTOMER: { dot: "bg-[var(--brand)]", band: "bg-[var(--brand)]" },
+  DECISION_MAKER: { dot: "bg-[var(--accent-500)]", band: "bg-[var(--accent-500)]" },
+  SITE_CONTACT: { dot: "bg-[var(--tone-info)]", band: "bg-[var(--tone-info)]" },
+  FINANCE_CONTACT: { dot: "bg-[var(--tone-warn)]", band: "bg-[var(--tone-warn)]" },
+  SUPPLIER_CONTACT: { dot: "bg-[var(--warning-600)]", band: "bg-[var(--warning-600)]" },
+  REFERRAL_PARTNER: { dot: "bg-[var(--tone-success)]", band: "bg-[var(--tone-success)]" },
+  OTHER: { dot: "bg-[var(--text-subtle)]", band: "bg-[var(--text-subtle)]" },
+};
+
+/** Company account standing. Here the colour *is* a judgement, so it is semantic. */
+export const ACCOUNT_STATUS_COLOR: Record<string, { dot: string; band: string }> = {
+  ACTIVE: { dot: "bg-[var(--tone-success)]", band: "bg-[var(--tone-success)]" },
+  ON_HOLD: { dot: "bg-[var(--tone-warn)]", band: "bg-[var(--tone-warn)]" },
+  INACTIVE: { dot: "bg-[var(--text-subtle)]", band: "bg-[var(--text-subtle)]" },
+  BLACKLISTED: { dot: "bg-[var(--tone-danger)]", band: "bg-[var(--tone-danger)]" },
+};
