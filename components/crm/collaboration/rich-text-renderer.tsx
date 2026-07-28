@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { accentFor } from "@corelithzw/react";
 import { Fragment } from "react";
 
 import {
@@ -20,27 +22,45 @@ import { cn } from "@/lib/utils";
  * in comments and grey text on a timeline.
  */
 
+/** One glyph per kind — enough to tell a deal from the company behind it. */
+const GLYPH: Record<Reference["kind"], string> = {
+  user: "@",
+  person: "@",
+  company: "▪",
+  lead: "✦",
+  deal: "▲",
+  site: "◆",
+  quotation: "§",
+  invoice: "§",
+  receipt: "§",
+};
+
+/**
+ * A reference, drawn the same way the composer draws it while somebody types.
+ *
+ * Tinted by a hash of the label, so the same company is the same colour in
+ * every note that mentions it — and so a wall of references is scannable
+ * rather than a paragraph of identical underlines.
+ */
 function ReferenceChip({ reference }: { reference: Reference }) {
   const href = referenceHref(reference);
-  const label = reference.kind === "user" ? `@${reference.label}` : reference.label;
 
   const chip = (
     <span
-      className={cn(
-        "rounded px-1 font-medium",
-        reference.kind === "user"
-          ? "bg-[var(--accent-subtle)]"
-          : "underline decoration-[var(--border)] underline-offset-2",
-      )}
+      data-accent={accentFor(reference.label)}
+      className="mx-0.5 inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--accent-bg)] px-1.5 align-baseline font-medium text-[var(--accent-fg)]"
     >
-      {label}
+      <span aria-hidden="true" className="opacity-70">
+        {GLYPH[reference.kind]}
+      </span>
+      {reference.label}
     </span>
   );
 
   if (!href) return chip;
 
   return (
-    <Link href={href} className="hover:decoration-[var(--text)]">
+    <Link href={href} className="hover:brightness-95">
       {chip}
     </Link>
   );

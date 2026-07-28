@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { fetchJson } from "@/lib/api-client";
+import { offsetOf, placeCaret, renderBody, serialise } from "@/lib/crm/reference-dom";
 import {
   activeReferenceQuery,
   insertReference,
@@ -17,6 +17,7 @@ import {
 import { Eye, ListBullets, type LucideIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
+import { referenceChipElement } from "./reference-chip";
 import { RichTextRenderer } from "./rich-text-renderer";
 
 type TeamResponse = { data: { id: string; name: string | null; email: string }[] };
@@ -112,10 +113,51 @@ export function RichTextComposer({
   onSubmit?: () => void;
   peopleOnly?: boolean;
 }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState<string | null>(null);
   const [highlighted, setHighlighted] = useState(0);
   const [preview, setPreview] = useState(false);
+
+  // What the editor's DOM currently serialises to. Redrawing on every value
+  // change would move the caret to the start on every keystroke, so a redraw
+  // only happens when the value arrived from somewhere other than typing.
+  const shown = useRef(value);
+
+  const draw = useCallback((body: string) => {
+    const element = ref.current;
+    if (!element) return;
+    renderBody(element, body, referenceChipElement);
+    shown.current = body;
+  }, []);
+
+  useEffect(() => {
+    if (preview) return;
+    if (value === shown.current) return;
+    draw(value);
+  }, [draw, preview, value]);
+
+  /** The caret, as a position in the body. */
+  function caretOffset(): number {
+    const element = ref.current;
+    const selection = window.getSelection();
+    if (!element || !selection?.anchorNode) return shown.current.length;
+    return (
+      offsetOf(element, selection.anchorNode, selection.anchorOffset) ??
+      shown.current.length
+    );
+  }
+
+  /** Replace the body and put the caret back where it belongs. */
+  function rewrite(body: string, caret: number) {
+    onChange(body);
+    draw(body);
+    requestAnimationFrame(() => {
+      const element = ref.current;
+      if (!element) return;
+      element.focus();
+      placeCaret(element, caret);
+    });
+  }
 
   const { data: team } = useQuery({
     queryKey: ["crm-team"],
@@ -167,33 +209,42 @@ export function RichTextComposer({
 
   const visible = [...people, ...recordCandidates].slice(0, 10);
 
-  function sync(next: string, caret: number) {
+  /** Typing: read the DOM back out, without redrawing it underneath. */
+  function sync() {
+    const element = ref.current;
+    if (!element) return;
+    const next = serialise(element);
+    shown.current = next;
     onChange(next);
-    setQuery(activeReferenceQuery(next, caret));
+    setQuery(activeReferenceQuery(next, caretOffset()));
     setHighlighted(0);
   }
 
   function pick(candidate: Candidate) {
-    const caret = ref.current?.selectionStart ?? value.length;
-    const result = insertReference(value, caret, query ?? "", candidate);
-    onChange(result.body);
+    const body = shown.current;
+    const result = insertReference(body, caretOffset(), query ?? "", candidate);
     setQuery(null);
-    requestAnimationFrame(() => {
-      ref.current?.focus();
-      ref.current?.setSelectionRange(result.caret, result.caret);
-    });
+    rewrite(result.body, result.caret);
   }
 
   function runTool(tool: Tool) {
     const element = ref.current;
-    const start = element?.selectionStart ?? value.length;
-    const end = element?.selectionEnd ?? start;
-    const result = tool.apply(value, start, end);
-    onChange(result.body);
-    requestAnimationFrame(() => {
-      element?.focus();
-      element?.setSelectionRange(result.start, result.end);
-    });
+    const selection = window.getSelection();
+    const body = shown.current;
+
+    let start = body.length;
+    let end = start;
+    if (element && selection?.anchorNode && selection.focusNode) {
+      const anchor = offsetOf(element, selection.anchorNode, selection.anchorOffset);
+      const focus = offsetOf(element, selection.focusNode, selection.focusOffset);
+      if (anchor !== null && focus !== null) {
+        start = Math.min(anchor, focus);
+        end = Math.max(anchor, focus);
+      }
+    }
+
+    const result = tool.apply(body, start, end);
+    rewrite(result.body, result.end);
   }
 
   return (
@@ -253,16 +304,37 @@ export function RichTextComposer({
         </div>
       ) : (
         <div className="relative">
-          <Textarea
+          <div
             ref={ref}
-            rows={rows}
-            className={className}
-            placeholder={placeholder ?? "Write a note. Type @ to mention someone or link a record."}
-            value={value}
-            onChange={(event) => sync(event.target.value, event.target.selectionStart)}
-            onClick={(event) =>
-              setQuery(activeReferenceQuery(value, event.currentTarget.selectionStart))
+            role="textbox"
+            aria-multiline="true"
+            aria-label={placeholder ?? "Write a note"}
+            contentEditable
+            suppressContentEditableWarning
+            data-placeholder={
+              placeholder ?? "Write a note. Type @ to mention someone or link a record."
             }
+            className={cn(
+              "w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm",
+              "whitespace-pre-wrap break-words",
+              "focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]",
+              // A contenteditable has no placeholder of its own, and `:empty`
+              // misses the stray text node a browser leaves behind — so
+              // emptiness is decided here rather than in CSS.
+              !value.trim() &&
+                "before:pointer-events-none before:absolute before:text-[var(--text-subtle)] before:content-[attr(data-placeholder)]",
+              className,
+            )}
+            style={{ minHeight: `${rows * 1.5 + 1}rem` }}
+            onInput={sync}
+            onClick={() => setQuery(activeReferenceQuery(shown.current, caretOffset()))}
+            // Plain text only: a paste from a browser brings a stylesheet's
+            // worth of markup with it, and none of it survives serialising.
+            onPaste={(event) => {
+              event.preventDefault();
+              const text = event.clipboardData.getData("text/plain");
+              document.execCommand("insertText", false, text);
+            }}
             onBlur={() => setQuery(null)}
             onKeyDown={(event) => {
               if (query !== null && visible.length) {
