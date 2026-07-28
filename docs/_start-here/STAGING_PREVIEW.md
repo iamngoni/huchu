@@ -65,6 +65,27 @@ Cross-host redirects — the tenant host, the portal hosts, the POS till host �
 stay on the preview origin and switch the nominated host instead, because
 `pos.floorcode.pagka.dev` has no DNS pointing at a preview build.
 
+## Deployment protection
+
+Previews on this project sit behind Vercel Deployment Protection: every request
+answers `302` to `vercel.com/sso-api` until you have a Vercel session. A browser
+signed in to the team passes it without noticing. Anything else — curl, an e2e
+run, an agent checking the deployment — does not, and sees only the redirect.
+
+To let automation through, generate **Protection Bypass for Automation** under
+the project's **Settings → Deployment Protection**, then send the secret:
+
+```bash
+curl -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" \
+     -H 'x-huchu-preview-host: floorcode.pagka.dev' \
+     https://…vercel.app/api/v2/crm/leads
+```
+
+Add `?x-vercel-set-bypass-cookie=true` to have it set a cookie for the rest of
+the session rather than repeating the header. Turning protection off for Preview
+altogether also works, but it makes every branch deployment — and the staging
+data behind it — public to anyone with the URL.
+
 ## Seeding a workspace
 
 A staging database nobody has seeded is a sign-in page you cannot get past.
