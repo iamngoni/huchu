@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
-import { Building2 } from "@/lib/icons";
+import { Building2, Globe, Mail, MapPin, Phone, UserRound } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
@@ -21,6 +21,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
+import { RecordAttributes } from "./record-attributes";
 import { EntityLink } from "./entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { CompanyFormSheet } from "./company-form-sheet";
@@ -85,23 +86,6 @@ type CompanyDetail = {
   /** Present only when this company was merged away. */
   redirectTo?: string;
 };
-
-function DetailRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-2 py-1.5">
-      <dt className="w-32 shrink-0 text-sm text-[var(--text-muted)]">{label}</dt>
-      <dd className="min-w-0 flex-1 break-words text-right text-sm">{children}</dd>
-    </div>
-  );
-}
-
-function TextRow({ label, value }: { label: string; value: string | null }) {
-  return (
-    <DetailRow label={label}>
-      {value ? value : <span className="text-[var(--text-muted)]">—</span>}
-    </DetailRow>
-  );
-}
 
 export function CompanyDetailPage({ companyId }: { companyId: string }) {
   const router = useRouter();
@@ -207,6 +191,78 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
       status={ACCOUNT_STATUS_PRESENTATION[company.accountStatus] ?? null}
       subtitle={subtitle}
       activeTab={tab}
+      attributes={
+        <RecordAttributes
+          attributes={[
+            {
+              id: "owner",
+              label: "Owner",
+              icon: UserRound,
+              display: (
+                <EntityLink
+                  href={company.assignedTo ? `/crm/reps/${company.assignedTo.id}` : null}
+                  className="text-sm"
+                >
+                  {company.assignedTo?.name ?? "Unassigned"}
+                </EntityLink>
+              ),
+            },
+            {
+              id: "phone",
+              label: "Phone",
+              icon: Phone,
+              display: company.phone ? (
+                <a href={`tel:${company.phone}`} className="text-sm hover:underline">
+                  {company.phone}
+                </a>
+              ) : undefined,
+              value: company.phone,
+            },
+            {
+              id: "email",
+              label: "Email",
+              icon: Mail,
+              display: company.email ? (
+                <a href={`mailto:${company.email}`} className="text-sm hover:underline">
+                  {company.email}
+                </a>
+              ) : undefined,
+              value: company.email,
+            },
+            {
+              id: "website",
+              label: "Website",
+              icon: Globe,
+              display: company.website ? (
+                <a
+                  href={company.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm hover:underline"
+                >
+                  {company.website}
+                </a>
+              ) : undefined,
+              value: company.website,
+            },
+            {
+              id: "location",
+              label: "Location",
+              icon: MapPin,
+              value: [company.city, company.country].filter(Boolean).join(", ") || null,
+              placeholder: "Not recorded",
+            },
+            { id: "industry", label: "Industry", value: company.industry },
+            {
+              id: "registration",
+              label: "Registration no.",
+              value: company.registrationNumber,
+              mono: true,
+            },
+            { id: "tax", label: "Tax number", value: company.taxNumber, mono: true },
+          ]}
+        />
+      }
       onTabChange={setTab}
       tabs={[
         {
@@ -297,30 +353,6 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
       ]}
       rail={
         <>
-          <RailSection title="Details">
-            <dl className="divide-y divide-[var(--border)]">
-              <TextRow label="Registration no." value={company.registrationNumber} />
-              <TextRow label="Tax number" value={company.taxNumber} />
-              <TextRow label="Industry" value={company.industry} />
-              <DetailRow label="Website">
-                {company.website ? (
-                  <a
-                    href={company.website}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:underline"
-                  >
-                    {company.website}
-                  </a>
-                ) : (
-                  <span className="text-[var(--text-muted)]">—</span>
-                )}
-              </DetailRow>
-              <TextRow label="Phone" value={company.phone} />
-              <TextRow label="Email" value={company.email} />
-            </dl>
-          </RailSection>
-
           {hasHierarchy ? (
             <RailSection title="Hierarchy">
               {company.parent ? (

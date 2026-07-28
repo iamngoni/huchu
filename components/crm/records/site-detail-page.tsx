@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
-import { MapPin } from "@/lib/icons";
+import { Building2, MapPin, UserRound } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
@@ -19,6 +19,7 @@ import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
+import { RecordAttributes } from "./record-attributes";
 import { EntityLink } from "./entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { SiteFormSheet } from "./site-form-sheet";
@@ -140,6 +141,68 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
       reference={site.siteNo}
       subtitle={subtitle}
       activeTab={tab}
+      attributes={
+        <RecordAttributes
+          attributes={[
+            {
+              id: "company",
+              label: "Company",
+              icon: Building2,
+              display: site.client ? (
+                <EntityLink href={`/crm/companies/${site.client.id}`} className="text-sm">
+                  {site.client.name}
+                </EntityLink>
+              ) : undefined,
+              value: null,
+              placeholder: "No company",
+            },
+            {
+              id: "contact",
+              label: "Primary contact",
+              icon: UserRound,
+              display: site.primaryContact ? (
+                <EntityLink
+                  href={`/crm/people/${site.primaryContact.id}`}
+                  className="text-sm"
+                >
+                  {site.primaryContact.fullName}
+                </EntityLink>
+              ) : undefined,
+              value: null,
+              placeholder: "Nobody named",
+            },
+            {
+              id: "address",
+              label: "Address",
+              icon: MapPin,
+              value: site.addressLine,
+              placeholder: "Not recorded",
+            },
+            {
+              id: "location",
+              label: "City",
+              value: [site.city, site.country].filter(Boolean).join(", ") || null,
+              placeholder: "Not recorded",
+            },
+            {
+              id: "coordinates",
+              label: "Coordinates",
+              value:
+                site.latitude !== null && site.longitude !== null
+                  ? `${site.latitude.toFixed(5)}, ${site.longitude.toFixed(5)}`
+                  : null,
+              placeholder: "Not pinned",
+              mono: true,
+            },
+            {
+              id: "access",
+              label: "Access",
+              value: site.accessInstructions,
+              placeholder: "No instructions",
+            },
+          ]}
+        />
+      }
       onTabChange={setTab}
       tabs={[
         {

@@ -58,6 +58,7 @@ export function RecordPageShell({
   activeTab,
   onTabChange,
   rail,
+  attributes,
 }: {
   backHref: string;
   backLabel: string;
@@ -75,6 +76,12 @@ export function RecordPageShell({
   activeTab: string;
   onTabChange: (value: string) => void;
   rail?: ReactNode;
+  /**
+   * The record's properties, shown above the tabs. Notion-style, because a
+   * property in a right rail is one a phone never shows and a reader looks at
+   * last — which is how they go stale.
+   */
+  attributes?: ReactNode;
 }) {
   const visibleTabs = tabs.filter((tab) => tab.content !== null && tab.content !== undefined);
 
@@ -125,6 +132,10 @@ export function RecordPageShell({
           <span className="min-w-0 truncate text-sm text-[var(--text-muted)]">{subtitle}</span>
         ) : null}
       </div>
+
+      {attributes ? (
+        <div className="border-y border-[var(--border-subtle)] py-3">{attributes}</div>
+      ) : null}
 
       <div className={rail ? "detail-grid" : "min-w-0"}>
         <div className="min-w-0 space-y-4">

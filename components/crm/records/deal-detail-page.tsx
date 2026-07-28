@@ -11,7 +11,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { Calendar, FileText, Funnel, Plus } from "@/lib/icons";
+import {
+  Building2,
+  Calendar,
+  FileText,
+  Funnel,
+  MapPin,
+  Payments,
+  Plus,
+  TrendingUp,
+  UserRound,
+} from "@/lib/icons";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
 import { isDealStale } from "@/lib/crm/pipelines";
 import { visitItemsToQuotationLines } from "@/lib/crm/site-visits";
@@ -36,6 +46,7 @@ import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
+import { RecordAttributes } from "./record-attributes";
 import { EntityLink } from "./entity-link";
 import { DealStageBar } from "./deal-stage-bar";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
@@ -256,6 +267,98 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
           { label: "Open documents", onSelect: () => setTab("documents") },
         ]}
         activeTab={tab}
+        attributes={
+          <RecordAttributes
+            attributes={[
+              {
+                id: "value",
+                label: "Value",
+                icon: Payments,
+                value:
+                  deal.value !== null ? formatMoney(deal.value, deal.currency) : null,
+                placeholder: "Not sized",
+                mono: true,
+              },
+              {
+                id: "stage",
+                label: "Stage",
+                icon: Funnel,
+                display: (
+                  <span className="text-sm">
+                    {deal.stage.name}
+                    <span className="text-[var(--text-muted)]">
+                      {" · "}
+                      {deal.pipeline.name}
+                    </span>
+                  </span>
+                ),
+              },
+              {
+                id: "owner",
+                label: "Owner",
+                icon: UserRound,
+                display: (
+                  <EntityLink
+                    href={deal.assignedTo ? `/crm/reps/${deal.assignedTo.id}` : null}
+                    className="text-sm"
+                  >
+                    {deal.assignedTo?.name ?? "Unassigned"}
+                  </EntityLink>
+                ),
+              },
+              {
+                id: "company",
+                label: "Company",
+                icon: Building2,
+                display: deal.client ? (
+                  <EntityLink href={`/crm/companies/${deal.client.id}`} className="text-sm">
+                    {deal.client.name}
+                  </EntityLink>
+                ) : undefined,
+                value: null,
+                placeholder: "No company",
+              },
+              {
+                id: "close",
+                label: "Expected close",
+                icon: Calendar,
+                display: deal.expectedCloseDate ? (
+                  <span className="text-sm">
+                    <ClientDate value={deal.expectedCloseDate} mode="date" />
+                  </span>
+                ) : undefined,
+                value: null,
+                placeholder: "No date set",
+              },
+              {
+                id: "probability",
+                label: "Likelihood",
+                icon: TrendingUp,
+                value: `${deal.probability ?? 0}%`,
+                mono: true,
+              },
+              {
+                id: "forecast",
+                label: "Forecast",
+                value: deal.forecastCategory.toLowerCase().replace("_", " "),
+              },
+              ...(deal.site
+                ? [
+                    {
+                      id: "site",
+                      label: "Site",
+                      icon: MapPin,
+                      display: (
+                        <EntityLink href={`/crm/sites/${deal.site.id}`} className="text-sm">
+                          {deal.site.name}
+                        </EntityLink>
+                      ),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        }
         onTabChange={setTab}
         tabs={[
           {
@@ -344,24 +447,11 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
         ]}
         rail={
           <>
-            <RailSection title="Deal">
-              <p className="font-mono text-2xl">
-                {deal.value !== null ? formatMoney(deal.value, deal.currency) : "Not sized"}
-              </p>
-              <p className="text-sm text-[var(--text-muted)]">
-                {deal.probability ?? 0}% likely · {deal.forecastCategory.toLowerCase().replace("_", " ")}
-              </p>
-              {deal.expectedCloseDate ? (
-                <p className="text-sm text-[var(--text-muted)]">
-                  Expected <ClientDate value={deal.expectedCloseDate} mode="date" />
-                </p>
-              ) : null}
-              {deal.lostReason ? (
-                <p className="mt-1 text-sm text-[var(--status-error-text)]">
-                  Lost: {deal.lostReason}
-                </p>
-              ) : null}
-            </RailSection>
+            {deal.lostReason ? (
+              <RailSection title="Why it was lost">
+                <p className="text-sm text-[var(--status-error-text)]">{deal.lostReason}</p>
+              </RailSection>
+            ) : null}
 
             <RailSection title="Stage">
               <DealStageBar
