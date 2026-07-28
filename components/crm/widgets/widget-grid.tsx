@@ -19,7 +19,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +36,7 @@ import {
   type WidgetInstance,
   type WidgetSpan,
 } from "@/lib/crm/widgets";
+import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
 
 /** Tailwind cannot see a computed `col-span-${n}`, so the classes are spelled out. */
@@ -99,9 +99,9 @@ function WidgetFrame({
         <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline" className="h-7 w-7 px-0" aria-label="Widget options">
-                <DotsThree className="size-4" />
-              </Button>
+              <IconButton size="sm" tone="outlined" aria-label="Widget options">
+                <DotsThree />
+              </IconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {WIDGET_SPANS.map((span) => (

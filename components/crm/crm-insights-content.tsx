@@ -272,7 +272,7 @@ export function CrmInsightsContent() {
             )}
           </Card>
 
-          <Tabs defaultValue="owner" variant="underline">
+          <Tabs defaultValue="owner">
             <TabsList aria-label="Performance breakdown">
               <TabsTrigger value="owner">By owner</TabsTrigger>
               <TabsTrigger value="source">By source</TabsTrigger>

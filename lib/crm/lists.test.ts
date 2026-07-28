@@ -20,11 +20,18 @@ describe("listIdFilter", () => {
 });
 
 describe("allowedViewTypes", () => {
-  it("offers a board only where there is a status worth grouping by", () => {
-    expect(allowedViewTypes("DEAL")).toContain("BOARD");
-    expect(allowedViewTypes("LEAD")).toContain("BOARD");
-    expect(allowedViewTypes("PERSON")).not.toContain("BOARD");
-    expect(allowedViewTypes("COMPANY")).not.toContain("BOARD");
+  it("offers a board for every record type", () => {
+    // People, companies and sites grew boards on their own list pages; the
+    // registry kept saying they had none, so a saved view of people had no
+    // kanban option while the page behind it had a board toggle.
+    for (const entity of VIEW_ENTITY_KEYS) {
+      expect(allowedViewTypes(entity)).toContain("BOARD");
+    }
+  });
+
+  it("offers a calendar only where there is a date to put on one", () => {
+    expect(allowedViewTypes("DEAL")).toContain("CALENDAR");
+    expect(allowedViewTypes("PERSON")).not.toContain("CALENDAR");
   });
 
   it("always offers a table", () => {

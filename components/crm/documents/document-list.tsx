@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Empty,
   EmptyDescription,
@@ -205,14 +206,11 @@ export function DocumentList({
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 px-0"
+                    <IconButton
                       aria-label={`Actions for ${documentNumber(doc)}`}
                     >
-                      <DotsThree className="h-4 w-4" />
-                    </Button>
+                      <DotsThree />
+                    </IconButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>

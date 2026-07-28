@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -139,14 +140,11 @@ export function DocumentsListContent({
           actions: from ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 px-0"
+                <IconButton
                   aria-label={`Actions for ${document.number ?? "this document"}`}
                 >
-                  <DotsThree className="h-4 w-4" />
-                </Button>
+                  <DotsThree />
+                </IconButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>

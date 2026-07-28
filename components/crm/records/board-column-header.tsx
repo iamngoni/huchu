@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IconButton } from "@/components/ui/icon-button";
 import { DotsThree, Plus } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -84,13 +85,13 @@ export function BoardColumnHeader({
           {actions && actions.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
+                <IconButton
+                  size="sm"
                   aria-label={`Options for ${name}`}
-                  className="flex size-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] opacity-0 transition-opacity hover:bg-[var(--surface-muted)] hover:text-[var(--text)] focus-visible:opacity-100 group-hover/head:opacity-100 data-[state=open]:opacity-100"
+                  className="opacity-0 focus-visible:opacity-100 group-hover/head:opacity-100 data-[state=open]:opacity-100"
                 >
-                  <DotsThree className="size-4" />
-                </button>
+                  <DotsThree />
+                </IconButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {actions.map((action) => (
