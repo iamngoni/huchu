@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { IconTile, Stack } from "@corelithzw/react";
 import { ManagementShell } from "@/components/settings/management-shell";
+import { IconButton } from "@/components/ui/icon-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { DataTable, type DataTableQueryState } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -43,7 +43,7 @@ import {
   type DocumentTemplateSchema,
   templateSchema,
 } from "@/lib/documents/template-schema";
-import { CheckIcon, ChevronDown } from "@/lib/icons";
+import { CheckIcon, ChevronDown, DotsThree } from "@/lib/icons";
 
 type DocumentType =
   | "REPORT_TABLE"
@@ -245,13 +245,6 @@ function AutocompleteField({
 export default function TemplateSettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const [queryState, setQueryState] = useState<DataTableQueryState>({
-    mode: "paginated",
-    page: 1,
-    pageSize: 25,
-    search: "",
-  });
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState({
@@ -539,127 +532,6 @@ export default function TemplateSettingsPage() {
     setSchemaJsonDraft(JSON.stringify(next, null, 2));
   };
 
-  const columns: ColumnDef<TemplateRow>[] = [
-      {
-        id: "name",
-        header: "Template",
-        cell: ({ row }) => (
-          <div className="space-y-1">
-            <div className="font-semibold">{row.original.name}</div>
-            {row.original.description ? (
-              <p className="text-xs text-muted-foreground">{row.original.description}</p>
-            ) : null}
-          </div>
-        ),
-      },
-      {
-        id: "source",
-        header: "Source",
-        cell: ({ row }) => {
-          const source = row.original.sourceKey;
-          const catalog = resolveCatalogTemplateEntry({
-            sourceKey: row.original.sourceKey,
-            documentType: row.original.documentType,
-            targetType: row.original.targetType,
-          });
-
-          return (
-            <div className="space-y-1">
-              <div className="font-medium">{catalog?.name ?? toSourceLabel(source)}</div>
-              <div className="font-mono text-xs text-muted-foreground">{source}</div>
-            </div>
-          );
-        },
-      },
-      {
-        id: "type",
-        header: "Type",
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-1">
-            <Badge variant="outline">{toDocumentTypeLabel(row.original.documentType)}</Badge>
-            <Badge variant="secondary">{toTargetTypeLabel(row.original.targetType)}</Badge>
-          </div>
-        ),
-      },
-      {
-        id: "scope",
-        header: "Scope",
-        cell: ({ row }) => (
-          <Badge variant={row.original.scope === "SYSTEM" ? "outline" : "secondary"}>
-            {row.original.scope}
-          </Badge>
-        ),
-      },
-      {
-        id: "default",
-        header: "Default",
-        cell: ({ row }) =>
-          row.original.isDefault ? <Badge>Default</Badge> : <span className="text-muted-foreground">No</span>,
-      },
-      {
-        id: "version",
-        header: "Latest Version",
-        cell: ({ row }) => {
-          const latest = row.original.versions[0];
-          if (!latest) return <span className="text-muted-foreground">N/A</span>;
-          return (
-            <div className="space-y-1">
-              <div className="font-mono text-xs">v{latest.version}</div>
-              <Badge variant={latest.isPublished ? "secondary" : "outline"}>
-                {latest.isPublished ? "Published" : "Draft"}
-              </Badge>
-            </div>
-          );
-        },
-      },
-      {
-        id: "updated",
-        header: "Updated",
-        cell: ({ row }) => <span className="font-mono text-xs">{formatTimestamp(row.original.updatedAt)}</span>,
-      },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={
-                    createTemplateMutation.isPending ||
-                    saveVersionMutation.isPending ||
-                    publishMutation.isPending ||
-                    setDefaultMutation.isPending
-                  }
-                >
-                  Actions
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {row.original.scope === "COMPANY" ? (
-                  <>
-                    <DropdownMenuItem onClick={() => openEditDialog(row.original)}>
-                      Edit Template
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDefaultMutation.mutate(row.original.id)}>
-                      Set as Default
-                    </DropdownMenuItem>
-                  </>
-                ) : (
-                  <DropdownMenuItem onClick={() => openCreateDialog(row.original)}>
-                    Create Company Override
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ),
-      },
-    ];
 
   return (
     <ManagementShell
@@ -679,28 +551,94 @@ export default function TemplateSettingsPage() {
         </Alert>
       ) : null}
 
-      <DataTable
-        data={templates}
-        columns={columns}
-        queryState={queryState}
-        onQueryStateChange={(next) =>
-          setQueryState((current) => ({
-            ...current,
-            ...next,
-          }))
-        }
-        features={{ sorting: false, globalFilter: true, pagination: true }}
-        pagination={{ enabled: true }}
-        searchPlaceholder="Search templates by name, source, or type"
-        searchSubmitLabel="Search"
-        tableClassName="text-sm"
-        noResultsText={templatesQuery.isLoading ? "Loading templates..." : "No templates found."}
-        toolbar={
-          <>
-            <Badge variant="outline">{templates.length} Templates</Badge>
-          </>
-        }
-      />
+      {/* A list, not a table. A document layout is one thing with a name, a
+          source and a version — seven columns of one-word cells made every
+          template look like a spreadsheet row and none of them scannable. */}
+      <Stack as="ul" gap="xs">
+        {templates.map((template) => {
+          const catalog = resolveCatalogTemplateEntry({
+            sourceKey: template.sourceKey,
+            documentType: template.documentType,
+            targetType: template.targetType,
+          });
+          const latest = template.versions[0];
+
+          return (
+            <li
+              key={template.id}
+              className="flex flex-col gap-2 rounded-[var(--radius-md)] px-3 py-2.5 transition-colors hover:bg-[var(--surface-subtle)] sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div className="flex min-w-0 flex-1 gap-2.5">
+                <IconTile accentSeed={template.name} size="sm">
+                  {"\u{1F5A8}\u{FE0F}"}
+                </IconTile>
+
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">{template.name}</span>
+                    {template.isDefault ? <Badge>Default</Badge> : null}
+                    <Badge variant="outline">{template.scope}</Badge>
+                    {latest ? (
+                      <Badge variant={latest.isPublished ? "secondary" : "outline"}>
+                        v{latest.version} · {latest.isPublished ? "Published" : "Draft"}
+                      </Badge>
+                    ) : null}
+                  </div>
+
+                  {template.description ? (
+                    <p className="text-sm text-[var(--text-muted)]">{template.description}</p>
+                  ) : null}
+
+                  <p className="text-sm text-[var(--text-muted)]">
+                    {catalog?.name ?? toSourceLabel(template.sourceKey)} ·{" "}
+                    {toDocumentTypeLabel(template.documentType)} ·{" "}
+                    {toTargetTypeLabel(template.targetType)} · updated{" "}
+                    {formatTimestamp(template.updatedAt)}
+                  </p>
+                </div>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <IconButton
+                    aria-label={`Actions for ${template.name}`}
+                    disabled={
+                      createTemplateMutation.isPending ||
+                      saveVersionMutation.isPending ||
+                      publishMutation.isPending ||
+                      setDefaultMutation.isPending
+                    }
+                  >
+                    <DotsThree />
+                  </IconButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {template.scope === "COMPANY" ? (
+                    <>
+                      <DropdownMenuItem onClick={() => openEditDialog(template)}>
+                        Edit Template
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDefaultMutation.mutate(template.id)}>
+                        Set as Default
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <DropdownMenuItem onClick={() => openCreateDialog(template)}>
+                      Create Company Override
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </li>
+          );
+        })}
+
+        {templates.length === 0 ? (
+          <li className="px-3 py-6 text-center text-sm text-[var(--text-muted)]">
+            {templatesQuery.isLoading ? "Loading templates…" : "No templates yet."}
+          </li>
+        ) : null}
+      </Stack>
 
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent size="md">
