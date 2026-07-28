@@ -19,6 +19,7 @@ import {
   Send,
   User,
 } from "@/lib/icons";
+import { RichTextRenderer } from "@/components/crm/collaboration/rich-text-renderer";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
@@ -144,14 +145,13 @@ function StoryRow({ event }: { event: StoryEvent }) {
       ) : null}
 
       {event.body ? (
-        <p
-          className={cn(
-            "mt-1 whitespace-pre-wrap text-sm",
-            quiet ? "text-[var(--text-muted)]" : "text-[var(--text-body)]",
-          )}
-        >
-          {event.body}
-        </p>
+        // Bodies are written in the CRM's one text format, so a note that
+        // mentions a colleague or links a deal reads the same on a timeline as
+        // it does in the comment thread it might have been written in.
+        <RichTextRenderer
+          body={event.body}
+          className={cn("mt-1", quiet && "text-[var(--text-muted)]")}
+        />
       ) : null}
 
       {event.attachments && event.attachments.length > 0 ? (

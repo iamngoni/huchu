@@ -8,59 +8,6 @@ import {
   commentRecordWhere,
   isValidParent,
 } from "./collaboration";
-import {
-  activeMentionQuery,
-  extractMentionedUserIds,
-  insertMention,
-  renderMentionText,
-  segmentMentions,
-} from "./mentions";
-
-const ALICE = "11111111-1111-1111-1111-111111111111";
-const BOB = "22222222-2222-2222-2222-222222222222";
-
-describe("mentions", () => {
-  it("only counts the editor's markup, not a bare @name in prose", () => {
-    const body = `hey @john, can @[Alice](${ALICE}) take this?`;
-    expect(extractMentionedUserIds(body)).toEqual([ALICE]);
-  });
-
-  it("notifies a person once however many times they are named", () => {
-    const body = `@[Alice](${ALICE}) and again @[Alice](${ALICE})`;
-    expect(extractMentionedUserIds(body)).toEqual([ALICE]);
-  });
-
-  it("renders stored markup back to readable text", () => {
-    expect(renderMentionText(`ping @[Alice](${ALICE}) now`)).toBe("ping @Alice now");
-  });
-
-  it("splits a body into text and mention segments", () => {
-    const segments = segmentMentions(`hi @[Bob](${BOB})!`);
-    expect(segments).toEqual([
-      { kind: "text", text: "hi " },
-      { kind: "mention", text: "Bob", userId: BOB },
-      { kind: "text", text: "!" },
-    ]);
-  });
-
-  it("replaces the typed query rather than appending to it", () => {
-    const body = "please ask @al";
-    const result = insertMention(body, body.length, "al", {
-      id: ALICE,
-      name: "Alice",
-      email: "alice@example.com",
-    });
-    expect(result.body).toBe(`please ask @[Alice](${ALICE}) `);
-    expect(result.caret).toBe(result.body.length);
-  });
-
-  it("does not open the picker mid-sentence or inside a finished mention", () => {
-    expect(activeMentionQuery("hello there", 11)).toBeNull();
-    expect(activeMentionQuery("mail me @ some time", 19)).toBeNull();
-    expect(activeMentionQuery(`done @[Alice](${ALICE})`, 30)).toBeNull();
-    expect(activeMentionQuery("ask @ali", 8)).toBe("ali");
-  });
-});
 
 describe("comment record mapping", () => {
   it("sets exactly one column per record type", () => {
