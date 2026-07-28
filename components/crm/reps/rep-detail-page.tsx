@@ -24,6 +24,7 @@ import {
   RailSection,
   RecordPageShell,
 } from "@/components/crm/records/record-page-shell";
+import { RepSettingsTab } from "@/components/crm/reps/rep-settings-tab";
 
 const ROLE_LABELS: Record<string, string> = {
   SUPERADMIN: "Owner",
@@ -279,6 +280,16 @@ export function RepDetailPage({ repId }: { repId: string }) {
               events={activityEvents}
               emptyMessage="They have not logged anything yet."
               exportName={`${rep.name ?? "rep"}-activity`}
+            />
+          ),
+        },
+        {
+          value: "settings",
+          label: "Settings",
+          content: (
+            <RepSettingsTab
+              repId={rep.id}
+              repName={rep.name ?? rep.email ?? "This person"}
             />
           ),
         },
