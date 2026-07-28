@@ -25,6 +25,7 @@ import { CopyLink, Eye, Layers, ShieldCheck, Users } from "@/lib/icons";
 import { AttributeHeader } from "./attribute-header";
 import { BlockEditor } from "./block-editor";
 import { BlockRenderer } from "./block-renderer";
+import { TemplateAnalytics } from "./template-analytics";
 
 type TemplateRecord = {
   id: string;
@@ -43,6 +44,7 @@ type TemplateRecord = {
   lastSubmitAt: string | null;
   updatedAt: string;
   createdBy?: { id: string; name: string | null } | null;
+  events?: Array<{ id: string; type: string; source: string | null; createdAt: string }>;
 };
 
 /**
@@ -65,7 +67,8 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [isShared, setIsShared] = useState(true);
   const [isActive, setIsActive] = useState(true);
-  const [preview, setPreview] = useState(false);
+  const [view, setView] = useState<"edit" | "preview" | "activity">("edit");
+  const preview = view === "preview";
   const [seededFor, setSeededFor] = useState<string | null>(null);
 
   const templateQuery = useQuery({
@@ -170,11 +173,25 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
         <div className="flex items-center gap-2">
           <Button
             type="button"
-            variant={preview ? "secondary" : "ghost"}
-            onClick={() => setPreview((current) => !current)}
+            variant={view === "edit" ? "secondary" : "ghost"}
+            onClick={() => setView("edit")}
+          >
+            Edit
+          </Button>
+          <Button
+            type="button"
+            variant={view === "preview" ? "secondary" : "ghost"}
+            onClick={() => setView("preview")}
           >
             <Eye className="mr-1.5 size-4" aria-hidden="true" />
-            {preview ? "Edit" : "Preview"}
+            Preview
+          </Button>
+          <Button
+            type="button"
+            variant={view === "activity" ? "secondary" : "ghost"}
+            onClick={() => setView("activity")}
+          >
+            Activity
           </Button>
           <Button
             type="button"
@@ -307,7 +324,15 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
 
       <hr className="border-[var(--border-subtle)]" />
 
-      {preview ? (
+      {view === "activity" ? (
+        <TemplateAnalytics
+          viewCount={loaded.viewCount}
+          submitCount={loaded.submitCount}
+          lastViewedAt={loaded.lastViewedAt}
+          lastSubmitAt={loaded.lastSubmitAt}
+          events={loaded.events ?? []}
+        />
+      ) : preview ? (
         <div className="rounded-[var(--card-radius)] border border-[var(--border)] p-6">
           <BlockRenderer
             blocks={blocks}
