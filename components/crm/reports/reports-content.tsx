@@ -11,6 +11,7 @@ import {
   SegmentedControl,
   Skeleton,
   StatCard,
+  Stack,
 } from "@corelithzw/react";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { formatMoney } from "@/components/crm/documents/document-types";
@@ -120,7 +121,7 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
             {report.funnel.length === 0 ? (
               <EmptyState title="No deals in this period yet" />
             ) : (
-              <ul className="space-y-2">
+              <Stack as="ul" gap="sm">
                 {report.funnel.map((stage, index) => (
                   <li key={stage.key} className="space-y-1">
                     <div className="flex items-baseline justify-between gap-2 text-sm">
@@ -140,7 +141,7 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
                     />
                   </li>
                 ))}
-              </ul>
+              </Stack>
             )}
           </Card>
 

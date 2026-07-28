@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { Card, EmptyState, KpiGrid, StatHero } from "@corelithzw/react";
+import { Card, EmptyState, KpiGrid, StatHero, Stack } from "@corelithzw/react";
 import { AGEING_LABELS, type AgeingBucket } from "@/lib/crm/collections";
 import { LEAD_STAGE_COLOR } from "@/lib/crm/tones";
 import { cn } from "@/lib/utils";
@@ -225,7 +225,7 @@ export function renderHomeWidget(type: string, data: HomeData): React.ReactNode 
           {pipeline.byStage.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No stages configured yet.</p>
           ) : (
-            <ul className="space-y-2">
+            <Stack as="ul" gap="sm">
               {pipeline.byStage.map((stage) => {
                 const share =
                   pipeline.grossValue > 0 ? (stage.value / pipeline.grossValue) * 100 : 0;
@@ -251,7 +251,7 @@ export function renderHomeWidget(type: string, data: HomeData): React.ReactNode 
                   </li>
                 );
               })}
-            </ul>
+            </Stack>
           )}
         </Card>
       );
@@ -264,7 +264,7 @@ export function renderHomeWidget(type: string, data: HomeData): React.ReactNode 
               Nothing outstanding on a CRM invoice.
             </p>
           ) : (
-            <ul className="space-y-2">
+            <Stack as="ul" gap="sm">
               {(Object.keys(AGEING_LABELS) as AgeingBucket[]).map((bucket) => {
                 const row = collections.ageing[bucket];
                 return (
@@ -276,7 +276,7 @@ export function renderHomeWidget(type: string, data: HomeData): React.ReactNode 
                   </li>
                 );
               })}
-            </ul>
+            </Stack>
           )}
         </Card>
       );

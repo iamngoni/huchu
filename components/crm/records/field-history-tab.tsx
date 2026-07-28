@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Alert, EmptyState } from "@corelithzw/react";
+import { Alert, EmptyState, Stack } from "@corelithzw/react";
 import { Avatar } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { ClientDate } from "@/components/ui/client-date";
@@ -100,20 +100,20 @@ export function FieldHistoryTab({
           {byField.map(([field, entries]) => (
             <section key={field} className="space-y-1">
               <h3 className="text-sm font-semibold">{fieldLabel(field)}</h3>
-              <ul className="space-y-1">
+              <Stack as="ul" gap="xs">
                 {entries.map((change) => (
                   <ChangeRow key={change.id} change={change} showField={false} />
                 ))}
-              </ul>
+              </Stack>
             </section>
           ))}
         </div>
       ) : (
-        <ul className="space-y-1">
+        <Stack as="ul" gap="xs">
           {changes.map((change) => (
             <ChangeRow key={change.id} change={change} showField />
           ))}
-        </ul>
+        </Stack>
       )}
     </div>
   );

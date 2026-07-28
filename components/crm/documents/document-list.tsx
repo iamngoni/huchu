@@ -39,6 +39,8 @@ import {
 } from "./document-types";
 import { refreshAfterDocumentChange } from "@/lib/crm/refresh";
 
+import { Stack } from "@corelithzw/react";
+
 function KindIcon({ type }: { type: LeadDocument["type"] }) {
   const Icon = type === "RECEIPT" ? ReceiptLong : FileText;
   return <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />;
@@ -166,7 +168,7 @@ export function DocumentList({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="space-y-1">
+        <Stack as="ul" gap="xs">
           {documents.map((doc) => {
             const status = documentStatus(doc);
             const outstanding = doc.invoice ? invoiceOutstanding(doc.invoice) : 0;
@@ -283,7 +285,7 @@ export function DocumentList({
               </li>
             );
           })}
-        </ul>
+        </Stack>
       )}
 
       <DocumentBuilderSheet

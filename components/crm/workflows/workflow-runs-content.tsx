@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Alert, Badge, EmptyState } from "@corelithzw/react";
+import { Alert, Badge, EmptyState, Stack } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { ClientDate } from "@/components/ui/client-date";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -129,7 +129,7 @@ export function WorkflowRunsContent() {
           body="Once a workflow is live, every firing shows up here with what it touched."
         />
       ) : (
-        <ul className="space-y-1">
+        <Stack as="ul" gap="xs">
           {runs.map((run) => {
             const Icon = run.automation ? TRIGGER_ICON[run.automation.trigger] ?? Rule : Rule;
             const href = ENTITY_HREF[run.entity]?.(run.recordId);
@@ -187,7 +187,7 @@ export function WorkflowRunsContent() {
               </li>
             );
           })}
-        </ul>
+        </Stack>
       )}
     </div>
   );

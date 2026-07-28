@@ -29,6 +29,8 @@ import type { FieldChoice, MergeableValue } from "@/lib/crm/merge";
 import { useDebounced } from "@/hooks/use-debounced";
 import { cn } from "@/lib/utils";
 
+import { Stack } from "@corelithzw/react";
+
 /** Only the two fields the picker renders; people and companies both have them. */
 type MergeCandidate = {
   id: string;
@@ -167,7 +169,7 @@ export function MergeDialog({
             ) : options.length === 0 ? (
               <p className="text-sm text-[var(--text-muted)]">Nothing matched.</p>
             ) : (
-              <ul className="space-y-1">
+              <Stack as="ul" gap="xs">
                 {options.map((record) => {
                   const label = record.fullName ?? record.name ?? "Untitled";
                   const reference = record.personNo ?? record.clientNo ?? "";
@@ -189,7 +191,7 @@ export function MergeDialog({
                     </li>
                   );
                 })}
-              </ul>
+              </Stack>
             )}
           </div>
         ) : (

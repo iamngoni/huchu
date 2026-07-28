@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
-import { Alert, EmptyState, Progress, SegmentedControl, Skeleton } from "@corelithzw/react";
+import { Alert, EmptyState, Progress, SegmentedControl, Skeleton, Stack } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { StatusChip } from "@/components/ui/status-chip";
 import { WORK_ORDER_STATUS } from "@/lib/crm/tones";
@@ -68,7 +68,7 @@ export function WorkOrdersContent() {
       ) : orders.length === 0 ? (
         <EmptyState title={EMPTY_MESSAGES[queue] ?? "Nothing here."} />
       ) : (
-        <ul className="space-y-2">
+        <Stack as="ul" gap="sm">
           {orders.map((order) => {
             const percent = completionPercent(order.items);
             const late = isOverdueToStart(order);
@@ -141,7 +141,7 @@ export function WorkOrdersContent() {
               </li>
             );
           })}
-        </ul>
+        </Stack>
       )}
 
       <WorkOrderSheet

@@ -8,6 +8,8 @@ import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import type { LeadAppointment } from "./lead-types";
 
+import { Stack } from "@corelithzw/react";
+
 const VISIT_STATUS: Record<LeadAppointment["status"], { label: string; status: CanonicalUiStatus }> =
   {
     SCHEDULED: { label: "Scheduled", status: "pending" },
@@ -38,7 +40,7 @@ export function VisitsTab({
           anything substantial.
         </p>
       ) : (
-        <ul className="space-y-1">
+        <Stack as="ul" gap="xs">
           {appointments.map((visit) => {
             const status = VISIT_STATUS[visit.status];
             return (
@@ -64,7 +66,7 @@ export function VisitsTab({
               </li>
             );
           })}
-        </ul>
+        </Stack>
       )}
     </div>
   );

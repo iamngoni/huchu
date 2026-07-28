@@ -3,7 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@corelithzw/react";
+import { Tabs, TabsContent, TabsList, TabsTrigger, Stack } from "@corelithzw/react";
 import { StatusChip } from "@/components/ui/status-chip";
 import {
   DropdownMenu,
@@ -210,7 +210,7 @@ export function RelatedList<T>({
 
   return (
     <div className="space-y-2">
-      <ul className="space-y-1">
+      <Stack as="ul" gap="xs">
         {items.map((item, index) => {
           const rendered = renderItem(item);
           return (
@@ -236,7 +236,7 @@ export function RelatedList<T>({
             </li>
           );
         })}
-      </ul>
+      </Stack>
       {action}
     </div>
   );

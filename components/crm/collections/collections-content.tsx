@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Alert, Button, EmptyState, Skeleton, StatCard } from "@corelithzw/react";
+import { Alert, Button, EmptyState, Skeleton, StatCard, Stack } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,7 +112,7 @@ export function CollectionsContent({ currency = "USD" }: { currency?: string }) 
               body="Everything issued has been paid."
             />
           ) : (
-            <ul className="space-y-1">
+            <Stack as="ul" gap="xs">
               {report.data.map((row) => (
                 <li key={row.documentId} className="flex flex-wrap items-center gap-3 p-3">
                   <div className="min-w-0 flex-1">
@@ -163,7 +163,7 @@ export function CollectionsContent({ currency = "USD" }: { currency?: string }) 
                   </Button>
                 </li>
               ))}
-            </ul>
+            </Stack>
           )}
         </>
       )}

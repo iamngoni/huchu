@@ -36,6 +36,8 @@ import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
 import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
+import { Stack } from "@corelithzw/react";
+
 const ROLE_LABELS: Record<string, string> = {
   PRIMARY: "Primary contact",
   DECISION_MAKER: "Decision-maker",
@@ -354,7 +356,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
         <>
           {person.companyLinks.length > 1 ? (
             <RailSection title="Companies">
-              <ul className="space-y-1.5">
+              <Stack as="ul" gap="xs">
                 {person.companyLinks.map((link) => (
                   <li key={link.id} className="text-sm">
                     <EntityLink href={`/crm/companies/${link.client.id}`}>
@@ -365,7 +367,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
                     ) : null}
                   </li>
                 ))}
-              </ul>
+              </Stack>
             </RailSection>
           ) : null}
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Alert, Badge, Button, Card, EmptyState, Skeleton, StatCard } from "@corelithzw/react";
+import { Alert, Badge, Button, Card, EmptyState, Skeleton, StatCard, Stack } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
@@ -219,7 +219,7 @@ export function CrmFormsContent() {
         ) : (submissions.data?.data ?? []).length === 0 ? (
           <p className="text-sm text-[var(--text-muted)]">Nothing has been submitted yet.</p>
         ) : (
-          <ul className="space-y-1">
+          <Stack as="ul" gap="xs">
             {(submissions.data?.data ?? []).map((submission) => (
               <li
                 key={submission.id}
@@ -246,7 +246,7 @@ export function CrmFormsContent() {
                 </div>
               </li>
             ))}
-          </ul>
+          </Stack>
         )}
       </section>
     </div>

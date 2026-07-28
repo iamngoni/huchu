@@ -25,6 +25,8 @@ import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { SiteFormSheet } from "./site-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 
+import { Stack } from "@corelithzw/react";
+
 const VISIT_STATUS: Record<string, { label: string; status: CanonicalUiStatus }> = {
   SCHEDULED: { label: "Scheduled", status: "pending" },
   COMPLETED: { label: "Completed", status: "passing" },
@@ -215,7 +217,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
                 Nobody has visited this site yet.
               </p>
             ) : (
-              <ul className="space-y-1">
+              <Stack as="ul" gap="xs">
                 {site.appointments.map((visit) => {
                   const status = VISIT_STATUS[visit.status];
                   return (
@@ -239,7 +241,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
                     </li>
                   );
                 })}
-              </ul>
+              </Stack>
             ),
         },
         {

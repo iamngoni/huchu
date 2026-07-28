@@ -3,6 +3,8 @@
 import { SCORE_BAND_LABELS, type LeadScore } from "@/lib/crm/lead-scoring";
 import { cn } from "@/lib/utils";
 
+import { Stack } from "@corelithzw/react";
+
 const BAND_TONE: Record<LeadScore["band"], string> = {
   HOT: "text-[var(--status-success-text)]",
   WARM: "text-[var(--status-warning-text)]",
@@ -30,7 +32,7 @@ export function LeadScoreCard({ score }: { score: LeadScore }) {
           Nothing on this lead has scored yet.
         </p>
       ) : (
-        <ul className="space-y-1">
+        <Stack as="ul" gap="xs">
           {score.signals.map((signal) => (
             <li
               key={signal.key}
@@ -47,7 +49,7 @@ export function LeadScoreCard({ score }: { score: LeadScore }) {
               </span>
             </li>
           ))}
-        </ul>
+        </Stack>
       )}
     </div>
   );
