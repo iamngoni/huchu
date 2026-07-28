@@ -104,7 +104,7 @@ export function ActivityComposer({ target }: { target: ActivityTarget }) {
         rows={3}
       />
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-[var(--text-muted)]">
+        <p className="text-sm text-[var(--text-muted)]">
           First line becomes the heading. ⌘/Ctrl + Enter to save.
         </p>
         <Button

@@ -204,7 +204,7 @@ export function AutomationsPanel() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text-muted)]">
                   <span>
                     Fired {rule.runCount} time{rule.runCount === 1 ? "" : "s"}
                   </span>
@@ -598,7 +598,7 @@ function AutomationFormSheet({
             </div>
 
             {conditions.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-sm text-[var(--text-muted)]">
                 No conditions — the rule fires every time.
               </p>
             ) : (

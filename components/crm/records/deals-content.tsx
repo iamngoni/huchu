@@ -72,7 +72,7 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
         cell: ({ row }) => (
           <Link href={`/crm/deals/${row.original.id}`} className="block min-w-0 hover:underline">
             <div className="truncate font-medium">{row.original.title}</div>
-            <div className="truncate font-mono text-xs text-[var(--text-muted)]">
+            <div className="truncate font-mono text-sm text-[var(--text-muted)]">
               {row.original.dealNo}
             </div>
           </Link>
@@ -86,7 +86,7 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
           <div className="min-w-0">
             <div className="truncate text-sm">{row.original.client?.name ?? "—"}</div>
             {row.original.primaryContact ? (
-              <div className="truncate text-xs text-[var(--text-muted)]">
+              <div className="truncate text-sm text-[var(--text-muted)]">
                 {row.original.primaryContact.fullName}
               </div>
             ) : null}
@@ -109,7 +109,7 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
                 label={row.original.stage.name}
               />
               {stale ? (
-                <Badge variant="outline" className="text-[11px] text-[var(--status-warning-text)]">
+                <Badge variant="outline" className="text-sm text-[var(--status-warning-text)]">
                   Stale
                 </Badge>
               ) : null}
@@ -155,7 +155,7 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
           row.original.nextFollowUp ? (
             <div className="min-w-0">
               <div className="truncate text-sm">{row.original.nextFollowUp.title}</div>
-              <div className="truncate text-xs text-[var(--text-muted)]">
+              <div className="truncate text-sm text-[var(--text-muted)]">
                 <ClientDate value={row.original.nextFollowUp.dueAt} />
               </div>
             </div>
@@ -230,7 +230,7 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="truncate font-medium">{row.title}</div>
-                <div className="truncate font-mono text-xs text-[var(--text-muted)]">
+                <div className="truncate font-mono text-sm text-[var(--text-muted)]">
                   {row.dealNo} · {row.client?.name ?? "No company"}
                 </div>
               </div>

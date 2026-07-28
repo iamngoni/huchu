@@ -59,7 +59,7 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
         id: person.id,
         href: `/crm/people/${person.id}`,
         leading: (
-          <span className="flex size-9 items-center justify-center rounded-full bg-[var(--surface-muted)] text-xs font-medium text-[var(--text-muted)]">
+          <span className="flex size-9 items-center justify-center rounded-full bg-[var(--surface-muted)] text-sm font-medium text-[var(--text-muted)]">
             {initials(person.fullName)}
           </span>
         ),

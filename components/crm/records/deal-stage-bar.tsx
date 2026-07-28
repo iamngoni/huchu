@@ -102,7 +102,7 @@ export function DealStageBar({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-[var(--text-muted)]">{pipelineName}</p>
+      <p className="text-sm text-[var(--text-muted)]">{pipelineName}</p>
 
       <div className="flex flex-wrap gap-1">
         {path.map((stage, index) => {
@@ -116,7 +116,7 @@ export function DealStageBar({
               onClick={() => requestMove(stage)}
               aria-current={isCurrent ? "step" : undefined}
               className={cn(
-                "rounded-[var(--button-radius)] px-2 py-1 text-xs font-medium transition-colors",
+                "rounded-[var(--button-radius)] px-2 py-1 text-sm font-medium transition-colors",
                 "disabled:cursor-not-allowed disabled:opacity-60",
                 isCurrent
                   ? "bg-[var(--action-primary-bg)] text-[var(--action-primary-text)]"
@@ -158,9 +158,9 @@ export function DealStageBar({
 
       {checklist && checklist.length > 0 ? (
         <div className="space-y-1 border-t border-[var(--border)] pt-2">
-          <p className="text-xs text-[var(--text-muted)]">What should happen at this stage</p>
+          <p className="text-sm text-[var(--text-muted)]">What should happen at this stage</p>
           {checklist.map((item) => (
-            <label key={item.key} className="flex cursor-pointer items-start gap-2 text-xs">
+            <label key={item.key} className="flex cursor-pointer items-start gap-2 text-sm">
               <Checkbox
                 checked={checked[item.key] === true}
                 onCheckedChange={(value) =>

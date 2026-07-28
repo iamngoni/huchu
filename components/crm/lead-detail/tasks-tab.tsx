@@ -115,11 +115,11 @@ export function TasksTab({
             {task.title}
           </p>
           {task.notes ? (
-            <p className="text-xs text-[var(--text-muted)]">{task.notes}</p>
+            <p className="text-sm text-[var(--text-muted)]">{task.notes}</p>
           ) : null}
           <p
             className={cn(
-              "text-xs",
+              "text-sm",
               overdue ? "font-medium text-[var(--status-error-text)]" : "text-[var(--text-muted)]",
             )}
           >

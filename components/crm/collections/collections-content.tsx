@@ -54,12 +54,15 @@ type ChaseRow = {
   urgency: number;
 };
 
+/**
+ * The route answers this shape bare — `successResponse` adds no envelope.
+ * Wrapping it in another `data` made `report` the rows array instead of the
+ * report, so `report.ageing` was undefined and the page threw on open.
+ */
 type CollectionsResponse = {
-  data: {
-    data: ChaseRow[];
-    ageing: { bucket: AgeingBucket; label: string; count: number; amount: number }[];
-    totalOutstanding: number;
-  };
+  data: ChaseRow[];
+  ageing: { bucket: AgeingBucket; label: string; count: number; amount: number }[];
+  totalOutstanding: number;
 };
 
 export function CollectionsContent({ currency = "USD" }: { currency?: string }) {
@@ -70,7 +73,7 @@ export function CollectionsContent({ currency = "USD" }: { currency?: string }) 
     queryFn: () => fetchJson<CollectionsResponse>("/api/v2/crm/collections"),
   });
 
-  const report = data?.data;
+  const report = data;
 
   return (
     <div className="space-y-5">
@@ -124,7 +127,7 @@ export function CollectionsContent({ currency = "USD" }: { currency?: string }) 
                         </Link>
                       ) : null}
                     </div>
-                    <p className="text-xs text-[var(--text-muted)]">
+                    <p className="text-sm text-[var(--text-muted)]">
                       {row.daysOverdue > 0 ? (
                         <span className="font-medium text-[var(--status-error-text)]">
                           {row.daysOverdue} day{row.daysOverdue === 1 ? "" : "s"} late
@@ -269,7 +272,7 @@ function ChaseDialog({
                 value={promisedAt}
                 onChange={(event) => setPromisedAt(event.target.value)}
               />
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-sm text-[var(--text-muted)]">
                 A task lands on this date so somebody actually checks.
               </p>
             </div>

@@ -397,7 +397,7 @@ export function DealFormSheet({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   {FORECAST_CATEGORIES.find((entry) => entry.value === form.forecastCategory)?.hint}
                 </p>
               </div>

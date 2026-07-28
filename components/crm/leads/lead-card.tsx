@@ -24,7 +24,7 @@ export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{lead.title ?? lead.leadNo}</p>
-          <p className="truncate text-xs text-[var(--text-muted)]">
+          <p className="truncate text-sm text-[var(--text-muted)]">
             <span className="font-mono">{lead.deal?.dealNo ?? lead.leadNo}</span>
             {" · "}
             {lead.client?.name ?? lead.contactName ?? "No client"}
@@ -44,7 +44,7 @@ export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
           {formatLeadValue(lead.estimatedValue, lead.currency)}
         </span>
         <span
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[10px] font-medium"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-sm font-medium"
           title={lead.assignedTo?.name ?? "Unassigned"}
         >
           {initialsOf(lead.assignedTo?.name)}
@@ -53,7 +53,7 @@ export function LeadCardBody({ lead }: { lead: CrmBoardCard }) {
 
       <div
         className={cn(
-          "flex items-center gap-1 text-[11px]",
+          "flex items-center gap-1 text-sm",
           sla.breached
             ? "font-medium text-[var(--status-danger-fg)]"
             : sla.atRisk

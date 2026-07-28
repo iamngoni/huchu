@@ -154,7 +154,7 @@ export function RecordPaymentSheet({
               {outstanding > 0 && Number(amount) < outstanding ? (
                 <button
                   type="button"
-                  className="text-xs text-[var(--text-muted)] underline"
+                  className="text-sm text-[var(--text-muted)] underline"
                   onClick={() => setAmount(outstanding.toFixed(2))}
                 >
                   Pay the full {formatMoney(outstanding, document?.currency ?? "USD")}

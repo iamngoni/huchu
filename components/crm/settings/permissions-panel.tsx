@@ -51,7 +51,7 @@ export function PermissionsPanel() {
         </table>
       </div>
 
-      <p className="text-xs text-[var(--text-muted)]">
+      <p className="text-sm text-[var(--text-muted)]">
         A rep may also claim an unassigned record, which is what makes
         &ldquo;edit records assigned to them&rdquo; workable in practice.
       </p>

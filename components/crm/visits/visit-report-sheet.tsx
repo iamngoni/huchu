@@ -262,10 +262,10 @@ export function VisitReportSheet({
               }
             >
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   On-site checklist
                 </h3>
-                <ul className="divide-y divide-[var(--border)] rounded-[var(--card-radius)] border border-[var(--border)]">
+                <ul className="divide-y divide-[var(--border-subtle)]">
                   {checklist.map((entry, index) => (
                     <li key={entry.key} className="space-y-1.5 p-2.5">
                       <label className="flex cursor-pointer items-center gap-2.5 text-sm">
@@ -302,10 +302,10 @@ export function VisitReportSheet({
               </section>
 
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   Measurements & specifications
                 </h3>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   Each row becomes a quotation line. Prices are optional — leave them blank to
                   price up back at the office.
                 </p>
@@ -350,7 +350,7 @@ export function VisitReportSheet({
 
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
                         <div className="space-y-1">
-                          <Label className="text-xs">Qty</Label>
+                          <Label className="text-sm">Qty</Label>
                           <Input
                             value={item.quantity}
                             onChange={(event) =>
@@ -361,7 +361,7 @@ export function VisitReportSheet({
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Unit</Label>
+                          <Label className="text-sm">Unit</Label>
                           <Input
                             value={item.unit}
                             onChange={(event) => patchItem(index, { unit: event.target.value })}
@@ -370,7 +370,7 @@ export function VisitReportSheet({
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Width mm</Label>
+                          <Label className="text-sm">Width mm</Label>
                           <Input
                             value={item.widthMm}
                             onChange={(event) => patchItem(index, { widthMm: event.target.value })}
@@ -379,7 +379,7 @@ export function VisitReportSheet({
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Height mm</Label>
+                          <Label className="text-sm">Height mm</Label>
                           <Input
                             value={item.heightMm}
                             onChange={(event) =>
@@ -390,7 +390,7 @@ export function VisitReportSheet({
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Depth mm</Label>
+                          <Label className="text-sm">Depth mm</Label>
                           <Input
                             value={item.depthMm}
                             onChange={(event) => patchItem(index, { depthMm: event.target.value })}
@@ -399,7 +399,7 @@ export function VisitReportSheet({
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Est. price</Label>
+                          <Label className="text-sm">Est. price</Label>
                           <Input
                             value={item.unitPrice}
                             onChange={(event) =>
@@ -456,7 +456,7 @@ export function VisitReportSheet({
               </section>
 
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   Photos & files
                 </h3>
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-[var(--card-radius)] border border-dashed border-[var(--border)] p-4 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">
@@ -492,7 +492,7 @@ export function VisitReportSheet({
                               className="h-24 w-full rounded object-cover"
                             />
                           ) : (
-                            <span className="flex h-24 items-center justify-center rounded bg-[var(--surface-muted)] px-2 text-center text-xs">
+                            <span className="flex h-24 items-center justify-center rounded bg-[var(--surface-muted)] px-2 text-center text-sm">
                               {photo.fileName ?? "File"}
                             </span>
                           )}
@@ -507,14 +507,14 @@ export function VisitReportSheet({
                             )
                           }
                           placeholder="Caption"
-                          className="h-7 text-xs"
+                          className="h-7 text-sm"
                           aria-label="Photo caption"
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-full text-xs"
+                          className="h-7 w-full text-sm"
                           onClick={() =>
                             setPhotos((current) => current.filter((_, i) => i !== index))
                           }

@@ -47,7 +47,7 @@ function MultiFilter({ label, options, selected, onChange, extra }: MultiFilterP
         <Button variant="outline" size="sm" className="gap-1.5">
           {label}
           {activeCount > 0 ? (
-            <Badge variant="secondary" className="px-1.5 py-0 text-[11px]">
+            <Badge variant="secondary" className="px-1.5 py-0 text-sm">
               {activeCount}
             </Badge>
           ) : null}
@@ -121,14 +121,14 @@ function ValueRangeFilter({
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
           Value
-          {active ? <Badge variant="secondary" className="px-1.5 py-0 text-[11px]">1</Badge> : null}
+          {active ? <Badge variant="secondary" className="px-1.5 py-0 text-sm">1</Badge> : null}
           <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-3 p-3">
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5">
-            <Label htmlFor="value-min" className="text-xs">
+            <Label htmlFor="value-min" className="text-sm">
               Min
             </Label>
             <Input
@@ -140,7 +140,7 @@ function ValueRangeFilter({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="value-max" className="text-xs">
+            <Label htmlFor="value-max" className="text-sm">
               Max
             </Label>
             <Input
@@ -189,13 +189,13 @@ function DateRangeFilter({
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
           Created
-          {active ? <Badge variant="secondary" className="px-1.5 py-0 text-[11px]">1</Badge> : null}
+          {active ? <Badge variant="secondary" className="px-1.5 py-0 text-sm">1</Badge> : null}
           <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-3 p-3">
         <div className="space-y-1.5">
-          <Label htmlFor="created-from" className="text-xs">
+          <Label htmlFor="created-from" className="text-sm">
             From
           </Label>
           <Input
@@ -208,7 +208,7 @@ function DateRangeFilter({
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="created-to" className="text-xs">
+          <Label htmlFor="created-to" className="text-sm">
             To
           </Label>
           <Input

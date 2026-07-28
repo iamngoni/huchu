@@ -222,7 +222,7 @@ export function CrmInsightsContent() {
                   <li key={stage.key} className="space-y-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                       <span className="font-medium">{stage.label}</span>
-                      <span className="font-mono text-xs text-[var(--text-muted)]">
+                      <span className="font-mono text-sm text-[var(--text-muted)]">
                         {stage.reached} reached · {money(stage.value)}
                         {index > 0
                           ? ` · ${formatRate(stage.conversionFromPrevious)} carried through`
@@ -261,7 +261,7 @@ export function CrmInsightsContent() {
                     </div>
                   ))}
                 </div>
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                <p className="mt-2 text-sm text-[var(--text-muted)]">
                   Calls, notes, emails and meetings logged. Peak {peakActivity} in a single period.
                 </p>
               </>
@@ -335,7 +335,7 @@ export function CrmInsightsContent() {
                       >
                         {(CRM_CHANNEL_LABELS as Record<string, string>)[row.channel] ?? row.channel}
                       </Link>
-                      <span className="font-mono text-xs text-[var(--text-muted)]">
+                      <span className="font-mono text-sm text-[var(--text-muted)]">
                         {row.leads} leads · {row.won} won · {row.conversionRate}%
                       </span>
                     </li>

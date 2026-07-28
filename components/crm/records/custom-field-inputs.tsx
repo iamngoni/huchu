@@ -49,7 +49,7 @@ export function CustomFieldInputs({
     <>
       {sections.map(([section, fields]) => (
         <section key={section} className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             {section}
           </h3>
           {fields.map((definition) => (
@@ -83,7 +83,7 @@ function CustomFieldInput({
     </Label>
   );
   const hint = definition.description ? (
-    <p className="text-xs text-[var(--text-muted)]">{definition.description}</p>
+    <p className="text-sm text-[var(--text-muted)]">{definition.description}</p>
   ) : null;
 
   switch (definition.type) {

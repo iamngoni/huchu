@@ -41,10 +41,10 @@ export function BoardColumn({
       <header className="flex items-baseline justify-between gap-2 border-b border-[var(--border)] px-3 py-2.5">
         <div className="flex items-baseline gap-2">
           <h3 className="text-sm font-medium">{CRM_STAGE_LABELS[column.stage]}</h3>
-          <span className="font-mono text-xs text-[var(--text-muted)]">{column.count}</span>
+          <span className="font-mono text-sm text-[var(--text-muted)]">{column.count}</span>
         </div>
         {column.totalValue > 0 ? (
-          <span className="font-mono text-xs text-[var(--text-muted)]">
+          <span className="font-mono text-sm text-[var(--text-muted)]">
             {formatLeadValue(column.totalValue, currency)}
           </span>
         ) : null}
@@ -63,7 +63,7 @@ export function BoardColumn({
         {column.leads.length === 0 ? (
           <p
             className={cn(
-              "rounded-[var(--radius-md)] border border-dashed border-[var(--border)] px-1 py-6 text-center text-xs transition-colors",
+              "rounded-[var(--radius-md)] border border-dashed border-[var(--border)] px-1 py-6 text-center text-sm transition-colors",
               isOver
                 ? "border-[var(--action-primary-bg)] text-[var(--action-primary-bg)]"
                 : "text-[var(--text-muted)]",
@@ -77,7 +77,7 @@ export function BoardColumn({
           <button
             type="button"
             onClick={() => onViewAll(column.stage)}
-            className="rounded px-2 py-1.5 text-xs text-[var(--text-muted)] underline hover:text-[var(--text)]"
+            className="rounded px-2 py-1.5 text-sm text-[var(--text-muted)] underline hover:text-[var(--text)]"
           >
             View all {column.count} in table
           </button>

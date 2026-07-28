@@ -181,7 +181,7 @@ export function CrmFollowUpsContent() {
                       Lead reminder
                     </Badge>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-muted)]">
                     <ClientDate value={row.dueAt} mode="datetime" />
                     <span>{row.assignedTo?.name ?? "Unassigned"}</span>
                     {row.lead ? (
@@ -192,7 +192,7 @@ export function CrmFollowUpsContent() {
                     {row.client ? <span>{row.client.name}</span> : null}
                   </div>
                   {row.notes ? (
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">{row.notes}</p>
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">{row.notes}</p>
                   ) : null}
                 </div>
                 <Button

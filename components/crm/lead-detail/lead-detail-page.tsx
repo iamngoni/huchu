@@ -63,7 +63,7 @@ function draftsToLines(drafts: MeasurementDraft[]): CrmDocumentLineInput[] {
 function RailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
         {title}
       </h3>
       {children}
@@ -296,8 +296,8 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
               <p
                 className={
                   isOverdue(nextTask.dueAt)
-                    ? "text-xs font-medium text-[var(--status-error-text)]"
-                    : "text-xs text-[var(--text-muted)]"
+                    ? "text-sm font-medium text-[var(--status-error-text)]"
+                    : "text-sm text-[var(--text-muted)]"
                 }
               >
                 {isOverdue(nextTask.dueAt) ? "Overdue · " : "Due "}
@@ -324,7 +324,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
           {nextVisit ? (
             <RailSection title="Next visit">
               <p className="text-sm">{nextVisit.title}</p>
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-sm text-[var(--text-muted)]">
                 <ClientDate value={nextVisit.scheduledStart} />
                 {nextVisit.location ? ` · ${nextVisit.location}` : ""}
               </p>

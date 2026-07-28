@@ -139,7 +139,7 @@ export function ApprovalContent({ token }: { token: string }) {
                 ) : (
                   <p className="text-lg font-semibold text-neutral-900">{doc.companyName}</p>
                 )}
-                <div className="text-xs leading-relaxed text-neutral-500">
+                <div className="text-sm leading-relaxed text-neutral-500">
                   {doc.branding.physicalAddress ? <p>{doc.branding.physicalAddress}</p> : null}
                   <p>
                     {[doc.branding.email, doc.branding.phone, doc.branding.website]
@@ -162,22 +162,22 @@ export function ApprovalContent({ token }: { token: string }) {
                 </h1>
                 <p className="font-mono text-sm text-neutral-700">{doc.number}</p>
                 {doc.issuedAt ? (
-                  <p className="mt-1 text-xs text-neutral-500">
+                  <p className="mt-1 text-sm text-neutral-500">
                     Issued {formatDate(doc.issuedAt)}
                   </p>
                 ) : null}
                 {doc.validUntil ? (
-                  <p className="text-xs text-neutral-500">Valid until {formatDate(doc.validUntil)}</p>
+                  <p className="text-sm text-neutral-500">Valid until {formatDate(doc.validUntil)}</p>
                 ) : null}
                 {doc.dueDate ? (
-                  <p className="text-xs text-neutral-500">Due {formatDate(doc.dueDate)}</p>
+                  <p className="text-sm text-neutral-500">Due {formatDate(doc.dueDate)}</p>
                 ) : null}
               </div>
             </header>
 
             {doc.billedTo ? (
               <section className="mt-6">
-                <p className="text-xs uppercase tracking-wide text-neutral-400">
+                <p className="text-sm uppercase tracking-wide text-neutral-400">
                   {doc.documentType === "QUOTATION" ? "Prepared for" : "Billed to"}
                 </p>
                 <p className="text-sm font-medium text-neutral-900">{doc.billedTo}</p>
@@ -194,7 +194,7 @@ export function ApprovalContent({ token }: { token: string }) {
                 <div className="mt-6 -mx-2 overflow-x-auto px-2">
                   <table className="w-full min-w-[32rem] text-sm">
                     <thead>
-                      <tr className="border-b border-neutral-200 text-left text-xs uppercase tracking-wide text-neutral-400">
+                      <tr className="border-b border-neutral-200 text-left text-sm uppercase tracking-wide text-neutral-400">
                         <th className="py-2 font-medium">Description</th>
                         <th className="py-2 text-right font-medium">Qty</th>
                         <th className="py-2 text-right font-medium">Unit price</th>
@@ -254,14 +254,14 @@ export function ApprovalContent({ token }: { token: string }) {
 
             {doc.notes ? (
               <section className="mt-6 border-t border-neutral-100 pt-4">
-                <p className="text-xs uppercase tracking-wide text-neutral-400">Notes</p>
+                <p className="text-sm uppercase tracking-wide text-neutral-400">Notes</p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{doc.notes}</p>
               </section>
             ) : null}
 
             {doc.branding.bankAccountNumber ? (
               <section className="mt-6 rounded-lg bg-neutral-50 p-4">
-                <p className="text-xs uppercase tracking-wide text-neutral-400">Payment details</p>
+                <p className="text-sm uppercase tracking-wide text-neutral-400">Payment details</p>
                 <dl className="mt-1 space-y-0.5 text-sm text-neutral-700">
                   {doc.branding.bankName ? (
                     <div className="flex gap-2">
@@ -284,10 +284,10 @@ export function ApprovalContent({ token }: { token: string }) {
             ) : null}
 
             {doc.branding.paymentTerms ? (
-              <p className="mt-4 text-xs text-neutral-500">{doc.branding.paymentTerms}</p>
+              <p className="mt-4 text-sm text-neutral-500">{doc.branding.paymentTerms}</p>
             ) : null}
             {doc.branding.footerText ? (
-              <p className="mt-2 text-xs text-neutral-400">{doc.branding.footerText}</p>
+              <p className="mt-2 text-sm text-neutral-400">{doc.branding.footerText}</p>
             ) : null}
           </div>
         </article>
@@ -341,7 +341,7 @@ export function ApprovalContent({ token }: { token: string }) {
           )}
         </section>
 
-        <p className="text-center text-xs text-neutral-400 print:hidden">{doc.companyName}</p>
+        <p className="text-center text-sm text-neutral-400 print:hidden">{doc.companyName}</p>
       </div>
     </div>
   );

@@ -217,7 +217,7 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
                   ))}
                 </SelectContent>
               </Select>
-              <label className="col-span-2 flex items-center gap-1 text-xs sm:col-span-1">
+              <label className="col-span-2 flex items-center gap-1 text-sm sm:col-span-1">
                 <input
                   type="checkbox"
                   checked={field.required}
@@ -239,7 +239,7 @@ function FormBuilderEditor({ formId, initial }: { formId: string; initial: FormR
               </Button>
             </div>
           ))}
-          <p className="text-xs text-[var(--text-muted)]">
+          <p className="text-sm text-[var(--text-muted)]">
             Name, email, phone (with country code), and photos are always included.
           </p>
         </CardContent>

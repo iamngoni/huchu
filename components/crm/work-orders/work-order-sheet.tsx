@@ -236,7 +236,7 @@ export function WorkOrderSheet({
                   </p>
                 ) : null}
                 {order.accessNotes || order.site?.accessInstructions ? (
-                  <p className="rounded-[var(--radius-md)] bg-[var(--surface-subtle)] p-2 text-xs">
+                  <p className="rounded-[var(--radius-md)] bg-[var(--surface-subtle)] p-2 text-sm">
                     {order.accessNotes ?? order.site?.accessInstructions}
                   </p>
                 ) : null}
@@ -266,7 +266,7 @@ export function WorkOrderSheet({
                         <div className="min-w-0 flex-1">
                           <p className="text-sm">{item.description}</p>
                           {item.notes ? (
-                            <p className="text-xs text-[var(--text-muted)]">{item.notes}</p>
+                            <p className="text-sm text-[var(--text-muted)]">{item.notes}</p>
                           ) : null}
                         </div>
                         <div className="flex items-center gap-1 text-sm">

@@ -244,7 +244,7 @@ export default function StoresFuelPage() {
                         </TableCell>
                         <TableCell className="p-3 text-sm">
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            className={`px-2 py-1 rounded-full text-sm font-semibold ${
                               isReceipt
                                 ? "bg-green-100 text-green-800"
                                 : "bg-red-100 text-red-800"
@@ -290,7 +290,7 @@ export default function StoresFuelPage() {
               { label: "Total movements", value: String(ledgerRows.length) },
             ]}
           >
-            <table className="w-full text-xs">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left">
                   <th className="py-2">Date</th>

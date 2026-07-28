@@ -282,7 +282,7 @@ function Field({
         {required ? <span className="text-red-500"> *</span> : null}
       </span>
       {children}
-      {help ? <span className="mt-1 block text-xs text-neutral-500">{help}</span> : null}
+      {help ? <span className="mt-1 block text-sm text-neutral-500">{help}</span> : null}
     </label>
   );
 }

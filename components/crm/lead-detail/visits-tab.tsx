@@ -38,7 +38,7 @@ export function VisitsTab({
           anything substantial.
         </p>
       ) : (
-        <ul className="divide-y divide-[var(--border)] rounded-[var(--card-radius)] border border-[var(--border)]">
+        <ul className="divide-y divide-[var(--border-subtle)]">
           {appointments.map((visit) => {
             const status = VISIT_STATUS[visit.status];
             return (
@@ -48,11 +48,11 @@ export function VisitsTab({
                     <span className="font-mono text-sm">{visit.appointmentNo}</span>
                     <StatusChip status={status.status} label={status.label} />
                     {visit.reportCompletedAt ? (
-                      <span className="text-xs text-[var(--text-muted)]">Written up</span>
+                      <span className="text-sm text-[var(--text-muted)]">Written up</span>
                     ) : null}
                   </div>
                   <p className="text-sm">{visit.title}</p>
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <p className="text-sm text-[var(--text-muted)]">
                     <ClientDate value={visit.scheduledStart} />
                     {visit.location ? ` · ${visit.location}` : ""}
                   </p>

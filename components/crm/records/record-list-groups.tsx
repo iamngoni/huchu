@@ -187,7 +187,7 @@ export function GroupedRecordList({
               id={`${section.id}-heading`}
               // The bar is opaque so rows do not show through the heading as
               // they slide under it.
-              className="sticky top-14 z-10 -mx-1 flex items-baseline gap-2 bg-[var(--surface-base)] px-1 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-subtle)]"
+              className="sticky top-14 z-10 -mx-1 flex items-baseline gap-2 bg-[var(--surface-base)] px-1 py-1.5 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]"
             >
               <span>{section.label}</span>
               <span className="font-mono normal-case tracking-normal">
@@ -221,7 +221,7 @@ export function GroupedRecordList({
                 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
                 heading?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
               }}
-              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-subtle)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+              className="rounded px-1.5 py-0.5 text-sm font-medium text-[var(--text-subtle)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
             >
               {section.label}
             </button>

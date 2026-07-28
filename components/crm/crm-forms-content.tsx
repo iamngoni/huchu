@@ -173,16 +173,16 @@ export function CrmFormsContent() {
 
               <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
                 <div>
-                  <dt className="text-xs text-[var(--text-muted)]">Submissions</dt>
+                  <dt className="text-sm text-[var(--text-muted)]">Submissions</dt>
                   <dd className="font-mono">{form.submissionCount}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-[var(--text-muted)]">Became leads</dt>
+                  <dt className="text-sm text-[var(--text-muted)]">Became leads</dt>
                   <dd className="font-mono">{form.convertedCount}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-[var(--text-muted)]">Last one</dt>
-                  <dd className="text-xs">
+                  <dt className="text-sm text-[var(--text-muted)]">Last one</dt>
+                  <dd className="text-sm">
                     {form.lastSubmissionAt ? (
                       <ClientDate value={form.lastSubmissionAt} mode="date" />
                     ) : (
@@ -232,7 +232,7 @@ export function CrmFormsContent() {
                     via {submission.form?.name ?? "a form"}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                <div className="flex items-center gap-3 text-sm text-[var(--text-muted)]">
                   <ClientDate value={submission.createdAt} mode="datetime" />
                   {submission.lead ? (
                     <Link href={`/crm/leads/${submission.lead.id}`} className="hover:underline">

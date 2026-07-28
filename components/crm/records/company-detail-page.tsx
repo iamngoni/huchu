@@ -85,7 +85,7 @@ type CompanyDetail = {
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-2 py-1.5">
-      <dt className="w-32 shrink-0 text-xs text-[var(--text-muted)]">{label}</dt>
+      <dt className="w-32 shrink-0 text-sm text-[var(--text-muted)]">{label}</dt>
       <dd className="min-w-0 flex-1 break-words text-right text-sm">{children}</dd>
     </div>
   );
@@ -300,7 +300,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
                     {company.parent.name}
                   </Link>
                   {company.parentRelation ? (
-                    <span className="text-xs text-[var(--text-muted)]">
+                    <span className="text-sm text-[var(--text-muted)]">
                       {" · "}
                       {RELATION_LABELS[company.parentRelation] ?? company.parentRelation}
                     </span>
@@ -315,7 +315,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
                         {child.name}
                       </Link>
                       {child.parentRelation ? (
-                        <span className="text-xs text-[var(--text-muted)]">
+                        <span className="text-sm text-[var(--text-muted)]">
                           {" · "}
                           {RELATION_LABELS[child.parentRelation] ?? child.parentRelation}
                         </span>

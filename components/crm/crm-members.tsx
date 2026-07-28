@@ -76,14 +76,14 @@ export function CrmMembers({ className }: { className?: string }) {
             </span>
           ))}
           {overflow > 0 ? (
-            <span className="-ml-2 flex size-7 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[11px] font-medium text-[var(--text-muted)] ring-2 ring-[var(--surface-base)]">
+            <span className="-ml-2 flex size-7 items-center justify-center rounded-full bg-[var(--surface-muted)] text-sm font-medium text-[var(--text-muted)] ring-2 ring-[var(--surface-base)]">
               +{overflow}
             </span>
           ) : null}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[16rem] p-1">
-        <p className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+        <p className="px-2 py-1.5 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]">
           {members.length} in this workspace
         </p>
         <ul className="max-h-72 overflow-y-auto">
@@ -94,7 +94,7 @@ export function CrmMembers({ className }: { className?: string }) {
                 <span className="block truncate text-sm">
                   {member.name ?? member.email ?? "Unnamed"}
                 </span>
-                <span className="block truncate text-xs text-[var(--text-muted)]">
+                <span className="block truncate text-sm text-[var(--text-muted)]">
                   {ROLE_LABELS[member.role] ?? member.role}
                 </span>
               </span>

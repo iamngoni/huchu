@@ -81,7 +81,7 @@ export function SidebarAccountMenu({
                   <p className="truncate text-[14px] font-medium">
                     {user?.name ?? user?.email ?? "Signed in"}
                   </p>
-                  <p className="truncate text-[12px] text-[var(--text-muted)]">
+                  <p className="truncate text-sm text-[var(--text-muted)]">
                     {workspaceLabel}
                     {user?.role ? ` · ${String(user.role).toLowerCase().replace(/_/g, " ")}` : ""}
                   </p>

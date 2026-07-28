@@ -97,7 +97,7 @@ export function WorkOrdersContent() {
                       label={WORK_ORDER_STATUS_LABELS[order.status]}
                     />
                     {late ? (
-                      <span className="text-xs font-medium text-[var(--status-error-text)]">
+                      <span className="text-sm font-medium text-[var(--status-error-text)]">
                         Should have started
                       </span>
                     ) : null}
@@ -105,7 +105,7 @@ export function WorkOrdersContent() {
 
                   <p className="font-medium">{order.title}</p>
 
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)]">
                     {order.scheduledStart ? (
                       <span className="inline-flex items-center gap-1">
                         <Clock className="size-3.5" />
@@ -134,7 +134,7 @@ export function WorkOrdersContent() {
                         tone={percent === 100 ? "success" : "brand"}
                         label={`${percent}% of the job done`}
                       />
-                      <p className="text-xs text-[var(--text-muted)]">
+                      <p className="text-sm text-[var(--text-muted)]">
                         {percent}% done · {order.items.length} item
                         {order.items.length === 1 ? "" : "s"}
                       </p>
@@ -142,7 +142,7 @@ export function WorkOrdersContent() {
                   ) : null}
 
                   {order.status === "BLOCKED" && order.blockedReason ? (
-                    <p className="text-xs text-[var(--status-error-text)]">
+                    <p className="text-sm text-[var(--status-error-text)]">
                       {order.blockedReason}
                     </p>
                   ) : null}

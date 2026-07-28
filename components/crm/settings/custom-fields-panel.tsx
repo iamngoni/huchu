@@ -187,26 +187,26 @@ export function CustomFieldsPanel() {
         ) : (
           grouped.map(([sectionName, fields]) => (
             <section key={sectionName} className="space-y-1.5">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 {sectionName}
               </h4>
-              <ul className="divide-y divide-[var(--border)] rounded-[var(--card-radius)] border border-[var(--border)]">
+              <ul className="divide-y divide-[var(--border-subtle)]">
                 {fields.map((definition) => (
                   <li key={definition.id} className="flex items-center gap-3 p-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-medium">{definition.label}</span>
-                        <Badge variant="outline" className="text-[11px]">
+                        <Badge variant="outline" className="text-sm">
                           {CRM_FIELD_TYPE_LABELS[definition.type as CrmFieldType] ??
                             definition.type}
                         </Badge>
                         {definition.isRequired ? (
-                          <Badge variant="secondary" className="text-[11px]">
+                          <Badge variant="secondary" className="text-sm">
                             Required
                           </Badge>
                         ) : null}
                       </div>
-                      <p className="truncate font-mono text-xs text-[var(--text-muted)]">
+                      <p className="truncate font-mono text-sm text-[var(--text-muted)]">
                         {definition.key}
                       </p>
                     </div>
@@ -265,7 +265,7 @@ export function CustomFieldsPanel() {
                 autoFocus
               />
               {label.trim() ? (
-                <p className="font-mono text-xs text-[var(--text-muted)]">
+                <p className="font-mono text-sm text-[var(--text-muted)]">
                   key: {normalizeFieldKey(label)}
                 </p>
               ) : null}

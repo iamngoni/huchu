@@ -245,12 +245,27 @@ const WORKSPACE_MODULES: Record<WorkspaceModuleId, WorkspaceModuleDefinition> = 
       return items;
     },
   },
-  crm: createSectionModule({
+  crm: {
     id: "crm",
     label: "CRM",
-    sectionId: "crm",
     homeHref: "/crm",
-  }),
+    /**
+     * Two sections feed this module: the CRM proper and retail's customer
+     * ledger. They used to share the id "crm" and rely on gating to leave
+     * exactly one standing — the ledger surfaced only when `crm.core` was off
+     * and the CRM section had already been filtered away. That worked and read
+     * as a bug, so the ids are distinct now and the module names both.
+     */
+    getItems(context) {
+      return [
+        ...(context.navSectionById.get("crm")?.items ?? []),
+        ...(context.navSectionById.get("retail-customers")?.items ?? []),
+      ];
+    },
+    getGroups(context) {
+      return context.navSectionById.get("crm")?.groups;
+    },
+  },
   hr: createSectionModule({
     id: "hr",
     label: "Human Resources",
@@ -641,16 +656,19 @@ function collectSectionHrefs(sections: WorkspaceNavSection[]): Set<string> {
  * the section but its items. Module ids and section ids line up for every
  * `createSectionModule` module, so reading the declaration back is enough.
  */
-function declaredGroups(moduleId: WorkspaceModuleId): NavGroup[] | undefined {
-  // Last match, not first: two sections share the id "crm" (the retail customer
-  // directory and the CRM module proper), and `navSectionById` — the map the
-  // module reads its items from — is built from this array, so a later entry
-  // wins there. Taking the first here would read groups off the other section.
-  let found: NavGroup[] | undefined;
+function declaredSection(moduleId: WorkspaceModuleId): NavSection | undefined {
+  // Last match, not first, to stay consistent with `navSectionById` — the map
+  // the module reads its items from is built from this array, so a later entry
+  // with the same id wins there and this has to agree.
+  let found: NavSection | undefined;
   for (const section of navSections) {
-    if (section.id === moduleId) found = section.groups;
+    if (section.id === moduleId) found = section;
   }
   return found;
+}
+
+function declaredGroups(moduleId: WorkspaceModuleId): NavGroup[] | undefined {
+  return declaredSection(moduleId)?.groups;
 }
 
 function buildModuleSection(
@@ -670,6 +688,10 @@ function buildModuleSection(
     id: moduleId,
     title: WORKSPACE_MODULES[moduleId].label,
     ...(groups && groups.length > 0 ? { groups } : {}),
+    // Carried through: the sidebar decides whether to render the groups as
+    // root entries or as bands, and it can only do that if the flag survives
+    // the trip through the module layer.
+    ...(declaredSection(moduleId)?.flattenGroups ? { flattenGroups: true } : {}),
     items,
     workspaceGroup,
   };

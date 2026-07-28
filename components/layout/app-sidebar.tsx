@@ -233,7 +233,7 @@ function SidebarSectionHeading({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-1 px-2 pb-1 pt-2 text-[12px] font-medium text-[var(--text-subtle)] transition-colors hover:text-foreground"
+        className="flex w-full items-center gap-1 px-2 pb-1 pt-2 text-sm font-medium text-[var(--text-subtle)] transition-colors hover:text-foreground"
       >
         <span className="truncate">{label}</span>
         {expanded ? (
@@ -245,7 +245,7 @@ function SidebarSectionHeading({
     );
   }
   return (
-    <div className="flex items-center gap-1 px-2 pb-1 pt-2 text-[12px] font-medium text-[var(--text-subtle)]">
+    <div className="flex items-center gap-1 px-2 pb-1 pt-2 text-sm font-medium text-[var(--text-subtle)]">
       <span className="truncate">{label}</span>
       <MedusaChevronDownIcon className="h-3.5 w-3.5 text-[var(--text-subtle)]" />
     </div>

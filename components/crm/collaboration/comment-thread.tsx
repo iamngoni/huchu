@@ -146,14 +146,14 @@ export function CommentThread({
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-xs font-medium">
+            <span className="flex size-7 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-sm font-medium">
               {initials(comment.createdBy.name, comment.createdBy.email)}
             </span>
             <div className="leading-tight">
               <div className="text-sm font-medium">
                 {comment.createdBy.name ?? comment.createdBy.email}
               </div>
-              <div className="text-xs text-[var(--text-muted)]">
+              <div className="text-sm text-[var(--text-muted)]">
                 <ClientDate value={comment.createdAt} mode="datetime" />
                 {comment.editedAt ? " · edited" : null}
               </div>
@@ -203,7 +203,7 @@ export function CommentThread({
         </div>
 
         {resolved && comment.resolvedBy ? (
-          <div className="mt-2 flex items-center gap-1 text-xs text-[var(--text-muted)]">
+          <div className="mt-2 flex items-center gap-1 text-sm text-[var(--text-muted)]">
             <Check className="size-3.5" />
             Resolved by {comment.resolvedBy.name ?? comment.resolvedBy.email}
           </div>
@@ -281,7 +281,7 @@ export function CommentThread({
                   <span
                     key={follower.id}
                     title={follower.user.name ?? follower.user.email}
-                    className="flex size-6 items-center justify-center rounded-full border border-[var(--surface-base)] bg-[var(--surface-subtle)] text-[10px] font-medium"
+                    className="flex size-6 items-center justify-center rounded-full border border-[var(--surface-base)] bg-[var(--surface-subtle)] text-sm font-medium"
                   >
                     {initials(follower.user.name, follower.user.email)}
                   </span>
@@ -316,7 +316,7 @@ export function CommentThread({
           onSubmit={() => body.trim() && post.mutate({ body: body.trim() })}
         />
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-muted)]">⌘↵ to post</span>
+          <span className="text-sm text-[var(--text-muted)]">⌘↵ to post</span>
           <Button
             type="button"
             size="sm"

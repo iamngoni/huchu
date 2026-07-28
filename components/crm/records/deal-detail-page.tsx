@@ -346,8 +346,8 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 <p
                   className={
                     isOverdue(nextTask.dueAt)
-                      ? "text-xs font-medium text-[var(--status-error-text)]"
-                      : "text-xs text-[var(--text-muted)]"
+                      ? "text-sm font-medium text-[var(--status-error-text)]"
+                      : "text-sm text-[var(--text-muted)]"
                   }
                 >
                   {isOverdue(nextTask.dueAt) ? "Overdue · " : "Due "}
@@ -365,7 +365,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             {nextVisit ? (
               <RailSection title="Next visit">
                 <p className="text-sm">{nextVisit.title}</p>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   <ClientDate value={nextVisit.scheduledStart} />
                 </p>
                 <Button
@@ -382,7 +382,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             {deal.site ? (
               <RailSection title="Site">
                 <p className="text-sm">{deal.site.name}</p>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   {[deal.site.addressLine, deal.site.city].filter(Boolean).join(", ")}
                 </p>
               </RailSection>
@@ -403,7 +403,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                   {deal.contacts.map((contact) => (
                     <li key={contact.id} className="flex items-center justify-between gap-2 text-sm">
                       <span className="min-w-0 truncate">{contact.person.fullName}</span>
-                      <Badge variant="outline" className="shrink-0 text-[11px]">
+                      <Badge variant="outline" className="shrink-0 text-sm">
                         {ROLE_LABELS[contact.role] ?? contact.role}
                       </Badge>
                     </li>

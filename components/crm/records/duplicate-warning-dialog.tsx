@@ -74,14 +74,14 @@ export function DuplicateWarningDialog({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{rendered.title}</span>
-                    <Badge variant="secondary" className="text-[11px]">
+                    <Badge variant="secondary" className="text-sm">
                       {CONFIDENCE_LABELS[entry.confidence]}
                     </Badge>
                   </div>
                   {rendered.subtitle ? (
                     <p className="text-sm text-[var(--text-muted)]">{rendered.subtitle}</p>
                   ) : null}
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <p className="text-sm text-[var(--text-muted)]">
                     {entry.reasons.join(" · ")}
                   </p>
                 </div>

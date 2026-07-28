@@ -81,7 +81,7 @@ function HistoryRow({ event }: { event: HistoryEvent }) {
         ) : null}
         <time
           dateTime={event.occurredAt}
-          className="mt-0.5 block font-mono text-xs text-[var(--text-subtle)]"
+          className="mt-0.5 block font-mono text-sm text-[var(--text-subtle)]"
         >
           {Number.isNaN(time.getTime())
             ? event.occurredAt
@@ -111,7 +111,7 @@ function HistoryRow({ event }: { event: HistoryEvent }) {
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
-          className="flex h-7 items-center gap-1 self-start rounded px-1.5 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+          className="flex h-7 items-center gap-1 self-start rounded px-1.5 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
         >
           {expanded ? (
             <ChevronDown className="size-3.5" />
@@ -202,7 +202,7 @@ export function HistoryFeed({
             type="button"
             size="sm"
             variant="ghost"
-            className="ml-auto h-7 gap-1.5 px-2 text-xs"
+            className="ml-auto h-7 gap-1.5 px-2 text-sm"
             onClick={download}
           >
             <Download className="size-3.5" />
@@ -220,7 +220,7 @@ export function HistoryFeed({
           <section key={bucket.id} aria-labelledby={`history-${bucket.id}`}>
             <h4
               id={`history-${bucket.id}`}
-              className="sticky top-14 z-10 bg-[var(--surface-base)] py-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-subtle)]"
+              className="sticky top-14 z-10 bg-[var(--surface-base)] py-1.5 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]"
             >
               {bucket.label}
             </h4>
@@ -251,7 +251,7 @@ function FilterChip({
       aria-pressed={pressed}
       onClick={onToggle}
       className={cn(
-        "rounded-full border px-2.5 py-1 text-xs capitalize transition-colors",
+        "rounded-full border px-2.5 py-1 text-sm capitalize transition-colors",
         pressed
           ? "border-[var(--action-primary-bg)] bg-[var(--action-primary-bg)] text-[var(--action-primary-fg)]"
           : "border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)]",

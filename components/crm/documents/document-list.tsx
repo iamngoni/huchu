@@ -132,7 +132,7 @@ export function DocumentList({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="divide-y divide-[var(--border)] rounded-[var(--card-radius)] border border-[var(--border)]">
+        <ul className="divide-y divide-[var(--border-subtle)]">
           {documents.map((doc) => {
             const status = documentStatus(doc);
             const outstanding = doc.invoice ? invoiceOutstanding(doc.invoice) : 0;
@@ -150,17 +150,17 @@ export function DocumentList({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-sm">{documentNumber(doc)}</span>
-                    <span className="text-xs text-[var(--text-muted)]">
+                    <span className="text-sm text-[var(--text-muted)]">
                       {DOCUMENT_KIND_LABELS[doc.type]}
                     </span>
                     {doc.version > 1 ? (
-                      <span className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[11px] text-[var(--text-muted)]">
+                      <span className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-sm text-[var(--text-muted)]">
                         v{doc.version}
                       </span>
                     ) : null}
                     <StatusChip status={status.status} label={status.label} />
                   </div>
-                  <div className="text-xs text-[var(--text-muted)]">
+                  <div className="text-sm text-[var(--text-muted)]">
                     <ClientDate value={doc.createdAt} mode="date" />
                     {canPay ? ` · ${formatMoney(outstanding, doc.currency)} outstanding` : ""}
                     {doc.revisionNote ? ` · ${doc.revisionNote}` : ""}

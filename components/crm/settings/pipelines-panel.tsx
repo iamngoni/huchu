@@ -163,7 +163,7 @@ function StageEditor({
                   </Badge>
                 ) : null}
                 {stage.dealCount ? (
-                  <span className="text-xs text-[var(--text-muted)]">
+                  <span className="text-sm text-[var(--text-muted)]">
                     {stage.dealCount} deal{stage.dealCount === 1 ? "" : "s"}
                   </span>
                 ) : null}
@@ -208,7 +208,7 @@ function StageEditor({
 
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <div className="space-y-1">
-                  <Label className="text-xs">Probability %</Label>
+                  <Label className="text-sm">Probability %</Label>
                   <Input
                     value={stage.probability}
                     onChange={(event) =>
@@ -219,7 +219,7 @@ function StageEditor({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Goes stale after</Label>
+                  <Label className="text-sm">Goes stale after</Label>
                   <Input
                     value={stage.inactivityDays ?? ""}
                     onChange={(event) =>
@@ -235,7 +235,7 @@ function StageEditor({
                 </div>
                 {!isOutcome ? (
                   <>
-                    <label className="flex items-end gap-2 pb-1.5 text-xs">
+                    <label className="flex items-end gap-2 pb-1.5 text-sm">
                       <Checkbox
                         checked={Boolean(stage.requiresSiteVisit)}
                         onCheckedChange={(checked) =>
@@ -244,7 +244,7 @@ function StageEditor({
                       />
                       Expects a visit
                     </label>
-                    <label className="flex items-end gap-2 pb-1.5 text-xs">
+                    <label className="flex items-end gap-2 pb-1.5 text-sm">
                       <Checkbox
                         checked={Boolean(stage.requiresQuotation)}
                         onCheckedChange={(checked) =>
@@ -393,7 +393,7 @@ export function PipelinesPanel() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{pipeline.name}</span>
                   {pipeline.isDefault ? <Badge variant="secondary">Default</Badge> : null}
-                  <span className="text-xs text-[var(--text-muted)]">
+                  <span className="text-sm text-[var(--text-muted)]">
                     {pipeline._count?.deals ?? 0} deal
                     {(pipeline._count?.deals ?? 0) === 1 ? "" : "s"}
                   </span>
@@ -434,7 +434,7 @@ export function PipelinesPanel() {
                 <Badge
                   key={stage.id}
                   variant={stage.status === "OPEN" ? "outline" : "secondary"}
-                  className="text-[11px]"
+                  className="text-sm"
                 >
                   {stage.name}
                 </Badge>

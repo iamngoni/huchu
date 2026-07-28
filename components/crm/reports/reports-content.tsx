@@ -24,8 +24,8 @@ import {
   type ReportRange,
 } from "@/lib/crm/reports";
 
+/** Bare, like every other report route — see the collections note. */
 type ReportResponse = {
-  data: {
     range: ReportRange;
     scope: "TEAM" | "MINE";
     funnel: FunnelStage[];
@@ -37,7 +37,6 @@ type ReportResponse = {
     bySource: GroupedPerformance[];
     activity: { period: string; count: number }[];
     leads: { created: number; converted: number };
-  };
 };
 
 export function ReportsContent({ currency = "USD" }: { currency?: string }) {
@@ -48,7 +47,7 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
     queryFn: () => fetchJson<ReportResponse>(`/api/v2/crm/reports?range=${range}`),
   });
 
-  const report = data?.data;
+  const report = data;
   const leak = report ? biggestLeak(report.funnel) : null;
   const peak = Math.max(1, ...(report?.activity.map((bucket) => bucket.count) ?? [1]));
 
@@ -159,7 +158,7 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
                 />
               ))}
             </div>
-            <p className="mt-2 text-xs text-[var(--text-muted)]">
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
               Calls, emails and notes logged. Peak {peak} in a single period.
             </p>
           </Card>
@@ -184,7 +183,7 @@ function PerformanceTable({
         <EmptyState title="Nothing to show yet" />
       ) : (
         <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
+          <thead className="text-left text-sm uppercase tracking-wide text-[var(--text-muted)]">
             <tr>
               <th className="pb-1 font-medium">Name</th>
               <th className="pb-1 text-right font-medium">Won</th>

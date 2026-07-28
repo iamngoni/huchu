@@ -324,11 +324,17 @@
      SIDEBAR
      ══════════════════════════════════════════════════════════════════════ */
 
-  --sidebar:                    var(--surface-muted);
+  /* The sidebar is the page's own surface, not a tinted panel beside it. A
+     muted background made it read as a separate application chrome; flat white
+     lets the nav sit in the same plane as the content and puts all the visual
+     weight on the one item that is selected. */
+  --sidebar:                    var(--surface);
   --sidebar-foreground:         var(--text-body);
   --sidebar-primary:            var(--action-primary-bg);
   --sidebar-primary-foreground: var(--action-primary-fg);
-  --sidebar-accent:             var(--surface);
+  /* Hover has to darken now that the base is white — against `--surface` the
+     old value was invisible. */
+  --sidebar-accent:             var(--surface-muted);
   --sidebar-accent-foreground:  var(--text-strong);
   --sidebar-border:             var(--border);
   --sidebar-ring:               var(--focus-ring);

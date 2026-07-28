@@ -224,7 +224,7 @@ export function GlobalSearch({ compact = false }: { compact?: boolean }) {
         {compact ? null : (
           <>
             <span className="flex-1 text-left">Search everything</span>
-            <kbd className="rounded border border-[var(--border)] px-1 text-[10px]">⌘K</kbd>
+            <kbd className="rounded border border-[var(--border)] px-1 text-sm">⌘K</kbd>
           </>
         )}
       </Button>
@@ -259,7 +259,7 @@ export function GlobalSearch({ compact = false }: { compact?: boolean }) {
                         <Icon className="h-4 w-4 shrink-0 opacity-60" />
                         <span className="truncate">{entry.title}</span>
                         {entry.subtitle ? (
-                          <span className="truncate text-xs text-[var(--text-muted)]">
+                          <span className="truncate text-sm text-[var(--text-muted)]">
                             {entry.subtitle}
                           </span>
                         ) : null}
@@ -291,13 +291,13 @@ export function GlobalSearch({ compact = false }: { compact?: boolean }) {
                         <span className="min-w-0 flex-1">
                           <span className="block truncate">{result.title}</span>
                           {result.subtitle ? (
-                            <span className="block truncate text-xs text-[var(--text-muted)]">
+                            <span className="block truncate text-sm text-[var(--text-muted)]">
                               {result.subtitle}
                             </span>
                           ) : null}
                         </span>
                         {result.reference ? (
-                          <span className="shrink-0 font-mono text-xs text-[var(--text-muted)]">
+                          <span className="shrink-0 font-mono text-sm text-[var(--text-muted)]">
                             {result.reference}
                           </span>
                         ) : null}
@@ -320,7 +320,7 @@ export function GlobalSearch({ compact = false }: { compact?: boolean }) {
                       >
                         <ArrowRight className="h-4 w-4 shrink-0 opacity-60" />
                         <span className="min-w-0 flex-1 truncate">{destination.label}</span>
-                        <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                        <span className="shrink-0 text-sm text-[var(--text-muted)]">
                           {destination.section}
                         </span>
                       </CommandItem>
@@ -352,7 +352,7 @@ export function GlobalSearch({ compact = false }: { compact?: boolean }) {
           <div
             className={cn(
               "flex items-center justify-between border-t border-[var(--border)] px-3 py-1.5",
-              "text-[11px] text-[var(--text-muted)]",
+              "text-sm text-[var(--text-muted)]",
             )}
           >
             <span>↑↓ to move · ↵ to open · esc to close</span>

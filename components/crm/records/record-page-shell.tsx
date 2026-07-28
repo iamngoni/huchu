@@ -174,7 +174,7 @@ export function RailSection({
   return (
     <section className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
           {title}
         </h3>
         {action}
@@ -207,7 +207,7 @@ export function RelatedList<T>({
 
   return (
     <div className="space-y-2">
-      <ul className="divide-y divide-[var(--border)] rounded-[var(--card-radius)] border border-[var(--border)]">
+      <ul className="divide-y divide-[var(--border-subtle)]">
         {items.map((item, index) => {
           const rendered = renderItem(item);
           return (
@@ -219,7 +219,7 @@ export function RelatedList<T>({
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">{rendered.title}</span>
                   {rendered.subtitle ? (
-                    <span className="block truncate text-xs text-[var(--text-muted)]">
+                    <span className="block truncate text-sm text-[var(--text-muted)]">
                       {rendered.subtitle}
                     </span>
                   ) : null}

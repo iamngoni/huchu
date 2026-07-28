@@ -36,7 +36,7 @@ export function StageProgress({
             onClick={() => onChange(entry)}
             aria-current={isCurrent ? "step" : undefined}
             className={cn(
-              "rounded-[var(--button-radius)] px-2.5 py-1 text-xs font-medium transition-colors",
+              "rounded-[var(--button-radius)] px-2.5 py-1 text-sm font-medium transition-colors",
               "disabled:cursor-not-allowed disabled:opacity-60",
               isCurrent
                 ? "bg-[var(--action-primary-bg)] text-[var(--action-primary-text)]"
@@ -57,7 +57,7 @@ export function StageProgress({
         disabled={disabled}
         onClick={() => onChange("WON")}
         className={cn(
-          "rounded-[var(--button-radius)] px-2.5 py-1 text-xs font-medium transition-colors",
+          "rounded-[var(--button-radius)] px-2.5 py-1 text-sm font-medium transition-colors",
           "disabled:cursor-not-allowed disabled:opacity-60",
           stage === "WON"
             ? "bg-[var(--status-success-bg)] text-[var(--status-success-text)]"
@@ -71,7 +71,7 @@ export function StageProgress({
         disabled={disabled}
         onClick={() => onChange("LOST")}
         className={cn(
-          "rounded-[var(--button-radius)] px-2.5 py-1 text-xs font-medium transition-colors",
+          "rounded-[var(--button-radius)] px-2.5 py-1 text-sm font-medium transition-colors",
           "disabled:cursor-not-allowed disabled:opacity-60",
           stage === "LOST"
             ? "bg-[var(--status-error-bg)] text-[var(--status-error-text)]"

@@ -73,7 +73,7 @@ type LeadSourceOption = { id: string; name: string; channel: string; isActive: b
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
         {title}
       </h3>
       {children}
@@ -383,7 +383,7 @@ export function LeadFormSheet({
                       onChange={(event) => patch({ probability: event.target.value })}
                       placeholder={String(CRM_STAGE_DEFAULT_PROBABILITY[form.stage])}
                     />
-                    <p className="text-xs text-[var(--text-muted)]">
+                    <p className="text-sm text-[var(--text-muted)]">
                       Leave blank to use the {CRM_STAGE_LABELS[form.stage].toLowerCase()} default of{" "}
                       {CRM_STAGE_DEFAULT_PROBABILITY[form.stage]}%.
                     </p>
@@ -521,7 +521,7 @@ export function LeadFormSheet({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   Unassigned leads are claimable by anyone on the team.
                 </p>
               </div>

@@ -141,7 +141,7 @@ export function StockOverview({ siteId }: { siteId?: string }) {
       <section aria-labelledby="stock-attention" className="space-y-2">
         <h2
           id="stock-attention"
-          className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-subtle)]"
+          className="text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]"
         >
           Running low
         </h2>
@@ -190,7 +190,7 @@ export function StockOverview({ siteId }: { siteId?: string }) {
         <div className="flex items-baseline justify-between gap-2">
           <h2
             id="stock-recent"
-            className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-subtle)]"
+            className="text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]"
           >
             Last movements
           </h2>

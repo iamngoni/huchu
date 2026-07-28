@@ -295,7 +295,7 @@ export function ImportWizard() {
           </div>
 
           {preview.rowCount > preview.rows.length ? (
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="text-sm text-[var(--text-muted)]">
               Showing the first {preview.rows.length} of {preview.rowCount} rows. All of them will
               be imported.
             </p>

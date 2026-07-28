@@ -106,7 +106,7 @@ function ApiKeysPanel() {
             Create key
           </Button>
         </div>
-        <p className="text-xs text-[var(--text-muted)]">
+        <p className="text-sm text-[var(--text-muted)]">
           Every lead captured with a key inherits its channel and source label — e.g. a &quot;Facebook Lead
           Ads&quot; key labels leads as Paid ads / facebook automatically.
         </p>
@@ -216,7 +216,7 @@ function LeadSourcesPanel() {
               </span>
               <span className="flex items-center gap-2">
                 <select
-                  className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-xs"
+                  className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-sm"
                   value={source.channel}
                   disabled={update.isPending}
                   onChange={(e) => update.mutate({ id: source.id, channel: e.target.value })}

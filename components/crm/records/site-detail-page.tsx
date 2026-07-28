@@ -129,7 +129,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
                 Nobody has visited this site yet.
               </p>
             ) : (
-              <ul className="divide-y divide-[var(--border)] rounded-[var(--card-radius)] border border-[var(--border)]">
+              <ul className="divide-y divide-[var(--border-subtle)]">
                 {site.appointments.map((visit) => {
                   const status = VISIT_STATUS[visit.status];
                   return (
@@ -141,11 +141,11 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
                         ) : null}
                       </div>
                       <p className="text-sm">{visit.title}</p>
-                      <p className="text-xs text-[var(--text-muted)]">
+                      <p className="text-sm text-[var(--text-muted)]">
                         <ClientDate value={visit.scheduledStart} />
                       </p>
                       {visit.visitItems.length > 0 ? (
-                        <p className="text-xs text-[var(--text-muted)]">
+                        <p className="text-sm text-[var(--text-muted)]">
                           {visit.visitItems.length} measurement
                           {visit.visitItems.length === 1 ? "" : "s"} recorded
                         </p>
@@ -231,7 +231,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
               <>
                 <p className="text-sm">{site.primaryContact.fullName}</p>
                 {site.primaryContact.phone ? (
-                  <p className="text-xs text-[var(--text-muted)]">{site.primaryContact.phone}</p>
+                  <p className="text-sm text-[var(--text-muted)]">{site.primaryContact.phone}</p>
                 ) : null}
               </>
             ) : (

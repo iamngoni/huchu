@@ -182,7 +182,7 @@ export function MergeDialog({
                         }}
                       >
                         <span>{label}</span>
-                        <span className="font-mono text-xs text-[var(--text-muted)]">
+                        <span className="font-mono text-sm text-[var(--text-muted)]">
                           {reference}
                         </span>
                       </button>
@@ -207,7 +207,7 @@ export function MergeDialog({
             ) : null}
 
             <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)]">
-              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 bg-[var(--surface-subtle)] px-3 py-2 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 bg-[var(--surface-subtle)] px-3 py-2 text-sm font-medium uppercase tracking-wide text-[var(--text-muted)]">
                 <span>Field</span>
                 <span>{plan.survivor.label}</span>
                 <span>{plan.loser.label}</span>

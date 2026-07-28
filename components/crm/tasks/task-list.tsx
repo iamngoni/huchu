@@ -151,7 +151,7 @@ export function TaskList({
                   ) : null}
                 </div>
 
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-muted)]">
                   <span
                     className={cn(
                       "inline-flex items-center gap-1",
@@ -178,7 +178,7 @@ export function TaskList({
                 </div>
 
                 {task.outcomeNotes ? (
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">{task.outcomeNotes}</p>
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">{task.outcomeNotes}</p>
                 ) : null}
               </div>
 

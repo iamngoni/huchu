@@ -64,7 +64,7 @@ function SummaryItem({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
+      <span className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
         {label}
       </span>
       <span
@@ -191,7 +191,7 @@ export function OfflineRuntimePanel() {
                 </p>
               </div>
               {bootstrapProgress ? (
-                <span className="rounded-full bg-[color-mix(in_srgb,var(--surface-base)_72%,white)] px-3 py-1 text-xs font-mono tabular-nums text-[var(--text-muted)]">
+                <span className="rounded-full bg-[color-mix(in_srgb,var(--surface-base)_72%,white)] px-3 py-1 text-sm font-mono tabular-nums text-[var(--text-muted)]">
                   {bootstrapProgressValue}%
                 </span>
               ) : null}
@@ -203,13 +203,13 @@ export function OfflineRuntimePanel() {
                   max={Math.max(bootstrapProgress.totalSteps, 1)}
                   className="h-2 border-0 bg-[color-mix(in_srgb,var(--surface-base)_78%,white)] shadow-none"
                 />
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                <p className="mt-2 text-sm text-[var(--text-muted)]">
                   {bootstrapProgress.currentStepLabel ?? "Preparing offline data."}
                 </p>
               </div>
             ) : null}
             {stillPreparingLabels.length > 0 ? (
-              <p className="mt-3 text-xs text-[var(--text-muted)]">
+              <p className="mt-3 text-sm text-[var(--text-muted)]">
                 Still preparing: {stillPreparingLabels.join(", ")}
                 {unreadyModules.length > stillPreparingLabels.length ? ", and more." : "."}
               </p>
@@ -272,7 +272,7 @@ export function OfflineRuntimePanel() {
       </div>
 
       <DialogFooter className="border-t border-[color-mix(in_srgb,var(--border-default)_72%,transparent)] px-6 py-4 sm:items-center sm:justify-between">
-        <p className="text-xs text-[var(--text-muted)]">
+        <p className="text-sm text-[var(--text-muted)]">
           Queued changes stay on the device until they can sync safely.
         </p>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">

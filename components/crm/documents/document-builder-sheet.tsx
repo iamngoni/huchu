@@ -211,7 +211,7 @@ export function DocumentBuilderSheet({
               </p>
             ) : (
               <section className="space-y-3">
-                <div className="hidden gap-2 px-1 text-xs font-medium text-[var(--text-muted)] sm:grid sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem]">
+                <div className="hidden gap-2 px-1 text-sm font-medium text-[var(--text-muted)] sm:grid sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem]">
                   <span>Description</span>
                   <span className="text-right">Qty</span>
                   <span className="text-right">Unit price</span>

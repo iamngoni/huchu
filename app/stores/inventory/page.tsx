@@ -900,7 +900,7 @@ export default function StoresInventoryPage() {
                         </TableCell>
                         <TableCell className="p-3 text-center">
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            className={`px-2 py-1 rounded-full text-sm font-semibold ${
                               isLow
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-green-100 text-green-800"
@@ -983,7 +983,7 @@ export default function StoresInventoryPage() {
                         className="h-64 w-64 rounded border object-contain"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground break-all">
+                    <p className="text-sm text-muted-foreground break-all">
                       {qrPreviewPayload}
                     </p>
                   </div>
@@ -1037,7 +1037,7 @@ export default function StoresInventoryPage() {
                       }
                       required
                     />
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {editingItemId
                         ? "Item code is immutable."
                         : reserveInventoryCodeError ??
@@ -1245,7 +1245,7 @@ export default function StoresInventoryPage() {
               { label: "Total value", value: `$${totalValue.toFixed(2)}` },
             ]}
           >
-            <div className="space-y-6 text-xs">
+            <div className="space-y-6 text-sm">
               <div>
                 <h2 className="text-sm font-semibold mb-2">Inventory Items</h2>
                 <table className="w-full">
@@ -1442,7 +1442,7 @@ export default function StoresInventoryPage() {
                     }
                     required
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {editingLocationId
                       ? "Location code is immutable."
                       : reserveLocationCodeError ??

@@ -108,7 +108,7 @@ export function StockLocationsPanel() {
           <section key={site.id} aria-labelledby={`site-${site.id}`} className="space-y-2">
             <h3
               id={`site-${site.id}`}
-              className="sticky top-14 z-10 flex items-baseline gap-2 bg-[var(--surface-base)] py-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-subtle)]"
+              className="sticky top-14 z-10 flex items-baseline gap-2 bg-[var(--surface-base)] py-1.5 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]"
             >
               <span>{site.name}</span>
               <span className="font-mono normal-case tracking-normal">
@@ -116,7 +116,7 @@ export function StockLocationsPanel() {
               </span>
             </h3>
 
-            <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)]">
+            <ul className="divide-y divide-[var(--border-subtle)]">
               {site.rows.map((location) => (
                 <li key={location.id}>
                   <Link
@@ -128,7 +128,7 @@ export function StockLocationsPanel() {
                         <span className="truncate text-sm font-medium text-[var(--text-strong)]">
                           {location.name}
                         </span>
-                        <span className="font-mono text-xs text-[var(--text-subtle)]">
+                        <span className="font-mono text-sm text-[var(--text-subtle)]">
                           {location.code}
                         </span>
                         {!location.isActive ? (
@@ -149,7 +149,7 @@ export function StockLocationsPanel() {
                     </span>
 
                     <span className="hidden text-right sm:block">
-                      <span className="block text-[11px] uppercase tracking-wide text-[var(--text-subtle)]">
+                      <span className="block text-sm uppercase tracking-wide text-[var(--text-subtle)]">
                         Value
                       </span>
                       <span className="block font-mono text-sm tabular-nums">
@@ -170,7 +170,7 @@ export function StockLocationsPanel() {
       )}
 
       {grouped.some((site) => site.rows.some((row) => !row.valueComplete)) ? (
-        <p className="text-xs text-[var(--text-muted)]">
+        <p className="text-sm text-[var(--text-muted)]">
           * Some items in this location have no unit cost recorded, so the value
           shown is lower than what is actually there.
         </p>

@@ -42,7 +42,7 @@ function OwnerCell({ owner }: { owner: CrmLeadListRecord["assignedTo"] }) {
   return (
     <div className="flex items-center gap-2">
       <span
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[10px] font-medium"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-sm font-medium"
         aria-hidden="true"
       >
         {initialsOf(owner.name)}
@@ -60,7 +60,7 @@ function NextTaskCell({ task }: { task: CrmLeadListRecord["nextFollowUp"] }) {
       <div className="truncate text-sm">{task.title}</div>
       <div
         className={cn(
-          "text-xs",
+          "text-sm",
           overdue ? "font-medium text-[var(--status-error-text)]" : "text-[var(--text-muted)]",
         )}
       >
@@ -110,7 +110,7 @@ export function LeadsTable({
             <div className="truncate font-medium">
               {row.original.title ?? row.original.leadNo}
             </div>
-            <div className="truncate font-mono text-xs text-[var(--text-muted)]">
+            <div className="truncate font-mono text-sm text-[var(--text-muted)]">
               {row.original.leadNo}
             </div>
           </Link>
@@ -124,7 +124,7 @@ export function LeadsTable({
           <div className="min-w-0">
             <div className="truncate text-sm">{row.original.client?.name ?? "—"}</div>
             {row.original.contactName ? (
-              <div className="truncate text-xs text-[var(--text-muted)]">
+              <div className="truncate text-sm text-[var(--text-muted)]">
                 {row.original.contactName}
               </div>
             ) : null}
@@ -171,7 +171,7 @@ export function LeadsTable({
         cell: ({ row }) => (
           <div className="min-w-0">
             <div className="truncate text-sm">{row.original.source ?? "—"}</div>
-            <div className="truncate text-xs text-[var(--text-muted)]">
+            <div className="truncate text-sm text-[var(--text-muted)]">
               {CRM_CHANNEL_LABELS[row.original.sourceChannel ?? ""] ??
                 row.original.sourceChannel ??
                 ""}
@@ -287,7 +287,7 @@ export function LeadsTable({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="truncate font-medium">{row.title ?? row.leadNo}</div>
-              <div className="truncate font-mono text-xs text-[var(--text-muted)]">
+              <div className="truncate font-mono text-sm text-[var(--text-muted)]">
                 {row.leadNo} · {row.client?.name ?? "No client"}
               </div>
             </div>

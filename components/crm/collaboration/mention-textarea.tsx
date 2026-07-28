@@ -137,7 +137,7 @@ export function MentionTextarea({
                 )}
               >
                 <span className="font-medium">{user.name ?? user.email}</span>
-                <span className="text-xs text-[var(--text-muted)]">{user.email}</span>
+                <span className="text-sm text-[var(--text-muted)]">{user.email}</span>
               </button>
             </li>
           ))}

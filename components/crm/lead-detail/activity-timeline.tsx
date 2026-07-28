@@ -98,7 +98,7 @@ export function ActivityTimeline({ activities }: { activities: LeadActivity[] })
     <div className="space-y-5">
       {groups.map(([key, entries]) => (
         <section key={key} className="space-y-2">
-          <h4 className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+          <h4 className="text-sm font-medium uppercase tracking-wide text-[var(--text-muted)]">
             {dayLabel(entries[0].occurredAt)}
           </h4>
           <ul className="space-y-2">
@@ -126,7 +126,7 @@ export function ActivityTimeline({ activities }: { activities: LeadActivity[] })
                         {activity.body}
                       </p>
                     ) : null}
-                    <p className="text-xs text-[var(--text-muted)]">
+                    <p className="text-sm text-[var(--text-muted)]">
                       {timeLabel(activity.occurredAt)}
                     </p>
                   </div>

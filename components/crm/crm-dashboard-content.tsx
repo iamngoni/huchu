@@ -280,7 +280,7 @@ export function CrmDashboardContent() {
                         style={{ width: `${Math.max(share, stage.count > 0 ? 3 : 0)}%` }}
                         aria-hidden="true"
                       />
-                      <span className="ml-auto shrink-0 font-mono text-xs text-[var(--text-muted)]">
+                      <span className="ml-auto shrink-0 font-mono text-sm text-[var(--text-muted)]">
                         {stage.count} · {money(stage.value)}
                       </span>
                     </Link>
@@ -306,7 +306,7 @@ export function CrmDashboardContent() {
                     className="flex items-center justify-between gap-3 text-sm"
                   >
                     <span>{AGEING_LABELS[bucket]}</span>
-                    <span className="font-mono text-xs text-[var(--text-muted)]">
+                    <span className="font-mono text-sm text-[var(--text-muted)]">
                       {row ? `${row.count} · ${money(row.value)}` : "—"}
                     </span>
                   </li>

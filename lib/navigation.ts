@@ -80,6 +80,12 @@ export type NavSection = {
   featureKey?: string;
   /** Declares group order and labels. Groups with no visible items are dropped. */
   groups?: NavGroup[];
+  /**
+   * Render each group as its own root-level entry instead of as a band inside
+   * this section. For a section whose title names a category rather than a
+   * destination, the groups are the places people are actually going.
+   */
+  flattenGroups?: boolean;
   items: NavItem[];
 };
 
@@ -281,8 +287,11 @@ export const navSections: NavSection[] = [
     })),
   },
   {
-    id: "crm",
-    title: "CRM",
+    // Retail's customer ledger, not the CRM module. It used to share the id
+    // "crm" with it, and since section lookups are built from this array the
+    // later entry silently won.
+    id: "retail-customers",
+    title: "Customers",
     description: "Customer profiles, loyalty, and ledgers",
     featureKey: "crm.customers",
     items: [
@@ -332,26 +341,36 @@ export const navSections: NavSection[] = [
       roles: tab.roles,
     })),
   },
+  // The CRM is not one thing you open, it is six. A single parent entry meant
+  // every route inside it cost two clicks and hid behind a word — "CRM" — that
+  // names a category rather than a place. Its groups are root entries now,
+  // each expanding to its own children, which is how the reference works and
+  // how anybody actually describes where they are going: "the pipeline",
+  // "records", "the paperwork".
+  //
+  // They share `crm.core`, so a tenant without the module loses the whole set
+  // rather than being left with six empty headings.
   {
     id: "crm",
     title: "CRM",
     description: "Leads, clients, site visits, and sales pipeline",
     featureKey: "crm.core",
-    // Grouped by what kind of thing each link is, not by what stage of the job
-    // it belongs to. A flat column of sixteen links was an inventory of pages;
-    // so was a set of groups named after phases nobody uses as a noun. These
-    // are the four nouns people actually say: the pipeline, the records, the
-    // work, the paperwork.
+    // Rendered flat: each group below becomes its own root entry in the
+    // sidebar rather than a band inside a "CRM" parent. "CRM" names a category,
+    // not a place — nobody says "I'm going to CRM", they say "the pipeline" or
+    // "the paperwork", and burying six of those behind one word cost a click
+    // each and told you nothing on the way past.
+    flattenGroups: true,
     groups: [
       { id: "pipeline", label: "Pipeline" },
       { id: "records", label: "Records" },
       { id: "work", label: "Work" },
       { id: "documents", label: "Sales documents" },
       { id: "learn", label: "Insights" },
-      { id: "setup", label: "Setup" },
+      { id: "setup", label: "CRM setup" },
     ],
     items: [
-      { href: "/crm", icon: Dashboard, label: "Overview" },
+      { href: "/crm", icon: Dashboard, label: "CRM overview" },
 
       { href: "/crm/leads", icon: Funnel, label: "Leads", group: "pipeline" },
       { href: "/crm/deals", icon: Funnel, label: "Deals", group: "pipeline" },

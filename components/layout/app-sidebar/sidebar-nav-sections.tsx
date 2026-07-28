@@ -205,7 +205,7 @@ function SidebarExpandableSection({
                   <React.Fragment key={band.id ?? "__ungrouped"}>
                     {band.label ? (
                       <li
-                        className="px-2 pb-0.5 pt-2 text-[11px] font-medium uppercase tracking-wide text-[var(--text-subtle)]"
+                        className="px-2 pb-0.5 pt-2 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]"
                         aria-hidden="true"
                       >
                         {band.label}
@@ -290,28 +290,66 @@ export function SidebarNavSections({
 }) {
   return (
     <>
-      {sections.map((section) => {
+      {sections.flatMap((section) => {
+        // A flattened section is not one entry with bands inside it — it is
+        // several entries. Split before anything else looks at it, so each
+        // group opens and closes on its own like any other root entry.
+        if (section.flattenGroups && section.groups?.length) {
+          const ungrouped = section.items.filter((item) => !item.group);
+          const bands = section.groups
+            .map((group) => ({
+              group,
+              items: section.items.filter((item) => item.group === group.id),
+            }))
+            .filter((band) => band.items.length > 0);
+
+          return [
+            // Items with no group are destinations in their own right — an
+            // overview page is not a category to expand.
+            ...ungrouped.map((item) => (
+              <SidebarDirectSectionLink
+                key={`${section.id}-${item.href}`}
+                section={{ ...section, items: [item], title: item.label }}
+                activeHref={activeHref}
+              />
+            )),
+            ...bands.map(({ group, items }) => {
+              const id = `${section.id}-${group.id}`;
+              return (
+                <SidebarExpandableSection
+                  key={id}
+                  section={{ ...section, id, title: group.label, groups: undefined, items }}
+                  activeHref={activeHref}
+                  isCollapsed={isCollapsed}
+                  isOpen={openSectionId === id}
+                  onToggle={() => onToggleSection(id)}
+                />
+              );
+            }),
+          ];
+        }
+
         if (isDirectLinkSection(section)) {
-          return (
+          return [
             <SidebarDirectSectionLink
               key={section.id}
               section={section}
               activeHref={activeHref}
-            />
-          );
+            />,
+          ];
         }
 
         if (isFlatLinkSection(section)) {
-          return (
+          return [
             <SidebarFlatSection
               key={section.id}
               section={section}
               activeHref={activeHref}
-            />
-          );
+            />,
+          ];
         }
 
-        return (
+        return [
           <SidebarExpandableSection
             key={section.id}
             section={section}
@@ -319,8 +357,8 @@ export function SidebarNavSections({
             isCollapsed={isCollapsed}
             isOpen={openSectionId === section.id}
             onToggle={() => onToggleSection(section.id)}
-          />
-        );
+          />,
+        ];
       })}
     </>
   );

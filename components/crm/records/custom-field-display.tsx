@@ -30,7 +30,7 @@ export function CustomFieldDisplay({
     <>
       {Array.from(sections.entries()).map(([section, fields]) => (
         <section key={section} className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             {section}
           </h3>
           <dl className="divide-y divide-[var(--border)]">
@@ -42,7 +42,7 @@ export function CustomFieldDisplay({
               );
               return (
                 <div key={definition.id} className="flex items-start justify-between gap-2 py-1.5">
-                  <dt className="w-32 shrink-0 text-xs text-[var(--text-muted)]">
+                  <dt className="w-32 shrink-0 text-sm text-[var(--text-muted)]">
                     {definition.label}
                   </dt>
                   <dd className="min-w-0 flex-1 text-right text-sm">

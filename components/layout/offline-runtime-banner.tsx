@@ -62,7 +62,7 @@ export function OfflineRuntimeBanner() {
         <div className="min-w-0 flex-1">
           <div
             style={{ "--status-chip": `var(${bannerTone.colorVar})` } as CSSProperties}
-            className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--status-chip)_12%,transparent)] bg-[color-mix(in_srgb,var(--surface-muted)_82%,white)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+            className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--status-chip)_12%,transparent)] bg-[color-mix(in_srgb,var(--surface-muted)_82%,white)] px-3 py-1 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
           >
             <BannerIcon className={["size-3", bannerTone.iconClassName].join(" ")} />
             {bannerTone.text}
@@ -83,12 +83,12 @@ export function OfflineRuntimeBanner() {
                   max={progressMax}
                   className="h-2 flex-1 border-0 bg-[color-mix(in_srgb,var(--surface-muted)_78%,white)] shadow-none"
                 />
-                <span className="text-xs font-mono tabular-nums text-[var(--text-muted)]">
+                <span className="text-sm font-mono tabular-nums text-[var(--text-muted)]">
                   {bootstrapProgress?.completedSteps ?? 0}/
                   {bootstrapProgress?.totalSteps ?? 0}
                 </span>
               </div>
-              <div className="mt-2 text-xs text-[var(--text-muted)]">
+              <div className="mt-2 text-sm text-[var(--text-muted)]">
                 {(bootstrapProgress?.completedSteps ?? 0) ===
                 (bootstrapProgress?.totalSteps ?? 0)
                   ? "Core offline setup is ready."
@@ -98,7 +98,7 @@ export function OfflineRuntimeBanner() {
               </div>
             </div>
           ) : (
-            <div className="mt-1 text-xs text-[var(--text-muted)]">
+            <div className="mt-1 text-sm text-[var(--text-muted)]">
               {showUpdatePrompt
                 ? "Refresh when the operator is at a safe stopping point. Offline data stays in place."
                 : "Applying the downloaded update now."}

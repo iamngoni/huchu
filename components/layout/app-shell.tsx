@@ -46,7 +46,11 @@ export function AppShell({
     <PageChromeProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-surface-base md:m-2 md:h-[calc(100dvh-1rem)] md:min-h-[calc(100dvh-1rem)] md:rounded-xl md:border md:shadow-sm">
+        {/* Flat: no inset margin, rounding, border or shadow. The framed card
+            read as a window floating over a desktop, which cost a gutter on
+            every side and drew a line between the nav and the work that is
+            not a real boundary. */}
+        <SidebarInset className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-surface-base">
           <Navbar />
           <main
             className={

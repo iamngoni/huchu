@@ -78,7 +78,7 @@ export function RecordList({
   return (
     <ul
       className={cn(
-        "divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)]",
+        "divide-y divide-[var(--border-subtle)]",
         className,
       )}
     >
@@ -111,7 +111,7 @@ export function RecordList({
                 {row.facts.map((fact, index) => (
                   <span key={index} className="text-right">
                     {fact.label ? (
-                      <span className="block text-[11px] uppercase tracking-wide text-[var(--text-subtle)]">
+                      <span className="block text-sm uppercase tracking-wide text-[var(--text-subtle)]">
                         {fact.label}
                       </span>
                     ) : null}

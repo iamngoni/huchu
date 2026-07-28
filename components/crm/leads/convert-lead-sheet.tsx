@@ -90,14 +90,14 @@ function CandidateRow({
       <span className="min-w-0">
         <span className="flex flex-wrap items-center gap-1.5">
           <span className="font-medium">{title}</span>
-          <Badge variant="secondary" className="text-[11px]">
+          <Badge variant="secondary" className="text-sm">
             {CONFIDENCE_LABELS[confidence]}
           </Badge>
         </span>
         {subtitle ? (
           <span className="block truncate text-sm text-[var(--text-muted)]">{subtitle}</span>
         ) : null}
-        <span className="block text-xs text-[var(--text-muted)]">{reasons.join(" · ")}</span>
+        <span className="block text-sm text-[var(--text-muted)]">{reasons.join(" · ")}</span>
       </span>
       {selected ? <Check className="mt-0.5 h-4 w-4 shrink-0" /> : null}
     </button>
@@ -248,7 +248,7 @@ export function ConvertLeadSheet({
               }
             >
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   Person
                 </h3>
                 {prep.personDuplicates.length > 0 ? (
@@ -293,7 +293,7 @@ export function ConvertLeadSheet({
               </section>
 
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   Company
                 </h3>
                 {prep.companyDuplicates.length > 0 ? (
@@ -330,7 +330,7 @@ export function ConvertLeadSheet({
                       placeholder="Leave blank for an individual customer"
                       maxLength={200}
                     />
-                    <p className="text-xs text-[var(--text-muted)]">
+                    <p className="text-sm text-[var(--text-muted)]">
                       Plenty of jobs are for a person rather than a business — leaving this empty is
                       fine.
                     </p>
@@ -339,7 +339,7 @@ export function ConvertLeadSheet({
               </section>
 
               <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   Deal
                 </h3>
                 <div className="space-y-1.5">
@@ -362,7 +362,7 @@ export function ConvertLeadSheet({
                     placeholder="0.00"
                   />
                 </div>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   Notes, calls, tasks and documents from lead {prep.lead.leadNo} carry across to the
                   deal. The lead stays as the record of where this came from.
                 </p>

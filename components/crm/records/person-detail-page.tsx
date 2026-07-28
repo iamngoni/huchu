@@ -95,7 +95,7 @@ type PersonDetail = {
 function DetailRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="flex items-start justify-between gap-2 py-1.5">
-      <dt className="w-32 shrink-0 text-xs text-[var(--text-muted)]">{label}</dt>
+      <dt className="w-32 shrink-0 text-sm text-[var(--text-muted)]">{label}</dt>
       <dd className="min-w-0 flex-1 text-right text-sm">
         {value ? value : <span className="text-[var(--text-muted)]">—</span>}
       </dd>
@@ -269,7 +269,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
                       {link.client.name}
                     </Link>
                     {link.jobTitle ? (
-                      <span className="text-xs text-[var(--text-muted)]"> · {link.jobTitle}</span>
+                      <span className="text-sm text-[var(--text-muted)]"> · {link.jobTitle}</span>
                     ) : null}
                   </li>
                 ))}

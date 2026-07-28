@@ -275,7 +275,7 @@ export function TaskFormSheet({
                   value={form.recurrenceInterval}
                   onChange={(event) => set("recurrenceInterval", event.target.value)}
                 />
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   The next one is created when you complete this one.
                 </p>
               </div>

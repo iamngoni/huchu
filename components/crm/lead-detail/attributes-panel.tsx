@@ -35,7 +35,7 @@ function Row({
 }) {
   return (
     <div className="group flex items-start justify-between gap-2 py-1.5">
-      <dt className="w-28 shrink-0 pt-0.5 text-xs text-[var(--text-muted)]">{label}</dt>
+      <dt className="w-28 shrink-0 pt-0.5 text-sm text-[var(--text-muted)]">{label}</dt>
       <dd className="flex min-w-0 flex-1 items-start justify-end gap-1 text-right text-sm">
         <span className="min-w-0 break-words">{children}</span>
         {action}
