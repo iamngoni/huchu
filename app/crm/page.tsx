@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { CrmPage } from "@/components/crm/crm-page";
 import { redirect } from "next/navigation";
 import { PageChrome } from "@/components/layout/page-chrome";
-import { CrmDashboardContent } from "@/components/crm/crm-dashboard-content";
+import { CrmOverview } from "@/components/crm/crm-overview";
 import { authOptions } from "@/lib/auth";
 
 export default async function CrmDashboardPage() {
@@ -12,7 +12,7 @@ export default async function CrmDashboardPage() {
   return (
     <CrmPage>
       <PageChrome title="CRM" />
-      <CrmDashboardContent />
+      <CrmOverview />
     </CrmPage>
   );
 }

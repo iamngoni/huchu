@@ -1,0 +1,277 @@
+"use client";
+
+import { useMemo, useState, type ReactNode } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DotsThree, Grid3x3, Plus, Trash2, X } from "@/lib/icons";
+import {
+  WIDGET_SPANS,
+  widgetDefinition,
+  widgetsForScope,
+  type OverviewScope,
+  type WidgetInstance,
+  type WidgetSpan,
+} from "@/lib/crm/widgets";
+import { cn } from "@/lib/utils";
+
+/** Tailwind cannot see a computed `col-span-${n}`, so the classes are spelled out. */
+const SPAN_CLASS: Record<WidgetSpan, string> = {
+  3: "sm:col-span-6 lg:col-span-3",
+  4: "sm:col-span-6 lg:col-span-4",
+  6: "sm:col-span-6 lg:col-span-6",
+  8: "sm:col-span-12 lg:col-span-8",
+  12: "col-span-12",
+};
+
+const SPAN_LABEL: Record<WidgetSpan, string> = {
+  3: "Quarter",
+  4: "Third",
+  6: "Half",
+  8: "Two thirds",
+  12: "Full width",
+};
+
+function WidgetFrame({
+  instance,
+  editing,
+  children,
+  onResize,
+  onRemove,
+}: {
+  instance: WidgetInstance;
+  editing: boolean;
+  children: ReactNode;
+  onResize: (span: WidgetSpan) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: instance.id,
+    disabled: !editing,
+  });
+
+  const definition = widgetDefinition(instance.type);
+
+  return (
+    <section
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        transition:
+          transition ??
+          "transform var(--motion-duration-base, 180ms) var(--motion-ease-standard, ease)",
+      }}
+      className={cn(
+        "group/widget relative col-span-12 min-w-0",
+        SPAN_CLASS[instance.span],
+        isDragging && "opacity-50",
+      )}
+      aria-label={definition?.label}
+    >
+      {editing ? (
+        <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" className="h-7 w-7 px-0" aria-label="Widget options">
+                <DotsThree className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {WIDGET_SPANS.map((span) => (
+                <DropdownMenuItem
+                  key={span}
+                  onClick={() => onResize(span)}
+                  className={span === instance.span ? "font-medium" : undefined}
+                >
+                  {SPAN_LABEL[span]}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-[var(--status-error-text)]"
+                onClick={onRemove}
+              >
+                <Trash2 className="size-4" />
+                Remove
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* The handle is the whole point of edit mode being a mode: a card
+              you can accidentally drag while reading it is worse than one you
+              have to opt into moving. */}
+          <button
+            type="button"
+            aria-label={`Move ${definition?.label ?? "widget"}`}
+            className="flex size-7 cursor-grab items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-subtle)] active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+          >
+            <Grid3x3 className="size-3.5" />
+          </button>
+        </div>
+      ) : null}
+
+      <div className={cn(editing && "pointer-events-none")}>{children}</div>
+    </section>
+  );
+}
+
+/**
+ * An overview page you can rearrange.
+ *
+ * Editing is a mode rather than always-on. A dashboard is read far more often
+ * than it is rearranged, and a card that moves when you meant to click a
+ * number in it is a worse trade than a button you press once a month.
+ *
+ * Widths come from a five-step scale rather than free resizing. Free widths
+ * produce dashboards with a two-pixel gutter down one side and nothing lines
+ * up with anything; five steps over twelve columns covers every arrangement
+ * anybody actually wants and always tiles.
+ */
+export function WidgetGrid({
+  scope,
+  widgets,
+  editing,
+  onChange,
+  renderWidget,
+}: {
+  scope: OverviewScope;
+  widgets: WidgetInstance[];
+  editing: boolean;
+  onChange: (next: WidgetInstance[]) => void;
+  renderWidget: (instance: WidgetInstance) => ReactNode;
+}) {
+  const [adding, setAdding] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const available = useMemo(() => {
+    const used = new Set(widgets.map((widget) => widget.type));
+    return widgetsForScope(scope).filter((definition) => !used.has(definition.type));
+  }, [scope, widgets]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = widgets.findIndex((widget) => widget.id === active.id);
+    const to = widgets.findIndex((widget) => widget.id === over.id);
+    if (from === -1 || to === -1) return;
+    onChange(arrayMove(widgets, from, to));
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={widgets.map((widget) => widget.id)} strategy={rectSortingStrategy}>
+        <div className="grid grid-cols-12 gap-4">
+          {widgets.map((instance) => (
+            <WidgetFrame
+              key={instance.id}
+              instance={instance}
+              editing={editing}
+              onResize={(span) =>
+                onChange(
+                  widgets.map((widget) =>
+                    widget.id === instance.id ? { ...widget, span } : widget,
+                  ),
+                )
+              }
+              onRemove={() => onChange(widgets.filter((widget) => widget.id !== instance.id))}
+            >
+              {renderWidget(instance)}
+            </WidgetFrame>
+          ))}
+
+          {editing ? (
+            <div className="col-span-12 lg:col-span-4">
+              <button
+                type="button"
+                onClick={() => setAdding((previous) => !previous)}
+                className="flex h-full min-h-32 w-full flex-col items-center justify-center gap-1 rounded-[var(--card-radius)] border border-dashed border-[var(--border)] text-sm text-[var(--text-muted)] hover:border-[var(--interactive-primary)] hover:text-[var(--text)]"
+              >
+                <Plus className="size-5" />
+                Add a widget
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </SortableContext>
+
+      {editing && adding ? (
+        <div className="mt-4 rounded-[var(--card-radius)] border border-[var(--border)] p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium">Add a widget</h3>
+            <button
+              type="button"
+              onClick={() => setAdding(false)}
+              aria-label="Close"
+              className="flex size-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] hover:bg-[var(--surface-muted)]"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
+          {available.length === 0 ? (
+            <p className="py-3 text-center text-sm text-[var(--text-muted)]">
+              Everything that fits this page is already on it.
+            </p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {available.map((definition) => (
+                <button
+                  key={definition.type}
+                  type="button"
+                  onClick={() => {
+                    onChange([
+                      ...widgets,
+                      {
+                        // Unique within the layout — the id is the drag key,
+                        // and two widgets of one type would otherwise collide.
+                        id: `${definition.type}-${widgets.length + 1}`,
+                        type: definition.type,
+                        span: definition.defaultSpan,
+                      },
+                    ]);
+                    setAdding(false);
+                  }}
+                  className="rounded-[var(--radius-md)] border border-[var(--border)] p-2.5 text-left hover:border-[var(--interactive-primary)] hover:bg-[var(--surface-hover)]"
+                >
+                  <span className="block text-sm font-medium">{definition.label}</span>
+                  <span className="mt-0.5 block text-sm text-[var(--text-muted)]">
+                    {definition.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+    </DndContext>
+  );
+}
