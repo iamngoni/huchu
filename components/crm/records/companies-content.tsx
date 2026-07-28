@@ -17,6 +17,8 @@ import { CompanyFormSheet } from "./company-form-sheet";
 import { RecordListPager, type RecordListRow } from "./record-list";
 import { RecordMark } from "./record-mark";
 import { RecordBoard } from "./record-board";
+import { ColumnPicker } from "@/components/ui/column-picker";
+import { useVisibleColumns, type ColumnOption } from "@/lib/ui/visible-columns";
 import {
   GroupedRecordList,
   bucketByLetter,
@@ -48,6 +50,17 @@ const ACCOUNT_STATUS_LABELS: Record<string, string> = {
   BLACKLISTED: "Blacklisted",
 };
 
+/** What a company's row or card can show, for the picker. */
+const COMPANY_FIELDS: ColumnOption[] = [
+  { id: "name", label: "Name", required: true },
+  { id: "location", label: "Reference and location" },
+  { id: "status", label: "Account status" },
+  { id: "type", label: "Company type" },
+  { id: "people", label: "People count" },
+  { id: "deals", label: "Deal count" },
+  { id: "owner", label: "Owner" },
+];
+
 export function CompaniesContent({ openCreate = false }: { openCreate?: boolean }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -78,6 +91,8 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
     [],
   );
 
+  const fields = useVisibleColumns("crm.companies.fields", COMPANY_FIELDS);
+
   const boardCards = useMemo(
     () =>
       companies.map((company) => ({
@@ -95,17 +110,34 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{company.name}</p>
-              <p className="truncate text-sm text-[var(--text-muted)]">
-                {[company.city, company.country].filter(Boolean).join(", ") || company.clientNo}
-              </p>
-              <p className="mt-1 text-sm text-[var(--text-subtle)]">
-                {company._count?.people ?? 0} people · {company._count?.deals ?? 0} deals
-              </p>
+              {fields.isVisible("location") ? (
+                <p className="truncate text-sm text-[var(--text-muted)]">
+                  {[company.city, company.country].filter(Boolean).join(", ") ||
+                    company.clientNo}
+                </p>
+              ) : null}
+              {fields.isVisible("people") || fields.isVisible("deals") ? (
+                <p className="mt-1 text-sm text-[var(--text-subtle)]">
+                  {[
+                    fields.isVisible("people")
+                      ? `${company._count?.people ?? 0} people`
+                      : null,
+                    fields.isVisible("deals") ? `${company._count?.deals ?? 0} deals` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              ) : null}
+              {fields.isVisible("owner") ? (
+                <p className="mt-1 truncate text-sm text-[var(--text-subtle)]">
+                  {company.assignedTo?.name ?? "Unassigned"}
+                </p>
+              ) : null}
             </div>
           </div>
         ),
       })),
-    [companies],
+    [companies, fields],
   );
 
   const moveAccountStatus = useMutation({
@@ -138,28 +170,39 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
           />
         ),
         title: company.name,
-        subtitle:
-          [company.clientNo, [company.city, company.country].filter(Boolean).join(", ")]
-            .filter(Boolean)
-            .join(" · "),
+        subtitle: fields.isVisible("location")
+          ? [company.clientNo, [company.city, company.country].filter(Boolean).join(", ")]
+              .filter(Boolean)
+              .join(" · ")
+          : null,
         status: (
           <>
-            <StatusChip
-              status={ACCOUNT_STATUS_PRESENTATION[company.accountStatus] ?? "pending"}
-              label={ACCOUNT_STATUS_LABELS[company.accountStatus] ?? company.accountStatus}
-            />
-            <Badge tone="neutral" size="sm">
-              {COMPANY_TYPE_LABELS[company.companyType] ?? company.companyType}
-            </Badge>
+            {fields.isVisible("status") ? (
+              <StatusChip
+                status={ACCOUNT_STATUS_PRESENTATION[company.accountStatus] ?? "pending"}
+                label={ACCOUNT_STATUS_LABELS[company.accountStatus] ?? company.accountStatus}
+              />
+            ) : null}
+            {fields.isVisible("type") ? (
+              <Badge tone="neutral" size="sm">
+                {COMPANY_TYPE_LABELS[company.companyType] ?? company.companyType}
+              </Badge>
+            ) : null}
           </>
         ),
         facts: [
-          { label: "People", value: company._count?.people ?? 0, mono: true },
-          { label: "Deals", value: company._count?.deals ?? 0, mono: true },
-          { label: "Owner", value: company.assignedTo?.name ?? "Unassigned" },
+          ...(fields.isVisible("people")
+            ? [{ label: "People", value: company._count?.people ?? 0, mono: true }]
+            : []),
+          ...(fields.isVisible("deals")
+            ? [{ label: "Deals", value: company._count?.deals ?? 0, mono: true }]
+            : []),
+          ...(fields.isVisible("owner")
+            ? [{ label: "Owner", value: company.assignedTo?.name ?? "Unassigned" }]
+            : []),
         ],
       })),
-    [companies],
+    [companies, fields],
   );
 
   // Same reasoning as People: a directory is scanned by name, so it gets a
@@ -188,16 +231,23 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
       onCreate={() => setCreateOpen(true)}
       error={companiesQuery.error}
       filters={
-        <SegmentedControl
-          value={layout}
-          onValueChange={(value) => setLayout(value as typeof layout)}
-          size="sm"
-          ariaLabel="List or board"
-          options={[
-            { value: "LIST", label: "List" },
-            { value: "BOARD", label: "Board" },
-          ]}
-        />
+        <>
+          <SegmentedControl
+            value={layout}
+            onValueChange={(value) => setLayout(value as typeof layout)}
+            size="sm"
+            ariaLabel="List or board"
+            options={[
+              { value: "LIST", label: "List" },
+              { value: "BOARD", label: "Board" },
+            ]}
+          />
+          <ColumnPicker
+            columns={COMPANY_FIELDS}
+            state={fields}
+            label={layout === "BOARD" ? "Card fields" : "Columns"}
+          />
+        </>
       }
     >
       {layout === "BOARD" ? (

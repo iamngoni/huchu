@@ -45,6 +45,7 @@ import { isOverdue } from "@/components/crm/leads/stage-config";
 
 import { BoardColumnHeader } from "./board-column-header";
 import { RecordMark } from "./record-mark";
+import { useBoardField } from "./board-fields";
 
 /**
  * The card animates back into its column rather than vanishing. Without this
@@ -69,6 +70,13 @@ function money(value: number | null, currency: string): string {
 }
 
 function DealCardBody({ deal }: { deal: CrmDealBoardCard }) {
+  const showReference = useBoardField("reference");
+  const showClient = useBoardField("client");
+  const showValue = useBoardField("value");
+  const showOwner = useBoardField("owner");
+  const showCloseDate = useBoardField("closeDate");
+  const showOverdue = useBoardField("overdue");
+
   const overdue = isOverdue(deal.nextFollowUp?.dueAt);
 
   return (
@@ -83,13 +91,15 @@ function DealCardBody({ deal }: { deal: CrmDealBoardCard }) {
         />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{deal.title}</p>
-          <p className="truncate text-sm text-[var(--text-muted)]">
-            <span className="font-mono">{deal.dealNo}</span>
-            {" · "}
-            {deal.client?.name ?? "No company"}
-          </p>
+          {showReference || showClient ? (
+            <p className="truncate text-sm text-[var(--text-muted)]">
+              {showReference ? <span className="font-mono">{deal.dealNo}</span> : null}
+              {showReference && showClient ? " · " : null}
+              {showClient ? (deal.client?.name ?? "No company") : null}
+            </p>
+          ) : null}
         </div>
-        {overdue ? (
+        {overdue && showOverdue ? (
           <span
             className="mt-1 size-2 shrink-0 rounded-full bg-[var(--status-error-border)]"
             title={`Overdue: ${deal.nextFollowUp?.title ?? "task"}`}
@@ -98,17 +108,25 @@ function DealCardBody({ deal }: { deal: CrmDealBoardCard }) {
         ) : null}
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-sm">{money(deal.value, deal.currency)}</span>
-        <RecordMark
-          kind="rep"
-          name={deal.assignedTo?.name ?? "Unassigned"}
-          size="sm"
-          className="shrink-0"
-        />
-      </div>
+      {showValue || showOwner ? (
+        <div className="flex items-center justify-between gap-2">
+          {showValue ? (
+            <span className="font-mono text-sm">{money(deal.value, deal.currency)}</span>
+          ) : (
+            <span />
+          )}
+          {showOwner ? (
+            <RecordMark
+              kind="rep"
+              name={deal.assignedTo?.name ?? "Unassigned"}
+              size="sm"
+              className="shrink-0"
+            />
+          ) : null}
+        </div>
+      ) : null}
 
-      {deal.expectedCloseDate ? (
+      {deal.expectedCloseDate && showCloseDate ? (
         <p className="flex items-center gap-1 text-sm text-[var(--text-muted)]">
           <Clock className="size-3" />
           <span>

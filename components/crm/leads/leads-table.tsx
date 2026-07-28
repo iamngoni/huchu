@@ -22,6 +22,7 @@ import {
 import { ChevronDown } from "@/lib/icons";
 import type { CrmLeadListRecord } from "@/lib/crm/crm-v2";
 import type { LeadSort } from "@/lib/crm/views";
+import type { ColumnOption } from "@/lib/ui/visible-columns";
 import { cn } from "@/lib/utils";
 
 import { RecordMark } from "@/components/crm/records/record-mark";
@@ -35,6 +36,24 @@ import {
   formatLeadValue,
   isOverdue,
 } from "./stage-config";
+
+/**
+ * Every column this table knows how to draw, for the picker.
+ *
+ * Kept beside the definitions rather than in a shared file so the two cannot
+ * drift: a column somebody can turn on that the table does not render is worse
+ * than no picker at all.
+ */
+export const LEAD_TABLE_COLUMNS: ColumnOption[] = [
+  { id: "leadNo", label: "Lead", required: true },
+  { id: "client", label: "Client" },
+  { id: "stage", label: "Stage" },
+  { id: "value", label: "Value" },
+  { id: "owner", label: "Owner" },
+  { id: "nextTask", label: "Next task" },
+  { id: "source", label: "Source" },
+  { id: "updatedAt", label: "Updated" },
+];
 
 function OwnerCell({ owner }: { owner: CrmLeadListRecord["assignedTo"] }) {
   if (!owner) {
@@ -79,6 +98,7 @@ export function LeadsTable({
   onSortChange,
   onBulkAssign,
   onBulkStage,
+  hiddenColumns,
 }: {
   leads: CrmLeadListRecord[];
   total: number;
@@ -91,6 +111,8 @@ export function LeadsTable({
   onSortChange: (sort: LeadSort) => void;
   onBulkAssign: (ids: string[], assignedToId: string | null, done: () => void) => void;
   onBulkStage: (ids: string[], stage: CrmLeadStage, done: () => void) => void;
+  /** Column ids the reader has switched off. */
+  hiddenColumns?: string[];
 }) {
   const router = useRouter();
 
@@ -188,12 +210,18 @@ export function LeadsTable({
     [],
   );
 
+  const hiddenSet = useMemo(() => new Set(hiddenColumns ?? []), [hiddenColumns]);
+  const visibleColumns = useMemo(
+    () => columns.filter((column) => !hiddenSet.has(String(column.id))),
+    [columns, hiddenSet],
+  );
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <DataTable
       data={leads}
-      columns={columns}
+      columns={visibleColumns}
       edgeToEdge
       stickyHeader
       queryState={{

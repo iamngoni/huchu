@@ -16,6 +16,12 @@ import {
   fetchCrmSavedViews,
 } from "@/lib/crm/crm-v2";
 import { DEFAULT_LEAD_SORT, type LeadSort, type LeadViewFilters } from "@/lib/crm/views";
+import { useVisibleColumns } from "@/lib/ui/visible-columns";
+import { ColumnPicker } from "@/components/ui/column-picker";
+import {
+  BoardFieldsProvider,
+  LEAD_CARD_FIELDS,
+} from "@/components/crm/records/board-fields";
 
 import { LeadsBoard } from "./leads-board";
 import {
@@ -24,7 +30,7 @@ import {
   LeadStageFilter,
   type LeadFilterOwner,
 } from "./leads-filters";
-import { LeadsTable } from "./leads-table";
+import { LEAD_TABLE_COLUMNS, LeadsTable } from "./leads-table";
 import { LeadFormSheet } from "./lead-form-sheet";
 import { LostReasonDialog } from "./lost-reason-dialog";
 import {
@@ -53,6 +59,11 @@ export function LeadsWorkspace({
   const { toast } = useToast();
 
   const [viewType, setViewType] = useState<"TABLE" | "BOARD">(initialView);
+
+  // A table's columns and a board's card facts are the same question asked of
+  // two surfaces, so they get one control and two remembered answers.
+  const tableColumns = useVisibleColumns("crm.leads.table", LEAD_TABLE_COLUMNS);
+  const boardFields = useVisibleColumns("crm.leads.board", LEAD_CARD_FIELDS);
   const [filters, setFilters] = useState<LeadViewFilters>(initialFilters);
   const [sort, setSort] = useState<LeadSort>(DEFAULT_LEAD_SORT);
   const [page, setPage] = useState(1);
@@ -227,6 +238,12 @@ export function LeadsWorkspace({
           />
         ) : null}
 
+        <ColumnPicker
+          columns={viewType === "TABLE" ? LEAD_TABLE_COLUMNS : LEAD_CARD_FIELDS}
+          state={viewType === "TABLE" ? tableColumns : boardFields}
+          label={viewType === "TABLE" ? "Columns" : "Card fields"}
+        />
+
         <LeadStageFilter filters={filters} onChange={applyFilters} />
       </div>
 
@@ -253,9 +270,12 @@ export function LeadsWorkspace({
           }}
           onBulkAssign={handleBulkAssign}
           onBulkStage={handleBulkStage}
+          hiddenColumns={tableColumns.hidden}
         />
       ) : (
-        <LeadsBoard filters={filters} className="min-h-0 flex-1" />
+        <BoardFieldsProvider hidden={boardFields.hidden}>
+          <LeadsBoard filters={filters} className="min-h-0 flex-1" />
+        </BoardFieldsProvider>
       )}
 
       <LeadFormSheet

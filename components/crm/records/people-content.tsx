@@ -21,6 +21,8 @@ import { PersonFormSheet } from "./person-form-sheet";
 import { RecordListPager, type RecordListRow } from "./record-list";
 import { RecordMark } from "./record-mark";
 import { RecordBoard } from "./record-board";
+import { ColumnPicker } from "@/components/ui/column-picker";
+import { useVisibleColumns, type ColumnOption } from "@/lib/ui/visible-columns";
 import {
   GroupedRecordList,
   bucketByLetter,
@@ -39,6 +41,16 @@ const CONTACT_TYPE_LABELS: Record<string, string> = {
   REFERRAL_PARTNER: "Referral partner",
   OTHER: "Other",
 };
+
+/** What a person's row or card can show, for the picker. */
+const PERSON_FIELDS: ColumnOption[] = [
+  { id: "name", label: "Name", required: true },
+  { id: "role", label: "Job title and company" },
+  { id: "contact", label: "Email or phone" },
+  { id: "type", label: "Contact type" },
+  { id: "deals", label: "Deal count" },
+  { id: "owner", label: "Owner" },
+];
 
 export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) {
   const [search, setSearch] = useState("");
@@ -101,6 +113,8 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
       }),
   });
 
+  const fields = useVisibleColumns("crm.people.fields", PERSON_FIELDS);
+
   const rows = useMemo<RecordListRow[]>(
     () =>
       people.map((person) => ({
@@ -117,20 +131,28 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
         ),
         title: person.fullName,
         subtitle:
-          [person.jobTitle, person.client?.name, person.email ?? person.phone]
+          [
+            fields.isVisible("role") ? person.jobTitle : null,
+            fields.isVisible("role") ? person.client?.name : null,
+            fields.isVisible("contact") ? person.email ?? person.phone : null,
+          ]
             .filter(Boolean)
             .join(" · ") || person.personNo,
-        status: (
+        status: fields.isVisible("type") ? (
           <Badge tone="neutral" size="sm">
             {CONTACT_TYPE_LABELS[person.contactType] ?? person.contactType}
           </Badge>
-        ),
+        ) : null,
         facts: [
-          { label: "Deals", value: person._count?.dealContacts ?? 0, mono: true },
-          { label: "Owner", value: person.assignedTo?.name ?? "Unassigned" },
+          ...(fields.isVisible("deals")
+            ? [{ label: "Deals", value: person._count?.dealContacts ?? 0, mono: true }]
+            : []),
+          ...(fields.isVisible("owner")
+            ? [{ label: "Owner", value: person.assignedTo?.name ?? "Unassigned" }]
+            : []),
         ],
       })),
-    [people],
+    [fields, people],
   );
 
   // A directory is scanned by name, so it gets the grouped-by-section recipe:
@@ -168,20 +190,27 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{person.fullName}</p>
-              <p className="truncate text-sm text-[var(--text-muted)]">
-                {[person.jobTitle, person.client?.name].filter(Boolean).join(" · ") ||
-                  person.personNo}
-              </p>
-              {person.email || person.phone ? (
+              {fields.isVisible("role") ? (
+                <p className="truncate text-sm text-[var(--text-muted)]">
+                  {[person.jobTitle, person.client?.name].filter(Boolean).join(" · ") ||
+                    person.personNo}
+                </p>
+              ) : null}
+              {fields.isVisible("contact") && (person.email || person.phone) ? (
                 <p className="mt-1 truncate text-sm text-[var(--text-subtle)]">
                   {person.email ?? person.phone}
+                </p>
+              ) : null}
+              {fields.isVisible("owner") ? (
+                <p className="mt-1 truncate text-sm text-[var(--text-subtle)]">
+                  {person.assignedTo?.name ?? "Unassigned"}
                 </p>
               ) : null}
             </div>
           </div>
         ),
       })),
-    [people],
+    [fields, people],
   );
 
   const moveContactType = useMutation({
@@ -222,16 +251,23 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
       onCreate={() => setCreateOpen(true)}
       error={peopleQuery.error}
       filters={
-        <SegmentedControl
-          value={layout}
-          onValueChange={(value) => setLayout(value as typeof layout)}
-          size="sm"
-          ariaLabel="List or board"
-          options={[
-            { value: "LIST", label: "List" },
-            { value: "BOARD", label: "Board" },
-          ]}
-        />
+        <>
+          <SegmentedControl
+            value={layout}
+            onValueChange={(value) => setLayout(value as typeof layout)}
+            size="sm"
+            ariaLabel="List or board"
+            options={[
+              { value: "LIST", label: "List" },
+              { value: "BOARD", label: "Board" },
+            ]}
+          />
+          <ColumnPicker
+            columns={PERSON_FIELDS}
+            state={fields}
+            label={layout === "BOARD" ? "Card fields" : "Columns"}
+          />
+        </>
       }
     >
       {layout === "BOARD" ? (

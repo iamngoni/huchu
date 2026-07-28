@@ -26,6 +26,9 @@ import { isDealStale } from "@/lib/crm/pipelines";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { DealsBoard } from "./deals-board";
+import { BoardFieldsProvider, DEAL_CARD_FIELDS } from "./board-fields";
+import { ColumnPicker } from "@/components/ui/column-picker";
+import { useVisibleColumns, type ColumnOption } from "@/lib/ui/visible-columns";
 import { DealFormSheet } from "./deal-form-sheet";
 import { RecordListShell } from "./record-list-shell";
 
@@ -41,6 +44,17 @@ function formatMoney(value: number | null, currency: string): string {
   if (typeof value !== "number") return "—";
   return `${currency} ${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
+
+/** Every column the deals table knows how to draw, for the picker. */
+const DEAL_TABLE_COLUMNS: ColumnOption[] = [
+  { id: "deal", label: "Deal", required: true },
+  { id: "company", label: "Company" },
+  { id: "stage", label: "Stage" },
+  { id: "value", label: "Value" },
+  { id: "close", label: "Expected close" },
+  { id: "owner", label: "Owner" },
+  { id: "next", label: "Next task" },
+];
 
 export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
   const [search, setSearch] = useState("");
@@ -84,6 +98,9 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
     pipelines.find((pipeline) => pipeline.isDefault) ??
     pipelines[0] ??
     null;
+
+  const tableColumns = useVisibleColumns("crm.deals.table", DEAL_TABLE_COLUMNS);
+  const boardFields = useVisibleColumns("crm.deals.board", DEAL_CARD_FIELDS);
 
   const columns = useMemo<ColumnDef<CrmDealRecord>[]>(
     () => [
@@ -189,6 +206,11 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
     [],
   );
 
+  const visibleColumns = useMemo(
+    () => columns.filter((column) => tableColumns.isVisible(String(column.id))),
+    [columns, tableColumns],
+  );
+
   return (
     <RecordListShell
       title="Deals"
@@ -257,22 +279,30 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
               { value: "LIST", label: "List" },
             ]}
           />
+
+          <ColumnPicker
+            columns={layout === "BOARD" ? DEAL_CARD_FIELDS : DEAL_TABLE_COLUMNS}
+            state={layout === "BOARD" ? boardFields : tableColumns}
+            label={layout === "BOARD" ? "Card fields" : "Columns"}
+          />
         </>
       }
     >
       {layout === "BOARD" ? (
-        <DealsBoard
-          pipelineId={activePipeline?.id ?? null}
-          search={debouncedSearch}
-          className="min-h-[24rem]"
-        />
+        <BoardFieldsProvider hidden={boardFields.hidden}>
+          <DealsBoard
+            pipelineId={activePipeline?.id ?? null}
+            search={debouncedSearch}
+            className="min-h-[24rem]"
+          />
+        </BoardFieldsProvider>
       ) : (
       <DataTable
         // The shell above owns search; a second box in the table toolbar is the
         // duplicate-control failure the cookbook's one-filter-pathway rule exists to stop.
         features={{ globalFilter: false }}
         data={rows}
-        columns={columns}
+        columns={visibleColumns}
         edgeToEdge
         stickyHeader
         queryState={{ mode: "paginated", page, pageSize: PAGE_SIZE }}
