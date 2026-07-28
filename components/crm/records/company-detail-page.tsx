@@ -15,7 +15,8 @@ import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 import { formatMoney } from "@/components/crm/documents/document-types";
 import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
-import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline";
+import { RecordStory } from "@/components/crm/records/record-story";
+import { buildStory } from "@/lib/crm/story";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
@@ -261,7 +262,14 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
         {
           value: "timeline",
           label: "Timeline",
-          content: <ActivityTimeline activities={company.activities} />,
+          content: (
+            <RecordStory
+              events={buildStory({
+                activities: company.activities,
+                createdLabel: "Company added",
+              })}
+            />
+          ),
         },
         {
           value: "tasks",

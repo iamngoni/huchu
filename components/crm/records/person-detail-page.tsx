@@ -13,7 +13,8 @@ import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/c
 import { formatMoney } from "@/components/crm/documents/document-types";
 import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
-import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline";
+import { RecordStory } from "@/components/crm/records/record-story";
+import { buildStory } from "@/lib/crm/story";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
@@ -208,7 +209,14 @@ export function PersonDetailPage({ personId }: { personId: string }) {
         {
           value: "timeline",
           label: "Timeline",
-          content: <ActivityTimeline activities={person.activities} />,
+          content: (
+            <RecordStory
+              events={buildStory({
+                activities: person.activities,
+                createdLabel: "Person added",
+              })}
+            />
+          ),
         },
         {
           value: "deals",

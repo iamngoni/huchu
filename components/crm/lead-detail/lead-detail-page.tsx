@@ -36,7 +36,8 @@ import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 
 import { ActivityComposer } from "./activity-composer";
-import { ActivityTimeline } from "./activity-timeline";
+import { RecordStory } from "@/components/crm/records/record-story";
+import { buildStory } from "@/lib/crm/story";
 import { AttributesPanel } from "./attributes-panel";
 import { StageProgress } from "./stage-progress";
 import { VisitsTab } from "./visits-tab";
@@ -253,7 +254,19 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             </div>
 
             <TabsContent value="timeline" className="pt-4">
-              <ActivityTimeline activities={lead.activities} />
+              {/* The whole story, not just the activity table: visits, tasks,
+                  documents and the day it arrived, in one order. */}
+              <RecordStory
+                events={buildStory({
+                  activities: lead.activities,
+                  tasks: lead.followUps,
+                  visits: lead.appointments,
+                  documents: lead.documents,
+                  createdAt: lead.createdAt,
+                  createdLabel: `Lead ${lead.leadNo} came in`,
+                })}
+                emptyMessage="Nothing has happened on this lead yet. Log a call or a note above to start the trail."
+              />
             </TabsContent>
 
             <TabsContent value="documents" className="pt-4">

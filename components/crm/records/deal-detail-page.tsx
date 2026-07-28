@@ -24,7 +24,8 @@ import type { LeadDocument } from "@/components/crm/documents/document-types";
 import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityComposer } from "@/components/crm/lead-detail/activity-composer";
-import { ActivityTimeline } from "@/components/crm/lead-detail/activity-timeline";
+import { RecordStory } from "@/components/crm/records/record-story";
+import { buildStory } from "@/lib/crm/story";
 import { VisitsTab } from "@/components/crm/lead-detail/visits-tab";
 import type { LeadActivity, LeadAppointment, LeadFollowUp } from "@/components/crm/lead-detail/lead-types";
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
@@ -263,7 +264,16 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             content: (
               <div className="space-y-4">
                 <ActivityComposer target={{ kind: "deal", id: dealId }} />
-                <ActivityTimeline activities={deal.activities} />
+                <RecordStory
+                  events={buildStory({
+                    activities: deal.activities,
+                    tasks: deal.followUps,
+                    visits: deal.appointments,
+                    documents: deal.documents,
+                    createdLabel: `Deal ${deal.dealNo} opened`,
+                  })}
+                  emptyMessage="Nothing has happened on this deal yet."
+                />
               </div>
             ),
           },
