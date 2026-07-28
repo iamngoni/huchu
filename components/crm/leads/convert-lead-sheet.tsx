@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { ArrowRight, Check } from "@/lib/icons";
 import type { DuplicateConfidence } from "@/lib/crm/duplicates";
+import { DUPLICATE_CONFIDENCE_TONE } from "@/lib/crm/tones";
 import { cn } from "@/lib/utils";
 
 type DuplicateMatch = {
@@ -83,7 +84,7 @@ function CandidateRow({
       <span className="min-w-0">
         <span className="flex flex-wrap items-center gap-1.5">
           <span className="font-medium">{title}</span>
-          <Badge variant="secondary" className="text-sm">
+          <Badge tone={DUPLICATE_CONFIDENCE_TONE[confidence] ?? "neutral"} size="sm">
             {CONFIDENCE_LABELS[confidence]}
           </Badge>
         </span>

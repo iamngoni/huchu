@@ -5,6 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar, Badge } from "@corelithzw/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { StatusChip } from "@/components/ui/status-chip";
+import {
+  CRM_STAGE_LABELS,
+  CRM_STAGE_STATUS,
+} from "@/components/crm/leads/stage-config";
 import { ClientDate } from "@/components/ui/client-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -83,9 +88,10 @@ function pipelineRows(detail: CrmRepDetail): RecordListRow[] {
       title: lead.title,
       subtitle: [lead.client?.name, lead.leadNo].filter(Boolean).join(" · "),
       status: (
-        <Badge tone="neutral" size="sm">
-          {lead.stage.replace(/_/g, " ").toLowerCase()}
-        </Badge>
+        <StatusChip
+          status={CRM_STAGE_STATUS[lead.stage]}
+          label={CRM_STAGE_LABELS[lead.stage]}
+        />
       ),
       facts: [
         {

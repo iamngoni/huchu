@@ -17,18 +17,12 @@ import {
   requiresOutcome,
   taskRecordRef,
 } from "@/lib/crm/tasks";
+import { TASK_PRIORITY_TONE } from "@/lib/crm/tones";
 import { Clock, Repeat, Trash2 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 import { CompleteTaskDialog } from "./complete-task-dialog";
 import { TaskFormSheet } from "./task-form-sheet";
-
-const PRIORITY_TONE: Record<string, string> = {
-  LOW: "text-[var(--text-muted)]",
-  NORMAL: "text-[var(--text-muted)]",
-  HIGH: "text-[var(--status-warning-fg)]",
-  URGENT: "text-[var(--status-danger-fg)]",
-};
 
 /**
  * The task list, shared by the queue page and every record page's Tasks tab.
@@ -161,8 +155,10 @@ export function TaskList({
                     <Clock className="size-3.5" />
                     <ClientDate value={task.dueAt} mode={task.hasDueTime ? "datetime" : "date"} />
                   </span>
-                  {task.priority !== "NORMAL" ? (
-                    <span className={PRIORITY_TONE[task.priority]}>{task.priority}</span>
+                  {task.priority !== "NORMAL" && task.priority !== "LOW" ? (
+                    <Badge tone={TASK_PRIORITY_TONE[task.priority] ?? "neutral"} size="sm">
+                      {task.priority.toLowerCase()}
+                    </Badge>
                   ) : null}
                   {task.assignedTo ? <span>{task.assignedTo.name}</span> : <span>Unassigned</span>}
                   {record && recordLabel ? (

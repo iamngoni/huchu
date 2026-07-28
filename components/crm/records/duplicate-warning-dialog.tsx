@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { DuplicateConfidence } from "@/lib/crm/duplicates";
+import { DUPLICATE_CONFIDENCE_TONE } from "@/lib/crm/tones";
 
 export type DuplicateEntry = {
   record: { id: string; [key: string]: unknown };
@@ -74,7 +75,7 @@ export function DuplicateWarningDialog({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{rendered.title}</span>
-                    <Badge variant="secondary" className="text-sm">
+                    <Badge tone={DUPLICATE_CONFIDENCE_TONE[entry.confidence] ?? "neutral"} size="sm">
                       {CONFIDENCE_LABELS[entry.confidence]}
                     </Badge>
                   </div>

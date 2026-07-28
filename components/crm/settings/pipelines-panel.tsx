@@ -30,6 +30,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { ArrowDownward, ArrowUpward, Plus, Trash2 } from "@/lib/icons";
 import { fetchCrmPipelines, type CrmPipelineRecord } from "@/lib/crm/crm-v2";
+import { STAGE_OUTCOME_TONE } from "@/lib/crm/tones";
 import { validateStages, type StageInput } from "@/lib/crm/pipelines";
 
 type StageDraft = StageInput & { dealCount?: number };
@@ -158,7 +159,7 @@ function StageEditor({
                   maxLength={60}
                 />
                 {isOutcome ? (
-                  <Badge variant="secondary">
+                  <Badge tone={STAGE_OUTCOME_TONE[stage.status] ?? "neutral"} size="sm">
                     {stage.status === "WON" ? "Won outcome" : "Lost outcome"}
                   </Badge>
                 ) : null}

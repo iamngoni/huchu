@@ -1,0 +1,78 @@
+import type { BadgeTone } from "@corelithzw/react";
+
+import type { CanonicalUiStatus } from "@/lib/ui/status-map";
+
+/**
+ * What colour each piece of CRM vocabulary is.
+ *
+ * Two rules, applied consistently, which is the whole point of gathering them
+ * in one file rather than letting each screen invent its own map:
+ *
+ *   - A **state** is coloured. Won is green, blocked is red, awaiting a
+ *     decision is amber. The colour is doing work — it is how you find the row
+ *     that needs you without reading every row.
+ *   - A **category** is not. "Contractor", "Site contact", "Sales rep" are
+ *     facts about a record, not judgements on it, and colouring them spends
+ *     the reader's attention on something that never needs acting on. Those
+ *     stay neutral on purpose; the page is not monochrome by accident, it is
+ *     monochrome everywhere the colour would mean nothing.
+ *
+ * Anything that is genuinely a state and is still rendering grey is a bug.
+ */
+
+/** How likely two records are the same. A near-certain duplicate is a problem. */
+export const DUPLICATE_CONFIDENCE_TONE: Record<string, BadgeTone> = {
+  HIGH: "danger",
+  MEDIUM: "warn",
+  LOW: "neutral",
+};
+
+/** Task priority. Normal and low are not worth a colour — that is what normal means. */
+export const TASK_PRIORITY_TONE: Record<string, BadgeTone> = {
+  LOW: "neutral",
+  NORMAL: "neutral",
+  HIGH: "warn",
+  URGENT: "danger",
+};
+
+/** A pipeline stage's terminal outcome, as configured in settings. */
+export const STAGE_OUTCOME_TONE: Record<string, BadgeTone> = {
+  OPEN: "neutral",
+  WON: "success",
+  LOST: "danger",
+};
+
+/**
+ * Where a job has got to. Canonical UI statuses rather than badge tones,
+ * because these render through `StatusChip`.
+ */
+export const WORK_ORDER_STATUS: Record<string, CanonicalUiStatus> = {
+  DRAFT: "inactive",
+  SCHEDULED: "pending",
+  IN_PROGRESS: "in_progress",
+  BLOCKED: "failing",
+  COMPLETED: "passing",
+  CANCELLED: "inactive",
+};
+
+/** A quote, invoice or receipt's standing. */
+export const DOCUMENT_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+  DRAFT: { label: "Draft", tone: "neutral" },
+  SENT: { label: "Sent", tone: "info" },
+  ISSUED: { label: "Issued", tone: "info" },
+  ACCEPTED: { label: "Accepted", tone: "success" },
+  PAID: { label: "Paid", tone: "success" },
+  RECEIVED: { label: "Received", tone: "success" },
+  EXPIRED: { label: "Expired", tone: "warn" },
+  VOIDED: { label: "Voided", tone: "neutral" },
+  MISSING: { label: "No paperwork", tone: "danger" },
+};
+
+/** A site visit's standing. */
+export const VISIT_STATUS: Record<string, CanonicalUiStatus> = {
+  SCHEDULED: "pending",
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "passing",
+  CANCELLED: "inactive",
+  NO_SHOW: "failing",
+};

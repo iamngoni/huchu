@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { Alert, EmptyState, Progress, SegmentedControl, Skeleton } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { StatusChip } from "@/components/ui/status-chip";
+import { WORK_ORDER_STATUS } from "@/lib/crm/tones";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
   WORK_ORDER_QUEUE_LABELS,
@@ -16,20 +17,10 @@ import {
   type WorkOrderQueue,
 } from "@/lib/crm/work-orders";
 import { Clock, MapPin, Users } from "@/lib/icons";
-import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { WorkOrderSheet, type WorkOrderRecord } from "./work-order-sheet";
 
 const QUEUES: WorkOrderQueue[] = ["TODAY", "SCHEDULED", "IN_PROGRESS", "BLOCKED", "MINE", "DONE"];
-
-const STATUS_TONE: Record<string, CanonicalUiStatus> = {
-  DRAFT: "inactive",
-  SCHEDULED: "pending",
-  IN_PROGRESS: "in_progress",
-  BLOCKED: "failing",
-  COMPLETED: "passing",
-  CANCELLED: "inactive",
-};
 
 const EMPTY_MESSAGES: Partial<Record<WorkOrderQueue, string>> = {
   TODAY: "No jobs booked for today.",
@@ -93,7 +84,7 @@ export function WorkOrdersContent() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-sm">{order.workOrderNo}</span>
                     <StatusChip
-                      status={STATUS_TONE[order.status] ?? "inactive"}
+                      status={WORK_ORDER_STATUS[order.status] ?? "inactive"}
                       label={WORK_ORDER_STATUS_LABELS[order.status]}
                     />
                     {late ? (

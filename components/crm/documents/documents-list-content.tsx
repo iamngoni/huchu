@@ -15,6 +15,7 @@ import { ClientDate } from "@/components/ui/client-date";
 import { Download, DotsThree, FileText } from "@/lib/icons";
 import { useDebounced } from "@/hooks/use-debounced";
 import { fetchCrmDocuments, type CrmDocumentKind, type CrmDocumentRecord } from "@/lib/crm/crm-v2";
+import { DOCUMENT_STATUS } from "@/lib/crm/tones";
 
 import {
   GroupedRecordList,
@@ -28,18 +29,6 @@ import { formatMoney } from "./document-types";
 const PAGE_SIZE = 50;
 
 /** The accounting statuses, said the way a salesperson would say them. */
-const STATUS_TONE: Record<string, { label: string; tone: "neutral" | "info" | "success" | "warn" | "danger" }> = {
-  DRAFT: { label: "Draft", tone: "neutral" },
-  SENT: { label: "Sent", tone: "info" },
-  ISSUED: { label: "Issued", tone: "info" },
-  ACCEPTED: { label: "Accepted", tone: "success" },
-  PAID: { label: "Paid", tone: "success" },
-  RECEIVED: { label: "Received", tone: "success" },
-  EXPIRED: { label: "Expired", tone: "warn" },
-  VOIDED: { label: "Voided", tone: "neutral" },
-  MISSING: { label: "No paperwork", tone: "danger" },
-};
-
 /**
  * Where the document came from, and therefore where its PDF lives — the
  * render route hangs off the record the document was raised against.
@@ -100,7 +89,7 @@ export function DocumentsListContent({
       emptyBody: `Nothing ${bucket.label.toLowerCase()}.`,
       rows: bucket.items.map((document) => {
         const from = origin(document);
-        const status = STATUS_TONE[document.status] ?? {
+        const status = DOCUMENT_STATUS[document.status] ?? {
           label: document.status,
           tone: "neutral" as const,
         };

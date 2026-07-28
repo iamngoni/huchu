@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { EntityLink } from "@/components/crm/records/entity-link";
 import { useToast } from "@/components/ui/use-toast";
+import { WORK_ORDER_STATUS } from "@/lib/crm/tones";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
   WORK_ORDER_STATUS_LABELS,
@@ -21,7 +22,6 @@ import {
   type WorkOrderQueue,
 } from "@/lib/crm/work-orders";
 import { Clock, MapPin, Phone } from "@/lib/icons";
-import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 export type WorkOrderItem = {
   id: string;
@@ -55,15 +55,6 @@ export type WorkOrderRecord = {
   client: { id: string; name: string } | null;
   deal: { id: string; dealNo: string; title: string } | null;
   allowedTransitions?: (keyof typeof WORK_ORDER_STATUS_LABELS)[];
-};
-
-const STATUS_TONE: Record<string, CanonicalUiStatus> = {
-  DRAFT: "inactive",
-  SCHEDULED: "pending",
-  IN_PROGRESS: "in_progress",
-  BLOCKED: "failing",
-  COMPLETED: "passing",
-  CANCELLED: "inactive",
 };
 
 /**
@@ -172,7 +163,7 @@ export function WorkOrderSheet({
               {order.workOrderNo}
             </span>
             <StatusChip
-              status={STATUS_TONE[order.status] ?? "inactive"}
+              status={WORK_ORDER_STATUS[order.status] ?? "inactive"}
               label={WORK_ORDER_STATUS_LABELS[order.status]}
             />
             {order.deal ? (

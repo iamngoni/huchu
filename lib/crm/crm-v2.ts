@@ -935,7 +935,7 @@ export type CrmRepDetail = {
     id: string;
     leadNo: string;
     title: string;
-    stage: string;
+    stage: CrmLeadStage;
     estimatedValue: number | null;
     currency: string;
     updatedAt: string;
