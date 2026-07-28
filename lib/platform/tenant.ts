@@ -5,6 +5,11 @@ import {
   getPortalHostPrefixes,
   isPortalAliasPrefix,
 } from "@/lib/platform/portal-hosts";
+import {
+  PREVIEW_HOST_HEADER,
+  isHostEnforcementBypassed,
+  resolvePreviewHostOverride,
+} from "@/lib/platform/preview-host";
 
 type NullableString = string | null | undefined;
 type HeaderRecordValue = string | string[] | undefined | null;
@@ -326,13 +331,41 @@ function readHeaderValue(headers: RequestHeadersLike | null | undefined, key: st
   return null;
 }
 
-export function getHostHeaderFromRequestHeaders(headers: RequestHeadersLike | null | undefined): string | null {
+/**
+ * The host this request is actually on, ignoring any preview override.
+ *
+ * Only the proxy needs this — to build redirects that stay on the origin the
+ * browser is really talking to. Everything else wants the effective host below.
+ */
+export function getRealHostHeaderFromRequestHeaders(
+  headers: RequestHeadersLike | null | undefined,
+): string | null {
   const forwardedHost = readHeaderValue(headers, "x-forwarded-host");
   const host = readHeaderValue(headers, "host");
   const resolvedHost = forwardedHost || host;
 
   const normalizedHost = normalizeHostHeaderValue(resolvedHost);
   return normalizedHost || null;
+}
+
+/**
+ * The host the request should be treated as being on.
+ *
+ * Normally the real one. On a preview or staging deployment that has opted in,
+ * a nominated host takes its place — see lib/platform/preview-host.ts for why.
+ * Every caller in the app goes through here, which is what keeps the proxy,
+ * the credentials provider and the layouts agreeing about tenancy.
+ */
+export function getHostHeaderFromRequestHeaders(headers: RequestHeadersLike | null | undefined): string | null {
+  const previewHost = resolvePreviewHostOverride(
+    readHeaderValue(headers, PREVIEW_HOST_HEADER),
+    readHeaderValue(headers, "cookie"),
+  );
+  if (previewHost) {
+    return previewHost;
+  }
+
+  return getRealHostHeaderFromRequestHeaders(headers);
 }
 
 type ExistsRow = {
@@ -748,6 +781,14 @@ export function getPortalRequestRouting(
 }
 
 export function isAllowedHost(hostHeader: NullableString, allowedHosts: string[] | undefined): boolean {
+  // The preview escape hatch. Without it a stale `allowedHosts` claim — a token
+  // minted before the override was set, a tenant whose subdomain was never
+  // provisioned — dead-ends the whole deployment on /access-blocked, including
+  // the page that would let you correct it.
+  if (isHostEnforcementBypassed()) {
+    return true;
+  }
+
   const currentHost = getCanonicalHost(hostHeader);
   if (!currentHost) {
     return false;

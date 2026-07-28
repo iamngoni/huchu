@@ -8,6 +8,15 @@ import {
   isTenantStatusActive,
 } from "@/lib/platform/tenant";
 import {
+  PREVIEW_HOST_COOKIE,
+  PREVIEW_HOST_PARAM,
+  PREVIEW_HOST_PATH,
+  isHostEnforcementBypassed,
+  isPreviewHostOverrideEnabled,
+  readPreviewHostIntentFromUrl,
+  stripPreviewHostParams,
+} from "@/lib/platform/preview-host";
+import {
   buildPortalHost,
   getPortalHostDescriptorByPath,
   getPortalInternalPathForPublicPath,
@@ -166,15 +175,40 @@ function redirectToLoginWithCallback(request: NextRequestWithAuth, loginPath: st
   );
 }
 
+/**
+ * Send the browser to another host.
+ *
+ * On a preview deployment that host does not resolve — `pos.floorcode.example.com`
+ * has no DNS pointing at a `*.vercel.app` build — so instead of moving the
+ * browser we stay on the origin it can reach and nominate the target host
+ * through the override parameter. The next pass through the proxy turns that
+ * into a cookie, and from there the request is treated as though it arrived on
+ * the target host, which is the whole point.
+ *
+ * With the escape hatch on but the override off there is nowhere safe to send
+ * anyone, so the redirect is dropped and the caller carries on where it is.
+ */
+function redirectAcrossHost(targetHostname: string, redirectUrl: URL) {
+  if (isPreviewHostOverrideEnabled()) {
+    redirectUrl.searchParams.set(PREVIEW_HOST_PARAM, targetHostname);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (isHostEnforcementBypassed()) {
+    return NextResponse.next();
+  }
+
+  redirectUrl.hostname = targetHostname;
+  return NextResponse.redirect(redirectUrl);
+}
+
 function redirectToTenantHost(request: NextRequestWithAuth, companySlug: string) {
   const rootDomain = getRootDomain();
   if (!rootDomain) {
     return NextResponse.next();
   }
 
-  const redirectUrl = request.nextUrl.clone();
-  redirectUrl.hostname = `${companySlug}.${rootDomain}`;
-  return NextResponse.redirect(redirectUrl);
+  return redirectAcrossHost(`${companySlug}.${rootDomain}`, request.nextUrl.clone());
 }
 
 function redirectToPortalHost(request: NextRequestWithAuth, tenantSlug: string, portalPrefix: string) {
@@ -183,9 +217,10 @@ function redirectToPortalHost(request: NextRequestWithAuth, tenantSlug: string, 
     return NextResponse.next();
   }
 
-  const redirectUrl = request.nextUrl.clone();
-  redirectUrl.hostname = buildPortalHost(portalPrefix, tenantSlug, rootDomain);
-  return NextResponse.redirect(redirectUrl);
+  return redirectAcrossHost(
+    buildPortalHost(portalPrefix, tenantSlug, rootDomain),
+    request.nextUrl.clone(),
+  );
 }
 
 function toInternalAdminPath(pathname: string) {
@@ -216,6 +251,45 @@ export default withAuth(
   async function proxy(request) {
     const { pathname } = request.nextUrl;
     const isApiRequest = pathname.startsWith("/api/");
+
+    // Before anything else, including the access-blocked page: nominating a
+    // host has to work from wherever you are stuck, and the parameter is how
+    // you get unstuck. Turning it into a cookie here keeps it out of the page,
+    // out of any callbackUrl and out of anything anyone copies from the address
+    // bar.
+    const previewIntent = readPreviewHostIntentFromUrl(request.nextUrl);
+    if (previewIntent.kind !== "absent") {
+      if (previewIntent.kind === "invalid") {
+        const controlUrl = request.nextUrl.clone();
+        controlUrl.pathname = PREVIEW_HOST_PATH;
+        controlUrl.search = "";
+        controlUrl.searchParams.set("invalid", previewIntent.value);
+        return NextResponse.redirect(controlUrl);
+      }
+
+      const cleanUrl = request.nextUrl.clone();
+      stripPreviewHostParams(cleanUrl);
+      const response = NextResponse.redirect(cleanUrl);
+
+      if (previewIntent.kind === "set") {
+        response.cookies.set(PREVIEW_HOST_COOKIE, previewIntent.host, {
+          path: "/",
+          httpOnly: true,
+          sameSite: "lax",
+          secure: request.nextUrl.protocol === "https:",
+        });
+      } else {
+        response.cookies.delete(PREVIEW_HOST_COOKIE);
+      }
+
+      return response;
+    }
+
+    // The control page is how you reach a preview whose tenant routing is
+    // wrong, so it cannot itself be behind tenant routing.
+    if (isPathWithinRoute(pathname, PREVIEW_HOST_PATH)) {
+      return NextResponse.next();
+    }
 
     if (PUBLIC_ASSET_PATTERN.test(pathname)) {
       return NextResponse.next();
@@ -316,10 +390,9 @@ export default withAuth(
       const posHost = getPosHostForCompany(token.companySlug, rootDomain);
       if (posHost && hostContext.hostname !== posHost && !isAdminHost) {
         const redirectUrl = request.nextUrl.clone();
-        redirectUrl.hostname = posHost;
         redirectUrl.pathname = "/";
         redirectUrl.search = "";
-        return NextResponse.redirect(redirectUrl);
+        return redirectAcrossHost(posHost, redirectUrl);
       }
     }
 
@@ -519,6 +592,13 @@ export default withAuth(
         }
 
         if (pathname === LOGIN_PATH || pathname === ACCESS_BLOCKED_PATH) {
+          return true;
+        }
+
+        // Same reason as in the proxy body: this is the page you go to when
+        // the deployment is pointed at the wrong tenant, so it cannot require
+        // a session on that tenant.
+        if (isPathWithinRoute(pathname, PREVIEW_HOST_PATH)) {
           return true;
         }
 
