@@ -4,7 +4,9 @@ import { guessMapping, parseCsv, rowToRecord } from "./csv";
 import {
   IMPORT_FIELDS,
   buildImportPlan,
+  columnPreview,
   importRowKey,
+  mappingWarnings,
   parseImportList,
   parseImportNumber,
 } from "./import";
@@ -234,5 +236,56 @@ describe("validateMergePair", () => {
 
   it("allows a clean pair", () => {
     expect(validateMergePair({ id: "a" }, { id: "b" })).toBeNull();
+  });
+});
+
+describe("columnPreview", () => {
+  const table = {
+    headers: ["email", "phone", "notes"],
+    rows: [
+      ["a@x.com", "0771", "hello"],
+      ["b@x.com", "", ""],
+      ["a@x.com", "0772", ""],
+      ["c@x.com", "", ""],
+    ],
+  };
+
+  it("shows the first distinct values rather than the first rows", () => {
+    // A column whose first three rows repeat one value tells you nothing.
+    expect(columnPreview(table, "email")?.samples).toEqual([
+      "a@x.com",
+      "b@x.com",
+      "c@x.com",
+    ]);
+  });
+
+  it("counts the blanks, which is the thing a header cannot tell you", () => {
+    expect(columnPreview(table, "notes")).toMatchObject({ blanks: 3, total: 4 });
+  });
+
+  it("returns nothing for a column that is not there", () => {
+    expect(columnPreview(table, "nope")).toBeNull();
+  });
+});
+
+describe("mappingWarnings", () => {
+  it("catches an email column with no email in it", () => {
+    const preview = { samples: ["Acme Ltd", "Beacon"], blanks: 0, total: 2, distinct: 2 };
+    expect(mappingWarnings("email", preview).join(" ")).toContain("email");
+  });
+
+  it("stays quiet when the column looks right", () => {
+    const preview = { samples: ["a@x.com"], blanks: 0, total: 1, distinct: 1 };
+    expect(mappingWarnings("email", preview)).toEqual([]);
+  });
+
+  it("flags a column that is mostly empty", () => {
+    const preview = { samples: ["x"], blanks: 9, total: 10, distinct: 1 };
+    expect(mappingWarnings("city", preview).join(" ")).toContain("90%");
+  });
+
+  it("says nothing about a field it has no opinion on", () => {
+    const preview = { samples: ["anything"], blanks: 0, total: 1, distinct: 1 };
+    expect(mappingWarnings("notes", preview)).toEqual([]);
   });
 });

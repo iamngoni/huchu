@@ -15,7 +15,12 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { guessMapping, parseCsv, type CsvTable } from "@/lib/crm/csv";
-import { IMPORT_FIELDS, type ImportEntity } from "@/lib/crm/import";
+import {
+  IMPORT_FIELDS,
+  columnPreview,
+  mappingWarnings,
+  type ImportEntity,
+} from "@/lib/crm/import";
 import {
   commitCrmImport,
   previewCrmImport,
@@ -164,38 +169,81 @@ export function ImportWizard() {
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {IMPORT_FIELDS[entity].map((field) => (
-              <div key={field.key} className="space-y-1.5">
-                <Label>
-                  {field.label}
-                  {field.required ? " *" : ""}
-                </Label>
-                <Select
-                  value={mapping[field.key] ?? NONE}
-                  onValueChange={(value) =>
-                    setMapping((previous) => {
-                      const next = { ...previous };
-                      if (value === NONE) delete next[field.key];
-                      else next[field.key] = value;
-                      return next;
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Not imported" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>Not imported</SelectItem>
-                    {table.headers.map((header) => (
-                      <SelectItem key={header} value={header}>
-                        {header}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
+            {IMPORT_FIELDS[entity].map((field) => {
+              const header = mapping[field.key];
+              const preview = header ? columnPreview(table, header) : null;
+              const warnings = preview ? mappingWarnings(field.key, preview) : [];
+
+              return (
+                <div key={field.key} className="space-y-1.5">
+                  <Label>
+                    {field.label}
+                    {field.required ? " *" : ""}
+                  </Label>
+                  <Select
+                    value={mapping[field.key] ?? NONE}
+                    onValueChange={(value) =>
+                      setMapping((previous) => {
+                        const next = { ...previous };
+                        if (value === NONE) delete next[field.key];
+                        else next[field.key] = value;
+                        return next;
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Not imported" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>Not imported</SelectItem>
+                      {table.headers.map((header) => (
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* The values, not just the column name. A guess that is right
+                      nine times in ten is the kind that gets waved through on
+                      the tenth. */}
+                  {preview ? (
+                    <div className="space-y-0.5">
+                      {preview.samples.length > 0 ? (
+                        <p className="truncate text-sm text-[var(--text-muted)]">
+                          {preview.samples.join(" · ")}
+                          {preview.distinct > preview.samples.length
+                            ? ` … ${preview.distinct} distinct`
+                            : ""}
+                        </p>
+                      ) : null}
+                      {warnings.map((warning) => (
+                        <p
+                          key={warning}
+                          className="text-sm font-medium text-[var(--status-warning-fg)]"
+                        >
+                          {warning}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
+
+          {/* Columns in the file that nothing is reading. Not an error — most
+              exports carry more than anybody wants — but the one thing you
+              cannot see from a list of destinations. */}
+          {table.headers.filter((header) => !Object.values(mapping).includes(header))
+            .length > 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">
+              Not imported:{" "}
+              {table.headers
+                .filter((header) => !Object.values(mapping).includes(header))
+                .join(", ")}
+            </p>
+          ) : null}
 
           <div className="space-y-1.5">
             <Label>When a row matches something already here</Label>
