@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Switch } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -224,9 +225,9 @@ function BlockEditorRow({
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="sm" aria-label="Block options">
-              <DotsThree className="size-4" aria-hidden="true" />
-            </Button>
+            <IconButton aria-label="Block options">
+              <DotsThree aria-hidden="true" />
+            </IconButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={onRemove}>

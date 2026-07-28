@@ -189,7 +189,7 @@ export function CustomFieldsPanel() {
         ) : (
           grouped.map(([sectionName, fields]) => (
             <section key={sectionName} className="space-y-1.5">
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              <h4 className="text-sm font-semibold text-[var(--text-muted)]">
                 {sectionName}
               </h4>
               <Stack as="ul" gap="xs">

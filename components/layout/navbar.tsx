@@ -14,12 +14,12 @@ import { useSession } from "next-auth/react";
 
 import { getCurrentPageTitle } from "@/components/layout/breadcrumbs";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IconButton } from "@/components/ui/icon-button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { usePageChrome } from "@/components/layout/page-chrome";
 import { GlobalCommandBar } from "@/components/layout/command-bar/global-command-bar";
@@ -72,7 +72,7 @@ export function Navbar() {
   const showMembers = pathname === "/crm" || pathname.startsWith("/crm/");
 
   return (
-    <header className="sticky top-0 z-20 bg-surface-base pt-[env(safe-area-inset-top)]">
+    <header className="sticky top-0 z-20 border-b border-[var(--border-subtle)] bg-surface-base pt-[env(safe-area-inset-top)]">
       <div className="px-2 h-14 lg:pr-4">
         <>
           <div className="flex h-14 items-center gap-1.5 md:hidden">
@@ -156,14 +156,9 @@ function MobileNavbarActions({ actions }: { actions: ReactNode }) {
       {primaryAction}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            aria-label="More actions"
-          >
-            <MoreHorizontal className="size-4" />
-          </Button>
+          <IconButton size="lg" aria-label="More actions">
+            <MoreHorizontal />
+          </IconButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[14rem]">
           <div className="flex flex-col gap-1">

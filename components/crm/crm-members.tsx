@@ -83,7 +83,7 @@ export function CrmMembers({ className }: { className?: string }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[16rem] p-1">
-        <p className="px-2 py-1.5 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+        <p className="px-2 py-1.5 text-sm font-medium text-[var(--text-subtle)]">
           {members.length} in this workspace
         </p>
         <ul className="max-h-72 overflow-y-auto">

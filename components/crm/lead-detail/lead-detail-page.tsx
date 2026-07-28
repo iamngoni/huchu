@@ -65,7 +65,7 @@ function draftsToLines(drafts: MeasurementDraft[]): CrmDocumentLineInput[] {
 function RailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
-      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+      <h3 className="mb-2 text-sm font-semibold text-[var(--text-muted)]">
         {title}
       </h3>
       {children}

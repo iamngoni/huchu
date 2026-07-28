@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { Switch } from "@corelithzw/react";
+import { Badge, Switch } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -44,10 +44,13 @@ export function ColumnPicker({
         <Button type="button" variant="outline" size="sm" className="gap-1.5">
           <Eye className="size-4" aria-hidden="true" />
           {label}
+          {/* The count alone. "2 hidden" spelt out makes the trigger a
+              sentence; a red-toned number reads as "attention: not seeing
+              everything" at a glance. */}
           {state.hiddenCount > 0 ? (
-            <span className="rounded-full bg-[var(--surface-subtle)] px-1.5 text-sm text-[var(--text-muted)]">
-              {state.hiddenCount} hidden
-            </span>
+            <Badge tone="danger" size="sm">
+              {state.hiddenCount}
+            </Badge>
           ) : null}
         </Button>
       </PopoverTrigger>

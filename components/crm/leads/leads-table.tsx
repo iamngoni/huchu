@@ -123,7 +123,10 @@ export function LeadsTable({
         header: "Lead",
         size: 220,
         cell: ({ row }) => (
-          <Link href={`/crm/leads/${row.original.id}`} className="block min-w-0 hover:underline">
+          <Link
+            href={`/crm/leads/${row.original.id}`}
+            className="block min-w-0 underline decoration-[var(--border)] underline-offset-2 hover:decoration-[var(--text-muted)]"
+          >
             <div className="truncate font-medium">
               {row.original.title ?? row.original.leadNo}
             </div>

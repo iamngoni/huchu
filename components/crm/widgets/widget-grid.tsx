@@ -99,7 +99,7 @@ function WidgetFrame({
         <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <IconButton size="sm" tone="outlined" aria-label="Widget options">
+              <IconButton size="sm" aria-label="Widget options">
                 <DotsThree />
               </IconButton>
             </DropdownMenuTrigger>

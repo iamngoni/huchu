@@ -40,7 +40,9 @@ export function ViewToolbar({
       className={cn(
         // The hairline is what reads as "this is the toolbar, that is the
         // content" — the same seam the sidebar draws against the main pane.
-        "flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] pb-3",
+        // Sticky: the row is the page's header, and a header that scrolls
+        // away takes the filters and the search with it.
+        "sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] bg-surface-base pb-3 pt-1",
         className,
       )}
     >

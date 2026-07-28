@@ -188,7 +188,7 @@ function PerformanceTable({
         <EmptyState title="Nothing to show yet" />
       ) : (
         <table className="w-full text-sm">
-          <thead className="text-left text-sm uppercase tracking-wide text-[var(--text-muted)]">
+          <thead className="text-left text-sm font-medium text-[var(--text-muted)]">
             <tr>
               <th className="pb-1 font-medium">Name</th>
               <th className="pb-1 text-right font-medium">Won</th>

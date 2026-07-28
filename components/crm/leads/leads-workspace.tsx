@@ -250,7 +250,7 @@ export function LeadsWorkspace({
           <ColumnPicker
             columns={viewType === "TABLE" ? LEAD_TABLE_COLUMNS : LEAD_CARD_FIELDS}
             state={viewType === "TABLE" ? tableColumns : boardFields}
-            label={viewType === "TABLE" ? "Columns" : "Card fields"}
+            label={viewType === "TABLE" ? "Columns" : "Fields"}
           />
         }
       />

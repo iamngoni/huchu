@@ -187,7 +187,7 @@ export function RecordPicker({
           ) : (
             groups.map((group) => (
               <div key={group.type}>
-                <p className="px-2 pb-0.5 pt-2 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+                <p className="px-2 pb-0.5 pt-2 text-sm font-medium text-[var(--text-subtle)]">
                   {group.label}
                 </p>
                 {group.results.map((result) => (

@@ -227,7 +227,7 @@ export function HistoryFeed({
           <section key={bucket.id} aria-labelledby={`history-${bucket.id}`}>
             <h4
               id={`history-${bucket.id}`}
-              className="sticky top-14 z-10 bg-[var(--surface-base)] py-1.5 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]"
+              className="sticky top-14 z-10 bg-[var(--surface-base)] py-1.5 text-sm font-medium text-[var(--text-subtle)]"
             >
               {bucket.label}
             </h4>

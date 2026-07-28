@@ -59,7 +59,7 @@ export function RecordMarkPicker({
 
       <PopoverContent align="start" className="w-auto p-0">
         <div className="border-b border-[var(--border-subtle)] p-2">
-          <p className="pb-1.5 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+          <p className="pb-1.5 text-sm font-medium text-[var(--text-subtle)]">
             Colour
           </p>
           <div className="flex flex-wrap gap-1">
