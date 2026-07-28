@@ -24,6 +24,7 @@ import {
 } from "./document-math";
 import { formatMoney } from "./document-types";
 import { CataloguePicker } from "./catalogue-picker";
+import { DocumentTemplatePicker } from "./document-template-picker";
 import { refreshAfterDocumentChange } from "@/lib/crm/refresh";
 
 export function DocumentBuilderSheet({
@@ -370,6 +371,11 @@ export function DocumentBuilderSheet({
           />
         </div>
       </section>
+
+      <DocumentTemplatePicker
+        kind={isQuotation ? "QUOTE" : "INVOICE"}
+        onPick={(text) => setNotes(text)}
+      />
 
       <div className="space-y-1.5">
         <Label htmlFor="doc-notes">Notes</Label>

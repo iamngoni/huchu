@@ -130,7 +130,7 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
       fetchJson(`/api/v2/crm/templates/${templateId}`, { method: "DELETE" }),
     onSuccess: () => {
       toast({ title: "Template deleted" });
-      router.push("/crm/templates");
+      router.push("/templates");
     },
     onError: (error) =>
       toast({
@@ -167,7 +167,7 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
     <div className="space-y-5">
       <PageChrome
         title={name || "Untitled template"}
-        backHref="/crm/templates"
+        backHref="/templates"
         backLabel="All templates"
       >
         <div className="flex items-center gap-2">

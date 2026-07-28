@@ -5,6 +5,10 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/help", featureKey: "core.help.quick-tips" },
   { scope: "page", prefix: "/preferences/organization/branding", featureKey: "core.branding.manage" },
   { scope: "page", prefix: "/preferences/organization/templates", featureKey: "core.branding.manage" },
+  // Templates left the CRM: the quote layout, the site-survey form and the
+  // invoice a customer receives are one library, gated the way the document
+  // layouts they sit beside always were.
+  { scope: "page", prefix: "/templates", featureKey: "core.branding.manage" },
   { scope: "page", prefix: "/preferences/organization/departments", featureKey: "hr.employees" },
   { scope: "page", prefix: "/preferences/organization/sites", featureKey: "admin.sites-sections" },
   { scope: "page", prefix: "/preferences/organization/users", featureKey: "admin.user-management.directory" },
@@ -179,7 +183,6 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/crm/reps", featureKey: "crm.core" },
   { scope: "page", prefix: "/crm/work-orders", featureKey: "crm.core" },
   { scope: "page", prefix: "/crm/workflows", featureKey: "crm.settings" },
-  { scope: "page", prefix: "/crm/templates", featureKey: "crm.settings" },
   { scope: "page", prefix: "/crm/settings", featureKey: "crm.settings" },
   { scope: "page", prefix: "/crm", featureKey: "crm.core" },
 
