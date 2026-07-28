@@ -302,6 +302,40 @@ export function updateCrmDealStage(dealId: string, stageId: string) {
   );
 }
 
+export type CrmListRecord = {
+  id: string;
+  entity: string;
+  name: string;
+  description: string | null;
+  isShared: boolean;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { members: number };
+};
+
+export function fetchCrmLists(entity?: string) {
+  return fetchJson<Envelope<CrmListRecord[]>>(`/api/v2/crm/lists${qs({ entity })}`);
+}
+
+export function fetchCrmList(listId: string) {
+  return fetchJson<CrmListRecord & { recordIds: string[] }>(
+    `/api/v2/crm/lists/${listId}`,
+  );
+}
+
+export function createCrmList(body: {
+  entity: string;
+  name: string;
+  description?: string | null;
+  isShared?: boolean;
+}) {
+  return fetchJson<CrmListRecord>(`/api/v2/crm/lists`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export type CrmBulkLeadAction =
   | { action: "assign"; ids: string[]; assignedToId: string | null }
   | { action: "stage"; ids: string[]; stage: CrmLeadStage; lostReason?: string };

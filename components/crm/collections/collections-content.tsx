@@ -112,7 +112,7 @@ export function CollectionsContent({ currency = "USD" }: { currency?: string }) 
               body="Everything issued has been paid."
             />
           ) : (
-            <ul className="divide-y divide-[var(--border-subtle)] rounded-[var(--card-radius)] border border-[var(--border)]">
+            <ul className="space-y-1">
               {report.data.map((row) => (
                 <li key={row.documentId} className="flex flex-wrap items-center gap-3 p-3">
                   <div className="min-w-0 flex-1">

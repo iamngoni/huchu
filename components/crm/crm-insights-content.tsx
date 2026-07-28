@@ -327,7 +327,7 @@ export function CrmInsightsContent() {
 
             <TabsContent value="channel">
               {sources.data?.channels.length ? (
-                <ul className="divide-y divide-[var(--border-subtle)]">
+                <ul className="space-y-1">
                   {sources.data.channels.map((row) => (
                     <li
                       key={row.channel}

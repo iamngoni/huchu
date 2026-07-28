@@ -199,7 +199,7 @@ export function RelatedList<T>({
 
   return (
     <div className="space-y-2">
-      <ul className="divide-y divide-[var(--border-subtle)]">
+      <ul className="space-y-1">
         {items.map((item, index) => {
           const rendered = renderItem(item);
           return (

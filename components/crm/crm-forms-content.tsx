@@ -219,7 +219,7 @@ export function CrmFormsContent() {
         ) : (submissions.data?.data ?? []).length === 0 ? (
           <p className="text-sm text-[var(--text-muted)]">Nothing has been submitted yet.</p>
         ) : (
-          <ul className="divide-y divide-[var(--border-subtle)] rounded-[var(--radius-md)] border border-[var(--border-subtle)]">
+          <ul className="space-y-1">
             {(submissions.data?.data ?? []).map((submission) => (
               <li
                 key={submission.id}

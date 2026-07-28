@@ -152,7 +152,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
                 Nobody has visited this site yet.
               </p>
             ) : (
-              <ul className="divide-y divide-[var(--border-subtle)]">
+              <ul className="space-y-1">
                 {site.appointments.map((visit) => {
                   const status = VISIT_STATUS[visit.status];
                   return (

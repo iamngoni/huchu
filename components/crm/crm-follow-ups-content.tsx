@@ -171,7 +171,7 @@ export function CrmFollowUpsContent() {
               same way — tick one off when it is done.
             </p>
           </div>
-          <ul className="divide-y divide-[var(--border-subtle)] rounded-[var(--radius-md)] border border-[var(--border-subtle)]">
+          <ul className="space-y-1">
             {legacyRows.map((row) => (
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
                 <div className="min-w-0">

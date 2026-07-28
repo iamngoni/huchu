@@ -76,3 +76,30 @@ export const VISIT_STATUS: Record<string, CanonicalUiStatus> = {
   CANCELLED: "inactive",
   NO_SHOW: "failing",
 };
+
+/**
+ * The dot beside a stage in a picker, on a board column, anywhere the stage
+ * is named. A hue per stage rather than per outcome: in a list of six stages
+ * the reader is telling them apart, not judging them, and six shades of the
+ * same amber does that worse than six distinct hues.
+ *
+ * Deliberately the ramp tokens rather than the semantic ones, except at the
+ * two ends where won and lost genuinely are success and failure.
+ */
+export const LEAD_STAGE_DOT: Record<string, string> = {
+  NEW: "bg-[var(--tone-info)]",
+  CONTACTED: "bg-[var(--accent-500)]",
+  QUALIFIED: "bg-[var(--brand)]",
+  SITE_VISIT: "bg-[var(--warning-400)]",
+  QUOTED: "bg-[var(--tone-warn)]",
+  INVOICED: "bg-[var(--warning-600)]",
+  WON: "bg-[var(--tone-success)]",
+  LOST: "bg-[var(--tone-danger)]",
+};
+
+/** A configurable pipeline stage's dot, keyed by its terminal outcome. */
+export const DEAL_STAGE_DOT: Record<string, string> = {
+  OPEN: "bg-[var(--brand)]",
+  WON: "bg-[var(--tone-success)]",
+  LOST: "bg-[var(--tone-danger)]",
+};

@@ -190,7 +190,7 @@ export function CustomFieldsPanel() {
               <h4 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 {sectionName}
               </h4>
-              <ul className="divide-y divide-[var(--border-subtle)]">
+              <ul className="space-y-1">
                 {fields.map((definition) => (
                   <li key={definition.id} className="flex items-center gap-3 p-3">
                     <div className="min-w-0 flex-1">

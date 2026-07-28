@@ -104,7 +104,7 @@ export function TaskList({
 
   return (
     <>
-      <ul className="divide-y divide-[var(--border-subtle)] rounded-[var(--radius-md)] border border-[var(--border-subtle)]">
+      <ul className="space-y-1">
         {tasks.map((task) => {
           const overdue = isTaskOverdue(task);
           const record = showRecord ? taskRecordRef(task) : null;

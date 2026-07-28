@@ -38,6 +38,7 @@ import {
   type CrmDealBoardCard,
   type CrmDealBoardColumn,
 } from "@/lib/crm/crm-v2";
+import { DEAL_STAGE_DOT } from "@/lib/crm/tones";
 import { cn } from "@/lib/utils";
 
 import { isOverdue } from "@/components/crm/leads/stage-config";
@@ -65,12 +66,6 @@ function money(value: number | null, currency: string): string {
     maximumFractionDigits: 0,
   });
 }
-
-const STATUS_DOT: Record<string, string> = {
-  OPEN: "bg-[var(--brand)]",
-  WON: "bg-[var(--tone-success)]",
-  LOST: "bg-[var(--tone-danger)]",
-};
 
 function DealCardBody({ deal }: { deal: CrmDealBoardCard }) {
   const overdue = isOverdue(deal.nextFollowUp?.dueAt);
@@ -179,7 +174,7 @@ function DealColumn({ column, currency }: { column: CrmDealBoardColumn; currency
             aria-hidden="true"
             className={cn(
               "size-2 flex-none rounded-full",
-              STATUS_DOT[column.stage.status] ?? "bg-[var(--text-subtle)]",
+              DEAL_STAGE_DOT[column.stage.status] ?? "bg-[var(--text-subtle)]",
             )}
           />
           <h3 className="truncate text-sm font-medium">{column.stage.name}</h3>

@@ -41,10 +41,13 @@ type PendingLostBulk = { ids: string[]; done: () => void };
 export function LeadsWorkspace({
   initialFilters = {},
   initialView = "BOARD",
+  initialViewId = null,
 }: {
   /** Parsed from the page's query string, so links like /crm/leads?stages=QUOTED land pre-filtered. */
   initialFilters?: LeadViewFilters;
   initialView?: "TABLE" | "BOARD";
+  /** From `?view=`, so the sidebar's saved-view links land on that view. */
+  initialViewId?: string | null;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -53,7 +56,9 @@ export function LeadsWorkspace({
   const [filters, setFilters] = useState<LeadViewFilters>(initialFilters);
   const [sort, setSort] = useState<LeadSort>(DEFAULT_LEAD_SORT);
   const [page, setPage] = useState(1);
-  const [activeViewKey, setActiveViewKey] = useState<string>(BUILT_IN_VIEWS[0].key);
+  const [activeViewKey, setActiveViewKey] = useState<string>(
+    initialViewId ?? BUILT_IN_VIEWS[0].key,
+  );
   const [createOpen, setCreateOpen] = useState(false);
   const [pendingLostBulk, setPendingLostBulk] = useState<PendingLostBulk | null>(null);
 
@@ -96,6 +101,21 @@ export function LeadsWorkspace({
     ],
     [savedViewsQuery.data],
   );
+
+  // A saved view arriving by link is only known once the list has loaded, so
+  // its filters are applied during render the moment it appears rather than in
+  // an effect that would paint the wrong leads first.
+  const [appliedViewKey, setAppliedViewKey] = useState<string | null>(null);
+  if (initialViewId && appliedViewKey !== initialViewId) {
+    const linked = views.find((view) => view.key === initialViewId);
+    if (linked) {
+      setAppliedViewKey(initialViewId);
+      setActiveViewKey(linked.key);
+      setViewType(linked.layout);
+      setFilters(linked.filters);
+      setSort(linked.sort ?? DEFAULT_LEAD_SORT);
+    }
+  }
 
   const refreshLeadLists = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["crm", "leads"] });

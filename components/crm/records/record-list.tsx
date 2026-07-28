@@ -100,16 +100,16 @@ export function RecordList({
   return (
     <>
     <ul
-      className={cn(
-        "divide-y divide-[var(--border-subtle)]",
-        className,
-      )}
+      // Space between rows, not rules. A divider draws a line the reader has
+      // to cross for every row; a gap does the same separating without adding
+      // anything to look at, and the rows stop reading as a ruled ledger.
+      className={cn("space-y-1", className)}
     >
       {rows.map((row) => (
         <li
           key={row.id}
           className={cn(
-            "relative flex items-center gap-3 pr-3",
+            "relative flex items-center gap-3 rounded-[var(--radius-md)] pr-3",
             selectedIds.includes(row.id) && "bg-[var(--surface-subtle)]",
           )}
         >
@@ -125,7 +125,7 @@ export function RecordList({
           <Link
             href={row.href}
             className={cn(
-              "flex min-w-0 flex-1 items-center gap-3 py-3 pr-3 hover:bg-[var(--surface-muted)]",
+              "flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] py-2.5 pr-3 hover:bg-[var(--surface-muted)]",
               selection ? "pl-2" : "pl-3",
             )}
           >

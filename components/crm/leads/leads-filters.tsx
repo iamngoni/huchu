@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronDown, Funnel, SortAscending, X } from "@/lib/icons";
+import { LEAD_STAGE_DOT } from "@/lib/crm/tones";
+import { ToneSelect } from "@/components/crm/records/tone-select";
 import type { LeadSort, LeadViewFilters } from "@/lib/crm/views";
 import { cn } from "@/lib/utils";
 
@@ -255,13 +257,15 @@ export function LeadStageFilter({
       CRM_LEAD_STAGES.map((stage: CrmLeadStage) => ({
         value: stage,
         label: CRM_STAGE_LABELS[stage],
+        dot: LEAD_STAGE_DOT[stage],
       })),
     [],
   );
 
   return (
-    <MultiFilter
+    <ToneSelect
       label="Stage"
+      placeholder="All stages"
       options={stageOptions}
       selected={filters.stages ?? []}
       onChange={(next) =>

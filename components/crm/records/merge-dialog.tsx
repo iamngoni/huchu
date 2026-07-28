@@ -167,7 +167,7 @@ export function MergeDialog({
             ) : options.length === 0 ? (
               <p className="text-sm text-[var(--text-muted)]">Nothing matched.</p>
             ) : (
-              <ul className="divide-y divide-[var(--border-subtle)] rounded-[var(--radius-md)] border border-[var(--border-subtle)]">
+              <ul className="space-y-1">
                 {options.map((record) => {
                   const label = record.fullName ?? record.name ?? "Untitled";
                   const reference = record.personNo ?? record.clientNo ?? "";

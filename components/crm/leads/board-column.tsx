@@ -5,27 +5,11 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import type { CrmLeadStage } from "@prisma/client";
 
 import type { CrmBoardColumn } from "@/lib/crm/crm-v2";
+import { LEAD_STAGE_DOT } from "@/lib/crm/tones";
 import { cn } from "@/lib/utils";
 
 import { LeadCard } from "./lead-card";
 import { CRM_STAGE_LABELS, formatLeadValue } from "./stage-config";
-
-/**
- * The stage's own colour, as a dot on the column header rather than a wash
- * over the whole lane. A tinted column changes the background every card sits
- * on, which makes the cards themselves harder to compare down the row; a dot
- * says the same thing in the one place you are already reading.
- */
-const STAGE_DOT: Partial<Record<CrmLeadStage, string>> = {
-  NEW: "bg-[var(--tone-info)]",
-  CONTACTED: "bg-[var(--tone-info)]",
-  QUALIFIED: "bg-[var(--brand)]",
-  SITE_VISIT: "bg-[var(--brand)]",
-  QUOTED: "bg-[var(--tone-warn)]",
-  INVOICED: "bg-[var(--tone-warn)]",
-  WON: "bg-[var(--tone-success)]",
-  LOST: "bg-[var(--tone-danger)]",
-};
 
 export function BoardColumn({
   column,
@@ -59,7 +43,7 @@ export function BoardColumn({
             aria-hidden="true"
             className={cn(
               "size-2 flex-none rounded-full",
-              STAGE_DOT[column.stage] ?? "bg-[var(--text-subtle)]",
+              LEAD_STAGE_DOT[column.stage] ?? "bg-[var(--text-subtle)]",
             )}
           />
           <h3 className="truncate text-sm font-medium">{CRM_STAGE_LABELS[column.stage]}</h3>
