@@ -35,7 +35,7 @@ export async function GET(
 
     const doc = await prisma.crmLeadDocument.findFirst({
       where: { id: docId, dealId: id, companyId: session.user.companyId },
-      select: { type: true, quotationId: true, invoiceId: true, receiptId: true },
+      select: { type: true, quotationId: true, invoiceId: true, receiptId: true, renderTemplateId: true },
     });
     if (!doc) return errorResponse("Document not found", 404);
 
@@ -48,6 +48,10 @@ export async function GET(
       recordId,
       format: "pdf",
       mode: "SYNC",
+      // The layout chosen when the document was raised. Null falls through to
+      // the company default, which is what every document did before layouts
+      // could be chosen.
+      templateId: doc.renderTemplateId ?? undefined,
     });
 
     return new Response(new Uint8Array(rendered.data), {

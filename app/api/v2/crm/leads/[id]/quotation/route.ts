@@ -14,6 +14,7 @@ const bodySchema = z.object({
   notes: z.string().trim().max(2000).optional(),
   supersedesId: z.string().uuid().optional(),
   revisionNote: z.string().trim().max(500).optional(),
+  renderTemplateId: z.string().uuid().optional(),
   sendApproval: z.boolean().optional(),
   approvalExpiresInDays: z.number().int().min(1).max(90).optional(),
 });
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       notes: data.notes ?? null,
       supersedesId: data.supersedesId ?? null,
       revisionNote: data.revisionNote ?? null,
+      renderTemplateId: data.renderTemplateId ?? null,
     });
 
     let approvalToken: string | undefined;
