@@ -5,6 +5,7 @@ import { useMemo, type ReactNode } from "react";
 import { Alert, Button, Input } from "@corelithzw/react";
 import { PageChrome } from "@/components/layout/page-chrome";
 import { Plus } from "@/lib/icons";
+import { cn } from "@/lib/utils";
 
 import { ViewToolbar } from "./view-toolbar";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -30,6 +31,7 @@ export function RecordListShell({
   createLabel,
   onCreate,
   error,
+  width = "full",
   children,
 }: {
   title: string;
@@ -44,6 +46,12 @@ export function RecordListShell({
   createLabel?: string;
   onCreate?: () => void;
   error?: unknown;
+  /**
+   * "narrow" caps the whole surface at max-w-3xl. A register of one-line
+   * items — tasks, receipts, work orders — reads as a column, and stretching
+   * it across a wide screen just puts air between the title and its facts.
+   */
+  width?: "full" | "narrow";
   children: ReactNode;
 }) {
   const actions = useMemo(
@@ -62,7 +70,7 @@ export function RecordListShell({
   );
 
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", width === "narrow" && "max-w-3xl")}>
       <PageChrome title={title}>{actions}</PageChrome>
 
       <ViewToolbar

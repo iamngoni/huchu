@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 
@@ -10,16 +11,7 @@ import { NumericCell } from "@/components/ui/numeric-cell";
 import { StatusChip } from "@/components/ui/status-chip";
 import { ClientDate } from "@/components/ui/client-date";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "@/lib/icons";
 import { useDebounced } from "@/hooks/use-debounced";
 import { fetchCrmDeals, fetchCrmPipelines, type CrmDealRecord } from "@/lib/crm/crm-v2";
 import { isDealStale } from "@/lib/crm/pipelines";
@@ -30,6 +22,7 @@ import { BoardFieldsProvider, DEAL_CARD_FIELDS } from "./board-fields";
 import { ColumnPicker } from "@/components/ui/column-picker";
 import { useVisibleColumns, type ColumnOption } from "@/lib/ui/visible-columns";
 import { DealFormSheet } from "./deal-form-sheet";
+import { PipelineSwitcher } from "./pipeline-switcher";
 import { RecordListShell } from "./record-list-shell";
 
 const PAGE_SIZE = 50;
@@ -66,7 +59,9 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
   // Which pipeline, and whether to work it as a board or read it as a list.
   // Both live in state rather than the URL because they are how you are
   // looking at the page, not what the page is.
-  const [pipelineId, setPipelineId] = useState<string | null>(null);
+  // Arriving from the leads page's pipeline menu lands on ?pipeline=<id>.
+  const requestedPipeline = useSearchParams().get("pipeline");
+  const [pipelineId, setPipelineId] = useState<string | null>(requestedPipeline);
   const [layout, setLayout] = useState<"BOARD" | "LIST">("BOARD");
 
   const pipelinesQuery = useQuery({
@@ -109,7 +104,10 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
         header: "Deal",
         size: 240,
         cell: ({ row }) => (
-          <Link href={`/crm/deals/${row.original.id}`} className="block min-w-0 hover:underline">
+          <Link
+            href={`/crm/deals/${row.original.id}`}
+            className="block min-w-0 underline decoration-[var(--border)] underline-offset-2 hover:decoration-[var(--text-muted)]"
+          >
             <div className="truncate font-medium">{row.original.title}</div>
             <div className="truncate font-mono text-sm text-[var(--text-muted)]">
               {row.original.dealNo}
@@ -250,31 +248,10 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
           {/* A pipeline is a different shape of work, not a filter over one
               shape — supply-only and supply-and-fit do not share stages — so
               picking one swaps the board rather than narrowing it. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline" className="gap-1.5">
-                {activePipeline?.name ?? "Pipeline"}
-                <ChevronDown className="size-3 text-[var(--text-muted)]" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
-              {pipelines.map((pipeline) => (
-                <DropdownMenuItem
-                  key={pipeline.id}
-                  onClick={() => setPipelineId(pipeline.id)}
-                >
-                  {pipeline.name}
-                  {pipeline.isDefault ? (
-                    <span className="ml-2 text-sm text-[var(--text-muted)]">default</span>
-                  ) : null}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/crm/settings?tab=pipelines">Manage pipelines</Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <PipelineSwitcher
+            active={activePipeline?.id ?? null}
+            onPickPipeline={setPipelineId}
+          />
 
           <SegmentedControl
             value={layout}
