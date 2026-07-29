@@ -3,7 +3,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
-import { requireCrmManager } from "../_helpers";
+import { requireCrmCapability } from "../_helpers";
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "settings.manage")) return errorResponse("Manager access required", 403);
 
     const data = createSchema.parse(await request.json());
     const source = await prisma.crmLeadSource.create({

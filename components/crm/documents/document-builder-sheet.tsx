@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { RecordDialog } from "@/components/crm/records/record-dialog";
 import { useToast } from "@/components/ui/use-toast";
@@ -24,6 +31,17 @@ import {
 } from "./document-math";
 import { formatMoney } from "./document-types";
 import { CataloguePicker } from "./catalogue-picker";
+import { DocumentTemplatePicker } from "./document-template-picker";
+import { refreshAfterDocumentChange } from "@/lib/crm/refresh";
+
+/** A render layout the PDF can be drawn through, from the templates studio. */
+type LayoutOption = {
+  id: string;
+  name: string;
+  scope: "SYSTEM" | "COMPANY";
+  isActive: boolean;
+  isDefault: boolean;
+};
 
 export function DocumentBuilderSheet({
   open,
@@ -33,6 +51,7 @@ export function DocumentBuilderSheet({
   currency,
   prefillLines,
   fromQuotationId,
+  isDeposit,
   onCreated,
 }: {
   open: boolean;
@@ -43,6 +62,8 @@ export function DocumentBuilderSheet({
   currency: string;
   prefillLines?: CrmDocumentLineInput[];
   fromQuotationId?: string;
+  /** This invoice is money down against the quote — stored on the document. */
+  isDeposit?: boolean;
   onCreated?: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -53,7 +74,25 @@ export function DocumentBuilderSheet({
   const [validUntil, setValidUntil] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [sendApproval, setSendApproval] = useState(mode === "quotation");
+  const [renderTemplateId, setRenderTemplateId] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+
+  // Which layout the PDF renders through. Distinct from the standing-terms
+  // picker below: that fills the notes, this picks the page design.
+  const docType = mode === "quotation" ? "SALES_QUOTATION" : "SALES_INVOICE";
+  const layouts = useQuery({
+    queryKey: ["crm", "render-layouts", docType],
+    enabled: open,
+    queryFn: () =>
+      fetchJson<LayoutOption[]>(`/api/document-templates?documentType=${docType}`),
+  });
+  const layoutOptions = useMemo(
+    () =>
+      (layouts.data ?? [])
+        .filter((template) => template.isActive)
+        .sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || a.name.localeCompare(b.name)),
+    [layouts.data],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -73,6 +112,7 @@ export function DocumentBuilderSheet({
     setValidUntil("");
     setDueDate("");
     setSendApproval(mode === "quotation");
+    setRenderTemplateId("");
     setErrors([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -108,6 +148,8 @@ export function DocumentBuilderSheet({
             ...(fromQuotationId ? { fromQuotationId } : { lines: payload }),
             currency,
             notes: noteParts.join(" ") || undefined,
+            ...(renderTemplateId ? { renderTemplateId } : {}),
+            ...(mode === "invoice" && isDeposit ? { isDeposit: true } : {}),
             ...(mode === "quotation"
               ? {
                   validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
@@ -119,9 +161,7 @@ export function DocumentBuilderSheet({
       );
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["crm-record", basePath] });
-      queryClient.invalidateQueries({ queryKey: ["crm", "leads"] });
-      queryClient.invalidateQueries({ queryKey: ["crm", "board"] });
+      refreshAfterDocumentChange(queryClient);
       toast({
         title: mode === "quotation" ? "Quotation created" : "Invoice issued",
         // Report the server's total, not the preview — per-line rounding can
@@ -370,7 +410,39 @@ export function DocumentBuilderSheet({
             }
           />
         </div>
+        {layoutOptions.length > 0 ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="doc-layout">Layout</Label>
+            <Select
+              value={renderTemplateId || "default"}
+              onValueChange={(value) =>
+                setRenderTemplateId(value === "default" ? "" : value)
+              }
+            >
+              <SelectTrigger id="doc-layout" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Company default</SelectItem>
+                {layoutOptions.map((layout) => (
+                  <SelectItem key={layout.id} value={layout.id}>
+                    {layout.name}
+                    {layout.isDefault ? " (default)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-[var(--text-muted)]">
+              The page design the PDF is drawn with. Manage layouts under Templates.
+            </p>
+          </div>
+        ) : null}
       </section>
+
+      <DocumentTemplatePicker
+        kind={isQuotation ? "QUOTE" : "INVOICE"}
+        onPick={(text) => setNotes(text)}
+      />
 
       <div className="space-y-1.5">
         <Label htmlFor="doc-notes">Notes</Label>

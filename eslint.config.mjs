@@ -30,8 +30,23 @@ const eslintConfig = defineConfig([
       "components/layout/**/*.tsx",
       "components/stores/**/*.tsx",
       "components/inventory/**/*.tsx",
+      "components/settings/**/*.tsx",
+      "components/templates/**/*.tsx",
+      "components/dashboard/**/*.tsx",
+      "components/maintenance/**/*.tsx",
+      "components/onboarding/**/*.tsx",
+      "components/user-management/**/*.tsx",
+      "components/ui/**/*.tsx",
       "app/crm/**/*.tsx",
       "app/stores/**/*.tsx",
+      "app/templates/**/*.tsx",
+      "app/management/**/*.tsx",
+      "app/preferences/**/*.tsx",
+      "app/compliance/**/*.tsx",
+      // Still outside the fence: gold/, offline/, retail/, scrap-metal/,
+      // schools/ and the admin portal — each is a per-module job, because
+      // raising type changes layout and doing it unseen ships a regression
+      // nobody asked for. Bring a tree up to the scale, then add it here.
     ],
     rules: {
       "no-restricted-syntax": [

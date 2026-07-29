@@ -92,7 +92,7 @@ export function ExecutiveKpiGrid({
                 detail={deltaLabel ? `Trend ${deltaLabel}` : undefined}
                 delta={typeof item.delta === "number" ? item.delta : undefined}
                 titleAdornment={
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span className="rounded-md bg-muted px-2 py-0.5 text-sm uppercase tracking-wide text-muted-foreground">
                     {formatModuleLabel(item.module)}
                   </span>
                 }

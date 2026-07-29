@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RecordDialog } from "@/components/crm/records/record-dialog";
@@ -208,7 +209,7 @@ export function ViewPicker({
           <Button variant="outline" size="sm" className="h-9 gap-2 pr-2">
             <LayoutMark layout={active.layout} />
             <span className="max-w-40 truncate font-medium">{active.name}</span>
-            <ChevronDown className="size-4 opacity-60" />
+            <ChevronDown className="size-3 text-[var(--text-muted)]" />
           </Button>
         </DropdownMenuTrigger>
 
@@ -249,13 +250,9 @@ export function ViewPicker({
               ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={`Options for ${view.name}`}
-                      className="flex size-7 flex-none items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
-                    >
-                      <DotsThree className="size-4" />
-                    </button>
+                    <IconButton size="sm" aria-label={`Options for ${view.name}`}>
+                      <DotsThree />
+                    </IconButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Alert, EmptyState, Switch } from "@corelithzw/react";
+import { Alert, EmptyState, Switch, Stack } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { ClientDate } from "@/components/ui/client-date";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -145,7 +145,7 @@ export function WorkflowsContent() {
           Nothing in this group.
         </p>
       ) : (
-        <ul className="space-y-1">
+        <Stack as="ul" gap="xs">
           {visible.map((workflow) => {
             const failed = failedRuns(workflow);
             const steps = [
@@ -224,7 +224,7 @@ export function WorkflowsContent() {
               </li>
             );
           })}
-        </ul>
+        </Stack>
       )}
     </div>
   );

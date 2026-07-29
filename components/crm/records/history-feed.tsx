@@ -5,6 +5,7 @@ import { Avatar } from "@corelithzw/react";
 
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Download } from "@/lib/icons";
+import { RichTextRenderer } from "@/components/crm/collaboration/rich-text-renderer";
 import { cn } from "@/lib/utils";
 
 import { bucketByDate } from "./record-list-groups";
@@ -77,7 +78,13 @@ function HistoryRow({ event }: { event: HistoryEvent }) {
           <span className="text-[var(--text-body)]">{event.verb}</span>
         </p>
         {event.note ? (
-          <p className="mt-0.5 text-sm text-[var(--text-muted)]">{event.note}</p>
+          // Notes are written in the CRM's one text format, so a mention in
+          // one has to be a chip here too — rendered as plain text, a note
+          // that referenced a colleague showed their name followed by a uuid.
+          <RichTextRenderer
+            body={event.note}
+            className="mt-0.5 text-[var(--text-muted)]"
+          />
         ) : null}
         <time
           dateTime={event.occurredAt}
@@ -220,7 +227,7 @@ export function HistoryFeed({
           <section key={bucket.id} aria-labelledby={`history-${bucket.id}`}>
             <h4
               id={`history-${bucket.id}`}
-              className="sticky top-14 z-10 bg-[var(--surface-base)] py-1.5 text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]"
+              className="sticky top-14 z-10 bg-[var(--surface-base)] py-1.5 text-sm font-medium text-[var(--text-subtle)]"
             >
               {bucket.label}
             </h4>

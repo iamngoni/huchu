@@ -192,13 +192,13 @@ function QuickActionTile({ link }: { link: ExecutiveQuickLink }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{link.label}</p>
-        <p className="truncate text-xs uppercase tracking-wide text-muted-foreground">
+        <p className="truncate text-sm uppercase tracking-wide text-muted-foreground">
           {MODULE_META[link.module].label}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {badgeText ? (
-          <Badge variant="secondary" className="shrink-0 font-mono text-[11px]">
+          <Badge variant="secondary" className="shrink-0 font-mono text-sm">
             {badgeText}
           </Badge>
         ) : null}
@@ -284,7 +284,7 @@ export function ExecutiveQuickLinks({
       <div>
         {hasPrimary ? (
           <div className="mb-5 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Primary Actions
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

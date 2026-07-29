@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { AttachmentCenter, Stack } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -255,10 +256,10 @@ export function VisitReportSheet({
       ) : (
         <div className="space-y-4">
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            <h3 className="text-sm font-semibold text-[var(--text-muted)]">
               On-site checklist
             </h3>
-            <ul className="space-y-1">
+            <Stack as="ul" gap="xs">
               {checklist.map((entry, index) => (
                 <li key={entry.key} className="space-y-1.5 p-2.5">
                   <label className="flex cursor-pointer items-center gap-2.5 text-sm">
@@ -291,11 +292,11 @@ export function VisitReportSheet({
                   )}
                 </li>
               ))}
-            </ul>
+            </Stack>
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            <h3 className="text-sm font-semibold text-[var(--text-muted)]">
               Measurements & specifications
             </h3>
             <p className="text-sm text-[var(--text-muted)]">
@@ -448,77 +449,61 @@ export function VisitReportSheet({
             </div>
           </section>
 
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              Photos & files
-            </h3>
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-[var(--card-radius)] border border-dashed border-[var(--border)] p-4 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">
-              <Camera className="h-4 w-4" />
-              {uploading ? "Uploading…" : "Add photos of every work area"}
-              <input
-                type="file"
-                multiple
-                accept="image/*,application/pdf"
-                className="sr-only"
-                disabled={uploading}
-                onChange={(event) => {
-                  const files = Array.from(event.target.files ?? []);
-                  if (files.length > 0) void uploadFiles(files);
-                  event.target.value = "";
-                }}
-              />
-            </label>
-
-            {photos.length > 0 ? (
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {photos.map((photo, index) => (
-                  <li
-                    key={photo.url}
-                    className="space-y-1 rounded-[var(--card-radius)] border border-[var(--border)] p-1.5"
-                  >
-                    <a href={photo.url} target="_blank" rel="noreferrer" className="block">
-                      {photo.kind === "PHOTO" ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={photo.url}
-                          alt={photo.caption ?? photo.fileName ?? "Site photo"}
-                          className="h-24 w-full rounded object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-24 items-center justify-center rounded bg-[var(--surface-muted)] px-2 text-center text-sm">
-                          {photo.fileName ?? "File"}
-                        </span>
-                      )}
-                    </a>
-                    <Input
-                      value={photo.caption ?? ""}
-                      onChange={(event) =>
-                        setPhotos((current) =>
-                          current.map((entry, i) =>
-                            i === index ? { ...entry, caption: event.target.value } : entry,
-                          ),
-                        )
-                      }
-                      placeholder="Caption"
-                      className="h-7 text-sm"
-                      aria-label="Photo caption"
+          {/* The DS attachment pattern: one dropzone, one list, remove per
+              row. The caption rides in each row's description slot — it's
+              the one field a site photo needs that a generic file doesn't. */}
+          <AttachmentCenter
+            title="Photos & files"
+            files={[
+              ...photos.map((photo, index) => ({
+                id: photo.url,
+                name: photo.fileName ?? (photo.kind === "PHOTO" ? "Photo" : "File"),
+                href: photo.url,
+                icon:
+                  photo.kind === "PHOTO" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo.url}
+                      alt={photo.caption ?? photo.fileName ?? "Site photo"}
+                      className="h-10 w-10 rounded object-cover"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-full text-sm"
-                      onClick={() =>
-                        setPhotos((current) => current.filter((_, i) => i !== index))
-                      }
-                    >
-                      Remove
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  ),
+                meta: photo.contentType ?? undefined,
+                description: (
+                  <Input
+                    value={photo.caption ?? ""}
+                    onChange={(event) =>
+                      setPhotos((current) =>
+                        current.map((entry, i) =>
+                          i === index ? { ...entry, caption: event.target.value } : entry,
+                        ),
+                      )
+                    }
+                    placeholder="Caption"
+                    className="mt-1 h-7 text-sm"
+                    aria-label={`Caption for ${photo.fileName ?? "photo"}`}
+                  />
+                ),
+              })),
+              ...(uploading
+                ? [{ id: "__uploading__", name: "Uploading…", progress: 50 }]
+                : []),
+            ]}
+            onUpload={(fileList) => {
+              const files = Array.from(fileList);
+              if (files.length > 0) void uploadFiles(files);
+            }}
+            onRemove={(id) =>
+              setPhotos((current) => current.filter((photo) => photo.url !== id))
+            }
+            accept="image/*,application/pdf"
+            multiple
+            dropLabel="Add photos of every work area"
+            dropHint="Images and PDFs"
+            emptyLabel="No photos yet."
+          />
 
           <section className="space-y-3">
             <div className="space-y-1.5">

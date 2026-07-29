@@ -6404,6 +6404,9 @@ model CrmClient {
   id                 String              @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
   avatarUrl          String?
+  /// A colour for this record, Notion-style. One of the design system's
+  /// accent names; null means it takes its colour from its own name.
+  accent         String?
   /// A single emoji standing in for this record, shown where a picture would
   /// be. Falls back to the entity's own icon when unset.
   emoji              String?
@@ -6478,6 +6481,10 @@ model CrmClient {
 
 model CrmLead {
   id             String         @id @default(uuid())
+  /// The same mark and colour every other record carries.
+  emoji          String?
+  avatarUrl      String?
+  accent         String?
   companyId      String
   leadNo         String
   title          String?
@@ -6563,6 +6570,12 @@ model CrmLeadDocument {
   supersedesId String?
   /// Why this revision exists — "customer asked for the cheaper panel".
   revisionNote String?
+  /// An invoice raised as money down against the quote, before the work. A
+  /// deposit is billed, not just received — but it means something different
+  /// from "some of the bill", and the deal's billing summary reports it apart.
+  isDeposit   Boolean         @default(false)
+  /// The document layout this renders through. Null means the company default.
+  renderTemplateId String?
   createdById String?
   createdAt   DateTime        @default(now())
 
@@ -7418,6 +7431,9 @@ model CrmPerson {
   id                 String               @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
   avatarUrl          String?
+  /// A colour for this record, Notion-style. One of the design system's
+  /// accent names; null means it takes its colour from its own name.
+  accent         String?
   /// A single emoji standing in for this record, shown where a picture would
   /// be. Falls back to the entity's own icon when unset.
   emoji              String?
@@ -7502,6 +7518,9 @@ model CrmSite {
   id                 String   @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
   avatarUrl   String?
+  /// A colour for this record, Notion-style. One of the design system's
+  /// accent names; null means it takes its colour from its own name.
+  accent         String?
   /// A single emoji standing in for this record. Falls back to the entity icon.
   emoji       String?
   companyId          String
@@ -7549,6 +7568,9 @@ model CrmDeal {
   id                String               @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
   avatarUrl   String?
+  /// A colour for this record, Notion-style. One of the design system's
+  /// accent names; null means it takes its colour from its own name.
+  accent         String?
   /// A single emoji standing in for this record. Falls back to the entity icon.
   emoji       String?
   companyId         String

@@ -37,8 +37,18 @@ export function AppShell({
   const isPublicRoute = isPublicPath(pathname);
   const isCctvRoute = pathname.startsWith("/cctv");
   const isScrapRoute = pathname.startsWith("/scrap-metal");
+  // The preview host control page. Drawing a workspace sidebar around it would
+  // be drawing the workspace whose routing you are there to correct.
+  const isPreviewHostRoute = pathname === "/preview-host";
 
-  if (isAuthRoute || isMarketingRoute || isPortalRoute || isAdminRoute || isPublicRoute) {
+  if (
+    isAuthRoute ||
+    isMarketingRoute ||
+    isPortalRoute ||
+    isAdminRoute ||
+    isPublicRoute ||
+    isPreviewHostRoute
+  ) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 

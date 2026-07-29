@@ -4,7 +4,9 @@ import {
   emptyBlock,
   fieldBlocks,
   templateProblems,
+  validateAnswers,
   type Block,
+  type FieldBlock,
   type LeafBlock,
 } from "./blocks";
 import {
@@ -104,5 +106,97 @@ describe("variables", () => {
     expect(resolveVariables("{{company.name}} · {{document.total}}", values)).not.toContain(
       "—",
     );
+  });
+});
+
+describe("validateAnswers", () => {
+  const field = (over: Partial<FieldBlock> & { key: string }): FieldBlock => ({
+    id: over.key,
+    type: "field",
+    key: over.key,
+    label: over.label ?? over.key,
+    fieldType: over.fieldType ?? "text",
+    required: over.required ?? false,
+    options: over.options,
+  }) as FieldBlock;
+
+  it("refuses a number question answered with words", () => {
+    // The whole point: "banana" satisfied a required check, and the answer is
+    // read back as a record value.
+    const { problems } = validateAnswers(
+      [field({ key: "units", fieldType: "number", required: true })],
+      { units: "banana" },
+    );
+    expect(problems).toHaveLength(1);
+    expect(problems[0].key).toBe("units");
+  });
+
+  it("takes a number that arrived as a string", () => {
+    const { values } = validateAnswers(
+      [field({ key: "units", fieldType: "number" })],
+      { units: "12" },
+    );
+    expect(values.units).toBe(12);
+  });
+
+  it("refuses a select option that was never offered", () => {
+    const { problems } = validateAnswers(
+      [field({ key: "size", fieldType: "select", options: ["S", "M"] })],
+      { size: "XXL" },
+    );
+    expect(problems).toHaveLength(1);
+  });
+
+  it("reports every problem, not just the first", () => {
+    const { problems } = validateAnswers(
+      [
+        field({ key: "email", fieldType: "email", required: true }),
+        field({ key: "units", fieldType: "number", required: true }),
+      ],
+      { email: "not-an-email", units: "nope" },
+    );
+    expect(problems.map((problem) => problem.key)).toEqual(["email", "units"]);
+  });
+
+  it("treats an empty optional answer as absent rather than invalid", () => {
+    const { values, problems } = validateAnswers(
+      [field({ key: "notes", fieldType: "longText" })],
+      { notes: "" },
+    );
+    expect(problems).toHaveLength(0);
+    expect("notes" in values).toBe(false);
+  });
+
+  it("is not satisfied by whitespace in a required question", () => {
+    const { problems } = validateAnswers(
+      [field({ key: "name", required: true })],
+      { name: "   " },
+    );
+    expect(problems).toHaveLength(1);
+  });
+
+  it("drops keys the form never asked about", () => {
+    const { values } = validateAnswers([field({ key: "name" })], {
+      name: "Rudo",
+      isAdmin: true,
+    });
+    expect(values).toEqual({ name: "Rudo" });
+  });
+
+  it("stores a file answer as the URL it landed at", () => {
+    const { values, problems } = validateAnswers(
+      [field({ key: "plan", fieldType: "file" })],
+      { plan: "https://blob.example/companies/x/plan.pdf" },
+    );
+    expect(problems).toHaveLength(0);
+    expect(values.plan).toContain("plan.pdf");
+  });
+
+  it("refuses a file answer that is not somewhere a file went", () => {
+    const { problems } = validateAnswers(
+      [field({ key: "plan", fieldType: "file", required: true })],
+      { plan: "C:\\fakepath\\plan.pdf" },
+    );
+    expect(problems).toHaveLength(1);
   });
 });

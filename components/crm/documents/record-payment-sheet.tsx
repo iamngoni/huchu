@@ -18,6 +18,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 
 import { formatMoney, invoiceOutstanding, type LeadDocument } from "./document-types";
+import { refreshAfterDocumentChange } from "@/lib/crm/refresh";
 
 const PAYMENT_METHODS = ["Cash", "Bank transfer", "Mobile money", "Card", "Cheque", "Other"];
 
@@ -69,9 +70,7 @@ export function RecordPaymentSheet({
       }),
     onSuccess: () => {
       const settled = Number(amount) >= outstanding - 0.009;
-      queryClient.invalidateQueries({ queryKey: ["crm-record", basePath] });
-      queryClient.invalidateQueries({ queryKey: ["crm", "leads"] });
-      queryClient.invalidateQueries({ queryKey: ["crm", "board"] });
+      refreshAfterDocumentChange(queryClient);
       toast({
         title: "Payment recorded",
         description: settled

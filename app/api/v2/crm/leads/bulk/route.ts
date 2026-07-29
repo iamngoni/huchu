@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { recordEditor } from "@/lib/crm/permissions";
 import { changeLeadStage, crmLeadStageSchema } from "@/lib/crm/pipeline";
 import { isCompanyUser } from "../../_helpers";
 
@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
 
     // A rep may only act on their own (or unclaimed) leads. Rather than failing
     // the whole batch, act on what they may touch and report the rest back.
-    const editable = leads.filter((lead) => canEditAssignedRecord(session, lead.assignedToId));
+    const mayEdit = await recordEditor(session);
+    const editable = leads.filter((lead) => mayEdit(lead.assignedToId));
     const skipped = leads.length - editable.length;
     const notFound = body.ids.length - leads.length;
 

@@ -5,6 +5,11 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/help", featureKey: "core.help.quick-tips" },
   { scope: "page", prefix: "/preferences/organization/branding", featureKey: "core.branding.manage" },
   { scope: "page", prefix: "/preferences/organization/templates", featureKey: "core.branding.manage" },
+  // Templates left the CRM: one library for the quote layout, the site-survey
+  // form and the invoice a customer receives. Gated on its own key, granted by
+  // both the CRM suite and the branding addon — gating it on branding alone
+  // locked the CRM's own template library away from CRM customers.
+  { scope: "page", prefix: "/templates", featureKey: "core.templates" },
   { scope: "page", prefix: "/preferences/organization/departments", featureKey: "hr.employees" },
   { scope: "page", prefix: "/preferences/organization/sites", featureKey: "admin.sites-sections" },
   { scope: "page", prefix: "/preferences/organization/users", featureKey: "admin.user-management.directory" },
@@ -179,7 +184,6 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/crm/reps", featureKey: "crm.core" },
   { scope: "page", prefix: "/crm/work-orders", featureKey: "crm.core" },
   { scope: "page", prefix: "/crm/workflows", featureKey: "crm.settings" },
-  { scope: "page", prefix: "/crm/templates", featureKey: "crm.settings" },
   { scope: "page", prefix: "/crm/settings", featureKey: "crm.settings" },
   { scope: "page", prefix: "/crm", featureKey: "crm.core" },
 

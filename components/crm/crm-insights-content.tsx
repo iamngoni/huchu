@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
-import { Alert, Badge, Card, EmptyState, Skeleton, StatHero } from "@corelithzw/react";
+import { Alert, Badge, Card, EmptyState, Skeleton, StatHero, Stack } from "@corelithzw/react";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
@@ -221,7 +221,7 @@ export function CrmInsightsContent() {
             {data.funnel.length === 0 ? (
               <p className="text-sm text-[var(--text-muted)]">No stages configured.</p>
             ) : (
-              <ul className="space-y-3">
+              <Stack as="ul" gap="md">
                 {data.funnel.map((stage, index) => (
                   <li key={stage.key} className="space-y-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
@@ -242,7 +242,7 @@ export function CrmInsightsContent() {
                     </div>
                   </li>
                 ))}
-              </ul>
+              </Stack>
             )}
           </Card>
 
@@ -272,7 +272,7 @@ export function CrmInsightsContent() {
             )}
           </Card>
 
-          <Tabs defaultValue="owner" variant="underline">
+          <Tabs defaultValue="owner">
             <TabsList aria-label="Performance breakdown">
               <TabsTrigger value="owner">By owner</TabsTrigger>
               <TabsTrigger value="source">By source</TabsTrigger>
@@ -327,7 +327,7 @@ export function CrmInsightsContent() {
 
             <TabsContent value="channel">
               {sources.data?.channels.length ? (
-                <ul className="space-y-1">
+                <Stack as="ul" gap="xs">
                   {sources.data.channels.map((row) => (
                     <li
                       key={row.channel}
@@ -344,7 +344,7 @@ export function CrmInsightsContent() {
                       </span>
                     </li>
                   ))}
-                </ul>
+                </Stack>
               ) : (
                 <EmptyState title="No lead channels recorded yet" />
               )}

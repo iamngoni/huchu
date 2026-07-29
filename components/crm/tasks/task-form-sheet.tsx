@@ -15,6 +15,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RecordDialog } from "@/components/crm/records/record-dialog";
+import {
+  RecordPicker,
+  recordRefFor,
+  type PickedRecord,
+} from "@/components/crm/records/record-picker";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { createCrmTask, type CrmTaskRecordRef } from "@/lib/crm/crm-v2";
@@ -80,6 +85,7 @@ export function TaskFormSheet({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState<FormState>(() => emptyForm(currentUserId, seed));
+  const [about, setAbout] = useState<PickedRecord | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
 
   // Reset during render as the sheet opens, so there's no flash of the last
@@ -92,6 +98,7 @@ export function TaskFormSheet({
     setWasOpen(open);
     if (open) {
       setForm(emptyForm(currentUserId, seed));
+      setAbout(null);
       setErrors([]);
     }
   }
@@ -117,7 +124,9 @@ export function TaskFormSheet({
         assignedToId: form.assignedToId || null,
         recurrence: form.recurrence,
         recurrenceInterval: Number(form.recurrenceInterval) || 1,
-        ...record,
+        // The record page's own record wins — the picker only appears when
+        // there isn't one.
+        ...(record ?? recordRefFor(about)),
       }),
     onSuccess: () => {
       toast({ title: "Task created" });
@@ -168,6 +177,17 @@ export function TaskFormSheet({
           placeholder="Call about the revised quote"
         />
       </div>
+
+      {record ? null : (
+        <div className="space-y-2">
+          <Label htmlFor="task-about">What is this about?</Label>
+          <RecordPicker id="task-about" value={about} onChange={setAbout} />
+          <p className="text-sm text-[var(--text-muted)]">
+            A follow-up nobody can trace back to a deal is a reminder to do
+            something unspecified.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">

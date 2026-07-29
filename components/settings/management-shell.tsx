@@ -21,6 +21,12 @@ type ManagementShellProps = {
   title: string;
   description?: string;
   actions?: React.ReactNode;
+  /**
+   * Skip the shell's own PageHeader. For content that draws its own — the DS
+   * `MasterData` assembly composes one — where two headers would say the same
+   * thing twice.
+   */
+  hideHeader?: boolean;
   children: React.ReactNode;
 };
 
@@ -29,6 +35,7 @@ export function ManagementShell({
   title,
   description,
   actions,
+  hideHeader,
   children,
 }: ManagementShellProps) {
   const pathname = usePathname();
@@ -95,10 +102,14 @@ export function ManagementShell({
       </aside>
 
       <section className="settings-content">
-        <PageHeader title={title || modulePresentation.title} primaryAction={actions} />
-        {description ? (
-          <p className="t-body t-muted max-w-[var(--content-max)]">{description}</p>
-        ) : null}
+        {hideHeader ? null : (
+          <>
+            <PageHeader title={title || modulePresentation.title} primaryAction={actions} />
+            {description ? (
+              <p className="t-body t-muted max-w-[var(--content-max)]">{description}</p>
+            ) : null}
+          </>
+        )}
         <div className="w-full max-w-[96rem] space-y-6">{children}</div>
       </section>
     </div>

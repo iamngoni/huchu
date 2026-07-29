@@ -36,6 +36,14 @@ export const uploadPolicies = {
     maxBytes: 10 * MB,
     folder: "crm-attachments",
   },
+  // A file question on a public form. Same allowance as an attachment, but a
+  // separate folder — anything a stranger uploaded should be identifiable as
+  // such without reading the row that references it.
+  "crm-template-upload": {
+    allowedTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
+    maxBytes: 10 * MB,
+    folder: "crm-template-uploads",
+  },
 } as const
 
 export type UploadContext = keyof typeof uploadPolicies

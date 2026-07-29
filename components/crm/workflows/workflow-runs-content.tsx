@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Alert, Badge, EmptyState } from "@corelithzw/react";
+import { Alert, Badge, EmptyState, Stack } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { ClientDate } from "@/components/ui/client-date";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,12 +34,40 @@ const ENTITY_HREF: Record<string, (id: string) => string> = {
   SITE: (id) => `/crm/sites/${id}`,
 };
 
+/**
+ * Why a run did not do what it was meant to.
+ *
+ * The runner stores its result as a bare array of `{ type, ok, detail }` — one
+ * entry per action. This looked for `result.actions[].error`, which is a shape
+ * nothing writes, so every failed run rendered with no reason at all: the one
+ * thing somebody opens this screen to find out.
+ *
+ * Named by action, because "Record not found" from three different actions in
+ * one rule is three different problems.
+ */
 function failureMessage(result: unknown): string | null {
-  if (!result || typeof result !== "object") return null;
-  const outcomes = (result as { actions?: Array<{ error?: unknown }> }).actions;
-  if (!Array.isArray(outcomes)) return null;
-  const failure = outcomes.find((outcome) => typeof outcome?.error === "string");
-  return failure ? String(failure.error) : null;
+  if (!Array.isArray(result)) return null;
+
+  const failures = result
+    .filter(
+      (outcome): outcome is { type?: unknown; ok?: unknown; detail?: unknown } =>
+        Boolean(outcome) && typeof outcome === "object" && outcome.ok === false,
+    )
+    .map((outcome) => {
+      const detail = typeof outcome.detail === "string" ? outcome.detail : "Action failed";
+      const type = typeof outcome.type === "string" ? outcome.type : null;
+      return type ? `${actionLabel(type)}: ${detail}` : detail;
+    });
+
+  return failures.length > 0 ? failures.join(" · ") : null;
+}
+
+/** `ADD_TAG` is a database value; "Add tag" is what somebody reads. */
+function actionLabel(type: string): string {
+  return type
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/^./, (character) => character.toUpperCase());
 }
 
 /**
@@ -101,7 +129,7 @@ export function WorkflowRunsContent() {
           body="Once a workflow is live, every firing shows up here with what it touched."
         />
       ) : (
-        <ul className="space-y-1">
+        <Stack as="ul" gap="xs">
           {runs.map((run) => {
             const Icon = run.automation ? TRIGGER_ICON[run.automation.trigger] ?? Rule : Rule;
             const href = ENTITY_HREF[run.entity]?.(run.recordId);
@@ -159,7 +187,7 @@ export function WorkflowRunsContent() {
               </li>
             );
           })}
-        </ul>
+        </Stack>
       )}
     </div>
   );

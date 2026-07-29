@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MasterDataShell } from "@/components/management/master-data/master-data-shell";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { DataTableColumn } from "@corelithzw/react";
+import {
+  DetailFact,
+  MasterDataPage,
+} from "@/components/management/master-data/master-data-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -27,7 +28,6 @@ import {
   updateDowntimeCode,
 } from "@/lib/api";
 import { getApiErrorMessage, resolveDisplayErrorMessage } from "@/lib/api-client";
-import { Pencil, Plus, Trash2 } from "@/lib/icons";
 import { useReservedId } from "@/hooks/use-reserved-id";
 
 type DowntimeCodeFormState = {
@@ -80,7 +80,17 @@ export default function DowntimeCodesManagementPage() {
     queryFn: () => fetchSitesList({ active: true }),
   });
 
-  const rows = data ?? [];
+  const [search, setSearch] = useState("");
+  const rows = useMemo(() => {
+    const all = data ?? [];
+    const needle = search.trim().toLowerCase();
+    if (!needle) return all;
+    return all.filter(
+      (row) =>
+        row.code.toLowerCase().includes(needle) ||
+        row.description.toLowerCase().includes(needle),
+    );
+  }, [data, search]);
   const sites = sitesData ?? [];
 
   const createMutation = useMutation({
@@ -146,105 +156,37 @@ export default function DowntimeCodesManagementPage() {
     },
   });
 
-  const columns = useMemo<ColumnDef<DowntimeCode>[]>(
+  const columns = useMemo<DataTableColumn<DowntimeCode>[]>(
     () => [
       {
-        id: "code",
+        key: "code",
         header: "Code",
-        cell: ({ row }) => <span className="font-mono">{row.original.code}</span>,
-        size: 112,
-        minSize: 112,
-        maxSize: 112},
+        width: 112,
+        render: (row) => <span className="font-mono">{row.code}</span>,
+      },
+      { key: "description", header: "Description", sortable: true },
       {
-        id: "description",
-        header: "Description",
-        accessorKey: "description",
-        size: 260,
-        minSize: 200,
-        maxSize: 360},
-      {
-        id: "site",
+        key: "site",
         header: "Site",
-        cell: ({ row }) => {
-          if (!row.original.siteId) return "Global default";
-          if (!row.original.site) return "Site unavailable";
-          return `${row.original.site.code} - ${row.original.site.name}`;
+        render: (row) => {
+          if (!row.siteId) return "Global default";
+          if (!row.site) return "Site unavailable";
+          return `${row.site.code} - ${row.site.name}`;
         },
-        size: 280,
-        minSize: 220,
-        maxSize: 420},
+      },
+      { key: "sortOrder", header: "Sort", sortable: true, width: 100 },
       {
-        id: "sortOrder",
-        header: "Sort",
-        cell: ({ row }) => row.original.sortOrder,
-        size: 160,
-        minSize: 160,
-        maxSize: 160},
-      {
-        id: "status",
+        key: "status",
         header: "Status",
-        cell: ({ row }) => (
-          <Badge variant={row.original.isActive ? "secondary" : "outline"}>
-            {row.original.isActive ? "Active" : "Inactive"}
+        width: 120,
+        render: (row) => (
+          <Badge variant={row.isActive ? "secondary" : "outline"}>
+            {row.isActive ? "Active" : "Inactive"}
           </Badge>
         ),
-        size: 120,
-        minSize: 120,
-        maxSize: 120},
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => {
-                setEditing(row.original);
-                setFormState({
-                  code: row.original.code,
-                  description: row.original.description,
-                  siteId: row.original.siteId ?? GLOBAL_SENTINEL,
-                  sortOrder: String(row.original.sortOrder),
-                  isActive: Boolean(row.original.isActive),
-                });
-                setFormOpen(true);
-              }}
-            >
-              <Pencil className="size-4" />
-            </Button>
-            {row.original.isActive ? (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  if (window.confirm("Confirm archival of this downtime code.")) {
-                    deleteMutation.mutate(row.original.id);
-                  }
-                }}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  updateMutation.mutate({ id: row.original.id, input: { isActive: true } })
-                }
-                disabled={updateMutation.isPending}
-              >
-                Set Active
-              </Button>
-            )}
-          </div>
-        ),
-        size: 108,
-        minSize: 108,
-        maxSize: 108},
+      },
     ],
-    [deleteMutation, updateMutation],
+    [],
   );
 
   const handleSave = (event: React.FormEvent) => {
@@ -319,39 +261,95 @@ export default function DowntimeCodesManagementPage() {
   };
 
   return (
-    <MasterDataShell
-      activeTab="downtime-codes"
+    <MasterDataPage<DowntimeCode>
       title="Downtime Codes"
-      actions={
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditing(null);
-            setFormState({ ...emptyForm, siteId: sites[0]?.id ?? "" });
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="mr-2 size-4" />
-          New Downtime Code
-        </Button>
+      description="Why the plant stops: the reasons a shift report can put a stoppage down to."
+      createLabel="New downtime code"
+      onCreate={() => {
+        setEditing(null);
+        setFormState({ ...emptyForm, siteId: sites[0]?.id ?? "" });
+        setFormOpen(true);
+      }}
+      columns={columns}
+      data={rows}
+      rowKey={(row) => row.id}
+      isLoading={isLoading}
+      error={loadErrorMessage}
+      emptyLabel="No downtime code records available."
+      search={
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search downtime codes"
+          aria-label="Search downtime codes"
+          className="h-9 w-full sm:w-64"
+        />
       }
+      renderDetail={(row, close) => (
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <DetailFact label="Code">
+              <span className="font-mono">{row.code}</span>
+            </DetailFact>
+            <DetailFact label="Description">{row.description}</DetailFact>
+            <DetailFact label="Site">
+              {!row.siteId
+                ? "Global default"
+                : row.site
+                  ? `${row.site.code} - ${row.site.name}`
+                  : "Site unavailable"}
+            </DetailFact>
+            <DetailFact label="Sort order">{row.sortOrder}</DetailFact>
+            <DetailFact label="Status">{row.isActive ? "Active" : "Inactive"}</DetailFact>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditing(row);
+                setFormState({
+                  code: row.code,
+                  description: row.description,
+                  siteId: row.siteId ?? GLOBAL_SENTINEL,
+                  sortOrder: String(row.sortOrder),
+                  isActive: Boolean(row.isActive),
+                });
+                setFormOpen(true);
+              }}
+            >
+              Edit
+            </Button>
+            {row.isActive ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={deleteMutation.isPending}
+                onClick={() => {
+                  if (window.confirm("Confirm archival of this downtime code.")) {
+                    deleteMutation.mutate(row.id, { onSuccess: close });
+                  }
+                }}
+              >
+                Archive
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={updateMutation.isPending}
+                onClick={() =>
+                  updateMutation.mutate({ id: row.id, input: { isActive: true } })
+                }
+              >
+                Set Active
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     >
-      {loadErrorMessage ? (
-        <Alert variant="destructive">
-          <AlertTitle>Unable to load downtime codes</AlertTitle>
-          <AlertDescription>{loadErrorMessage}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <DataTable
-        data={rows}
-        columns={columns}
-        searchPlaceholder="Search downtime codes"
-        searchSubmitLabel="Search"
-        pagination={{ enabled: true }}
-        emptyState={isLoading ? "Loading downtime code records..." : "No downtime code records available."}
-      />
-
       <Sheet
         open={formOpen}
         onOpenChange={(open) => {
@@ -380,7 +378,7 @@ export default function DowntimeCodesManagementPage() {
                 placeholder={isReserving ? "Reserving code..." : "Auto-generated"}
                 required
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {editing
                   ? "Downtime code cannot be changed."
                   : reserveError ?? "Code is generated automatically and cannot be edited."}
@@ -444,6 +442,6 @@ export default function DowntimeCodesManagementPage() {
           </form>
         </SheetContent>
       </Sheet>
-    </MasterDataShell>
+    </MasterDataPage>
   );
 }

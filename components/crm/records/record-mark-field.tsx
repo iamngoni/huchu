@@ -7,14 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { RecordMark, type RecordKind } from "./record-mark";
+import { RecordMarkPicker } from "./record-mark-picker";
 
 /**
  * A handful of marks that cover most of what a flooring business files.
  * Not a picker — a picker over the whole emoji set is a search problem, and
  * the field takes free text anyway for anyone who wants something else.
  */
-const SUGGESTIONS = ["🏢", "🏗️", "🏠", "🏬", "🏭", "⭐", "🔥", "🧵", "🪵", "🧰", "📐", "🚚"];
-
 /**
  * Sets a record's emoji or display picture.
  *
@@ -28,13 +27,16 @@ export function RecordMarkField({
   name,
   emoji,
   avatarUrl,
+  accent,
   onChange,
 }: {
   kind: RecordKind;
   name: string;
   emoji: string;
   avatarUrl: string;
-  onChange: (next: { emoji: string; avatarUrl: string }) => void;
+  /** The record's chosen colour, or "" for the one derived from its name. */
+  accent?: string;
+  onChange: (next: { emoji: string; avatarUrl: string; accent?: string }) => void;
 }) {
   const [showUrl, setShowUrl] = useState(Boolean(avatarUrl));
 
@@ -47,36 +49,38 @@ export function RecordMarkField({
           name={name}
           emoji={emoji || null}
           avatarUrl={avatarUrl || null}
+          accent={accent || null}
           size="lg"
         />
 
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-          <Input
-            value={emoji}
-            onChange={(event) => onChange({ emoji: event.target.value, avatarUrl })}
-            placeholder="Emoji"
-            aria-label="Emoji for this record"
-            maxLength={16}
-            className="h-9 w-24 text-center"
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {/* Emoji and colour are two independent choices on one control,
+              the way Notion has them — and both stay optional, because the
+              fallbacks (the entity icon, the hue of the record's own name) are
+              better than making somebody decide before they can save. */}
+          <RecordMarkPicker
+            emoji={emoji || null}
+            accent={accent || null}
+            name={name}
+            onChange={(next) =>
+              onChange({
+                emoji: next.emoji ?? "",
+                avatarUrl,
+                accent: next.accent ?? "",
+              })
+            }
           />
-          {SUGGESTIONS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-label={`Use ${option}`}
-              onClick={() => onChange({ emoji: option, avatarUrl })}
-              className="flex size-9 items-center justify-center rounded-[var(--radius-md)] border border-transparent hover:border-[var(--border)] hover:bg-[var(--surface-muted)]"
-            >
-              {option}
-            </button>
-          ))}
+          <p className="text-sm text-[var(--text-muted)]">
+            Pick an emoji and a colour, or leave both and it takes the colour of
+            its name.
+          </p>
         </div>
       </div>
 
       {showUrl ? (
         <Input
           value={avatarUrl}
-          onChange={(event) => onChange({ emoji, avatarUrl: event.target.value })}
+          onChange={(event) => onChange({ emoji, avatarUrl: event.target.value, accent })}
           placeholder="https://…"
           aria-label="Link to a display picture"
           className="h-9"
@@ -89,7 +93,7 @@ export function RecordMarkField({
           size="sm"
           variant="outline"
           onClick={() => {
-            if (showUrl) onChange({ emoji, avatarUrl: "" });
+            if (showUrl) onChange({ emoji, avatarUrl: "", accent });
             setShowUrl((previous) => !previous);
           }}
         >
@@ -101,7 +105,7 @@ export function RecordMarkField({
             size="sm"
             variant="ghost"
             onClick={() => {
-              onChange({ emoji: "", avatarUrl: "" });
+              onChange({ emoji: "", avatarUrl: "", accent: "" });
               setShowUrl(false);
             }}
           >

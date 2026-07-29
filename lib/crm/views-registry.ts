@@ -1,8 +1,9 @@
 /**
  * What a saved view or list can point at, and what each record type supports.
  *
- * The board view is only offered where there is a meaningful status to group
- * by — a board of people has no columns worth having.
+ * Every record type can be a board — people by contact type, companies by
+ * account status, sites by country. Only the calendar is conditional, because
+ * a record with no date has nothing to put on one.
  */
 import type { CrmFieldEntity } from "@prisma/client";
 
@@ -57,7 +58,7 @@ export const VIEW_ENTITIES: Record<ViewEntity, ViewCapability> = {
     label: "Person",
     plural: "People",
     href: "/crm/people",
-    supportsBoard: false,
+    supportsBoard: true,
     supportsCalendar: false,
     columns: [
       { key: "name", label: "Name" },
@@ -73,7 +74,7 @@ export const VIEW_ENTITIES: Record<ViewEntity, ViewCapability> = {
     label: "Company",
     plural: "Companies",
     href: "/crm/companies",
-    supportsBoard: false,
+    supportsBoard: true,
     supportsCalendar: false,
     columns: [
       { key: "company", label: "Company" },
@@ -90,7 +91,7 @@ export const VIEW_ENTITIES: Record<ViewEntity, ViewCapability> = {
     label: "Site",
     plural: "Sites",
     href: "/crm/sites",
-    supportsBoard: false,
+    supportsBoard: true,
     supportsCalendar: false,
     columns: [
       { key: "site", label: "Site" },
@@ -113,7 +114,14 @@ export const VIEW_ENTITIES: Record<ViewEntity, ViewCapability> = {
 
 export const VIEW_ENTITY_KEYS = Object.keys(VIEW_ENTITIES) as ViewEntity[];
 
-/** View types this record type can meaningfully render. */
+/**
+ * View types this record type can meaningfully render.
+ *
+ * Everything can be a board — people by contact type, companies by account
+ * status, sites by country. Three of these said otherwise long after their
+ * boards were built, so a saved view of people offered no kanban option while
+ * the people page itself had a board toggle on it.
+ */
 export function allowedViewTypes(entity: ViewEntity): Array<"TABLE" | "BOARD" | "CALENDAR"> {
   const capability = VIEW_ENTITIES[entity];
   const types: Array<"TABLE" | "BOARD" | "CALENDAR"> = ["TABLE"];

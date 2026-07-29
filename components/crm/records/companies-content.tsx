@@ -230,6 +230,13 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
       createLabel="New company"
       onCreate={() => setCreateOpen(true)}
       error={companiesQuery.error}
+      display={
+        <ColumnPicker
+          columns={COMPANY_FIELDS}
+          state={fields}
+          label={layout === "BOARD" ? "Card fields" : "Columns"}
+        />
+      }
       filters={
         <>
           <SegmentedControl
@@ -241,11 +248,6 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
               { value: "LIST", label: "List" },
               { value: "BOARD", label: "Board" },
             ]}
-          />
-          <ColumnPicker
-            columns={COMPANY_FIELDS}
-            state={fields}
-            label={layout === "BOARD" ? "Card fields" : "Columns"}
           />
         </>
       }

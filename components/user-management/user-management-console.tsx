@@ -331,7 +331,7 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
           accessorKey: "email",
           header: "Email",
           cell: ({ row }) => (
-            <span className="font-mono text-xs">{row.original.email}</span>
+            <span className="font-mono text-sm">{row.original.email}</span>
           ),
         },
         {
@@ -354,7 +354,7 @@ export function UserManagementConsole({ mode }: { mode: UserManagementMode }) {
           id: "updatedAt",
           header: "Updated",
           cell: ({ row }) => (
-            <span className="font-mono text-xs">
+            <span className="font-mono text-sm">
               {formatTimestamp(row.original.updatedAt)}
             </span>
           ),

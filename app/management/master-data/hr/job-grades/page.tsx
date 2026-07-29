@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MasterDataShell } from "@/components/management/master-data/master-data-shell";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { DataTableColumn } from "@corelithzw/react";
+import {
+  DetailFact,
+  MasterDataPage,
+} from "@/components/management/master-data/master-data-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -25,7 +26,6 @@ import {
   updateJobGrade,
 } from "@/lib/api";
 import { getApiErrorMessage, resolveDisplayErrorMessage } from "@/lib/api-client";
-import { Pencil, Plus, Trash2 } from "@/lib/icons";
 import { useReservedId } from "@/hooks/use-reserved-id";
 
 type GradeFormState = {
@@ -64,7 +64,17 @@ export default function JobGradesManagementPage() {
   });
   const loadErrorMessage = resolveDisplayErrorMessage([error]);
 
-  const rows = data?.data ?? [];
+  const [search, setSearch] = useState("");
+  const rows = useMemo(() => {
+    const all = data?.data ?? [];
+    const needle = search.trim().toLowerCase();
+    if (!needle) return all;
+    return all.filter(
+      (row) =>
+        row.code.toLowerCase().includes(needle) ||
+        row.name.toLowerCase().includes(needle),
+    );
+  }, [data, search]);
 
   const createMutation = useMutation({
     mutationFn: createJobGrade,
@@ -129,87 +139,36 @@ export default function JobGradesManagementPage() {
     },
   });
 
-  const columns = useMemo<ColumnDef<JobGradeRecord>[]>(
+  // No actions column: a row is picked, and what can be done to it lives in
+  // the detail pane — not behind forty pencils competing with the data.
+  const columns = useMemo<DataTableColumn<JobGradeRecord>[]>(
     () => [
       {
-        id: "code",
+        key: "code",
         header: "Code",
-        cell: ({ row }) => <span className="font-mono">{row.original.code}</span>,
-        size: 112,
-        minSize: 112,
-        maxSize: 112},
+        width: 112,
+        render: (row) => <span className="font-mono">{row.code}</span>,
+      },
+      { key: "name", header: "Name", sortable: true },
+      { key: "rank", header: "Rank", sortable: true, width: 120 },
       {
-        id: "name",
-        header: "Name",
-        accessorKey: "name",
-        size: 280,
-        minSize: 220,
-        maxSize: 420},
-      {
-        id: "rank",
-        header: "Rank",
-        cell: ({ row }) => row.original.rank,
-        size: 160,
-        minSize: 160,
-        maxSize: 160},
-      {
-        id: "employees",
+        key: "employees",
         header: "Employees",
-        cell: ({ row }) => row.original._count?.employees ?? 0,
-        size: 160,
-        minSize: 160,
-        maxSize: 160},
+        width: 120,
+        render: (row) => row._count?.employees ?? 0,
+      },
       {
-        id: "status",
+        key: "status",
         header: "Status",
-        cell: ({ row }) => (
-          <Badge variant={row.original.isActive ? "secondary" : "outline"}>
-            {row.original.isActive ? "Active" : "Inactive"}
+        width: 120,
+        render: (row) => (
+          <Badge variant={row.isActive ? "secondary" : "outline"}>
+            {row.isActive ? "Active" : "Inactive"}
           </Badge>
         ),
-        size: 120,
-        minSize: 120,
-        maxSize: 120},
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => {
-                setEditing(row.original);
-                setFormState({
-                  code: row.original.code,
-                  name: row.original.name,
-                  rank: String(row.original.rank),
-                  isActive: row.original.isActive,
-                });
-                setFormOpen(true);
-              }}
-            >
-              <Pencil className="size-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => {
-                if (window.confirm("Confirm deletion of this job grade.")) {
-                  deleteMutation.mutate(row.original.id);
-                }
-              }}
-              disabled={deleteMutation.isPending}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </div>
-        ),
-        size: 108,
-        minSize: 108,
-        maxSize: 108},
+      },
     ],
-    [deleteMutation],
+    [],
   );
 
   const handleSave = (event: React.FormEvent) => {
@@ -262,38 +221,79 @@ export default function JobGradesManagementPage() {
   };
 
   return (
-    <MasterDataShell
-      activeTab="job-grades"
+    <MasterDataPage<JobGradeRecord>
       title="Job Grades"
-      actions={
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditing(null);
-            setFormState(emptyForm);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="mr-2 size-4" />
-          New Job Grade
-        </Button>
+      description="Workforce classification: what each grade is called and where it ranks."
+      createLabel="New job grade"
+      onCreate={() => {
+        setEditing(null);
+        setFormState(emptyForm);
+        setFormOpen(true);
+      }}
+      columns={columns}
+      data={rows}
+      rowKey={(row) => row.id}
+      isLoading={isLoading}
+      error={loadErrorMessage}
+      emptyLabel="No job grade records available."
+      search={
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search job grades"
+          aria-label="Search job grades"
+          className="h-9 w-full sm:w-64"
+        />
       }
-    >
-      {loadErrorMessage ? (
-        <Alert variant="destructive">
-          <AlertTitle>Unable to load job grades</AlertTitle>
-          <AlertDescription>{loadErrorMessage}</AlertDescription>
-        </Alert>
-      ) : null}
+      renderDetail={(row, close) => (
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <DetailFact label="Code">
+              <span className="font-mono">{row.code}</span>
+            </DetailFact>
+            <DetailFact label="Name">{row.name}</DetailFact>
+            <DetailFact label="Rank">{row.rank}</DetailFact>
+            <DetailFact label="Employees on this grade">
+              {row._count?.employees ?? 0}
+            </DetailFact>
+            <DetailFact label="Status">
+              {row.isActive ? "Active" : "Inactive"}
+            </DetailFact>
+          </div>
 
-      <DataTable
-        data={rows}
-        columns={columns}
-        searchPlaceholder="Search job grades"
-        searchSubmitLabel="Search"
-        pagination={{ enabled: true }}
-        emptyState={isLoading ? "Loading job grade records..." : "No job grade records available."}
-      />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditing(row);
+                setFormState({
+                  code: row.code,
+                  name: row.name,
+                  rank: String(row.rank),
+                  isActive: row.isActive,
+                });
+                setFormOpen(true);
+              }}
+            >
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (window.confirm("Confirm deletion of this job grade.")) {
+                  deleteMutation.mutate(row.id, { onSuccess: close });
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
+    >
 
       <Sheet
         open={formOpen}
@@ -323,7 +323,7 @@ export default function JobGradesManagementPage() {
                 placeholder={isReserving ? "Reserving code..." : "Auto-generated"}
                 required
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {editing
                   ? "Job grade code cannot be changed."
                   : reserveError ?? "Code is generated automatically and cannot be edited."}
@@ -364,6 +364,6 @@ export default function JobGradesManagementPage() {
           </form>
         </SheetContent>
       </Sheet>
-    </MasterDataShell>
+    </MasterDataPage>
   );
 }

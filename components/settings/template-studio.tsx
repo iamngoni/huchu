@@ -195,7 +195,7 @@ export function TemplateStudio() {
         <CardContent className="p-2">
           {grouped.map((group) => (
             <div key={group.id} className="mb-3">
-              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              <p className="px-2 py-1 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                 {group.title}
               </p>
               {group.entries.map((e) => {
@@ -227,7 +227,7 @@ export function TemplateStudio() {
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">{entry?.name.replace(" Default", "") ?? "Template"}</p>
             <div className="flex items-center gap-2">
-              {savedFlash ? <span className="text-xs text-green-600">Saved</span> : null}
+              {savedFlash ? <span className="text-sm text-green-600">Saved</span> : null}
               <Button
                 size="sm"
                 variant="outline"
@@ -243,7 +243,7 @@ export function TemplateStudio() {
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Page</p>
+            <p className="mb-1 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">Page</p>
             <div className="grid grid-cols-3 gap-2">
               <Select
                 value={schema.page.size}
@@ -280,7 +280,7 @@ export function TemplateStudio() {
           </div>
 
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Header</p>
+            <p className="mb-1 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">Header</p>
             <Toggle label="Company logo" checked={schema.header.showLogo} onChange={(v) => patchSchema({ header: { ...schema.header, showLogo: v } })} />
             <Toggle label="Secondary logo" checked={schema.header.showSecondaryLogo} onChange={(v) => patchSchema({ header: { ...schema.header, showSecondaryLogo: v } })} />
             <Toggle label="Company identity" checked={schema.header.showCompanyIdentity} onChange={(v) => patchSchema({ header: { ...schema.header, showCompanyIdentity: v } })} />
@@ -288,13 +288,13 @@ export function TemplateStudio() {
           </div>
 
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Line items</p>
+            <p className="mb-1 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">Line items</p>
             <Toggle label="Compact rows" checked={schema.table.compact} onChange={(v) => patchSchema({ table: { ...schema.table, compact: v } })} />
             <Toggle label="Zebra striping" checked={schema.table.zebra} onChange={(v) => patchSchema({ table: { ...schema.table, zebra: v } })} />
           </div>
 
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Footer</p>
+            <p className="mb-1 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">Footer</p>
             <Toggle label="Footer text" checked={schema.footer.showFooterText} onChange={(v) => patchSchema({ footer: { ...schema.footer, showFooterText: v } })} />
             <Toggle label="Legal disclaimer" checked={schema.footer.showDisclaimer} onChange={(v) => patchSchema({ footer: { ...schema.footer, showDisclaimer: v } })} />
             <Toggle label="Payment details" checked={schema.footer.showPaymentDetails} onChange={(v) => patchSchema({ footer: { ...schema.footer, showPaymentDetails: v } })} />
@@ -303,8 +303,8 @@ export function TemplateStudio() {
           </div>
 
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Labels</p>
-            <Label htmlFor="tpl-title" className="text-xs">Document title</Label>
+            <p className="mb-1 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">Labels</p>
+            <Label htmlFor="tpl-title" className="text-sm">Document title</Label>
             <Input
               id="tpl-title"
               value={schema.labels.documentTitle ?? ""}
@@ -321,7 +321,7 @@ export function TemplateStudio() {
       <Card>
         <CardContent className="p-2">
           <div className="mb-1 flex items-center justify-between px-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            <p className="text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Live preview — sample data, your branding
             </p>
           </div>

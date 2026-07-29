@@ -186,15 +186,15 @@ export function OnboardingDialog({ open, onOpenChange, onComplete }: OnboardingD
         return (
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl bg-[var(--surface-subtle)] px-4 py-4">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Required</p>
+              <p className="text-sm uppercase tracking-[0.16em] text-muted-foreground">Required</p>
               <p className="mt-2 text-sm font-medium">Create at least one site</p>
             </div>
             <div className="rounded-2xl bg-[var(--surface-subtle)] px-4 py-4">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Optional</p>
+              <p className="text-sm uppercase tracking-[0.16em] text-muted-foreground">Optional</p>
               <p className="mt-2 text-sm font-medium">Add departments now or later</p>
             </div>
             <div className="rounded-2xl bg-[var(--surface-subtle)] px-4 py-4">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Defaults</p>
+              <p className="text-sm uppercase tracking-[0.16em] text-muted-foreground">Defaults</p>
               <p className="mt-2 text-sm font-medium">Set payroll and cash preferences</p>
             </div>
           </div>
@@ -205,7 +205,7 @@ export function OnboardingDialog({ open, onOpenChange, onComplete }: OnboardingD
           <div className="space-y-4">
             <div className="rounded-2xl bg-[var(--surface-subtle)] px-4 py-3">
               <div className="flex items-center gap-2">
-                <Badge variant="default" className="text-xs">Required</Badge>
+                <Badge variant="default" className="text-sm">Required</Badge>
                 <p className="text-sm font-medium">At least one site is required</p>
               </div>
             </div>
@@ -271,7 +271,7 @@ export function OnboardingDialog({ open, onOpenChange, onComplete }: OnboardingD
           <div className="space-y-4">
             <div className="rounded-2xl bg-[var(--surface-subtle)] px-4 py-3">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs">Optional</Badge>
+                <Badge variant="secondary" className="text-sm">Optional</Badge>
                 <p className="text-sm font-medium">Departments help organize your team</p>
               </div>
             </div>
@@ -382,7 +382,7 @@ export function OnboardingDialog({ open, onOpenChange, onComplete }: OnboardingD
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-medium">Sites</h4>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {validSitesCount} site{validSitesCount !== 1 ? "s" : ""} configured
                     </p>
                   </div>
@@ -408,7 +408,7 @@ export function OnboardingDialog({ open, onOpenChange, onComplete }: OnboardingD
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-medium">Departments</h4>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {validDepartmentsCount} department{validDepartmentsCount !== 1 ? "s" : ""} configured
                     </p>
                   </div>
@@ -433,7 +433,7 @@ export function OnboardingDialog({ open, onOpenChange, onComplete }: OnboardingD
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-medium">Defaults</h4>
-                    <p className="text-xs text-muted-foreground">Payroll and cash handling</p>
+                    <p className="text-sm text-muted-foreground">Payroll and cash handling</p>
                   </div>
                   <Badge variant="secondary">Ready</Badge>
                 </div>

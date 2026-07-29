@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { blockSchema, fieldBlocks } from "@/lib/crm/blocks";
+import { blockSchema, fieldBlocks, validateAnswers } from "@/lib/crm/blocks";
 
 const submitSchema = z.object({
   answers: z.record(z.string().max(60), z.unknown()),
@@ -44,30 +44,23 @@ export async function POST(
     return NextResponse.json({ ok: false, error: "Form is misconfigured" }, { status: 500 });
   }
 
+  // Every question is checked against what the builder said it was — a number
+  // is a number, a select is one of its own options, a date parses. Checking
+  // only that a required answer is non-empty let "banana" through as a
+  // quantity, and these answers are read back as record values.
   const questions = fieldBlocks(blocks.data);
-  const missing = questions
-    .filter((question) => {
-      if (!question.required) return false;
-      const answer = body.answers[question.key];
-      if (answer === undefined || answer === null || answer === "") return true;
-      return Array.isArray(answer) && answer.length === 0;
-    })
-    .map((question) => question.label || question.key);
+  const { values: answers, problems } = validateAnswers(questions, body.answers);
 
-  if (missing.length > 0) {
+  if (problems.length > 0) {
     return NextResponse.json(
-      { ok: false, error: `Still needed: ${missing.join(", ")}` },
+      {
+        ok: false,
+        error: problems.map((problem) => `${problem.label}: ${problem.message}`).join("; "),
+        problems,
+      },
       { status: 400 },
     );
   }
-
-  // Only the questions the form asked are kept. A payload with extra keys is
-  // either an old cached form or somebody poking at it; neither is a reason to
-  // write unknown columns into a record.
-  const known = new Set(questions.map((question) => question.key));
-  const answers = Object.fromEntries(
-    Object.entries(body.answers).filter(([key]) => known.has(key)),
-  );
 
   await prisma.$transaction([
     prisma.crmTemplateEvent.create({

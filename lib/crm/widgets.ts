@@ -76,6 +76,17 @@ const EVERYWHERE = ["HOME", ...RECORDS] as const;
  * "the collections endpoint".
  */
 export const WIDGET_CATALOGUE: WidgetDefinition[] = [
+  // --- theirs, not ours ----------------------------------------------
+  {
+    type: "custom-note",
+    label: "Note",
+    description:
+      "Anything the team needs on this page — written by you, with records linked in it.",
+    kind: "custom",
+    scopes: EVERYWHERE,
+    defaultSpan: 4,
+  },
+
   // --- money ---------------------------------------------------------
   {
     type: "won-this-period",
@@ -322,3 +333,91 @@ export const DEFAULT_LAYOUTS: Record<OverviewScope, WidgetInstance[]> = {
     { id: "w-activity", type: "activity-summary", span: 12 },
   ],
 };
+
+/**
+ * Rows that always add up.
+ *
+ * Dragging a widget used to leave whatever it left: an eight-wide chart with a
+ * four-wide gap beside it, a lone six sitting half a row. Every arrangement was
+ * possible, which meant most arrangements were ragged, and the person who moved
+ * one widget was then responsible for resizing three others to tidy up.
+ *
+ * So the layout is packed rather than freely positioned. Order is what somebody
+ * controls; widths follow from it. The rules, in the order they apply:
+ *
+ *   - Widgets fill a row in order until the next one will not fit.
+ *   - Two big widgets that will not share a row are made to share it evenly —
+ *     a row of two is the point of two big things next to each other.
+ *   - A row that is short is widened to fill, largest-first, so a big element
+ *     ends up full width rather than leaving a gap beside it.
+ *
+ * Pure, and the same on the server and the client, so a layout looks the same
+ * to the person who saved it and the colleague who opens it.
+ */
+export function packRows(widgets: WidgetInstance[]): WidgetInstance[] {
+  const packed: WidgetInstance[] = [];
+  let row: WidgetInstance[] = [];
+  let used = 0;
+
+  const flush = () => {
+    if (row.length === 0) return;
+    packed.push(...normaliseRow(row));
+    row = [];
+    used = 0;
+  };
+
+  for (const widget of widgets) {
+    const span = widget.span;
+
+    if (used + span <= 12) {
+      row.push(widget);
+      used += span;
+      if (used === 12) flush();
+      continue;
+    }
+
+    // Doesn't fit. Two big things wanting the same row get half each — which
+    // is what "there's an adjacent big column, make the row 2 column" means.
+    if (row.length === 1 && row[0].span >= 6 && span >= 6) {
+      row.push(widget);
+      flush();
+      continue;
+    }
+
+    flush();
+    row = [widget];
+    used = span;
+    if (used === 12) flush();
+  }
+
+  flush();
+  return packed;
+}
+
+/** The only row shapes there are, by how many widgets are in the row. */
+function normaliseRow(row: WidgetInstance[]): WidgetInstance[] {
+  if (row.length === 1) return [{ ...row[0], span: 12 }];
+
+  if (row.length === 2) {
+    const [first, second] = row;
+    // Relative size is preserved: the one that was bigger stays bigger.
+    if (first.span > second.span) {
+      return [
+        { ...first, span: 8 },
+        { ...second, span: 4 },
+      ];
+    }
+    if (first.span < second.span) {
+      return [
+        { ...first, span: 4 },
+        { ...second, span: 8 },
+      ];
+    }
+    return row.map((widget) => ({ ...widget, span: 6 as WidgetSpan }));
+  }
+
+  if (row.length === 3) return row.map((widget) => ({ ...widget, span: 4 as WidgetSpan }));
+
+  // Four is the most that fits — the narrowest span is three.
+  return row.map((widget) => ({ ...widget, span: 3 as WidgetSpan }));
+}

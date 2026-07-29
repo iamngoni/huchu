@@ -54,6 +54,7 @@ const PARENT_RELATIONS = [
 
 type FormState = {
   emoji: string;
+  accent: string;
   avatarUrl: string;
   name: string;
   tradingName: string;
@@ -77,6 +78,7 @@ type FormState = {
 
 const EMPTY: FormState = {
   emoji: "",
+  accent: "",
   avatarUrl: "",
   name: "",
   tradingName: "",
@@ -206,6 +208,7 @@ export function CompanyFormSheet({
     notes: form.notes.trim() || null,
     assignedToId: form.assignedToId || null,
     emoji: form.emoji.trim() || null,
+    accent: form.accent.trim() || null,
     avatarUrl: form.avatarUrl.trim() || null,
     customFields: customValues,
     force,
@@ -529,6 +532,8 @@ export function CompanyFormSheet({
           name={form.name}
 
           emoji={form.emoji}
+
+          accent={form.accent}
 
           avatarUrl={form.avatarUrl}
 

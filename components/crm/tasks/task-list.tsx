@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Badge, Button, EmptyState } from "@corelithzw/react";
+import { Badge, Button, EmptyState, Stack } from "@corelithzw/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
@@ -104,7 +104,7 @@ export function TaskList({
 
   return (
     <>
-      <ul className="space-y-1">
+      <Stack as="ul" gap="xs">
         {tasks.map((task) => {
           const overdue = isTaskOverdue(task);
           const record = showRecord ? taskRecordRef(task) : null;
@@ -192,7 +192,7 @@ export function TaskList({
             </li>
           );
         })}
-      </ul>
+      </Stack>
 
       <CompleteTaskDialog
         task={completing}

@@ -5,6 +5,8 @@ import { useMemo, type ReactNode } from "react";
 import { Alert, Button, Input } from "@corelithzw/react";
 import { PageChrome } from "@/components/layout/page-chrome";
 import { Plus } from "@/lib/icons";
+
+import { ViewToolbar } from "./view-toolbar";
 import { getApiErrorMessage } from "@/lib/api-client";
 
 /**
@@ -24,6 +26,7 @@ export function RecordListShell({
   onSearchChange,
   searchPlaceholder,
   filters,
+  display,
   createLabel,
   onCreate,
   error,
@@ -34,6 +37,8 @@ export function RecordListShell({
   onSearchChange: (value: string) => void;
   searchPlaceholder: string;
   filters?: ReactNode;
+  /** Display controls — column picker, card fields — right-aligned with search. */
+  display?: ReactNode;
   /** Omit both to get a list with no create button — quotes and invoices are
    *  raised against a deal, never from a directory of them. */
   createLabel?: string;
@@ -60,16 +65,19 @@ export function RecordListShell({
     <div className="space-y-4">
       <PageChrome title={title}>{actions}</PageChrome>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={searchPlaceholder}
-          className="h-9 w-full sm:w-72"
-          aria-label={searchPlaceholder}
-        />
-        {filters}
-      </div>
+      <ViewToolbar
+        start={filters}
+        search={
+          <Input
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder={searchPlaceholder}
+            className="h-9 w-full sm:w-64"
+            aria-label={searchPlaceholder}
+          />
+        }
+        end={display}
+      />
 
       {error ? (
         <Alert tone="danger" title={`Unable to load ${title.toLowerCase()}`}>

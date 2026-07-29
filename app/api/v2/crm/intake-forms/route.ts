@@ -8,7 +8,7 @@ import {
   crmIntakeFormConfigSchema,
   crmIntakeServicesSchema,
 } from "@/lib/crm/intake-schema";
-import { isCompanyUser, requireCrmManager } from "../_helpers";
+import { isCompanyUser, requireCrmCapability } from "../_helpers";
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "settings.manage")) return errorResponse("Manager access required", 403);
 
     const data = createSchema.parse(await request.json());
     // Cross-field rules (duplicate field keys / service ids).

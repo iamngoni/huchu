@@ -29,10 +29,36 @@ type Appointment = {
   location: string | null;
   status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
   reportCompletedAt: string | null;
-  lead: { id: string; leadNo: string } | null;
+  lead: { id: string; leadNo: string; title: string | null } | null;
+  deal: { id: string; dealNo: string; title: string } | null;
   client: { id: string; name: string } | null;
+  site: { id: string; name: string } | null;
   assignedTo: { id: string; name: string } | null;
 };
+
+/**
+ * Where the visit's row points, and what it says it is for.
+ *
+ * A site visit is always for something — a deal being specified, a lead being
+ * qualified, a site being surveyed. The list used to link every row back to
+ * itself unless a lead happened to be attached, which meant a coordinator
+ * looking at tomorrow's visits could not tell what any of them were about.
+ */
+function visitSubject(visit: Appointment): { href: string; label: string } | null {
+  if (visit.deal) {
+    return { href: `/crm/deals/${visit.deal.id}`, label: visit.deal.title || visit.deal.dealNo };
+  }
+  if (visit.lead) {
+    return { href: `/crm/leads/${visit.lead.id}`, label: visit.lead.title || visit.lead.leadNo };
+  }
+  if (visit.site) {
+    return { href: `/crm/sites/${visit.site.id}`, label: visit.site.name };
+  }
+  if (visit.client) {
+    return { href: `/crm/companies/${visit.client.id}`, label: visit.client.name };
+  }
+  return null;
+}
 
 const VISIT_STATUS: Record<
   Appointment["status"],
@@ -95,7 +121,7 @@ export function CrmAppointmentsContent() {
       const status = VISIT_STATUS[visit.status];
       return {
         id: visit.id,
-        href: visit.lead ? `/crm/leads/${visit.lead.id}` : "/crm/appointments",
+        href: visitSubject(visit)?.href ?? "/crm/appointments",
         leading: (
           <span className="flex size-9 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)]">
             <CalendarCheck className="size-4" />
@@ -105,7 +131,7 @@ export function CrmAppointmentsContent() {
         subtitle: (
           <>
             <ClientDate value={visit.scheduledStart} />
-            {visit.client ? ` · ${visit.client.name}` : ""}
+            {visitSubject(visit) ? ` · ${visitSubject(visit)!.label}` : " · Unattached"}
             {visit.location ? ` · ${visit.location}` : ""}
           </>
         ),
@@ -179,8 +205,8 @@ export function CrmAppointmentsContent() {
       <VisitScheduleSheet
         open={scheduling}
         onOpenChange={setScheduling}
-        // Booked from the list rather than from a record, so it starts
-        // unattached. It can still be linked to a deal from the record later.
+        // Booked from the list rather than from a record, so the sheet asks
+        // what the visit is for rather than leaving it unattached.
         subject={{}}
         owners={owners}
         currentUserId={session?.user?.id}

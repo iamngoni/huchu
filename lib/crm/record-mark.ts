@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+import { ACCENTS } from "./accents";
+
 /**
- * The mark a record can be given: an emoji, or an uploaded picture.
+ * The mark a record can be given: an emoji, a colour, or an uploaded picture.
  *
  * Shared by every record's update schema so the four of them cannot drift —
  * a company and a person should accept exactly the same thing here.
@@ -15,6 +17,12 @@ import { z } from "zod";
 export const recordMarkFields = {
   emoji: z.string().trim().max(16).nullable().optional(),
   avatarUrl: z.string().trim().url().max(2000).nullable().optional(),
+  /**
+   * The record's colour. An enum rather than free text: a hue that is not in
+   * the palette renders as nothing, and "why is this one grey" is a bug report
+   * nobody can act on.
+   */
+  accent: z.enum(ACCENTS).nullable().optional(),
 };
 
 export const recordMarkSchema = z.object(recordMarkFields);

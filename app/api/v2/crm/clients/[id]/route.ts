@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord, canUser, denialMessage } from "@/lib/crm/permissions";
 import { normalizeEmail, normalizePhoneE164 } from "@/lib/crm/phone";
 import { isCompanyUser } from "../../_helpers";
 
@@ -62,7 +62,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const existing = await loadClient(session.user.companyId, id);
     if (!existing) return errorResponse("Client not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only edit clients assigned to you", 403);
     }
 
@@ -106,8 +106,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     const existing = await loadClient(session.user.companyId, id);
     if (!existing) return errorResponse("Client not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only archive clients assigned to you", 403);
+    }
+    // Owning a record and being allowed to remove it are separate decisions.
+    if (!(await canUser(session, "records.delete"))) {
+      return errorResponse(denialMessage("records.delete"), 403);
     }
 
     await prisma.crmClient.update({ where: { id }, data: { archivedAt: new Date() } });

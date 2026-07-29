@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { MasterDataShell } from "@/components/management/master-data/master-data-shell";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { DataTableColumn } from "@corelithzw/react";
+import {
+  DetailFact,
+  MasterDataPage,
+} from "@/components/management/master-data/master-data-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -26,7 +27,6 @@ import {
   updateGoldExpenseType,
 } from "@/lib/api";
 import { getApiErrorMessage, resolveDisplayErrorMessage } from "@/lib/api-client";
-import { Pencil, Plus, Trash2 } from "@/lib/icons";
 
 type GoldExpenseTypeFormState = {
   name: string;
@@ -52,7 +52,13 @@ export default function GoldExpenseTypesManagementPage() {
     queryFn: () => fetchGoldExpenseTypes({ active: "all" }),
   });
   const loadErrorMessage = resolveDisplayErrorMessage([error]);
-  const rows = data ?? [];
+  const [search, setSearch] = useState("");
+  const rows = useMemo(() => {
+    const all = data ?? [];
+    const needle = search.trim().toLowerCase();
+    if (!needle) return all;
+    return all.filter((row) => row.name.toLowerCase().includes(needle));
+  }, [data, search]);
 
   const createMutation = useMutation({
     mutationFn: createGoldExpenseType,
@@ -117,92 +123,22 @@ export default function GoldExpenseTypesManagementPage() {
     },
   });
 
-  const columns = useMemo<ColumnDef<GoldExpenseType>[]>(
+  const columns = useMemo<DataTableColumn<GoldExpenseType>[]>(
     () => [
+      { key: "name", header: "Expense Type", sortable: true },
+      { key: "sortOrder", header: "Sort", sortable: true, width: 100 },
       {
-        id: "name",
-        header: "Expense Type",
-        accessorKey: "name",
-        size: 280,
-        minSize: 220,
-        maxSize: 420,
-      },
-      {
-        id: "sortOrder",
-        header: "Sort",
-        accessorKey: "sortOrder",
-        size: 160,
-        minSize: 160,
-        maxSize: 160,
-      },
-      {
-        id: "status",
+        key: "status",
         header: "Status",
-        cell: ({ row }) => (
-          <Badge variant={row.original.isActive ? "secondary" : "outline"}>
-            {row.original.isActive ? "Active" : "Inactive"}
+        width: 120,
+        render: (row) => (
+          <Badge variant={row.isActive ? "secondary" : "outline"}>
+            {row.isActive ? "Active" : "Inactive"}
           </Badge>
         ),
-        size: 120,
-        minSize: 120,
-        maxSize: 120,
-      },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => {
-                setEditing(row.original);
-                setFormState({
-                  name: row.original.name,
-                  sortOrder: String(row.original.sortOrder),
-                  isActive: row.original.isActive,
-                });
-                setFormOpen(true);
-              }}
-            >
-              <Pencil className="size-4" />
-            </Button>
-            {row.original.isActive ? (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  if (window.confirm("Confirm archival of this gold expense type.")) {
-                    deleteMutation.mutate(row.original.id);
-                  }
-                }}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  updateMutation.mutate({
-                    id: row.original.id,
-                    input: { isActive: true },
-                  })
-                }
-                disabled={updateMutation.isPending}
-              >
-                Set Active
-              </Button>
-            )}
-          </div>
-        ),
-        size: 108,
-        minSize: 108,
-        maxSize: 108,
       },
     ],
-    [deleteMutation, updateMutation],
+    [],
   );
 
   const handleSave = (event: React.FormEvent) => {
@@ -244,39 +180,83 @@ export default function GoldExpenseTypesManagementPage() {
   };
 
   return (
-    <MasterDataShell
-      activeTab="gold-expense-types"
+    <MasterDataPage<GoldExpenseType>
       title="Gold Expense Types"
-      actions={
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditing(null);
-            setFormState(emptyForm);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="mr-2 size-4" />
-          New Expense Type
-        </Button>
+      description="What gold-room spending can be booked against."
+      createLabel="New expense type"
+      onCreate={() => {
+        setEditing(null);
+        setFormState(emptyForm);
+        setFormOpen(true);
+      }}
+      columns={columns}
+      data={rows}
+      rowKey={(row) => row.id}
+      isLoading={isLoading}
+      error={loadErrorMessage}
+      emptyLabel="No expense type records available."
+      search={
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search expense types"
+          aria-label="Search expense types"
+          className="h-9 w-full sm:w-64"
+        />
       }
+      renderDetail={(row, close) => (
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <DetailFact label="Expense type">{row.name}</DetailFact>
+            <DetailFact label="Sort order">{row.sortOrder}</DetailFact>
+            <DetailFact label="Status">{row.isActive ? "Active" : "Inactive"}</DetailFact>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditing(row);
+                setFormState({
+                  name: row.name,
+                  sortOrder: String(row.sortOrder),
+                  isActive: row.isActive,
+                });
+                setFormOpen(true);
+              }}
+            >
+              Edit
+            </Button>
+            {row.isActive ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={deleteMutation.isPending}
+                onClick={() => {
+                  if (window.confirm("Confirm archival of this gold expense type.")) {
+                    deleteMutation.mutate(row.id, { onSuccess: close });
+                  }
+                }}
+              >
+                Archive
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={updateMutation.isPending}
+                onClick={() =>
+                  updateMutation.mutate({ id: row.id, input: { isActive: true } })
+                }
+              >
+                Set Active
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     >
-      {loadErrorMessage ? (
-        <Alert variant="destructive">
-          <AlertTitle>Unable to load gold expense types</AlertTitle>
-          <AlertDescription>{loadErrorMessage}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <DataTable
-        data={rows}
-        columns={columns}
-        searchPlaceholder="Search expense types"
-        searchSubmitLabel="Search"
-        pagination={{ enabled: true }}
-        emptyState={isLoading ? "Loading expense type records..." : "No expense type records available."}
-      />
-
       <Sheet
         open={formOpen}
         onOpenChange={(open) => {
@@ -340,6 +320,6 @@ export default function GoldExpenseTypesManagementPage() {
           </form>
         </SheetContent>
       </Sheet>
-    </MasterDataShell>
+    </MasterDataPage>
   );
 }

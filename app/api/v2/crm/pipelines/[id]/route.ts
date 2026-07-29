@@ -4,7 +4,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { stageInputSchema, validateStages } from "@/lib/crm/pipelines";
-import { requireCrmManager } from "../../_helpers";
+import { requireCrmCapability } from "../../_helpers";
 
 const updatePipelineSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) {
+    if (!await requireCrmCapability(session, "pipelines.manage")) {
       return errorResponse("Only managers can change pipelines", 403);
     }
     const companyId = session.user.companyId;
@@ -146,7 +146,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) {
+    if (!await requireCrmCapability(session, "pipelines.manage")) {
       return errorResponse("Only managers can delete pipelines", 403);
     }
     const companyId = session.user.companyId;

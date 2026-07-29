@@ -3,8 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@corelithzw/react";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger, Stack } from "@corelithzw/react";
 import { StatusChip } from "@/components/ui/status-chip";
 import {
   DropdownMenu,
@@ -13,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PageChrome } from "@/components/layout/page-chrome";
+import { IconButton } from "@/components/ui/icon-button";
 import { DotsThree, type LucideIcon } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
@@ -92,9 +92,9 @@ export function RecordPageShell({
         {actions && actions.length > 0 ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline" className="h-8 w-8 px-0" aria-label="More actions">
-                <DotsThree className="h-4 w-4" />
-              </Button>
+              <IconButton aria-label="More actions">
+                <DotsThree />
+              </IconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {actions.map((action) => (
@@ -177,7 +177,7 @@ export function RailSection({
   return (
     <section className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+        <h3 className="text-sm font-semibold text-[var(--text-muted)]">
           {title}
         </h3>
         {action}
@@ -210,7 +210,7 @@ export function RelatedList<T>({
 
   return (
     <div className="space-y-2">
-      <ul className="space-y-1">
+      <Stack as="ul" gap="xs">
         {items.map((item, index) => {
           const rendered = renderItem(item);
           return (
@@ -236,7 +236,7 @@ export function RelatedList<T>({
             </li>
           );
         })}
-      </ul>
+      </Stack>
       {action}
     </div>
   );

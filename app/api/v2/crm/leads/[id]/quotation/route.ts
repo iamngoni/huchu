@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord, canUser, denialMessage } from "@/lib/crm/permissions";
 import { createQuotationForLead } from "@/lib/crm/accounting-bridge";
 import { createOrRotateApproval } from "@/lib/crm/approvals";
 import { crmDocumentLineSchema } from "../../../_helpers";
@@ -14,6 +14,7 @@ const bodySchema = z.object({
   notes: z.string().trim().max(2000).optional(),
   supersedesId: z.string().uuid().optional(),
   revisionNote: z.string().trim().max(500).optional(),
+  renderTemplateId: z.string().uuid().optional(),
   sendApproval: z.boolean().optional(),
   approvalExpiresInDays: z.number().int().min(1).max(90).optional(),
 });
@@ -30,8 +31,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       select: { id: true, assignedToId: true },
     });
     if (!lead) return errorResponse("Lead not found", 404);
-    if (!canEditAssignedRecord(session, lead.assignedToId)) {
+    if (!await canEditRecord(session, lead.assignedToId)) {
       return errorResponse("You can only quote on leads assigned to you", 403);
+    }
+    // Owning the record is not the same as being allowed to bill against it.
+    if (!(await canUser(session, "documents.issue"))) {
+      return errorResponse(denialMessage("documents.issue"), 403);
     }
 
     const data = bodySchema.parse(await request.json());
@@ -45,6 +50,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       notes: data.notes ?? null,
       supersedesId: data.supersedesId ?? null,
       revisionNote: data.revisionNote ?? null,
+      renderTemplateId: data.renderTemplateId ?? null,
     });
 
     let approvalToken: string | undefined;

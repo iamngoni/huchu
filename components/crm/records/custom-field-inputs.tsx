@@ -49,7 +49,7 @@ export function CustomFieldInputs({
     <>
       {sections.map(([section, fields]) => (
         <section key={section} className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          <h3 className="text-sm font-semibold text-[var(--text-muted)]">
             {section}
           </h3>
           {fields.map((definition) => (

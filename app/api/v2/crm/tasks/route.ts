@@ -8,6 +8,7 @@ import {
   successResponse,
   validateSession,
 } from "@/lib/api-utils";
+import { canUser, denialMessage } from "@/lib/crm/permissions";
 import { prisma } from "@/lib/prisma";
 import { createTaskSchema, taskQueueWhere, type TaskQueue } from "@/lib/crm/tasks";
 import { isCompanyUser } from "../_helpers";
@@ -90,6 +91,14 @@ export async function POST(request: NextRequest) {
 
     if (!(await isCompanyUser(companyId, data.assignedToId))) {
       return errorResponse("Invalid assignee", 400);
+    }
+    // Putting work on somebody else's list is its own permission.
+    if (
+      data.assignedToId &&
+      data.assignedToId !== session.user.id &&
+      !(await canUser(session, "tasks.assign.others"))
+    ) {
+      return errorResponse(denialMessage("tasks.assign.others"), 403);
     }
 
     // Whatever the task is filed against has to be in this tenant.

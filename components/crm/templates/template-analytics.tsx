@@ -2,7 +2,7 @@
 
 import { useMemo, type ReactNode } from "react";
 
-import { EmptyState } from "@corelithzw/react";
+import { EmptyState, Stack } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { Download, Eye, Send } from "@/lib/icons";
 
@@ -31,7 +31,7 @@ function Stat({
 }) {
   return (
     <div className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
-      <h3 className="text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+      <h3 className="text-sm font-medium text-[var(--text-subtle)]">
         {label}
         <span className="mt-1 block font-mono text-xl font-semibold tracking-normal text-[var(--text-strong)]">
           {value}
@@ -117,7 +117,7 @@ export function TemplateAnalytics({
           body="Every open and every submission shows up here as it happens."
         />
       ) : (
-        <ul className="space-y-1">
+        <Stack as="ul" gap="xs">
           {events.map((event) => {
             const Icon =
               event.type === "SUBMIT" ? Send : event.type === "DOWNLOAD" ? Download : Eye;
@@ -136,7 +136,7 @@ export function TemplateAnalytics({
               </li>
             );
           })}
-        </ul>
+        </Stack>
       )}
     </div>
   );

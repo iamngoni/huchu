@@ -28,16 +28,33 @@ export type SearchResultType =
   | "PRODUCT"
   | "CUSTOMER";
 
+export type SearchFact = { label: string; value: string };
+
 export type SearchResult = {
   type: SearchResultType;
   id: string;
   /** The record number, shown alongside the title. */
   reference: string | null;
   title: string;
-  /** One line of disambiguating detail. */
+  /** One line of disambiguating detail, for the list row. */
   subtitle: string | null;
+  /**
+   * The same detail, labelled, for the preview pane.
+   *
+   * A preview showing one line is a list row in a bigger box. The command bar
+   * gathered all of this already and then joined it with a middle dot, so the
+   * pane beside the results had nothing to say that the row had not.
+   */
+  facts: SearchFact[];
   href: string;
 };
+
+/** Labelled facts, minus the ones with nothing in them. */
+function facts(entries: Array<[string, string | number | null | undefined]>): SearchFact[] {
+  return entries
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .map(([label, value]) => ({ label, value: String(value) }));
+}
 
 export const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
   PERSON: "People",
@@ -129,6 +146,10 @@ export async function searchCrm(
           personNo: true,
           fullName: true,
           jobTitle: true,
+          // Read for the preview pane, which is the difference between a
+          // result you recognise and one you have to open to identify.
+          email: true,
+          phone: true,
           client: { select: { name: true } },
           _count: { select: { dealContacts: true } },
         },
@@ -306,6 +327,13 @@ export async function searchCrm(
       reference: person.personNo,
       title: person.fullName,
       subtitle: context.length > 0 ? context.join(" · ") : null,
+      facts: facts([
+        ["Job title", person.jobTitle],
+        ["Company", person.client?.name],
+        ["Email", person.email],
+        ["Phone", person.phone],
+        ["Deals", person._count.dealContacts || null],
+      ]),
       href: `/crm/people/${person.id}`,
     });
   }
@@ -323,6 +351,12 @@ export async function searchCrm(
       reference: company.clientNo,
       title: company.name,
       subtitle: context.length > 0 ? context.join(" · ") : null,
+      facts: facts([
+        ["Status", company.accountStatus.toLowerCase()],
+        ["City", company.city],
+        ["Contacts", company._count.people || null],
+        ["Deals", company._count.deals || null],
+      ]),
       href: `/crm/companies/${company.id}`,
     });
   }
@@ -334,6 +368,10 @@ export async function searchCrm(
       reference: lead.leadNo,
       title: lead.title ?? lead.contactName ?? lead.leadNo,
       subtitle: [lead.contactName, lead.stage].filter(Boolean).join(" · ") || null,
+      facts: facts([
+        ["Stage", lead.stage],
+        ["Contact", lead.contactName],
+      ]),
       href: `/crm/leads/${lead.id}`,
     });
   }
@@ -350,6 +388,16 @@ export async function searchCrm(
       reference: deal.dealNo,
       title: deal.title,
       subtitle: context.length > 0 ? context.join(" · ") : null,
+      facts: facts([
+        ["Company", deal.client?.name],
+        ["Stage", deal.stage?.name],
+        [
+          "Value",
+          typeof deal.value === "number"
+            ? `${deal.currency} ${deal.value.toLocaleString()}`
+            : null,
+        ],
+      ]),
       href: `/crm/deals/${deal.id}`,
     });
   }
@@ -362,6 +410,11 @@ export async function searchCrm(
       reference: site.siteNo,
       title: site.name,
       subtitle: context.length > 0 ? context.join(" · ") : null,
+      facts: facts([
+        ["Company", site.client?.name],
+        ["Address", site.addressLine],
+        ["City", site.city],
+      ]),
       href: `/crm/sites/${site.id}`,
     });
   }
@@ -378,6 +431,10 @@ export async function searchCrm(
       subtitle: [doc.quotation?.customer?.name, `${doc.currency} ${doc.amount.toLocaleString()}`]
         .filter(Boolean)
         .join(" · "),
+      facts: facts([
+        ["Customer", doc.quotation?.customer?.name],
+        ["Amount", `${doc.currency} ${doc.amount.toLocaleString()}`],
+      ]),
       href: documentHref(doc),
     });
   }
@@ -391,6 +448,10 @@ export async function searchCrm(
       subtitle: [doc.invoice?.customer?.name, `${doc.currency} ${doc.amount.toLocaleString()}`]
         .filter(Boolean)
         .join(" · "),
+      facts: facts([
+        ["Customer", doc.invoice?.customer?.name],
+        ["Amount", `${doc.currency} ${doc.amount.toLocaleString()}`],
+      ]),
       href: documentHref(doc),
     });
   }
@@ -402,6 +463,7 @@ export async function searchCrm(
       reference: doc.receipt?.receiptNumber ?? null,
       title: doc.receipt?.receiptNumber ?? "Receipt",
       subtitle: `${doc.currency} ${doc.amount.toLocaleString()}`,
+      facts: facts([["Amount", `${doc.currency} ${doc.amount.toLocaleString()}`]]),
       href: documentHref(doc),
     });
   }
@@ -419,6 +481,11 @@ export async function searchCrm(
       ]
         .filter(Boolean)
         .join(" · "),
+      facts: facts([
+        ["Kind", PRODUCT_KIND_LABELS[product.kind]],
+        ["Sold by", UNIT_LABELS[product.unit]],
+        ["Status", product.isActive ? null : "Archived"],
+      ]),
       href: `/stores/catalogue?product=${product.id}`,
     });
   }
@@ -430,6 +497,10 @@ export async function searchCrm(
       reference: null,
       title: customer.name,
       subtitle: [customer.contactName, customer.email].filter(Boolean).join(" · ") || null,
+      facts: facts([
+        ["Contact", customer.contactName],
+        ["Email", customer.email],
+      ]),
       // The accounting account has no page of its own; its sales history is
       // the useful destination.
       href: `/accounting/sales?customerId=${customer.id}`,

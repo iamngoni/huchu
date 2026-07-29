@@ -202,6 +202,8 @@ export type CreateQuotationInput = DocumentOwnerRef & {
   supersedesId?: string | null;
   /** Why the revision exists — "customer asked for the cheaper panel". */
   revisionNote?: string | null;
+  /** The document layout to render through. Absent means the company default. */
+  renderTemplateId?: string | null;
 };
 
 export async function createQuotationForLead(input: CreateQuotationInput) {
@@ -262,6 +264,7 @@ export async function createQuotationForLead(input: CreateQuotationInput) {
         version,
         supersedesId: input.supersedesId ?? undefined,
         revisionNote: input.revisionNote ?? undefined,
+        renderTemplateId: input.renderTemplateId ?? undefined,
         createdById: input.userId,
       },
       select: { id: true },
@@ -313,6 +316,10 @@ export type CreateInvoiceInput = DocumentOwnerRef & {
   currency?: string;
   notes?: string | null;
   dueDate?: Date | null;
+  /** Raised as money down against the quote — reported apart in billing. */
+  isDeposit?: boolean;
+  /** The document layout to render through. Null means the company default. */
+  renderTemplateId?: string | null;
 };
 
 export async function createInvoiceForLead(input: CreateInvoiceInput) {
@@ -392,6 +399,8 @@ export async function createInvoiceForLead(input: CreateInvoiceInput) {
         invoiceId: invoice.id,
         amount: totals.total,
         currency,
+        isDeposit: input.isDeposit ?? false,
+        renderTemplateId: input.renderTemplateId ?? undefined,
         createdById: input.userId,
       },
       select: { id: true },

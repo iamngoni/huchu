@@ -110,7 +110,7 @@ export function ExecutiveSummaryBar({
                   <Badge
                     key={status}
                     variant={STATUS_META[status].variant}
-                    className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 font-mono text-xs")}
+                    className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 font-mono text-sm")}
                   >
                     <Icon className="h-3.5 w-3.5" />
                     {STATUS_META[status].label}: {count}
@@ -151,7 +151,7 @@ export function ExecutiveSummaryBar({
               <SummaryStatCard label="Watch Modules" value={watchCount} />
             </div>
             {highestPressureModule ? (
-              <div className="surface-framed rounded-md bg-muted/35 px-3 py-2 text-xs text-muted-foreground">
+              <div className="surface-framed rounded-md bg-muted/35 px-3 py-2 text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">
                   Highest pressure: {MODULE_LABELS[highestPressureModule.module]}
                 </span>

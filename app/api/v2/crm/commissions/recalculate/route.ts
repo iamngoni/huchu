@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { recalculatePeriod } from "@/lib/crm/commission-recalc";
-import { requireCrmManager } from "../../_helpers";
+import { requireCrmCapability } from "../../_helpers";
 
 const bodySchema = z.object({
   periodKey: z.string().regex(/^\d{4}-\d{2}$/),
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "commissions.manage")) return errorResponse("Manager access required", 403);
 
     const { periodKey, repId } = bodySchema.parse(await request.json());
     const result = await recalculatePeriod({

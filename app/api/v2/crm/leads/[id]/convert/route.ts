@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import { convertLead, convertLeadSchema, splitName } from "@/lib/crm/conversion";
 import { findCompanyDuplicates, findPersonDuplicates } from "@/lib/crm/duplicates";
 
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
     if (!lead) return errorResponse("Lead not found", 404);
     if (lead.convertedAt) return errorResponse("This lead has already been converted", 409);
-    if (!canEditAssignedRecord(session, lead.assignedToId)) {
+    if (!await canEditRecord(session, lead.assignedToId)) {
       return errorResponse("You can only convert leads assigned to you", 403);
     }
 

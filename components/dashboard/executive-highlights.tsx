@@ -86,7 +86,7 @@ function HighlightStatCard({ item }: { item: ExecutiveHighlight }) {
         <Badge
           variant={toneMeta.badgeVariant}
           className={cn(
-            "inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px]",
+            "inline-flex items-center gap-1.5 px-2 py-0.5 text-sm",
           )}
         >
           <ToneIcon className="h-3 w-3" />

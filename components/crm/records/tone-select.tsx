@@ -96,9 +96,15 @@ export function ToneSelect({
           aria-label={label}
         >
           <span className="flex min-w-0 items-center gap-2">
-            {chosen.length > 0 ? (
-              <span className="flex flex-none -space-x-1">
-                {chosen.slice(0, 3).map((option) =>
+            {/* A multi-select trigger says WHICH question it answers, and
+                shows the choice as dots. Spelling out every chosen stage
+                turns a 9-item pick into a sentence that wraps the button. */}
+            <span className="truncate">
+              {multiple ? (label ?? placeholder) : (chosen[0]?.label ?? placeholder)}
+            </span>
+            {multiple && chosen.length > 0 ? (
+              <span className="flex flex-none items-center -space-x-1">
+                {chosen.slice(0, 6).map((option) =>
                   option.icon ? (
                     <span key={option.value} className="flex size-3.5 items-center">
                       {option.icon}
@@ -116,13 +122,8 @@ export function ToneSelect({
                 )}
               </span>
             ) : null}
-            <span className="truncate">
-              {chosen.length === 0
-                ? placeholder
-                : chosen.map((option) => option.label).join(", ")}
-            </span>
           </span>
-          <ChevronDown className="size-4 flex-none opacity-60" />
+          <ChevronDown className="size-3 flex-none text-[var(--text-muted)]" />
         </Button>
       </PopoverTrigger>
 

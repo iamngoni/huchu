@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Empty,
   EmptyDescription,
@@ -26,6 +27,8 @@ import { Download, DotsThree, FileText, Plus, ReceiptLong } from "@/lib/icons";
 
 import { DocumentBuilderSheet } from "./document-builder-sheet";
 import { RecordPaymentSheet } from "./record-payment-sheet";
+import { BillingBand } from "./billing-band";
+import { DepositDialog } from "./deposit-dialog";
 import {
   DOCUMENT_KIND_LABELS,
   documentNumber,
@@ -34,6 +37,9 @@ import {
   invoiceOutstanding,
   type LeadDocument,
 } from "./document-types";
+import { refreshAfterDocumentChange } from "@/lib/crm/refresh";
+
+import { Stack } from "@corelithzw/react";
 
 function KindIcon({ type }: { type: LeadDocument["type"] }) {
   const Icon = type === "RECEIPT" ? ReceiptLong : FileText;
@@ -61,8 +67,12 @@ export function DocumentList({
   const [builder, setBuilder] = useState<{
     mode: "quotation" | "invoice";
     fromQuotationId?: string;
+    deposit?: boolean;
   } | null>(null);
   const [paymentFor, setPaymentFor] = useState<LeadDocument | null>(null);
+  const [depositFor, setDepositFor] = useState<LeadDocument | null>(null);
+  const [depositLine, setDepositLine] =
+    useState<Parameters<typeof DocumentBuilderSheet>[0]["prefillLines"]>(undefined);
 
   const shareApproval = useMutation({
     mutationFn: (docId: string) =>
@@ -84,7 +94,7 @@ export function DocumentList({
         // showing the link is still useful.
         toast({ title: "Approval link ready", description: url });
       }
-      queryClient.invalidateQueries({ queryKey: ["crm-record", basePath] });
+      refreshAfterDocumentChange(queryClient);
     },
     onError: (error) =>
       toast({
@@ -94,8 +104,34 @@ export function DocumentList({
       }),
   });
 
+  const markPaid = useMutation({
+    mutationFn: (doc: LeadDocument) =>
+      fetchJson(`${basePath}/receipt`, {
+        method: "POST",
+        body: JSON.stringify({
+          invoiceDocumentId: doc.id,
+          amount: doc.invoice ? invoiceOutstanding(doc.invoice) : doc.amount,
+          method: "Bank transfer",
+        }),
+      }),
+    onSuccess: () => {
+      // The receipt is the point: an invoice marked paid with nothing issued
+      // to the customer is a number changed in a database.
+      toast({ title: "Invoice settled", description: "A receipt has been raised." });
+      refreshAfterDocumentChange(queryClient);
+    },
+    onError: (error) =>
+      toast({
+        title: "Could not settle the invoice",
+        description: getApiErrorMessage(error),
+        variant: "destructive",
+      }),
+  });
+
   return (
     <div className="space-y-3">
+      <BillingBand documents={documents} currency={currency} />
+
       {canCreate ? (
         <div className="flex flex-wrap gap-2">
           <Button size="sm" className="gap-1.5" onClick={() => setBuilder({ mode: "quotation" })}>
@@ -132,7 +168,7 @@ export function DocumentList({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="space-y-1">
+        <Stack as="ul" gap="xs">
           {documents.map((doc) => {
             const status = documentStatus(doc);
             const outstanding = doc.invoice ? invoiceOutstanding(doc.invoice) : 0;
@@ -173,14 +209,11 @@ export function DocumentList({
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 px-0"
+                    <IconButton
                       aria-label={`Actions for ${documentNumber(doc)}`}
                     >
-                      <DotsThree className="h-4 w-4" />
-                    </Button>
+                      <DotsThree />
+                    </IconButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>
@@ -214,29 +247,45 @@ export function DocumentList({
                     ) : null}
 
                     {canConvert ? (
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setBuilder({
-                            mode: "invoice",
-                            fromQuotationId: doc.quotationId ?? undefined,
-                          })
-                        }
-                      >
-                        Convert to invoice
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setBuilder({
+                              mode: "invoice",
+                              fromQuotationId: doc.quotationId ?? undefined,
+                            })
+                          }
+                        >
+                          Convert to invoice
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDepositFor(doc)}>
+                          Request a deposit
+                        </DropdownMenuItem>
+                      </>
                     ) : null}
 
                     {canPay ? (
-                      <DropdownMenuItem onClick={() => setPaymentFor(doc)}>
-                        Record payment
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem onClick={() => setPaymentFor(doc)}>
+                          Record payment
+                        </DropdownMenuItem>
+                        {/* The whole balance, one click, receipt raised. The
+                            sheet is for a part payment or a deposit — this is
+                            for the invoice that has simply been settled. */}
+                        <DropdownMenuItem
+                          disabled={markPaid.isPending}
+                          onClick={() => markPaid.mutate(doc)}
+                        >
+                          Mark as paid ({formatMoney(outstanding, doc.currency)})
+                        </DropdownMenuItem>
+                      </>
                     ) : null}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </li>
             );
           })}
-        </ul>
+        </Stack>
       )}
 
       <DocumentBuilderSheet
@@ -244,6 +293,7 @@ export function DocumentList({
         onOpenChange={(next) => {
           if (!next) {
             setBuilder(null);
+            setDepositLine(undefined);
             onPrefillConsumed?.();
           }
         }}
@@ -251,7 +301,22 @@ export function DocumentList({
         mode={builder?.mode ?? "quotation"}
         currency={currency}
         fromQuotationId={builder?.fromQuotationId}
-        prefillLines={builder?.fromQuotationId ? undefined : prefillLines}
+        isDeposit={builder?.deposit}
+        prefillLines={
+          depositLine ?? (builder?.fromQuotationId ? undefined : prefillLines)
+        }
+      />
+
+      <DepositDialog
+        open={Boolean(depositFor)}
+        onOpenChange={(next) => (!next ? setDepositFor(null) : undefined)}
+        quotation={depositFor}
+        onConfirm={(line) => {
+          // The deposit is a one-line invoice, so the builder opens on it
+          // rather than on the whole quote.
+          setDepositLine([line]);
+          setBuilder({ mode: "invoice", deposit: true });
+        }}
       />
 
       <RecordPaymentSheet

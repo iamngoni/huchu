@@ -39,6 +39,8 @@ import {
 } from "@/lib/crm/custom-fields";
 import type { CrmFieldEntity, CrmFieldType } from "@prisma/client";
 
+import { Stack } from "@corelithzw/react";
+
 type OptionDraft = { value: string; label: string };
 
 const SELECT_TYPES = new Set(["SINGLE_SELECT", "MULTI_SELECT"]);
@@ -187,10 +189,10 @@ export function CustomFieldsPanel() {
         ) : (
           grouped.map(([sectionName, fields]) => (
             <section key={sectionName} className="space-y-1.5">
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              <h4 className="text-sm font-semibold text-[var(--text-muted)]">
                 {sectionName}
               </h4>
-              <ul className="space-y-1">
+              <Stack as="ul" gap="xs">
                 {fields.map((definition) => (
                   <li key={definition.id} className="flex items-center gap-3 p-3">
                     <div className="min-w-0 flex-1">
@@ -221,7 +223,7 @@ export function CustomFieldsPanel() {
                     </Button>
                   </li>
                 ))}
-              </ul>
+              </Stack>
             </section>
           ))
         )}

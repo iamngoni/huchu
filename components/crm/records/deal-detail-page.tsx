@@ -53,6 +53,8 @@ import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { RecordHistoryTab } from "./record-history-tab";
 import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
+import { Stack } from "@corelithzw/react";
+
 const STATUS_PRESENTATION: Record<string, CanonicalUiStatus> = {
   OPEN: "in_progress",
   WON: "passing",
@@ -530,7 +532,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
 
             {deal.contacts.length > 0 ? (
               <RailSection title="Contacts">
-                <ul className="space-y-1.5">
+                <Stack as="ul" gap="xs">
                   {deal.contacts.map((contact) => (
                     <li key={contact.id} className="flex items-center justify-between gap-2 text-sm">
                       <EntityLink
@@ -544,7 +546,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                       </Badge>
                     </li>
                   ))}
-                </ul>
+                </Stack>
               </RailSection>
             ) : null}
 

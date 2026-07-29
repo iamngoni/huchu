@@ -250,6 +250,13 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
       createLabel="New person"
       onCreate={() => setCreateOpen(true)}
       error={peopleQuery.error}
+      display={
+        <ColumnPicker
+          columns={PERSON_FIELDS}
+          state={fields}
+          label={layout === "BOARD" ? "Card fields" : "Columns"}
+        />
+      }
       filters={
         <>
           <SegmentedControl
@@ -261,11 +268,6 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
               { value: "LIST", label: "List" },
               { value: "BOARD", label: "Board" },
             ]}
-          />
-          <ColumnPicker
-            columns={PERSON_FIELDS}
-            state={fields}
-            label={layout === "BOARD" ? "Card fields" : "Columns"}
           />
         </>
       }

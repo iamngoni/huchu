@@ -23,6 +23,7 @@ import { RecordMarkField } from "./record-mark-field";
 
 type FormState = {
   emoji: string;
+  accent: string;
   avatarUrl: string;
   name: string;
   clientId: string;
@@ -39,6 +40,7 @@ type FormState = {
 
 const EMPTY: FormState = {
   emoji: "",
+  accent: "",
   avatarUrl: "",
   name: "",
   clientId: "",
@@ -166,6 +168,7 @@ export function SiteFormSheet({
           siteConditions: form.siteConditions.trim() || null,
           notes: form.notes.trim() || null,
           emoji: form.emoji.trim() || null,
+          accent: form.accent.trim() || null,
           avatarUrl: form.avatarUrl.trim() || null,
           customFields: customValues,
         }),

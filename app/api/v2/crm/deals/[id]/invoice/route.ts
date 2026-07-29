@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord, canUser, denialMessage } from "@/lib/crm/permissions";
 import { createInvoiceForLead } from "@/lib/crm/accounting-bridge";
 import { createOrRotateApproval } from "@/lib/crm/approvals";
 import { crmDocumentLineSchema } from "../../../_helpers";
@@ -15,6 +15,8 @@ const bodySchema = z
     notes: z.string().trim().max(2000).optional(),
     dueDate: z.string().datetime().optional(),
     sendApproval: z.boolean().optional(),
+    isDeposit: z.boolean().optional(),
+    renderTemplateId: z.string().uuid().optional(),
     approvalExpiresInDays: z.number().int().min(1).max(90).optional(),
   })
   .refine((v) => v.lines || v.fromQuotationId, {
@@ -33,8 +35,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       select: { id: true, assignedToId: true },
     });
     if (!deal) return errorResponse("Deal not found", 404);
-    if (!canEditAssignedRecord(session, deal.assignedToId)) {
+    if (!await canEditRecord(session, deal.assignedToId)) {
       return errorResponse("You can only invoice on deals assigned to you", 403);
+    }
+    // Owning the record is not the same as being allowed to bill against it.
+    if (!(await canUser(session, "documents.issue"))) {
+      return errorResponse(denialMessage("documents.issue"), 403);
     }
 
     const data = bodySchema.parse(await request.json());
@@ -47,6 +53,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       currency: data.currency,
       notes: data.notes ?? null,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      isDeposit: data.isDeposit ?? false,
+      renderTemplateId: data.renderTemplateId ?? null,
     });
 
     let approvalToken: string | undefined;

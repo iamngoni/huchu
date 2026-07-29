@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import {
   CRM_TASK_OUTCOME_LABELS,
   nextOccurrence,
@@ -59,7 +59,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       },
     });
     if (!existing) return errorResponse("Task not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only change tasks assigned to you", 403);
     }
 
@@ -198,7 +198,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       select: { id: true, assignedToId: true },
     });
     if (!existing) return errorResponse("Task not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only delete tasks assigned to you", 403);
     }
 

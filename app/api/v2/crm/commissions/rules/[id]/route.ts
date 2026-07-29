@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { isCompanyUser, requireCrmManager } from "../../../_helpers";
+import { isCompanyUser, requireCrmCapability } from "../../../_helpers";
 
 const tierSchema = z.object({
   thresholdFrom: z.number().finite().nonnegative(),
@@ -24,7 +24,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "commissions.manage")) return errorResponse("Manager access required", 403);
     const { id } = await params;
 
     const existing = await prisma.crmCommissionRule.findFirst({
@@ -76,7 +76,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "commissions.manage")) return errorResponse("Manager access required", 403);
     const { id } = await params;
 
     const existing = await prisma.crmCommissionRule.findFirst({

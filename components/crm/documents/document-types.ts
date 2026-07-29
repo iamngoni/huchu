@@ -10,6 +10,8 @@ export type LeadDocument = {
   receiptId: string | null;
   amount: number;
   currency: string;
+  /** Raised as money down against the quote. Reported apart in billing. */
+  isDeposit?: boolean;
   /** Quote revisions: v1 is the first thing sent, each later one supersedes it. */
   version: number;
   supersedesId: string | null;

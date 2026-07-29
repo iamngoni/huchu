@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { canEditAssignedRecord } from "@/lib/crm/scope";
+import { canEditRecord } from "@/lib/crm/permissions";
 import { changeLeadStage, crmLeadStageSchema } from "@/lib/crm/pipeline";
 import { runAutomations } from "@/lib/crm/automation-runner";
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     });
     if (!existing) return errorResponse("Lead not found", 404);
-    if (!canEditAssignedRecord(session, existing.assignedToId)) {
+    if (!await canEditRecord(session, existing.assignedToId)) {
       return errorResponse("You can only change stage on leads assigned to you", 403);
     }
 

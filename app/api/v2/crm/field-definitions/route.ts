@@ -9,7 +9,7 @@ import {
   normalizeFieldKey,
   validateDefinition,
 } from "@/lib/crm/custom-fields";
-import { requireCrmManager } from "../_helpers";
+import { requireCrmCapability } from "../_helpers";
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) {
+    if (!await requireCrmCapability(session, "fields.manage")) {
       return errorResponse("Only managers can add custom fields", 403);
     }
     const companyId = session.user.companyId;

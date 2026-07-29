@@ -123,7 +123,10 @@ export function LeadsTable({
         header: "Lead",
         size: 220,
         cell: ({ row }) => (
-          <Link href={`/crm/leads/${row.original.id}`} className="block min-w-0 hover:underline">
+          <Link
+            href={`/crm/leads/${row.original.id}`}
+            className="block min-w-0 underline decoration-[var(--border)] underline-offset-2 hover:decoration-[var(--text-muted)]"
+          >
             <div className="truncate font-medium">
               {row.original.title ?? row.original.leadNo}
             </div>
@@ -253,7 +256,7 @@ export function LeadsTable({
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" className="gap-1.5">
                     Assign owner
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                    <ChevronDown className="size-3 text-[var(--text-muted)]" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
@@ -278,7 +281,7 @@ export function LeadsTable({
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" className="gap-1.5">
                     Change stage
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                    <ChevronDown className="size-3 text-[var(--text-muted)]" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">

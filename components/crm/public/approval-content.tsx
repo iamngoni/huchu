@@ -177,7 +177,7 @@ export function ApprovalContent({ token }: { token: string }) {
 
             {doc.billedTo ? (
               <section className="mt-6">
-                <p className="text-sm uppercase tracking-wide text-neutral-400">
+                <p className="text-sm text-neutral-400">
                   {doc.documentType === "QUOTATION" ? "Prepared for" : "Billed to"}
                 </p>
                 <p className="text-sm font-medium text-neutral-900">{doc.billedTo}</p>
@@ -194,7 +194,7 @@ export function ApprovalContent({ token }: { token: string }) {
                 <div className="mt-6 -mx-2 overflow-x-auto px-2">
                   <table className="w-full min-w-[32rem] text-sm">
                     <thead>
-                      <tr className="border-b border-neutral-200 text-left text-sm uppercase tracking-wide text-neutral-400">
+                      <tr className="border-b border-neutral-200 text-left text-sm text-neutral-400">
                         <th className="py-2 font-medium">Description</th>
                         <th className="py-2 text-right font-medium">Qty</th>
                         <th className="py-2 text-right font-medium">Unit price</th>
@@ -254,14 +254,14 @@ export function ApprovalContent({ token }: { token: string }) {
 
             {doc.notes ? (
               <section className="mt-6 border-t border-neutral-100 pt-4">
-                <p className="text-sm uppercase tracking-wide text-neutral-400">Notes</p>
+                <p className="text-sm text-neutral-400">Notes</p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{doc.notes}</p>
               </section>
             ) : null}
 
             {doc.branding.bankAccountNumber ? (
               <section className="mt-6 rounded-lg bg-neutral-50 p-4">
-                <p className="text-sm uppercase tracking-wide text-neutral-400">Payment details</p>
+                <p className="text-sm text-neutral-400">Payment details</p>
                 <dl className="mt-1 space-y-0.5 text-sm text-neutral-700">
                   {doc.branding.bankName ? (
                     <div className="flex gap-2">

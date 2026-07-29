@@ -22,8 +22,10 @@ import { cn } from "@/lib/utils";
  * One difference worth knowing: the DS primitive is `variant`-driven and
  * defaults to `underline`. The local component always drew the segmented look,
  * so `segmented` is the default here and existing screens keep their shape.
- * Pass `variant="underline"` for page-level navigation — that is what the
- * design system intends above page content.
+ *
+ * The product uses two of the four — `segmented` and `vertical`. Underline and
+ * pill are deliberately not reached for: three tab shapes in one product is
+ * three things a reader has to learn mean the same thing.
  */
 
 type DsVariant = "underline" | "segmented" | "pill" | "vertical";

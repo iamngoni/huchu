@@ -50,6 +50,7 @@ const CHANNELS = [
 
 type FormState = {
   emoji: string;
+  accent: string;
   avatarUrl: string;
   firstName: string;
   lastName: string;
@@ -67,6 +68,7 @@ type FormState = {
 
 const EMPTY: FormState = {
   emoji: "",
+  accent: "",
   avatarUrl: "",
   firstName: "",
   lastName: "",
@@ -184,6 +186,7 @@ export function PersonFormSheet({
     clientId: form.clientId || null,
     assignedToId: form.assignedToId || null,
     emoji: form.emoji.trim() || null,
+    accent: form.accent.trim() || null,
     avatarUrl: form.avatarUrl.trim() || null,
     customFields: customValues,
     force,
@@ -407,6 +410,8 @@ export function PersonFormSheet({
           name={[form.firstName, form.lastName].filter(Boolean).join(" ")}
 
           emoji={form.emoji}
+
+          accent={form.accent}
 
           avatarUrl={form.avatarUrl}
 

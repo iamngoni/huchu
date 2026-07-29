@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { mergeClients } from "@/lib/crm/dedupe";
-import { requireCrmManager } from "../../../_helpers";
+import { requireCrmCapability } from "../../../_helpers";
 
 const bodySchema = z.object({ mergeClientId: z.string().uuid() });
 
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "records.merge")) return errorResponse("Manager access required", 403);
     const { id } = await params;
 
     const { mergeClientId } = bodySchema.parse(await request.json());

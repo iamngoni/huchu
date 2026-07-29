@@ -124,6 +124,7 @@ export function PublicTemplateForm({ token }: { token: string }) {
             answers,
             onAnswer: (key, value) =>
               setAnswers((current) => ({ ...current, [key]: value })),
+            uploadUrl: `/api/public/crm/template/${token}/upload`,
           }}
         />
 

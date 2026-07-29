@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
-import { Alert, Badge, Button, EmptyState, StatCard } from "@corelithzw/react";
+import { Alert, Badge, Button, EmptyState, StatCard, Stack } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -171,7 +171,7 @@ export function CrmFollowUpsContent() {
               same way — tick one off when it is done.
             </p>
           </div>
-          <ul className="space-y-1">
+          <Stack as="ul" gap="xs">
             {legacyRows.map((row) => (
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
                 <div className="min-w-0">
@@ -205,7 +205,7 @@ export function CrmFollowUpsContent() {
                 </Button>
               </li>
             ))}
-          </ul>
+          </Stack>
         </section>
       ) : null}
 

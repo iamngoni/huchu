@@ -47,7 +47,12 @@ BLOB_READ_WRITE_TOKEN="<vercel-blob-read-write-token>"
    - `NEXTAUTH_URL=https://apps.pagka.dev`
    - `PLATFORM_ROOT_DOMAIN=apps.pagka.dev`
    - `PLATFORM_ROOT_HOSTS=apps.pagka.dev`
-6. For preview deployments, leave `PLATFORM_ROOT_DOMAIN` unset to avoid strict host enforcement during QA.
+6. For preview deployments, keep `PLATFORM_ROOT_DOMAIN` set and turn on the host
+   override (`PREVIEW_HOST_OVERRIDE=1`) instead of unsetting it. Unsetting the
+   root domain does make a preview reachable, but it takes tenant routing,
+   portal hosts and host enforcement out of the build you are testing, and
+   leaves no way to say which tenant you want. See
+   [STAGING_PREVIEW.md](./STAGING_PREVIEW.md).
 
 ### Admin Portal Domain (Wildcard Support)
 

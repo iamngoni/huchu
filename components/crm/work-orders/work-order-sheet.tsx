@@ -23,6 +23,8 @@ import {
 } from "@/lib/crm/work-orders";
 import { Clock, MapPin, Phone } from "@/lib/icons";
 
+import { Stack } from "@corelithzw/react";
+
 export type WorkOrderItem = {
   id: string;
   description: string;
@@ -242,7 +244,7 @@ export function WorkOrderSheet({
                   </span>
                 </div>
 
-                <ul className="space-y-2">
+                <Stack as="ul" gap="sm">
                   {order.items.map((item) => (
                     <li
                       key={item.id}
@@ -277,7 +279,7 @@ export function WorkOrderSheet({
                       </div>
                     </li>
                   ))}
-                </ul>
+                </Stack>
               </section>
             ) : null}
 

@@ -125,7 +125,7 @@ export function RecordList({
           <Link
             href={row.href}
             className={cn(
-              "flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] py-2.5 pr-3 hover:bg-[var(--surface-muted)]",
+              "group/row flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] py-2.5 pr-3 hover:bg-[var(--surface-muted)]",
               selection ? "pl-2" : "pl-3",
             )}
           >
@@ -133,7 +133,9 @@ export function RecordList({
 
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-2">
-                <span className="truncate text-sm font-medium text-[var(--text-strong)]">
+                {/* The same cue EntityLink draws: a quiet underline that says
+                    "this opens" without waiting for a hover to admit it. */}
+                <span className="truncate text-sm font-medium text-[var(--text-strong)] underline decoration-[var(--border)] underline-offset-2 group-hover/row:decoration-[var(--text-muted)]">
                   {row.title}
                 </span>
                 {row.status}
@@ -152,7 +154,7 @@ export function RecordList({
                 {row.facts.map((fact, index) => (
                   <span key={index} className="text-right">
                     {fact.label ? (
-                      <span className="block text-sm uppercase tracking-wide text-[var(--text-subtle)]">
+                      <span className="block text-sm font-medium text-[var(--text-subtle)]">
                         {fact.label}
                       </span>
                     ) : null}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { requireCrmManager } from "../../../_helpers";
+import { requireCrmCapability } from "../../../_helpers";
 
 const bodySchema = z.object({
   action: z.enum(["APPROVE", "MARK_PAID", "VOID", "REOPEN"]),
@@ -21,7 +21,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
-    if (!requireCrmManager(session)) return errorResponse("Manager access required", 403);
+    if (!await requireCrmCapability(session, "commissions.manage")) return errorResponse("Manager access required", 403);
     const { id } = await params;
 
     const existing = await prisma.crmCommissionEntry.findFirst({

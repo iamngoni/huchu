@@ -414,13 +414,6 @@ export const navSections: NavSection[] = [
         group: "workflows",
       },
 
-      {
-        href: "/crm/templates",
-        icon: FileText,
-        label: "Templates",
-        roles: ["SUPERADMIN", "MANAGER"],
-        group: "setup",
-      },
       { href: "/crm/import", icon: Upload, label: "Import", group: "setup" },
       {
         href: "/crm/settings",
@@ -528,10 +521,17 @@ export const navSections: NavSection[] = [
         label: "Branding",
         roles: ["SUPERADMIN", "MANAGER"],
       },
+    ],
+  },
+  {
+    id: "templates",
+    title: "Templates",
+    description: "Every form, quote layout and document the company sends",
+    items: [
       {
-        href: "/preferences/organization/templates",
+        href: "/templates",
         icon: FileText,
-        label: "Document Templates",
+        label: "Templates",
         roles: ["SUPERADMIN", "MANAGER"],
       },
     ],
