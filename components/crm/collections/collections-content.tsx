@@ -113,53 +113,50 @@ export function CollectionsContent({ currency = "USD" }: { currency?: string }) 
             />
           ) : (
             <Stack as="ul" gap="xs">
+              {/* One line per debt: what is owed, how late, and the chase.
+                  The chase history belongs in the dialog behind the button —
+                  a two-line row of it made the amounts hard to scan down. */}
               {report.data.map((row) => (
-                <li key={row.documentId} className="flex flex-wrap items-center gap-3 p-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-sm">{row.invoiceNumber}</span>
-                      {row.record ? (
-                        <Link
-                          href={`/crm/${row.record.kind === "deal" ? "deals" : "leads"}/${row.record.id}`}
-                          className="text-sm hover:underline"
-                        >
-                          {row.record.label}
-                        </Link>
-                      ) : null}
-                    </div>
-                    <p className="text-sm text-[var(--text-muted)]">
-                      {row.daysOverdue > 0 ? (
-                        <span className="font-medium text-[var(--status-error-text)]">
-                          {row.daysOverdue} day{row.daysOverdue === 1 ? "" : "s"} late
-                        </span>
-                      ) : (
-                        <>
-                          Due <ClientDate value={row.dueDate} />
-                        </>
-                      )}
-                      {row.lastNote ? (
-                        <>
-                          {" · "}
-                          {COLLECTION_OUTCOME_LABELS[row.lastNote.outcome]}
-                          {row.lastNote.promisedAt ? (
-                            <>
-                              {" by "}
-                              <ClientDate value={row.lastNote.promisedAt} />
-                            </>
-                          ) : null}
-                        </>
-                      ) : (
-                        " · never chased"
-                      )}
-                    </p>
-                  </div>
+                <li
+                  key={row.documentId}
+                  className="flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 hover:bg-[var(--surface-subtle)]"
+                >
+                  <span className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="flex-none font-mono text-sm">{row.invoiceNumber}</span>
+                    {row.record ? (
+                      <Link
+                        href={`/crm/${row.record.kind === "deal" ? "deals" : "leads"}/${row.record.id}`}
+                        className="min-w-0 truncate text-sm underline decoration-[var(--border)] underline-offset-2 hover:decoration-[var(--text-muted)]"
+                      >
+                        {row.record.label}
+                      </Link>
+                    ) : null}
+                  </span>
 
-                  <span className="font-mono text-sm">
+                  <span className="flex-none text-sm">
+                    {row.daysOverdue > 0 ? (
+                      <span className="font-medium text-[var(--status-error-text)]">
+                        {row.daysOverdue}d late
+                      </span>
+                    ) : (
+                      <span className="text-[var(--text-muted)]">
+                        Due <ClientDate value={row.dueDate} mode="date" />
+                      </span>
+                    )}
+                  </span>
+
+                  <span className="hidden flex-none text-sm text-[var(--text-muted)] md:inline">
+                    {row.lastNote
+                      ? COLLECTION_OUTCOME_LABELS[row.lastNote.outcome]
+                      : "Never chased"}
+                  </span>
+
+                  <span className="flex-none font-mono text-sm tabular-nums">
                     {formatMoney(row.outstanding, row.currency)}
                   </span>
 
                   <Button type="button" size="sm" variant="secondary" onClick={() => setChasing(row)}>
-                    Log a chase
+                    Chase
                   </Button>
                 </li>
               ))}
