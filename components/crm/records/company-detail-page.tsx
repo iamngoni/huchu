@@ -21,6 +21,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
+import { CompanyPeopleTab } from "./company-people-tab";
 import { RecordAttributes } from "./record-attributes";
 import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
@@ -270,18 +271,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
           value: "people",
           label: "People",
           count: company.people.length,
-          content: (
-            <RelatedList
-              items={company.people}
-              emptyMessage="Nobody is recorded at this company yet."
-              renderItem={(person) => ({
-                href: `/crm/people/${person.id}`,
-                title: person.fullName,
-                subtitle: person.jobTitle,
-                meta: person.phone ?? undefined,
-              })}
-            />
-          ),
+          content: <CompanyPeopleTab companyId={companyId} people={company.people} />,
         },
         {
           value: "deals",
