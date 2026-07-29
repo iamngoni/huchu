@@ -20,6 +20,7 @@ import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { RecordAttributes } from "./record-attributes";
+import { RelationAttribute } from "./relation-attribute";
 import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
@@ -155,28 +156,33 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
               id: "company",
               label: "Company",
               icon: Building2,
-              display: site.client ? (
-                <EntityLink href={`/crm/companies/${site.client.id}`} className="text-sm">
-                  {site.client.name}
-                </EntityLink>
-              ) : undefined,
-              value: null,
-              placeholder: "No company",
+              display: (
+                <RelationAttribute
+                  value={site.client?.name ?? null}
+                  href={site.client ? `/crm/companies/${site.client.id}` : null}
+                  types={["COMPANY"]}
+                  placeholder="No company"
+                  searchPlaceholder="Search companies"
+                  onPick={(record) => edit.save.mutate({ clientId: record.id })}
+                  onClear={() => edit.save.mutate({ clientId: null })}
+                />
+              ),
             },
             {
               id: "contact",
               label: "Primary contact",
               icon: UserRound,
-              display: site.primaryContact ? (
-                <EntityLink
-                  href={`/crm/people/${site.primaryContact.id}`}
-                  className="text-sm"
-                >
-                  {site.primaryContact.fullName}
-                </EntityLink>
-              ) : undefined,
-              value: null,
-              placeholder: "Nobody named",
+              display: (
+                <RelationAttribute
+                  value={site.primaryContact?.fullName ?? null}
+                  href={site.primaryContact ? `/crm/people/${site.primaryContact.id}` : null}
+                  types={["PERSON"]}
+                  placeholder="Nobody named"
+                  searchPlaceholder="Search people"
+                  onPick={(record) => edit.save.mutate({ primaryContactId: record.id })}
+                  onClear={() => edit.save.mutate({ primaryContactId: null })}
+                />
+              ),
             },
             {
               id: "address",
