@@ -20,6 +20,7 @@ import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { RecordAttributes } from "./record-attributes";
+import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { SiteFormSheet } from "./site-form-sheet";
@@ -75,6 +76,10 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
   const siteQuery = useQuery({
     queryKey: ["crm", "site", siteId],
     queryFn: () => fetchJson<SiteDetail>(`/api/v2/crm/sites/${siteId}`),
+  });
+  const edit = useAttributeEditor({
+    path: `/api/v2/crm/sites/${siteId}`,
+    invalidate: [["crm", "site", siteId], ["crm", "sites"]],
   });
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "SITE"],
@@ -177,8 +182,8 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
               id: "address",
               label: "Address",
               icon: MapPin,
-              value: site.addressLine,
               placeholder: "Not recorded",
+              ...edit.text("addressLine", site.addressLine),
             },
             {
               id: "location",

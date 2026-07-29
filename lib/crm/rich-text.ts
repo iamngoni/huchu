@@ -287,3 +287,29 @@ export function referenceKindFromSearchType(type: string): ReferenceKind | null 
   if (lowered === "product") return null;
   return isReferenceKind(lowered) ? lowered : null;
 }
+
+/**
+ * A one-line, plain-text reading of a body — for a timeline subject, a
+ * notification, a search snippet, anywhere the words have to survive without
+ * the renderer.
+ *
+ * References collapse to their labels (`@[Sarah](uuid)` → `Sarah`) and the
+ * emphasis markers go, because a subject line showing `**urgent**` is the
+ * failure this exists to prevent.
+ */
+export function richTextToPlain(body: string, maxLength = 200): string {
+  const flattened = segmentRichText(body)
+    .map((segment) => (segment.kind === "reference" ? segment.reference.label : segment.text))
+    .join("");
+
+  const stripped = flattened
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/`(.+?)`/g, "$1")
+    .replace(/^>\s?/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (stripped.length <= maxLength) return stripped;
+  return `${stripped.slice(0, maxLength - 1).trimEnd()}…`;
+}

@@ -22,6 +22,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { RecordAttributes } from "./record-attributes";
+import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { CompanyFormSheet } from "./company-form-sheet";
@@ -98,6 +99,10 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
   const companyQuery = useQuery({
     queryKey: ["crm", "company", companyId],
     queryFn: () => fetchJson<CompanyDetail>(`/api/v2/crm/companies/${companyId}`),
+  });
+  const edit = useAttributeEditor({
+    path: `/api/v2/crm/companies/${companyId}`,
+    invalidate: [["crm", "company", companyId], ["crm", "companies"]],
   });
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "COMPANY"],
@@ -212,39 +217,22 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
               id: "phone",
               label: "Phone",
               icon: Phone,
-              display: company.phone ? (
-                <a href={`tel:${company.phone}`} className="text-sm hover:underline">
-                  {company.phone}
-                </a>
-              ) : undefined,
-              value: company.phone,
+              placeholder: "Not recorded",
+              ...edit.text("phone", company.phone),
             },
             {
               id: "email",
               label: "Email",
               icon: Mail,
-              display: company.email ? (
-                <a href={`mailto:${company.email}`} className="text-sm hover:underline">
-                  {company.email}
-                </a>
-              ) : undefined,
-              value: company.email,
+              placeholder: "Not recorded",
+              ...edit.text("email", company.email),
             },
             {
               id: "website",
               label: "Website",
               icon: Globe,
-              display: company.website ? (
-                <a
-                  href={company.website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm hover:underline"
-                >
-                  {company.website}
-                </a>
-              ) : undefined,
-              value: company.website,
+              placeholder: "Not recorded",
+              ...edit.text("website", company.website),
             },
             {
               id: "location",
@@ -253,14 +241,26 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
               value: [company.city, company.country].filter(Boolean).join(", ") || null,
               placeholder: "Not recorded",
             },
-            { id: "industry", label: "Industry", value: company.industry },
+            {
+              id: "industry",
+              label: "Industry",
+              placeholder: "Not recorded",
+              ...edit.text("industry", company.industry),
+            },
             {
               id: "registration",
               label: "Registration no.",
-              value: company.registrationNumber,
               mono: true,
+              placeholder: "Not recorded",
+              ...edit.text("registrationNumber", company.registrationNumber),
             },
-            { id: "tax", label: "Tax number", value: company.taxNumber, mono: true },
+            {
+              id: "tax",
+              label: "Tax number",
+              mono: true,
+              placeholder: "Not recorded",
+              ...edit.text("taxNumber", company.taxNumber),
+            },
           ]}
         />
       }

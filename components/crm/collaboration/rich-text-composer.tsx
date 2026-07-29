@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
+import { EmojiPicker } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { fetchJson } from "@/lib/api-client";
 import { offsetOf, placeCaret, renderBody, serialise } from "@/lib/crm/reference-dom";
 import {
@@ -14,7 +16,7 @@ import {
   togglePrefix,
   type Reference,
 } from "@/lib/crm/rich-text";
-import { Eye, ListBullets, type LucideIcon } from "@/lib/icons";
+import { Eye, ListBullets, Smiley, type LucideIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 import { referenceChipElement } from "./reference-chip";
@@ -117,6 +119,7 @@ export function RichTextComposer({
   const [query, setQuery] = useState<string | null>(null);
   const [highlighted, setHighlighted] = useState(0);
   const [preview, setPreview] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
 
   // What the editor's DOM currently serialises to, or null when the editor
   // holds nothing yet — freshly mounted, or just returned from Preview, which
@@ -254,6 +257,13 @@ export function RichTextComposer({
     rewrite(result.body, result.end);
   }
 
+  /** Drop a glyph in at the caret — the same path a reference chip takes. */
+  function insertEmoji(glyph: string) {
+    const body = shown.current ?? value;
+    const caret = Math.min(caretOffset(), body.length);
+    rewrite(`${body.slice(0, caret)}${glyph}${body.slice(caret)}`, caret + glyph.length);
+  }
+
   return (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center gap-0.5">
@@ -287,6 +297,32 @@ export function RichTextComposer({
             </Button>
           );
         })}
+
+        {/* An emoji is punctuation in a work note — "done 👍" is a whole
+            reply — and asking somebody to find their OS picker inside a
+            contenteditable is how they stop bothering. */}
+        <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Insert an emoji"
+              title="Insert an emoji"
+              disabled={preview}
+            >
+              <Smiley className="size-4" aria-hidden="true" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-0">
+            <EmojiPicker
+              onSelect={(glyph) => {
+                insertEmoji(glyph);
+                setEmojiOpen(false);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
 
         <span className="flex-1" />
 

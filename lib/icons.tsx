@@ -61,6 +61,8 @@ function createPhosphorIcon(iconName: string, displayName: string): LucideIcon {
   return Icon;
 }
 
+export const Smiley = createPhosphorIcon("Smiley", "Smiley");
+
 export const MedusaAcademicCapIcon = createPhosphorIcon(
   "GraduationCap",
   "MedusaAcademicCapIcon",
