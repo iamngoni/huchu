@@ -49,7 +49,16 @@ const DEAL_TABLE_COLUMNS: ColumnOption[] = [
   { id: "next", label: "Next task" },
 ];
 
-export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
+export function DealsContent({
+  openCreate = false,
+  pipelineId: pipelineIdProp,
+  onPickPipeline,
+}: {
+  openCreate?: boolean;
+  /** Set by the unified workspace, which owns which pipeline is showing. */
+  pipelineId?: string;
+  onPickPipeline?: (target: "leads" | string) => void;
+}) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"OPEN" | "WON" | "LOST" | "ALL">("OPEN");
   const [page, setPage] = useState(1);
@@ -61,7 +70,12 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
   // looking at the page, not what the page is.
   // Arriving from the leads page's pipeline menu lands on ?pipeline=<id>.
   const requestedPipeline = useSearchParams().get("pipeline");
-  const [pipelineId, setPipelineId] = useState<string | null>(requestedPipeline);
+  const [ownPipelineId, setOwnPipelineId] = useState<string | null>(requestedPipeline);
+  // The parent wins when there is one: the unified workspace holds the choice
+  // so the menu can cross to leads, which this component knows nothing about.
+  const pipelineId = pipelineIdProp ?? ownPipelineId;
+  const setPipelineId = (next: string) =>
+    onPickPipeline ? onPickPipeline(next) : setOwnPipelineId(next);
   const [layout, setLayout] = useState<"BOARD" | "LIST">("BOARD");
 
   const pipelinesQuery = useQuery({
@@ -250,6 +264,7 @@ export function DealsContent({ openCreate = false }: { openCreate?: boolean }) {
               picking one swaps the board rather than narrowing it. */}
           <PipelineSwitcher
             active={activePipeline?.id ?? null}
+            onPick={onPickPipeline}
             onPickPipeline={setPipelineId}
           />
 

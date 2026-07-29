@@ -27,6 +27,7 @@ import { fetchCrmPipelines } from "@/lib/crm/crm-v2";
 export function PipelineSwitcher({
   active,
   onPickPipeline,
+  onPick,
 }: {
   /** "leads", or the active deal pipeline's id. */
   active: "leads" | string | null;
@@ -35,6 +36,11 @@ export function PipelineSwitcher({
    * (the deals page). Omitted, the menu navigates instead (the leads page).
    */
   onPickPipeline?: (pipelineId: string) => void;
+  /**
+   * The unified workspace's handler: it can swap between leads and any deal
+   * pipeline without a navigation, so the menu never leaves the page.
+   */
+  onPick?: (target: "leads" | string) => void;
 }) {
   const pipelinesQuery = useQuery({
     queryKey: ["crm", "pipelines"],
@@ -56,18 +62,30 @@ export function PipelineSwitcher({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
-        <DropdownMenuItem asChild>
-          <Link href="/crm/leads" aria-current={active === "leads" ? "true" : undefined}>
+        {onPick ? (
+          <DropdownMenuItem onClick={() => onPick("leads")}>
             Leads
             {active === "leads" ? (
               <span className="ml-2 text-sm text-[var(--text-muted)]">current</span>
             ) : null}
-          </Link>
-        </DropdownMenuItem>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem asChild>
+            <Link href="/crm/leads" aria-current={active === "leads" ? "true" : undefined}>
+              Leads
+              {active === "leads" ? (
+                <span className="ml-2 text-sm text-[var(--text-muted)]">current</span>
+              ) : null}
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         {pipelines.map((pipeline) =>
-          onPickPipeline ? (
-            <DropdownMenuItem key={pipeline.id} onClick={() => onPickPipeline(pipeline.id)}>
+          onPick || onPickPipeline ? (
+            <DropdownMenuItem
+              key={pipeline.id}
+              onClick={() => (onPick ? onPick(pipeline.id) : onPickPipeline?.(pipeline.id))}
+            >
               {pipeline.name}
               {pipeline.id === active ? (
                 <span className="ml-2 text-sm text-[var(--text-muted)]">current</span>
