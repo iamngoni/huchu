@@ -76,7 +76,7 @@ export function CollectionsContent({ currency = "USD" }: { currency?: string }) 
   const report = data;
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-3xl space-y-4">
       {error ? (
         <Alert tone="danger" title="Couldn't load the chase list">
           {getApiErrorMessage(error)}

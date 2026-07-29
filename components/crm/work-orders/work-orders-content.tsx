@@ -45,7 +45,7 @@ export function WorkOrdersContent() {
   const orders = data?.data ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-3xl space-y-4">
       <SegmentedControl
         options={QUEUES.map((value) => ({ value, label: WORK_ORDER_QUEUE_LABELS[value] }))}
         value={queue}
