@@ -99,7 +99,7 @@ export function FieldHistoryTab({
         <div className="space-y-4">
           {byField.map(([field, entries]) => (
             <section key={field} className="space-y-1">
-              <h3 className="text-sm font-semibold">{fieldLabel(field)}</h3>
+              <h3 className="text-base font-semibold text-[var(--text-strong)]">{fieldLabel(field)}</h3>
               <Stack as="ul" gap="xs">
                 {entries.map((change) => (
                   <ChangeRow key={change.id} change={change} showField={false} />

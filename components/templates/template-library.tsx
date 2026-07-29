@@ -291,7 +291,7 @@ export function TemplateLibrary() {
         sections.map((section) => (
           <section key={section.id} className="space-y-1">
             <div>
-              <h2 className="text-sm font-semibold">{section.title}</h2>
+              <h2 className="text-base font-semibold text-[var(--text-strong)]">{section.title}</h2>
               <p className="text-sm text-[var(--text-muted)]">{section.body}</p>
             </div>
 

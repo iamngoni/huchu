@@ -66,7 +66,7 @@ type LeadSourceOption = { id: string; name: string; channel: string; isActive: b
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold text-[var(--text-muted)]">
+      <h3 className="text-base font-semibold text-[var(--text-strong)] text-[var(--text-muted)]">
         {title}
       </h3>
       {children}

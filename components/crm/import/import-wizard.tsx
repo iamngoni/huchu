@@ -120,7 +120,7 @@ export function ImportWizard() {
       ) : null}
 
       <section className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
-        <h2 className="text-sm font-semibold">1. What are you importing?</h2>
+        <h2 className="text-base font-semibold text-[var(--text-strong)]">1. What are you importing?</h2>
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1.5">
             <Label>Record type</Label>
@@ -162,7 +162,7 @@ export function ImportWizard() {
 
       {table ? (
         <section className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
-          <h2 className="text-sm font-semibold">2. Which column is which?</h2>
+          <h2 className="text-base font-semibold text-[var(--text-strong)]">2. Which column is which?</h2>
           <p className="text-sm text-[var(--text-muted)]">
             Guessed from the headers. Change anything that looks wrong — a wrong
             guess applied silently is worse than no guess at all.
@@ -279,7 +279,7 @@ export function ImportWizard() {
 
       {preview ? (
         <section className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border)] p-4">
-          <h2 className="text-sm font-semibold">3. What will happen</h2>
+          <h2 className="text-base font-semibold text-[var(--text-strong)]">3. What will happen</h2>
 
           <div className="flex flex-wrap gap-4">
             {(

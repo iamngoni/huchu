@@ -9,6 +9,7 @@ import { Alert, Badge, Button, EmptyState, StatCard, Stack } from "@corelithzw/r
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { ViewToolbar } from "@/components/crm/records/view-toolbar";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmTasks } from "@/lib/crm/crm-v2";
 import { TASK_QUEUE_LABELS, type TaskQueue } from "@/lib/crm/tasks";
@@ -104,7 +105,7 @@ export function CrmFollowUpsContent() {
     !tasks.isLoading && taskRows.length === 0 && legacyRows.length === 0 && queue === "TODAY";
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-3xl space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
         {HEADLINE_QUEUES.map((value, index) => {
           const count = headline[index]?.data?.pagination?.total ?? 0;
@@ -119,23 +120,27 @@ export function CrmFollowUpsContent() {
         })}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <SegmentedControl
-          options={QUEUES.map((value) => ({ value, label: TASK_QUEUE_LABELS[value] }))}
-          value={queue}
-          onValueChange={(value) => setQueue(value as TaskQueue)}
-          size="sm"
-          ariaLabel="Follow-up queue"
-        />
-        <Button
-          variant="primary"
-          size="sm"
-          startIcon={<Plus className="size-4" />}
-          onClick={() => setCreating(true)}
-        >
-          New follow-up
-        </Button>
-      </div>
+      <ViewToolbar
+        start={
+          <SegmentedControl
+            options={QUEUES.map((value) => ({ value, label: TASK_QUEUE_LABELS[value] }))}
+            value={queue}
+            onValueChange={(value) => setQueue(value as TaskQueue)}
+            size="sm"
+            ariaLabel="Follow-up queue"
+          />
+        }
+        end={
+          <Button
+            variant="primary"
+            size="sm"
+            startIcon={<Plus className="size-4" />}
+            onClick={() => setCreating(true)}
+          >
+            New follow-up
+          </Button>
+        }
+      />
 
       {tasks.error ? (
         <Alert tone="danger" title="Couldn't load follow-ups">
@@ -165,7 +170,7 @@ export function CrmFollowUpsContent() {
       {legacyRows.length ? (
         <section className="space-y-2">
           <div>
-            <h2 className="text-sm font-semibold">Lead reminders</h2>
+            <h2 className="text-base font-semibold text-[var(--text-strong)]">Lead reminders</h2>
             <p className="text-sm text-[var(--text-muted)]">
               Raised from a lead before follow-ups became tasks. They behave the
               same way — tick one off when it is done.

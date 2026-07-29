@@ -177,7 +177,7 @@ export function RailSection({
   return (
     <section className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[var(--text-muted)]">
+        <h3 className="text-base font-semibold text-[var(--text-strong)] text-[var(--text-muted)]">
           {title}
         </h3>
         {action}

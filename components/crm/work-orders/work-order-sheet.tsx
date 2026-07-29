@@ -238,7 +238,7 @@ export function WorkOrderSheet({
             {order.items.length > 0 ? (
               <section className="space-y-2">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="text-sm font-semibold">What needs doing</h3>
+                  <h3 className="text-base font-semibold text-[var(--text-strong)]">What needs doing</h3>
                   <span className="text-sm text-[var(--text-muted)]">
                     {completionPercent(order.items)}% done
                   </span>

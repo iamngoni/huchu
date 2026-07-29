@@ -242,7 +242,7 @@ export function WidgetGrid({
       {editing && adding ? (
         <div className="mt-4 rounded-[var(--card-radius)] border border-[var(--border)] p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-medium">Add a widget</h3>
+            <h3 className="text-base font-semibold text-[var(--text-strong)]">Add a widget</h3>
             <button
               type="button"
               onClick={() => setAdding(false)}
