@@ -152,22 +152,85 @@ async function requireDocumentOwner(
 
   const lead = await tx.crmLead.findFirst({
     where: { id: ref.leadId, companyId },
-    select: { id: true, clientId: true, stage: true, assignedToId: true },
+    select: {
+      id: true,
+      clientId: true,
+      stage: true,
+      assignedToId: true,
+      contactName: true,
+      contactEmail: true,
+      contactPhone: true,
+      title: true,
+    },
   });
   if (!lead) throw new Error("Lead not found");
   if (lead.stage === "LOST") {
     throw new Error("This lead is marked LOST — reopen it before creating documents");
   }
-  if (!lead.clientId) {
-    throw new Error("Lead has no client; attach or create a client before quoting/invoicing");
-  }
+
+  // Not every lead is a company. A service call from someone who rang up is a
+  // real lead with a real name and no organisation behind it, and refusing to
+  // quote it until somebody invents a company record is how quoting ends up
+  // looking like it needs the site-visit flow. A document has to be billed to
+  // someone, so the contact on the lead becomes that someone.
+  const clientId = lead.clientId ?? (await clientFromLeadContact(tx, companyId, lead));
+
   return {
     kind: "lead",
     id: lead.id,
-    clientId: lead.clientId,
+    clientId,
     stage: lead.stage,
     assignedToId: lead.assignedToId,
   };
+}
+
+/**
+ * Materialise a customer from a lead that never got a company attached, and
+ * keep it — a second quote for the same person should land on the same
+ * account rather than opening a second one.
+ */
+async function clientFromLeadContact(
+  tx: Tx,
+  companyId: string,
+  lead: {
+    id: string;
+    contactName: string | null;
+    contactEmail: string | null;
+    contactPhone: string | null;
+    title: string | null;
+  },
+): Promise<string> {
+  const name = lead.contactName?.trim() || lead.title?.trim();
+  if (!name) {
+    throw new Error(
+      "This lead has nobody to bill — add a contact name (or attach a company) before quoting",
+    );
+  }
+
+  // Reuse rather than duplicate: matching on the name is what the accounting
+  // side already does when it reconciles a CRM client to a customer.
+  const existing = await tx.crmClient.findFirst({
+    where: { companyId, name },
+    select: { id: true },
+  });
+
+  const clientId =
+    existing?.id ??
+    (
+      await tx.crmClient.create({
+        data: {
+          companyId,
+          clientNo: await reserveIdentifier(tx, { companyId, entity: "CRM_CLIENT" }),
+          name,
+          email: lead.contactEmail ?? undefined,
+          phone: lead.contactPhone ?? undefined,
+        },
+        select: { id: true },
+      })
+    ).id;
+
+  await tx.crmLead.update({ where: { id: lead.id }, data: { clientId } });
+  return clientId;
 }
 
 /** The foreign key to file a document under, given its owner. */

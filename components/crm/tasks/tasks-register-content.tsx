@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { Alert, Button } from "@corelithzw/react";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PageChrome } from "@/components/layout/page-chrome";
+import { ViewToolbar } from "@/components/crm/records/view-toolbar";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmTasks } from "@/lib/crm/crm-v2";
 import { Checklist, Plus } from "@/lib/icons";
@@ -71,42 +72,50 @@ export function TasksRegisterContent() {
   );
 
   return (
-    <div className="space-y-4">
+    // A register of one-line tasks reads as a column; stretched across a wide
+    // screen it just puts air between a task and when it is due.
+    <div className="max-w-3xl space-y-4">
       <PageChrome title="Tasks" icon={Checklist}>
         {actions}
       </PageChrome>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <SegmentedControl
-          value={scope}
-          onValueChange={(value) => setScope(value as typeof scope)}
-          options={[
-            { value: "ALL", label: "Everyone" },
-            { value: "MINE", label: "Mine" },
-            { value: "UNASSIGNED", label: "Unassigned" },
-          ]}
-        />
+      <ViewToolbar
+        start={
+          <>
+            <SegmentedControl
+              value={scope}
+              onValueChange={(value) => setScope(value as typeof scope)}
+              size="sm"
+              options={[
+                { value: "ALL", label: "Everyone" },
+                { value: "MINE", label: "Mine" },
+                { value: "UNASSIGNED", label: "Unassigned" },
+              ]}
+            />
 
-        {scope === "ALL" ? (
-          <select
-            value={owner}
-            onChange={(event) => setOwner(event.target.value)}
-            aria-label="Filter by owner"
-            className="h-9 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2 text-sm"
-          >
-            <option value="">Any owner</option>
-            {owners.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.name ?? "Unnamed"}
-              </option>
-            ))}
-          </select>
-        ) : null}
-
-        <p className="ml-auto text-sm text-[var(--text-muted)]">
-          <span className="font-mono">{tasks.length}</span> open
-        </p>
-      </div>
+            {scope === "ALL" ? (
+              <select
+                value={owner}
+                onChange={(event) => setOwner(event.target.value)}
+                aria-label="Filter by owner"
+                className="h-9 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2 text-sm"
+              >
+                <option value="">Any owner</option>
+                {owners.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.name ?? "Unnamed"}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </>
+        }
+        end={
+          <p className="text-sm text-[var(--text-muted)]">
+            <span className="font-mono">{tasks.length}</span> open
+          </p>
+        }
+      />
 
       {tasksQuery.error ? (
         <Alert tone="danger" title="Unable to load tasks">
@@ -120,7 +129,7 @@ export function TasksRegisterContent() {
           <section key={bucket.id} aria-labelledby={`tasks-${bucket.id}`} className="space-y-2">
             <h3
               id={`tasks-${bucket.id}`}
-              className="sticky top-14 z-10 flex items-baseline gap-2 bg-[var(--surface-base)] py-1.5 text-sm font-medium text-[var(--text-subtle)]"
+              className="sticky top-14 z-10 flex items-baseline gap-2 bg-[var(--surface-base)] py-1.5 text-base font-semibold text-[var(--text-strong)]"
             >
               <span
                 className={
@@ -129,7 +138,7 @@ export function TasksRegisterContent() {
               >
                 {bucket.label}
               </span>
-              <span className="font-mono normal-case tracking-normal">
+              <span className="font-mono text-sm font-normal text-[var(--text-muted)]">
                 {bucket.items.length}
               </span>
             </h3>

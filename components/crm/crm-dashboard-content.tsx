@@ -224,7 +224,7 @@ export function CrmDashboardContent() {
       </KpiGrid>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">What needs you</h2>
+        <h2 className="text-base font-semibold text-[var(--text-strong)]">What needs you</h2>
         <div className="grid gap-2">
           <RowCard
             icon={<Clock className="size-4" />}

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
-import { Alert, EmptyState, Progress, SegmentedControl, Skeleton, Stack } from "@corelithzw/react";
+import { Alert, EmptyState, SegmentedControl, Skeleton, Stack } from "@corelithzw/react";
 import { ClientDate } from "@/components/ui/client-date";
 import { StatusChip } from "@/components/ui/status-chip";
 import { WORK_ORDER_STATUS } from "@/lib/crm/tones";
@@ -16,7 +16,7 @@ import {
   isOverdueToStart,
   type WorkOrderQueue,
 } from "@/lib/crm/work-orders";
-import { Clock, MapPin, Users } from "@/lib/icons";
+import { Clock, Users } from "@/lib/icons";
 
 import { WorkOrderSheet, type WorkOrderRecord } from "./work-order-sheet";
 
@@ -45,7 +45,7 @@ export function WorkOrdersContent() {
   const orders = data?.data ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-3xl space-y-4">
       <SegmentedControl
         options={QUEUES.map((value) => ({ value, label: WORK_ORDER_QUEUE_LABELS[value] }))}
         value={queue}
@@ -68,75 +68,59 @@ export function WorkOrdersContent() {
       ) : orders.length === 0 ? (
         <EmptyState title={EMPTY_MESSAGES[queue] ?? "Nothing here."} />
       ) : (
-        <Stack as="ul" gap="sm">
+        // One line per job. A card with a title, a meta row and a progress
+        // bar is four lines to read before you know whether this is the job
+        // you are looking for; the number and the status answer that, and the
+        // sheet carries the rest.
+        <Stack as="ul" gap="xs">
           {orders.map((order) => {
             const percent = completionPercent(order.items);
             const late = isOverdueToStart(order);
 
             return (
               <li key={order.id}>
-                {/* One big tap target: this list is read on a phone at a gate. */}
                 <button
                   type="button"
                   onClick={() => setOpen(order.id)}
-                  className="w-full space-y-2 rounded-[var(--card-radius)] border border-[var(--border)] p-3 text-left transition-colors hover:bg-[var(--surface-hover)]"
+                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left transition-colors hover:bg-[var(--surface-subtle)]"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-sm">{order.workOrderNo}</span>
-                    <StatusChip
-                      status={WORK_ORDER_STATUS[order.status] ?? "inactive"}
-                      label={WORK_ORDER_STATUS_LABELS[order.status]}
-                    />
-                    {late ? (
-                      <span className="text-sm font-medium text-[var(--status-error-text)]">
-                        Should have started
-                      </span>
-                    ) : null}
-                  </div>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {order.title}
+                    <span className="ml-2 font-mono text-sm font-normal text-[var(--text-muted)]">
+                      {order.workOrderNo}
+                    </span>
+                  </span>
 
-                  <p className="font-medium">{order.title}</p>
-
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)]">
-                    {order.scheduledStart ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="size-3.5" />
-                        <ClientDate value={order.scheduledStart} mode="datetime" />
-                      </span>
-                    ) : null}
-                    {order.site?.name || order.addressLine ? (
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="size-3.5" />
-                        {order.site?.name ?? order.addressLine}
-                      </span>
-                    ) : null}
-                    {order.assignedTo ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Users className="size-3.5" />
-                        {order.assignedTo.name}
-                        {order.crewIds.length ? ` +${order.crewIds.length}` : ""}
-                      </span>
-                    ) : null}
-                  </div>
+                  {late ? (
+                    <span className="hidden flex-none text-sm font-medium text-[var(--status-error-text)] sm:inline">
+                      Should have started
+                    </span>
+                  ) : null}
 
                   {order.items.length > 0 ? (
-                    <div className="space-y-1">
-                      <Progress
-                        value={percent}
-                        tone={percent === 100 ? "success" : "brand"}
-                        label={`${percent}% of the job done`}
-                      />
-                      <p className="text-sm text-[var(--text-muted)]">
-                        {percent}% done · {order.items.length} item
-                        {order.items.length === 1 ? "" : "s"}
-                      </p>
-                    </div>
+                    <span className="hidden flex-none font-mono text-sm tabular-nums text-[var(--text-muted)] sm:inline">
+                      {percent}%
+                    </span>
                   ) : null}
 
-                  {order.status === "BLOCKED" && order.blockedReason ? (
-                    <p className="text-sm text-[var(--status-error-text)]">
-                      {order.blockedReason}
-                    </p>
+                  {order.scheduledStart ? (
+                    <span className="hidden flex-none items-center gap-1 text-sm text-[var(--text-muted)] sm:inline-flex">
+                      <Clock className="size-3.5" />
+                      <ClientDate value={order.scheduledStart} mode="date" />
+                    </span>
                   ) : null}
+
+                  {order.assignedTo ? (
+                    <span className="hidden flex-none items-center gap-1 text-sm text-[var(--text-muted)] md:inline-flex">
+                      <Users className="size-3.5" />
+                      {order.assignedTo.name}
+                    </span>
+                  ) : null}
+
+                  <StatusChip
+                    status={WORK_ORDER_STATUS[order.status] ?? "inactive"}
+                    label={WORK_ORDER_STATUS_LABELS[order.status]}
+                  />
                 </button>
               </li>
             );

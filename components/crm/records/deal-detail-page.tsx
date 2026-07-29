@@ -46,10 +46,11 @@ import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
+import { DealContactsTab } from "./deal-contacts-tab";
 import { RecordAttributes } from "./record-attributes";
 import { EntityLink } from "./entity-link";
 import { DealStageBar } from "./deal-stage-bar";
-import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
+import { RailSection, RecordPageShell } from "./record-page-shell";
 import { RecordHistoryTab } from "./record-history-tab";
 import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
@@ -419,21 +420,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             value: "people",
             label: "People",
             count: deal.contacts.length,
-            content: (
-              <RelatedList
-                items={deal.contacts}
-                emptyMessage="Nobody is attached to this deal yet."
-                renderItem={(contact) => ({
-                  href: `/crm/people/${contact.person.id}`,
-                  title: contact.person.fullName,
-                  subtitle:
-                    [ROLE_LABELS[contact.role] ?? contact.role, contact.person.jobTitle]
-                      .filter(Boolean)
-                      .join(" · ") || null,
-                  meta: contact.person.phone ?? undefined,
-                })}
-              />
-            ),
+            content: <DealContactsTab dealId={dealId} contacts={deal.contacts} />,
           },
           {
             value: "comments",

@@ -246,7 +246,7 @@ export function ConvertLeadSheet({
       ) : prep ? (
         <div className="space-y-4">
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--text-muted)]">
+            <h3 className="text-base font-semibold text-[var(--text-strong)] text-[var(--text-muted)]">
               Person
             </h3>
             {prep.personDuplicates.length > 0 ? (
@@ -291,7 +291,7 @@ export function ConvertLeadSheet({
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--text-muted)]">
+            <h3 className="text-base font-semibold text-[var(--text-strong)] text-[var(--text-muted)]">
               Company
             </h3>
             {prep.companyDuplicates.length > 0 ? (
@@ -337,7 +337,7 @@ export function ConvertLeadSheet({
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-[var(--text-muted)]">
+            <h3 className="text-base font-semibold text-[var(--text-strong)] text-[var(--text-muted)]">
               Deal
             </h3>
             <div className="space-y-1.5">

@@ -20,6 +20,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { RecordAttributes } from "./record-attributes";
+import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
 import {
   AddressBook,
@@ -122,6 +123,10 @@ export function PersonDetailPage({ personId }: { personId: string }) {
     queryKey: ["crm", "field-definitions", "PERSON"],
     queryFn: () => fetchCrmFieldDefinitions("PERSON"),
   });
+  const edit = useAttributeEditor({
+    path: `/api/v2/crm/people/${personId}`,
+    invalidate: [["crm", "person", personId], ["crm", "people"]],
+  });
 
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
   const person = personQuery.data;
@@ -212,23 +217,15 @@ export function PersonDetailPage({ personId }: { personId: string }) {
               id: "email",
               label: "Email",
               icon: Mail,
-              display: person.email ? (
-                <a href={`mailto:${person.email}`} className="text-sm hover:underline">
-                  {person.email}
-                </a>
-              ) : undefined,
-              value: person.email,
+              placeholder: "Not recorded",
+              ...edit.text("email", person.email),
             },
             {
               id: "phone",
               label: "Phone",
               icon: Phone,
-              display: person.phone ? (
-                <a href={`tel:${person.phone}`} className="text-sm hover:underline">
-                  {person.phone}
-                </a>
-              ) : undefined,
-              value: person.phone,
+              placeholder: "Not recorded",
+              ...edit.text("phone", person.phone),
             },
             {
               id: "company",
@@ -267,8 +264,8 @@ export function PersonDetailPage({ personId }: { personId: string }) {
             {
               id: "role",
               label: "Job title",
-              value: person.jobTitle,
               placeholder: "Not recorded",
+              ...edit.text("jobTitle", person.jobTitle),
             },
             {
               id: "prefers",
@@ -281,8 +278,8 @@ export function PersonDetailPage({ personId }: { personId: string }) {
             {
               id: "city",
               label: "City",
-              value: person.city,
               placeholder: "Not recorded",
+              ...edit.text("city", person.city),
             },
           ]}
         />

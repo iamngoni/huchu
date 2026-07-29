@@ -115,7 +115,7 @@ export function RepSettingsTab({ repId, repName }: { repId: string; repName: str
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">What {repName} can do</h3>
+          <h3 className="text-base font-semibold text-[var(--text-strong)]">What {repName} can do</h3>
           <p className="text-sm text-[var(--text-muted)]">
             Their role answers most of this. Anything set to allow or deny here
             overrides the role and stays put when the role changes.
@@ -148,7 +148,7 @@ export function RepSettingsTab({ repId, repName }: { repId: string; repName: str
       />
 
       <div className="border-t border-[var(--border-subtle)] pt-4">
-        <h3 className="text-sm font-semibold">The account itself</h3>
+        <h3 className="text-base font-semibold text-[var(--text-strong)]">The account itself</h3>
         <p className="text-sm text-[var(--text-muted)]">
           Suspending, deleting, changing the role or resetting the password are things
           done to an account rather than to a salesperson, so they live with the rest

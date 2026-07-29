@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@corelithzw/react";
-import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
@@ -177,6 +176,7 @@ export function DocumentsListContent({
 
   return (
     <RecordListShell
+      width="narrow"
       title={title}
       search={search}
       onSearchChange={(value) => {

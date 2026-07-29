@@ -175,6 +175,7 @@ export function CrmAppointmentsContent() {
 
   return (
     <RecordListShell
+      width="narrow"
       title="Site visits"
       search={search}
       onSearchChange={setSearch}

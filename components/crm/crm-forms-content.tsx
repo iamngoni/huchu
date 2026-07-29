@@ -121,7 +121,7 @@ export function CrmFormsContent() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold">Your forms</h2>
+          <h2 className="text-base font-semibold text-[var(--text-strong)]">Your forms</h2>
           <p className="text-sm text-[var(--text-muted)]">
             Share the link anywhere — a submission lands in the CRM as a lead,
             assigned and scored on the way in.
@@ -213,7 +213,7 @@ export function CrmFormsContent() {
       )}
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Latest submissions</h2>
+        <h2 className="text-base font-semibold text-[var(--text-strong)]">Latest submissions</h2>
         {submissions.isLoading ? (
           <Skeleton height={120} />
         ) : (submissions.data?.data ?? []).length === 0 ? (

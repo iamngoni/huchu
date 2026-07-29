@@ -132,26 +132,35 @@ export function DocumentList({
     <div className="space-y-3">
       <BillingBand documents={documents} currency={currency} />
 
+      {/* Two ways to start a document is not one primary action and one
+          afterthought — a quote and an invoice are peers, so they are drawn as
+          peers. Colour is reserved for the single action a screen wants you to
+          take, and this screen does not have one. */}
       {canCreate ? (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" className="gap-1.5" onClick={() => setBuilder({ mode: "quotation" })}>
-            <Plus className="h-3.5 w-3.5" />
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 gap-2"
+            onClick={() => setBuilder({ mode: "quotation" })}
+          >
+            <Plus className="size-4" />
             New quotation
           </Button>
           <Button
             size="sm"
             variant="outline"
-            className="gap-1.5"
+            className="h-9 gap-2"
             onClick={() => setBuilder({ mode: "invoice" })}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="size-4" />
             New invoice
           </Button>
         </div>
       ) : (
         <p className="rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3 text-sm text-[var(--text-muted)]">
-          Attach a company to this record before quoting or invoicing — documents are billed
-          to a customer.
+          Give this record somebody to bill — a contact name or a company — before quoting or
+          invoicing.
         </p>
       )}
 

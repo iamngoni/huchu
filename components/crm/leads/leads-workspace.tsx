@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { Funnel, Plus } from "@/lib/icons";
 import { PageChrome } from "@/components/layout/page-chrome";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { PipelineSwitcher } from "@/components/crm/records/pipeline-switcher";
 import { ViewToolbar } from "@/components/crm/records/view-toolbar";
 import {
   bulkUpdateCrmLeads,
@@ -49,12 +51,15 @@ export function LeadsWorkspace({
   initialFilters = {},
   initialView = "BOARD",
   initialViewId = null,
+  onPickPipeline,
 }: {
   /** Parsed from the page's query string, so links like /crm/leads?stages=QUOTED land pre-filtered. */
   initialFilters?: LeadViewFilters;
   initialView?: "TABLE" | "BOARD";
   /** From `?view=`, so the sidebar's saved-view links land on that view. */
   initialViewId?: string | null;
+  /** Set by the unified workspace so the pipeline menu swaps in place. */
+  onPickPipeline?: (target: "leads" | string) => void;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -234,6 +239,10 @@ export function LeadsWorkspace({
 
             <LeadStageFilter filters={filters} onChange={applyFilters} />
 
+            {/* The same pipeline menu deals has. Leads are the intake
+                pipeline; the menu is how you cross to the deal ones. */}
+            <PipelineSwitcher active="leads" onPick={onPickPipeline} />
+
             {/* A board is already ordered by stage, so sorting it means nothing. */}
             {viewType === "TABLE" ? (
               <LeadsSortButton
@@ -247,11 +256,23 @@ export function LeadsWorkspace({
           </>
         }
         end={
-          <ColumnPicker
-            columns={viewType === "TABLE" ? LEAD_TABLE_COLUMNS : LEAD_CARD_FIELDS}
-            state={viewType === "TABLE" ? tableColumns : boardFields}
-            label={viewType === "TABLE" ? "Columns" : "Fields"}
-          />
+          <>
+            <SegmentedControl
+              value={viewType}
+              onValueChange={(value) => setViewType(value as "TABLE" | "BOARD")}
+              size="sm"
+              ariaLabel="Board or list"
+              options={[
+                { value: "BOARD", label: "Board" },
+                { value: "TABLE", label: "List" },
+              ]}
+            />
+            <ColumnPicker
+              columns={viewType === "TABLE" ? LEAD_TABLE_COLUMNS : LEAD_CARD_FIELDS}
+              state={viewType === "TABLE" ? tableColumns : boardFields}
+              label={viewType === "TABLE" ? "Columns" : "Fields"}
+            />
+          </>
         }
       />
 

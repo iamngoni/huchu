@@ -8,6 +8,7 @@ import { RichTextComposer } from "@/components/crm/collaboration/rich-text-compo
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import { richTextToPlain } from "@/lib/crm/rich-text";
 
 const ACTIVITY_TYPES = [
   { value: "NOTE", label: "Note" },
@@ -54,15 +55,18 @@ export function ActivityComposer({ target }: { target: ActivityTarget }) {
   const log = useMutation({
     mutationFn: () => {
       const trimmed = text.trim();
-      const breakAt = trimmed.indexOf("\n");
-      const subject = breakAt === -1 ? trimmed : trimmed.slice(0, breakAt).trim();
-      const body = breakAt === -1 ? undefined : trimmed.slice(breakAt + 1).trim() || undefined;
+      // What was written goes in the body, always. Splitting on the first
+      // newline meant a one-line note — the common case — was stored entirely
+      // as the subject, and the timeline draws a subject as plain text: every
+      // mention came out as `@[Sarah](uuid)` and every bold as asterisks.
+      // The subject is now a flattened reading of the same words, for the
+      // places that cannot run the renderer.
       return fetchJson("/api/v2/crm/activities", {
         method: "POST",
         body: JSON.stringify({
           type,
-          subject: subject.slice(0, 200),
-          body,
+          subject: richTextToPlain(trimmed, 200),
+          body: trimmed,
           [TARGET_KEYS[target.kind]]: target.id,
         }),
       });

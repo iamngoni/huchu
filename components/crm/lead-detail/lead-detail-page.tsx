@@ -274,7 +274,9 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
                 basePath={`/api/v2/crm/leads/${leadId}`}
                 currency={lead.currency}
                 documents={lead.documents}
-                canCreate={Boolean(lead.clientId)}
+                // A lead with a name to bill can be quoted; the company is
+                // created from the contact if there is not one already.
+                canCreate={Boolean(lead.clientId || lead.contactName || lead.title)}
                 prefillLines={quotationPrefill}
                 onPrefillConsumed={() => setQuotationPrefill(undefined)}
               />
