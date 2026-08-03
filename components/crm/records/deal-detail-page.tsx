@@ -48,6 +48,8 @@ import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { DealContactsTab } from "./deal-contacts-tab";
 import { RecordAttributes } from "./record-attributes";
+import { RelationAttribute } from "./relation-attribute";
+import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
 import { DealStageBar } from "./deal-stage-bar";
 import { RailSection, RecordPageShell } from "./record-page-shell";
@@ -144,6 +146,10 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
   const dealQuery = useQuery({
     queryKey: ["crm", "deal", dealId],
     queryFn: () => fetchJson<DealDetail>(`/api/v2/crm/deals/${dealId}`),
+  });
+  const edit = useAttributeEditor({
+    path: `/api/v2/crm/deals/${dealId}`,
+    invalidate: [["crm", "deal", dealId], ["crm", "deals"]],
   });
   const teamQuery = useQuery({
     queryKey: ["crm", "team"],
@@ -278,10 +284,9 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 id: "value",
                 label: "Value",
                 icon: Payments,
-                value:
-                  deal.value !== null ? formatMoney(deal.value, deal.currency) : null,
                 placeholder: "Not sized",
                 mono: true,
+                ...edit.numeric("value", deal.value),
               },
               {
                 id: "stage",
@@ -314,13 +319,17 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 id: "company",
                 label: "Company",
                 icon: Building2,
-                display: deal.client ? (
-                  <EntityLink href={`/crm/companies/${deal.client.id}`} className="text-sm">
-                    {deal.client.name}
-                  </EntityLink>
-                ) : undefined,
-                value: null,
-                placeholder: "No company",
+                display: (
+                  <RelationAttribute
+                    value={deal.client?.name ?? null}
+                    href={deal.client ? `/crm/companies/${deal.client.id}` : null}
+                    types={["COMPANY"]}
+                    placeholder="No company"
+                    searchPlaceholder="Search companies"
+                    onPick={(record) => edit.save.mutate({ clientId: record.id })}
+                    onClear={() => edit.save.mutate({ clientId: null })}
+                  />
+                ),
               },
               {
                 id: "close",
@@ -338,8 +347,9 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 id: "probability",
                 label: "Likelihood",
                 icon: TrendingUp,
-                value: `${deal.probability ?? 0}%`,
                 mono: true,
+                placeholder: "0",
+                ...edit.numeric("probability", deal.probability),
               },
               {
                 id: "forecast",

@@ -75,15 +75,51 @@ const ACTIVITY_KIND: Record<string, StoryEvent["kind"]> = {
   SYSTEM: "system",
 };
 
+/**
+ * The types somebody writes prose into. Their content is written in the CRM's
+ * text format — mentions, emphasis — so it has to reach the renderer, and it
+ * must not also be printed as a heading above itself.
+ */
+const WRITTEN_LABEL: Record<string, string> = {
+  NOTE: "Note",
+  CALL: "Call",
+  EMAIL: "Email",
+  WHATSAPP: "WhatsApp",
+  MEETING: "Meeting",
+};
+
 export function activityEvents(activities: ActivityLike[]): StoryEvent[] {
-  return activities.map((activity) => ({
-    id: activity.id,
-    kind: ACTIVITY_KIND[activity.type] ?? "system",
-    title: activity.subject,
-    body: activity.body,
-    occurredAt: activity.occurredAt,
-    actorName: activity.createdBy?.name ?? null,
-  }));
+  return activities.map((activity) => {
+    const written = WRITTEN_LABEL[activity.type];
+    const body = activity.body?.trim() ? activity.body : null;
+
+    // A written activity shows its type as the heading and its prose as the
+    // body, so the body is the thing that runs through the renderer. Where
+    // there is no body the subject IS the prose — that is every note logged
+    // before the composer stopped splitting on the first newline, and those
+    // rows were printing `@[Name](uuid)` at the reader.
+    if (written) {
+      return {
+        id: activity.id,
+        kind: ACTIVITY_KIND[activity.type] ?? "system",
+        title: written,
+        body: body ?? activity.subject,
+        occurredAt: activity.occurredAt,
+        actorName: activity.createdBy?.name ?? null,
+      };
+    }
+
+    // Generated entries — a stage change, a document raised — are one-liners
+    // written by the system, with nothing to render.
+    return {
+      id: activity.id,
+      kind: ACTIVITY_KIND[activity.type] ?? "system",
+      title: activity.subject,
+      body,
+      occurredAt: activity.occurredAt,
+      actorName: activity.createdBy?.name ?? null,
+    };
+  });
 }
 
 /**

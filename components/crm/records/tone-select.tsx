@@ -92,14 +92,20 @@ export function ToneSelect({
         <Button
           variant="outline"
           size="sm"
-          className={cn("h-9 min-w-0 justify-between gap-2", className)}
+          // `min-w-0` let the toolbar shrink this below its own content, which
+          // wrapped the caret onto a second line and made the button taller
+          // than every other trigger in the row. It holds its width instead.
+          className={cn(
+            "h-9 shrink-0 flex-nowrap justify-between gap-2 whitespace-nowrap",
+            className,
+          )}
           aria-label={label}
         >
           <span className="flex min-w-0 items-center gap-2">
             {/* A multi-select trigger says WHICH question it answers, and
                 shows the choice as dots. Spelling out every chosen stage
                 turns a 9-item pick into a sentence that wraps the button. */}
-            <span className="truncate">
+            <span className="whitespace-nowrap">
               {multiple ? (label ?? placeholder) : (chosen[0]?.label ?? placeholder)}
             </span>
             {multiple && chosen.length > 0 ? (

@@ -29,9 +29,9 @@ const PLACEHOLDERS: Record<ActivityType, string> = {
 };
 
 /**
- * Logs what actually happened with the client. The first line becomes the
- * timeline subject and the rest the body, so a one-line note stays a one-liner
- * and a long call write-up still reads well.
+ * Logs what actually happened with the client. Everything written goes to the
+ * body, where the renderer runs; the subject is a flattened reading of it for
+ * notifications and search snippets, which cannot render.
  */
 export type ActivityTarget =
   | { kind: "lead"; id: string }
@@ -106,7 +106,7 @@ export function ActivityComposer({ target }: { target: ActivityTarget }) {
       />
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-[var(--text-muted)]">
-          First line becomes the heading. Type @ to link a person or record. ⌘/Ctrl + Enter to save.
+          Type @ to link a person or record. ⌘/Ctrl + Enter to save.
         </p>
         <Button
           size="sm"

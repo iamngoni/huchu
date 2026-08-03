@@ -234,7 +234,7 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
         <ColumnPicker
           columns={COMPANY_FIELDS}
           state={fields}
-          label={layout === "BOARD" ? "Card fields" : "Columns"}
+          label={layout === "BOARD" ? "Fields" : "Columns"}
         />
       }
       filters={

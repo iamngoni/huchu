@@ -254,7 +254,7 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
         <ColumnPicker
           columns={PERSON_FIELDS}
           state={fields}
-          label={layout === "BOARD" ? "Card fields" : "Columns"}
+          label={layout === "BOARD" ? "Fields" : "Columns"}
         />
       }
       filters={

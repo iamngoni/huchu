@@ -239,7 +239,7 @@ export function DealsContent({
         <ColumnPicker
           columns={layout === "BOARD" ? DEAL_CARD_FIELDS : DEAL_TABLE_COLUMNS}
           state={layout === "BOARD" ? boardFields : tableColumns}
-          label={layout === "BOARD" ? "Card fields" : "Columns"}
+          label={layout === "BOARD" ? "Fields" : "Columns"}
         />
       }
       filters={
