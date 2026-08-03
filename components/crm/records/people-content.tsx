@@ -173,12 +173,27 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
     [],
   );
 
+  const rowsById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
+
   const boardCards = useMemo(
     () =>
       people.map((person) => ({
         id: person.id,
         columnId: person.contactType,
         href: `/crm/people/${person.id}`,
+        // The phone board reuses the list view's row for the same person, so
+        // the two arrangements of these records say the same things.
+        row: (() => {
+          const row = rowsById.get(person.id);
+          if (!row) return undefined;
+          return {
+            leading: row.leading,
+            title: row.title,
+            subtitle: row.subtitle,
+            status: row.status,
+            facts: row.facts,
+          };
+        })(),
         content: (
           <div className="flex items-start gap-2">
             <RecordMark
@@ -210,7 +225,7 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
           </div>
         ),
       })),
-    [fields, people],
+    [fields, people, rowsById],
   );
 
   const moveContactType = useMutation({

@@ -99,6 +99,30 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
         id: company.id,
         columnId: company.accountStatus,
         href: `/crm/companies/${company.id}`,
+        // What the phone board shows instead of the card face: the same two
+        // lines the list view uses, so switching between them is a change of
+        // arrangement rather than of vocabulary.
+        row: {
+          leading: (
+            <RecordMark
+              kind="company"
+              name={company.name}
+              emoji={company.emoji}
+              avatarUrl={company.avatarUrl}
+              size="md"
+            />
+          ),
+          title: company.name,
+          subtitle: [
+            company.clientNo,
+            [company.city, company.country].filter(Boolean).join(", "),
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          facts: fields.isVisible("people")
+            ? [{ value: `${company._count?.people ?? 0} people` }]
+            : undefined,
+        },
         content: (
           <div className="flex items-start gap-2">
             <RecordMark

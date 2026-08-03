@@ -32,10 +32,13 @@ import {
 } from "@/lib/crm/crm-v2";
 import type { LeadViewFilters } from "@/lib/crm/views";
 
+import { LEAD_STAGE_COLOR, stageColor } from "@/lib/crm/tones";
+import { MobileBoard } from "@/components/crm/records/board-mobile";
+
 import { BoardColumn } from "./board-column";
 import { LeadCardBody } from "./lead-card";
 import { LostReasonDialog } from "./lost-reason-dialog";
-import { CRM_STAGE_LABELS } from "./stage-config";
+import { CRM_STAGE_LABELS, formatLeadValue } from "./stage-config";
 
 /**
  * The card animates back into its column rather than vanishing, and the hole
@@ -200,7 +203,7 @@ export function LeadsBoard({
 
   if (boardQuery.isLoading) {
     return (
-      <div className={cn("flex gap-3 overflow-x-auto pb-2", className)}>
+      <div className={cn("scroll-rail flex gap-3 overflow-x-auto pb-2", className)}>
         {Array.from({ length: 5 }).map((_, index) => (
           <Skeleton key={index} className="h-96 w-72 shrink-0 rounded-[var(--card-radius)]" />
         ))}
@@ -224,6 +227,39 @@ export function LeadsBoard({
 
   return (
     <div className={cn("flex min-h-0 flex-col", className)}>
+      {/* A phone gets the stage picker and one list; the strip of columns is
+          desktop-only. Tapping a lead opens it, where the stage stepper is —
+          so restaging stays reachable without dragging anything. */}
+      <MobileBoard
+        className="lg:hidden"
+        emptyTitle="No leads in this stage"
+        stages={columns.map((column) => ({
+          id: column.stage,
+          label: CRM_STAGE_LABELS[column.stage],
+          dot: (LEAD_STAGE_COLOR[column.stage] ?? stageColor(null)).dot,
+          count: column.count,
+          meta:
+            column.totalValue > 0
+              ? formatLeadValue(column.totalValue, currency)
+              : undefined,
+          rows: column.leads.map((lead) => ({
+            id: lead.id,
+            href: `/crm/leads/${lead.id}`,
+            title: lead.title ?? lead.leadNo,
+            subtitle: [
+              lead.deal?.dealNo ?? lead.leadNo,
+              lead.client?.name ?? lead.contactName ?? "No client",
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            facts: [
+              { value: formatLeadValue(lead.estimatedValue, lead.currency ?? currency), mono: true },
+            ],
+          })),
+        }))}
+      />
+
+      <div className="hidden min-h-0 flex-1 flex-col lg:flex">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -234,7 +270,7 @@ export function LeadsBoard({
         {/* The strip of columns takes the height the page has left, so a short
             pipeline still reaches the bottom instead of floating in white
             space, and a long one scrolls inside its column. */}
-        <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto pb-2">
+        <div className="scroll-rail flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto pb-2">
           {columns.map((column) => (
             <BoardColumn
               key={column.stage}
@@ -258,6 +294,7 @@ export function LeadsBoard({
           ) : null}
         </DragOverlay>
       </DndContext>
+      </div>
 
       <LostReasonDialog
         open={Boolean(pendingLost)}

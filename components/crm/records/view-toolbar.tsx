@@ -47,7 +47,11 @@ export function ViewToolbar({
       )}
     >
       {start}
-      <span className="min-w-2 flex-1" aria-hidden="true" />
+      {/* The spacer pushes search and display controls to the right of a
+          single row. Once the row wraps — which it always does on a phone —
+          a flex-1 spacer becomes a whole blank line between the filters and
+          the search, so it only exists at widths where the row fits. */}
+      <span className="hidden min-w-2 flex-1 sm:block" aria-hidden="true" />
       {search}
       {end}
     </div>

@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { isOverdue } from "@/components/crm/leads/stage-config";
 
 import { BoardColumnHeader } from "./board-column-header";
+import { MobileBoard } from "./board-mobile";
 import { RecordMark } from "./record-mark";
 import { useBoardField } from "./board-fields";
 
@@ -416,6 +417,29 @@ export function DealsBoard({
   };
 
   return (
+    <>
+    {/* A phone gets the stage picker and one list. Restaging lives on the deal
+        page's stage bar, so nothing is lost by not dragging here. */}
+    <MobileBoard
+      className="lg:hidden"
+      emptyTitle="No deals in this stage"
+      stages={board.columns.map((column) => ({
+        id: column.stage.id,
+        label: column.stage.name,
+        dot: stageColor(column.stage.colorToken).dot,
+        count: column.count,
+        meta: column.totalValue > 0 ? money(column.totalValue, currency) : undefined,
+        rows: column.deals.map((deal) => ({
+          id: deal.id,
+          href: `/crm/deals/${deal.id}`,
+          title: deal.title,
+          subtitle: `${deal.dealNo} · ${deal.client?.name ?? "No company"}`,
+          facts: [{ value: money(deal.value, deal.currency), mono: true }],
+        })),
+      }))}
+    />
+
+    <div className="hidden lg:block">
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -443,5 +467,7 @@ export function DealsBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </div>
+    </>
   );
 }

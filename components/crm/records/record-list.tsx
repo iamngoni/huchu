@@ -125,7 +125,10 @@ export function RecordList({
           <Link
             href={row.href}
             className={cn(
-              "group/row flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] py-2.5 pr-3 hover:bg-[var(--surface-muted)]",
+              // `min-h-11` is the 44px touch target. `py-2.5` alone gives a
+              // one-line row about 40px tall, which is under every platform's
+              // minimum and reads as a near-miss rather than a miss.
+              "group/row flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] py-2.5 pr-3 hover:bg-[var(--surface-muted)]",
               selection ? "pl-2" : "pl-3",
             )}
           >

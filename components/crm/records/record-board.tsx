@@ -29,6 +29,8 @@ import { EmptyState, Skeleton } from "@corelithzw/react";
 import { cn } from "@/lib/utils";
 
 import { BoardColumnHeader } from "./board-column-header";
+import { MobileBoard } from "./board-mobile";
+import type { RecordListRow } from "./record-list";
 
 const DROP_ANIMATION: DropAnimation = {
   duration: 220,
@@ -48,6 +50,14 @@ export type RecordBoardCard = {
   href: string;
   /** The card's face. Composed by the caller so each entity keeps its own. */
   content: ReactNode;
+  /**
+   * The same record as a list row, for the phone board. A card face is two or
+   * three stacked lines because a column is 288px of vertical space; a list
+   * row is a title, one supporting line and a fact on the right. Callers that
+   * already build rows for their list view pass those, so the two views of the
+   * same records agree. Omitted, the card face is reused as-is.
+   */
+  row?: Omit<RecordListRow, "id" | "href">;
 };
 
 function BoardCard({ card }: { card: RecordBoardCard }) {
@@ -226,6 +236,27 @@ export function RecordBoard({
   };
 
   return (
+    <>
+    <MobileBoard
+      className="lg:hidden"
+      emptyTitle={emptyLabel}
+      stages={columns.map((column) => ({
+        id: column.id,
+        label: column.name,
+        dot: column.color.dot,
+        count: (byColumn.get(column.id) ?? []).length,
+        rows: (byColumn.get(column.id) ?? []).map((card) => ({
+          id: card.id,
+          href: card.href,
+          ...(card.row ?? { title: card.content }),
+        })),
+      }))}
+    />
+
+    {/* The board itself is desktop-only. Rendered rather than unmounted so the
+        two views cannot drift apart in behaviour; the drag sensors below never
+        see a touch because nothing here is on screen at phone width. */}
+    <div className="hidden lg:block">
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -254,5 +285,7 @@ export function RecordBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </div>
+    </>
   );
 }
