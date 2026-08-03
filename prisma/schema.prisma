@@ -8309,6 +8309,18 @@ model CrmWorkOrder {
   assignedToId String?
   crewIds      String[]  @default([])
 
+  /// Client sign-off (/s/<token>). A job is not finished because the crew
+  /// says so; it is finished when the person paying agrees it is. Null until
+  /// somebody asks for the sign-off.
+  signOffToken     String?   @unique
+  signOffAskedAt   DateTime?
+  signOffAt        DateTime?
+  /// Typed by the client on their own phone — the name IS the signature.
+  signOffName      String?
+  /// 1–5, optional. A job can be signed off without being rated.
+  signOffRating    Int?
+  signOffNotes     String?
+
   addressLine String?
   accessNotes String?
   contactName  String?
