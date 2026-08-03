@@ -1,9 +1,13 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
 import { StatusChip } from "@/components/ui/status-chip";
 import { ClientDate } from "@/components/ui/client-date";
-import { Plus } from "@/lib/icons";
+import { Plus, Share } from "@/lib/icons";
+import { useToast } from "@/components/ui/use-toast";
+import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import type { LeadAppointment } from "./lead-types";
@@ -27,6 +31,35 @@ export function VisitsTab({
   onSchedule: () => void;
   onOpenReport: (appointment: LeadAppointment) => void;
 }) {
+  const { toast } = useToast();
+
+  // Sharing mints a fresh token every time, which is also how somebody takes
+  // back a link they sent to the wrong number.
+  const share = useMutation({
+    mutationFn: (id: string) =>
+      fetchJson<{ path: string }>(`/api/v2/crm/appointments/${id}/brief`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      }),
+    onSuccess: async (result) => {
+      const url = `${window.location.origin}${result.path}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link copied", description: "Send it to whoever is going." });
+      } catch {
+        // Clipboard is denied often enough on mobile that failing silently
+        // would look like the button did nothing.
+        toast({ title: "Link ready", description: url });
+      }
+    },
+    onError: (error) =>
+      toast({
+        title: "Could not share the visit",
+        description: getApiErrorMessage(error),
+        variant: "destructive",
+      }),
+  });
+
   return (
     <div className="space-y-3">
       <Button size="sm" className="gap-1.5" onClick={onSchedule}>
@@ -59,6 +92,17 @@ export function VisitsTab({
                     {visit.location ? ` · ${visit.location}` : ""}
                   </p>
                 </div>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  disabled={share.isPending}
+                  onClick={() => share.mutate(visit.id)}
+                >
+                  <Share className="h-3.5 w-3.5" />
+                  Share
+                </Button>
 
                 <Button size="sm" variant="outline" onClick={() => onOpenReport(visit)}>
                   {visit.reportCompletedAt ? "View report" : "Write up"}

@@ -6707,6 +6707,18 @@ model CrmAppointment {
   reportNotes       String?
   reportCompletedAt DateTime?
 
+  /// Where the visit actually is, when it is not at a recorded site — an
+  /// address somebody typed, optionally pinned so a phone can navigate to it.
+  latitude  Float?
+  longitude Float?
+
+  /// A tokenised public brief (/v/<token>): what the job is, when, where and
+  /// who is coming. Handed to the customer, or to a subcontractor who has no
+  /// account. Null until somebody shares it.
+  briefToken     String?   @unique
+  briefSharedAt  DateTime?
+  briefExpiresAt DateTime?
+
   company    Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   lead       CrmLead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
   client     CrmClient?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
