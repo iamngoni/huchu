@@ -33,12 +33,19 @@ import { formatMoney, invoiceOutstanding } from "@/components/crm/documents/docu
 import type { LeadDocument } from "@/components/crm/documents/document-types";
 import { ActivityComposer } from "@/components/crm/lead-detail/activity-composer";
 import { automationTab, commentsTab, mentionsTab, tasksTab } from "./record-tabs";
+import {
+  ActivityStrip,
+  CallList,
+  EmailPreview,
+  MeetingCard,
+  NextInteractionCard,
+  type NextInteraction,
+} from "./record-panels";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import { VisitsTab } from "@/components/crm/lead-detail/visits-tab";
 import type { LeadActivity, LeadAppointment, LeadFollowUp } from "@/components/crm/lead-detail/lead-types";
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
-import { isOverdue } from "@/components/crm/leads/stage-config";
 import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits/visit-report-sheet";
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
@@ -190,6 +197,45 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
   const openTasks = deal.followUps.filter((task) => task.status === "PENDING");
   const nextTask = openTasks[0];
   const nextVisit = deal.appointments.find((visit) => visit.status === "SCHEDULED");
+
+  // One "up next" rather than a task card and a visit card each showing their
+  // own soonest: the reader's question is what happens next, not what happens
+  // next of each kind.
+  const nextInteraction: NextInteraction | null = (() => {
+    const candidates: NextInteraction[] = [];
+    if (nextTask) candidates.push({ kind: "task", title: nextTask.title, at: nextTask.dueAt });
+    if (nextVisit) {
+      candidates.push({ kind: "visit", title: nextVisit.title, at: nextVisit.scheduledStart });
+    }
+    return (
+      candidates.sort(
+        (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),
+      )[0] ?? null
+    );
+  })();
+
+  const activityCounts = [
+    { label: "calls", count: deal.activities.filter((a) => a.type === "CALL").length },
+    { label: "emails", count: deal.activities.filter((a) => a.type === "EMAIL").length },
+    { label: "notes", count: deal.activities.filter((a) => a.type === "NOTE").length },
+    { label: "meetings", count: deal.activities.filter((a) => a.type === "MEETING").length },
+  ];
+
+  const recentCalls = deal.activities
+    .filter((activity) => activity.type === "CALL")
+    .slice(0, 3)
+    .map((activity) => ({
+      id: activity.id,
+      at: activity.occurredAt,
+      summary: activity.body ?? activity.subject,
+    }));
+
+  const lastEmail = (() => {
+    const found = deal.activities.find((activity) => activity.type === "EMAIL");
+    return found
+      ? { id: found.id, subject: found.subject, body: found.body, at: found.occurredAt }
+      : null;
+  })();
   const openInvoices = deal.documents.filter(
     (doc) => doc.type === "INVOICE" && doc.invoice && invoiceOutstanding(doc.invoice) > 0,
   );
@@ -466,44 +512,43 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
               />
             </RailSection>
 
-            {nextTask ? (
-              <RailSection title="Next task">
-                <p className="text-sm">{nextTask.title}</p>
-                <p
-                  className={
-                    isOverdue(nextTask.dueAt)
-                      ? "text-sm font-medium text-[var(--status-error-text)]"
-                      : "text-sm text-[var(--text-muted)]"
-                  }
-                >
-                  {isOverdue(nextTask.dueAt) ? "Overdue · " : "Due "}
-                  <ClientDate value={nextTask.dueAt} />
-                </p>
-              </RailSection>
-            ) : (
-              <RailSection title="Next task">
-                <p className="text-sm text-[var(--text-muted)]">
-                  Nothing scheduled — this deal will go quiet.
-                </p>
-              </RailSection>
-            )}
+            <RailSection title="Up next">
+              <NextInteractionCard
+                interaction={nextInteraction}
+                emptyMessage="Nothing scheduled — this deal will go quiet."
+              />
+            </RailSection>
 
             {nextVisit ? (
               <RailSection title="Next visit">
-                <p className="text-sm">{nextVisit.title}</p>
-                <p className="text-sm text-[var(--text-muted)]">
-                  <ClientDate value={nextVisit.scheduledStart} />
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-2"
-                  onClick={() => setReportFor(nextVisit)}
-                >
-                  Write it up
-                </Button>
+                <MeetingCard
+                  meeting={{
+                    id: nextVisit.id,
+                    title: nextVisit.title,
+                    scheduledStart: nextVisit.scheduledStart,
+                    location: nextVisit.location,
+                  }}
+                  action={
+                    <Button size="sm" variant="outline" onClick={() => setReportFor(nextVisit)}>
+                      Write it up
+                    </Button>
+                  }
+                />
               </RailSection>
             ) : null}
+
+            <RailSection title="Contact so far">
+              <ActivityStrip counts={activityCounts} />
+              {recentCalls.length > 0 ? (
+                <div className="mt-3">
+                  <CallList calls={recentCalls} />
+                </div>
+              ) : null}
+            </RailSection>
+
+            <RailSection title="Last email">
+              <EmailPreview message={lastEmail} />
+            </RailSection>
 
             {deal.site ? (
               <RailSection title="Site">

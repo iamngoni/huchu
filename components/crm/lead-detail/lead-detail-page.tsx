@@ -8,7 +8,6 @@ import type { CrmLeadStage } from "@prisma/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -37,7 +36,6 @@ import {
   CRM_STAGE_LABELS,
   CRM_STAGE_STATUS,
   formatLeadValue,
-  isOverdue,
 } from "@/components/crm/leads/stage-config";
 import { ConvertLeadSheet } from "@/components/crm/leads/convert-lead-sheet";
 import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits/visit-report-sheet";
@@ -45,6 +43,14 @@ import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet
 
 import { ActivityComposer } from "./activity-composer";
 import { automationTab, commentsTab, mentionsTab, tasksTab } from "@/components/crm/records/record-tabs";
+import {
+  ActivityStrip,
+  CallList,
+  EmailPreview,
+  MeetingCard,
+  NextInteractionCard,
+  type NextInteraction,
+} from "@/components/crm/records/record-panels";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { customFieldAttributes } from "@/components/crm/records/custom-field-attributes";
 import { RecordAttributes } from "@/components/crm/records/record-attributes";
@@ -164,6 +170,43 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
 
   const nextTask = lead.followUps.find((task) => task.status === "PENDING");
   const nextVisit = lead.appointments.find((visit) => visit.status === "SCHEDULED");
+
+  // One "up next" rather than a task card and a visit card each showing their
+  // own soonest: the reader's question is what happens next, not what happens
+  // next of each kind.
+  const nextInteraction: NextInteraction | null = (() => {
+    const candidates: NextInteraction[] = [];
+    if (nextTask) candidates.push({ kind: "task", title: nextTask.title, at: nextTask.dueAt });
+    if (nextVisit) {
+      candidates.push({ kind: "visit", title: nextVisit.title, at: nextVisit.scheduledStart });
+    }
+    return (
+      candidates.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())[0] ?? null
+    );
+  })();
+
+  const activityCounts = [
+    { label: "calls", count: lead.activities.filter((a) => a.type === "CALL").length },
+    { label: "emails", count: lead.activities.filter((a) => a.type === "EMAIL").length },
+    { label: "notes", count: lead.activities.filter((a) => a.type === "NOTE").length },
+    { label: "meetings", count: lead.activities.filter((a) => a.type === "MEETING").length },
+  ];
+
+  const recentCalls = lead.activities
+    .filter((activity) => activity.type === "CALL")
+    .slice(0, 3)
+    .map((activity) => ({
+      id: activity.id,
+      at: activity.occurredAt,
+      summary: activity.body ?? activity.subject,
+    }));
+
+  const lastEmail = (() => {
+    const found = lead.activities.find((activity) => activity.type === "EMAIL");
+    return found
+      ? { id: found.id, subject: found.subject, body: found.body, at: found.occurredAt }
+      : null;
+  })();
   const openInvoices = lead.documents.filter(
     (doc) => doc.type === "INVOICE" && doc.invoice && invoiceOutstanding(doc.invoice) > 0,
   );
@@ -364,54 +407,56 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             </RailSection>
           ) : null}
 
-          {nextTask ? (
-            <RailSection title="Next task">
-              <p className="text-sm">{nextTask.title}</p>
-              <p
-                className={
-                  isOverdue(nextTask.dueAt)
-                    ? "text-sm font-medium text-[var(--status-error-text)]"
-                    : "text-sm text-[var(--text-muted)]"
-                }
-              >
-                {isOverdue(nextTask.dueAt) ? "Overdue · " : "Due "}
-                <ClientDate value={nextTask.dueAt} />
-              </p>
-            </RailSection>
-          ) : (
-            <RailSection title="Next task">
-              <p className="text-sm text-[var(--text-muted)]">
-                Nothing scheduled — this lead will go quiet.
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2 gap-1.5"
-                onClick={() => setTab("tasks")}
-              >
-                Add a task
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </RailSection>
-          )}
+          <RailSection title="Up next">
+            <NextInteractionCard
+              interaction={nextInteraction}
+              emptyMessage="Nothing scheduled — this lead will go quiet."
+              action={
+                nextInteraction ? null : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => setTab("tasks")}
+                  >
+                    Add a task
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                )
+              }
+            />
+          </RailSection>
 
           {nextVisit ? (
             <RailSection title="Next visit">
-              <p className="text-sm">{nextVisit.title}</p>
-              <p className="text-sm text-[var(--text-muted)]">
-                <ClientDate value={nextVisit.scheduledStart} />
-                {nextVisit.location ? ` · ${nextVisit.location}` : ""}
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2"
-                onClick={() => setReportFor(nextVisit)}
-              >
-                Write it up
-              </Button>
+              <MeetingCard
+                meeting={{
+                  id: nextVisit.id,
+                  title: nextVisit.title,
+                  scheduledStart: nextVisit.scheduledStart,
+                  location: nextVisit.location,
+                }}
+                action={
+                  <Button size="sm" variant="outline" onClick={() => setReportFor(nextVisit)}>
+                    Write it up
+                  </Button>
+                }
+              />
             </RailSection>
           ) : null}
+
+          <RailSection title="Contact so far">
+            <ActivityStrip counts={activityCounts} />
+            {recentCalls.length > 0 ? (
+              <div className="mt-3">
+                <CallList calls={recentCalls} />
+              </div>
+            ) : null}
+          </RailSection>
+
+          <RailSection title="Last email">
+            <EmailPreview message={lastEmail} />
+          </RailSection>
 
           {lead.documents.length > 0 ? (
             <RailSection title="Billing">
