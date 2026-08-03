@@ -11,14 +11,13 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
-import { CommentThread } from "@/components/crm/collaboration/comment-thread";
-import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
+import { commentsTab, tasksTab } from "./record-tabs";
 import { RecordAttributes } from "./record-attributes";
 import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
@@ -320,24 +319,8 @@ export function PersonDetailPage({ personId }: { personId: string }) {
             />
           ),
         },
-        {
-          value: "tasks",
-          label: "Tasks",
-          content: (
-            <RecordTasksTab record={{ personId }} currentUserId={session?.user?.id} />
-          ),
-        },
-        {
-          value: "comments",
-          label: "Comments",
-          content: (
-            <CommentThread
-              entity="PERSON"
-              recordId={personId}
-              currentUserId={session?.user?.id}
-            />
-          ),
-        },
+        tasksTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
+        commentsTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
         {
           value: "history",
           label: "History",

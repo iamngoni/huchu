@@ -40,6 +40,7 @@ import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 
 import { ActivityComposer } from "./activity-composer";
+import { commentsTab, tasksTab } from "@/components/crm/records/record-tabs";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { RecordAttributes } from "@/components/crm/records/record-attributes";
 import { RecordPageShell } from "@/components/crm/records/record-page-shell";
@@ -50,8 +51,6 @@ import { AttributesPanel } from "./attributes-panel";
 import { StageProgress } from "./stage-progress";
 import { VisitsTab } from "./visits-tab";
 import { LeadScoreCard } from "./lead-score-card";
-import { CommentThread } from "@/components/crm/collaboration/comment-thread";
-import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import type { LeadAppointment, LeadDetail } from "./lead-types";
 
 /** Measurements captured on site, shaped into quotation lines for the builder. */
@@ -327,18 +326,8 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             />
           ),
         },
-        {
-          value: "tasks",
-          label: "Tasks",
-          content: <RecordTasksTab record={{ leadId }} currentUserId={currentUserId} />,
-        },
-        {
-          value: "comments",
-          label: "Comments",
-          content: (
-            <CommentThread entity="LEAD" recordId={leadId} currentUserId={currentUserId} />
-          ),
-        },
+        tasksTab({ ref: { kind: "lead", id: leadId }, currentUserId }),
+        commentsTab({ ref: { kind: "lead", id: leadId }, currentUserId }),
       ]}
       rail={
         <>

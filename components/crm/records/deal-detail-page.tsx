@@ -31,9 +31,8 @@ import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 import { DocumentList } from "@/components/crm/documents/document-list";
 import { formatMoney, invoiceOutstanding } from "@/components/crm/documents/document-types";
 import type { LeadDocument } from "@/components/crm/documents/document-types";
-import { CommentThread } from "@/components/crm/collaboration/comment-thread";
-import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityComposer } from "@/components/crm/lead-detail/activity-composer";
+import { commentsTab, tasksTab } from "./record-tabs";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import { VisitsTab } from "@/components/crm/lead-detail/visits-tab";
@@ -421,24 +420,14 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
               />
             ),
           },
-          {
-            value: "tasks",
-            label: "Tasks",
-            content: <RecordTasksTab record={{ dealId }} currentUserId={currentUserId} />,
-          },
+          tasksTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
           {
             value: "people",
             label: "People",
             count: deal.contacts.length,
             content: <DealContactsTab dealId={dealId} contacts={deal.contacts} />,
           },
-          {
-            value: "comments",
-            label: "Comments",
-            content: (
-              <CommentThread entity="DEAL" recordId={dealId} currentUserId={currentUserId} />
-            ),
-          },
+          commentsTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
           {
             value: "history",
             label: "History",

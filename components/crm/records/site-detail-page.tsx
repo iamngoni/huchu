@@ -14,11 +14,10 @@ import { Building2, MapPin, UserRound } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
-import { CommentThread } from "@/components/crm/collaboration/comment-thread";
-import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
+import { commentsTab, tasksTab } from "./record-tabs";
 import { RecordAttributes } from "./record-attributes";
 import { RelationAttribute } from "./relation-attribute";
 import { useAttributeEditor } from "./use-attribute-editor";
@@ -272,18 +271,8 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
             />
           ),
         },
-        {
-          value: "tasks",
-          label: "Tasks",
-          content: <RecordTasksTab record={{ siteId }} currentUserId={session?.user?.id} />,
-        },
-        {
-          value: "comments",
-          label: "Comments",
-          content: (
-            <CommentThread entity="SITE" recordId={siteId} currentUserId={session?.user?.id} />
-          ),
-        },
+        tasksTab({ ref: { kind: "site", id: siteId }, currentUserId: session?.user?.id }),
+        commentsTab({ ref: { kind: "site", id: siteId }, currentUserId: session?.user?.id }),
         {
           // Sites carry no activity trail of their own, so there is nothing to
           // filter history out of — the tab stays for consistency.

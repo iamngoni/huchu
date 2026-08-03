@@ -13,8 +13,6 @@ import { Building2, Globe, Mail, MapPin, Phone, UserRound } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
-import { CommentThread } from "@/components/crm/collaboration/comment-thread";
-import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
@@ -22,6 +20,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { CompanyPeopleTab } from "./company-people-tab";
+import { commentsTab, tasksTab } from "./record-tabs";
 import { RecordAttributes } from "./record-attributes";
 import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
@@ -318,24 +317,8 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
             />
           ),
         },
-        {
-          value: "tasks",
-          label: "Tasks",
-          content: (
-            <RecordTasksTab record={{ clientId: companyId }} currentUserId={session?.user?.id} />
-          ),
-        },
-        {
-          value: "comments",
-          label: "Comments",
-          content: (
-            <CommentThread
-              entity="COMPANY"
-              recordId={companyId}
-              currentUserId={session?.user?.id}
-            />
-          ),
-        },
+        tasksTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
+        commentsTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
         {
           value: "history",
           label: "History",
