@@ -8,6 +8,8 @@ import { ActivityComposer, type ActivityTarget } from "@/components/crm/lead-det
 import { RecordStory, type StoryEvent } from "./record-story";
 import { MentionsTab } from "./mentions-tab";
 import { AutomationTab } from "./automation-tab";
+import { FilesTab } from "./files-tab";
+import type { FileOwnerKind } from "@/lib/crm/record-files";
 import type { CollabEntity } from "@/lib/crm/collaboration";
 import type { CrmTaskRecordRef } from "@/lib/crm/crm-v2";
 
@@ -168,6 +170,31 @@ export function automationTab({ ref }: { ref: RecordRef }): RecordTab {
     content: <AutomationTab entity={AUTOMATION_ENTITY[ref.kind]} recordId={ref.id} />,
   };
 }
+
+/**
+ * Files that arrived from outside, on every kind.
+ *
+ * Separate from Documents, which is what the system raised and numbered. A
+ * signed contract and a quotation are both "a document" to a reader, but only
+ * one of them has a total and a status, and mixing them makes the register
+ * useless for either question.
+ */
+export function filesTab({ ref }: { ref: RecordRef }): RecordTab {
+  return {
+    value: "files",
+    label: "Files",
+    content: <FilesTab owner={FILE_OWNER[ref.kind]} ownerId={ref.id} />,
+  };
+}
+
+/** The file layer's name for the same record. */
+const FILE_OWNER: Record<RecordKind, FileOwnerKind> = {
+  lead: "lead",
+  deal: "deal",
+  company: "company",
+  person: "person",
+  site: "site",
+};
 
 /** A tab a single record type adds to the shared set. */
 export function extraTab(tab: {

@@ -42,7 +42,7 @@ import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 
 import { ActivityComposer } from "./activity-composer";
-import { automationTab, commentsTab, mentionsTab, tasksTab } from "@/components/crm/records/record-tabs";
+import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "@/components/crm/records/record-tabs";
 import {
   ActivityStrip,
   CallList,
@@ -388,6 +388,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
         tasksTab({ ref: { kind: "lead", id: leadId }, currentUserId }),
         commentsTab({ ref: { kind: "lead", id: leadId }, currentUserId }),
         mentionsTab({ ref: { kind: "lead", id: leadId } }),
+        filesTab({ ref: { kind: "lead", id: leadId } }),
         automationTab({ ref: { kind: "lead", id: leadId } }),
       ]}
       rail={

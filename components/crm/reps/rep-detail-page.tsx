@@ -30,6 +30,7 @@ import { RecordMark } from "@/components/crm/records/record-mark";
 import { RecordAttributes } from "@/components/crm/records/record-attributes";
 import { HistoryFeed, type HistoryEvent } from "@/components/crm/records/history-feed";
 import { RecordPageShell } from "@/components/crm/records/record-page-shell";
+import { FilesTab } from "@/components/crm/records/files-tab";
 import { RepSettingsTab } from "@/components/crm/reps/rep-settings-tab";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -345,6 +346,11 @@ export function RepDetailPage({ repId }: { repId: string }) {
               exportName={`${rep.name ?? "rep"}-activity`}
             />
           ),
+        },
+        {
+          value: "files",
+          label: "Files",
+          content: <FilesTab owner="rep" ownerId={rep.id} />,
         },
         {
           value: "settings",

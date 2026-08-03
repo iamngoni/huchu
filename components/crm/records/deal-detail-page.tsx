@@ -32,7 +32,7 @@ import { DocumentList } from "@/components/crm/documents/document-list";
 import { formatMoney, invoiceOutstanding } from "@/components/crm/documents/document-types";
 import type { LeadDocument } from "@/components/crm/documents/document-types";
 import { ActivityComposer } from "@/components/crm/lead-detail/activity-composer";
-import { automationTab, commentsTab, mentionsTab, tasksTab } from "./record-tabs";
+import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
 import {
   ActivityStrip,
   CallList,
@@ -482,6 +482,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
           },
           commentsTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
         mentionsTab({ ref: { kind: "deal", id: dealId } }),
+        filesTab({ ref: { kind: "deal", id: dealId } }),
         automationTab({ ref: { kind: "deal", id: dealId } }),
           {
             value: "history",

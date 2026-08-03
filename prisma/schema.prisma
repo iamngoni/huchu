@@ -201,6 +201,7 @@ model Company {
   crmListMembers                CrmListMember[]
   crmTasks                      CrmTask[]
   crmComments                   CrmComment[]
+  crmRecordFiles                CrmRecordFile[]
   crmMentions                   CrmMention[]
   crmFollowers                  CrmFollower[]
   crmAutomations                CrmAutomation[]
@@ -996,6 +997,8 @@ model User {
   crmTasksCreated                   CrmTask[]                      @relation("CrmTaskCreatedBy")
   crmCommentsCreated                CrmComment[]                   @relation("CrmCommentCreatedBy")
   crmCommentsResolved               CrmComment[]                   @relation("CrmCommentResolvedBy")
+  crmRecordFilesUploaded            CrmRecordFile[]                @relation("CrmRecordFileUploadedBy")
+  crmRecordFilesAbout               CrmRecordFile[]                @relation("CrmRecordFileSubject")
   crmMentions                       CrmMention[]                   @relation("CrmMentionUser")
   crmFollowing                      CrmFollower[]                  @relation("CrmFollowerUser")
   crmAutomationsCreated             CrmAutomation[]                @relation("CrmAutomationCreatedBy")
@@ -6462,6 +6465,7 @@ model CrmClient {
   people            CrmPerson[]           @relation("CrmPersonPrimaryCompany")
   tasks             CrmTask[]
   comments          CrmComment[]
+  files             CrmRecordFile[]
   personLinks       CrmPersonCompany[]
   deals             CrmDeal[]
   sites             CrmSite[]
@@ -6541,6 +6545,7 @@ model CrmLead {
   convertedBy       User?                 @relation("CrmLeadConvertedBy", fields: [convertedById], references: [id])
   tasks             CrmTask[]
   comments          CrmComment[]
+  files             CrmRecordFile[]
 
   @@unique([companyId, leadNo])
   @@index([companyId, stage, updatedAt])
@@ -7498,6 +7503,7 @@ model CrmPerson {
   leadsConverted CrmLead[]          @relation("CrmLeadConvertedPerson")
   tasks          CrmTask[]
   comments       CrmComment[]
+  files             CrmRecordFile[]
 
   @@unique([companyId, personNo])
   @@index([companyId, fullName])
@@ -7564,6 +7570,7 @@ model CrmSite {
   appointments   CrmAppointment[]
   tasks          CrmTask[]
   comments       CrmComment[]
+  files             CrmRecordFile[]
 
   workOrders     CrmWorkOrder[]
 
@@ -7631,6 +7638,7 @@ model CrmDeal {
   leadsConverted CrmLead[]         @relation("CrmLeadConvertedDeal")
   tasks             CrmTask[]
   comments          CrmComment[]
+  files             CrmRecordFile[]
 
   workOrders     CrmWorkOrder[]
 
@@ -7971,6 +7979,57 @@ model CrmComment {
   @@index([companyId, dealId, createdAt])
   @@index([companyId, leadId, createdAt])
   @@index([companyId, parentId])
+}
+
+/// A file somebody attached to a record.
+///
+/// Distinct from CrmLeadDocument, which is a billing document the system
+/// raised and numbered. This is the signed contract, the tax clearance, the
+/// photo of the damaged unit — things that arrive from outside and belong to
+/// a record rather than to an invoice.
+///
+/// The owner is a nullable column per kind rather than an entity+id pair, so
+/// the database can cascade a delete and enforce that the record exists. A
+/// string id pointing at nothing is how orphaned files outlive the customer
+/// who sent them.
+model CrmRecordFile {
+  id          String  @id @default(uuid())
+  companyId   String
+  /// What it is called to a reader — the original filename unless renamed.
+  name        String
+  url         String
+  /// Bytes, when the uploader reported it.
+  size        Int?
+  contentType String?
+  /// Why it is here. Optional; a filename is usually enough.
+  note        String?
+
+  leadId   String?
+  dealId   String?
+  clientId String?
+  personId String?
+  siteId   String?
+  /// A rep's own profile — a certificate, a licence, a signed policy.
+  userId   String?
+
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  uploadedBy User?      @relation("CrmRecordFileUploadedBy", fields: [uploadedById], references: [id])
+  lead       CrmLead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal       CrmDeal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  client     CrmClient? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  person     CrmPerson? @relation(fields: [personId], references: [id], onDelete: Cascade)
+  site       CrmSite?   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user       User?      @relation("CrmRecordFileSubject", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, leadId, createdAt])
+  @@index([companyId, dealId, createdAt])
+  @@index([companyId, clientId, createdAt])
+  @@index([companyId, personId, createdAt])
+  @@index([companyId, siteId, createdAt])
+  @@index([companyId, userId, createdAt])
 }
 
 model CrmMention {
