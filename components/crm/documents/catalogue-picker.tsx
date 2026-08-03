@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Input } from "@/components/ui/input";
@@ -89,7 +89,6 @@ export function CataloguePicker({
   const [active, setActive] = useState(0);
   const [debounced, setDebounced] = useState("");
   const listId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(value.trim()), 200);
@@ -181,7 +180,6 @@ export function CataloguePicker({
           positions the popover and imposes no button semantics. */}
       <PopoverAnchor asChild>
         <Input
-          ref={inputRef}
           type="text"
           value={value}
           className={className}
