@@ -252,6 +252,39 @@
     min-width: 0;
   }
 
+  /*    A button stretched to full width is a row, not a centred label: a
+        sheet of stacked controls, a form field filling its column. The words
+        start at the left edge and a trailing caret goes to the *right* edge,
+        which is where the eye looks for it and where a thumb reaches. Only a
+        trailing `svg` is pushed over — a button whose last child is text
+        keeps its label beside the rest of the label. */
+  .btn:where(.w-full) {
+    justify-content: flex-start;
+  }
+  .btn:where(.w-full) > .btn-label {
+    flex: 1 1 auto;
+  }
+  .btn:where(.w-full) > .btn-label > svg:last-child {
+    margin-inline-start: auto;
+  }
+
+  /*    The app bar is one row of controls, so they are one height. Measured
+        at 390px it was four: a 30px sidebar toggle, a 30px search box drawing
+        its own padding, a 36px notification bell and a 30px page action. The
+        sidebar toggle ships from the design system and cannot be sized from
+        its call site, so the row states the height it wants and everything in
+        it obeys — including the toggle. */
+  header .btn,
+  header [data-sidebar="trigger"],
+  header [data-slot="sidebar-trigger"] {
+    height: var(--h-control-md);
+    min-height: var(--h-control-md);
+  }
+  header [data-sidebar="trigger"],
+  header [data-slot="sidebar-trigger"] {
+    width: var(--h-control-md);
+  }
+
   /* 2. A segmented control is a row of buttons, so it stands as tall as one.
         The DS sizes it off its own scale rather than the control-height
         scale: `md` came out 34px and `sm` 28px beside 36px and 30px buttons,

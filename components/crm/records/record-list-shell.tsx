@@ -59,7 +59,6 @@ export function RecordListShell({
       createLabel && onCreate ? (
         <Button
           variant="primary"
-          size="sm"
           startIcon={<Plus className="h-4 w-4" />}
           onClick={onCreate}
         >

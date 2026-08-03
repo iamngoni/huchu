@@ -88,7 +88,10 @@ export function ViewToolbar({
                 the only way a nine-option filter reads on a phone. Labels go
                 to the left edge: a button centres its label, which is right
                 for a button you press and wrong for a row you read down. */}
-            <div className="flex flex-col items-stretch gap-2 [&>*]:w-full [&_.btn]:w-full [&_.btn]:justify-start">
+            {/* `w-full` on each control is what tells the button it is a row:
+                the left-aligned label and far-right caret come from that, in
+                globals.css, rather than from a rule written here. */}
+            <div className="flex flex-col items-stretch gap-2 [&>*]:w-full [&_.btn]:w-full">
               {start}
               {end}
             </div>

@@ -26,20 +26,28 @@ function getIconComponent(iconName: string) {
 /**
  * Marks that are strokes rather than shapes.
  *
- * A chevron is two strokes meeting at a point. Phosphor's `fill` weight turns
- * `CaretDown` into a solid triangle — a different mark entirely, and the one
- * that had been shipping in every dropdown trigger, select, disclosure and
- * "show more" in the product. The rest of the set stays filled, which is how
- * the product is drawn; this is only about the ones that are meant to be a
- * line.
+ * A chevron is two strokes meeting at a point; an X is two strokes crossing;
+ * a plus is two strokes meeting at right angles. Phosphor's `fill` weight has
+ * nothing to fill in a glyph made only of lines, so it fills the *box* — a
+ * solid triangle where the chevron should be, a solid rounded square with the
+ * X or the + knocked out of it. That is what had been shipping in every
+ * dropdown trigger, every close button and every "New …" button in the
+ * product.
+ *
+ * Exact names rather than prefixes: `XCircle`, `PlusCircle` and `CheckCircle`
+ * are genuinely shapes — a circle carrying a mark — and are meant to be
+ * filled. Only the bare marks belong here. Everything else in the set keeps
+ * the fill weight, which is how the product is drawn.
  */
-const STROKE_WEIGHT_ICONS = /^Caret/;
+const STROKE_WEIGHT_PREFIX = /^Caret/;
+const STROKE_WEIGHT_EXACT = new Set(["X", "Plus", "Minus", "Check", "Checks", "Equals"]);
 
 function createPhosphorIcon(iconName: string, displayName: string): LucideIcon {
   const IconComponent = getIconComponent(iconName);
-  const defaultWeight: PhosphorIconProps["weight"] = STROKE_WEIGHT_ICONS.test(iconName)
-    ? "bold"
-    : "fill";
+  const defaultWeight: PhosphorIconProps["weight"] =
+    STROKE_WEIGHT_PREFIX.test(iconName) || STROKE_WEIGHT_EXACT.has(iconName)
+      ? "bold"
+      : "fill";
 
   const Icon = ({
     className,
