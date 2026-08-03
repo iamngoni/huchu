@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,23 @@ type LayoutOption = {
   isActive: boolean;
   isDefault: boolean;
 };
+
+/**
+ * One numeric box on a quote line, labelled on a phone and bare on a desk.
+ *
+ * `sm:contents` is what makes the row work at both widths without writing it
+ * twice: at `sm` and up the wrapper stops generating a box, and the input
+ * below it becomes a direct child of the line's seven-column grid again. The
+ * label is `sm:hidden` because the grid has its own heading row up there.
+ */
+function LineField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block sm:contents">
+      <span className="mb-1 block text-sm text-[var(--text-muted)] sm:hidden">{label}</span>
+      {children}
+    </label>
+  );
+}
 
 export function DocumentBuilderSheet({
   open,
@@ -269,9 +286,16 @@ export function DocumentBuilderSheet({
             const net = round2(quantity * round2(listPrice * (1 - discount / 100)));
 
             return (
+              // On a phone the seven-column row becomes a card. The column
+              // headings above are `sm:grid`, so stacked the four numeric
+              // boxes were four identical unlabelled fields between the
+              // description and the total — the aria-labels are the only
+              // thing that ever said which was which, and nobody sees those.
+              // At `sm` and up the wrappers below go `display: contents` and
+              // the original grid is back, unchanged.
               <div
                 key={index}
-                className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem] sm:items-center"
+                className="grid gap-2 rounded-[var(--radius-md)] border border-[var(--border)] p-3 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem] sm:items-center sm:rounded-none sm:border-0 sm:p-0"
               >
                 {/* Free text still works — a quote for something not in the
                     catalogue is a real thing, and a builder that refuses it
@@ -297,56 +321,73 @@ export function DocumentBuilderSheet({
                   }
                   placeholder="What are you charging for?"
                 />
-                <Input
-                  value={line.quantity}
-                  onChange={(event) => patchLine(index, { quantity: event.target.value })}
-                  inputMode="decimal"
-                  className="text-right font-mono"
-                  aria-label={`Line ${index + 1} quantity`}
-                />
-                <Input
-                  value={line.unitPrice}
-                  onChange={(event) => patchLine(index, { unitPrice: event.target.value })}
-                  inputMode="decimal"
-                  className="text-right font-mono"
-                  placeholder="0.00"
-                  aria-label={`Line ${index + 1} unit price`}
-                />
-                <Input
-                  value={line.discountPercent}
-                  onChange={(event) =>
-                    patchLine(index, { discountPercent: event.target.value })
-                  }
-                  inputMode="decimal"
-                  className="text-right font-mono"
-                  placeholder="0"
-                  aria-label={`Line ${index + 1} discount percent`}
-                />
-                <Input
-                  value={line.taxRate}
-                  onChange={(event) => patchLine(index, { taxRate: event.target.value })}
-                  inputMode="decimal"
-                  className="text-right font-mono"
-                  placeholder="0"
-                  aria-label={`Line ${index + 1} tax percent`}
-                />
-                <span className="px-1 text-right font-mono text-sm tabular-nums">
-                  {net.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 px-0"
-                  aria-label={`Remove line ${index + 1}`}
-                  disabled={lines.length === 1}
-                  onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {/* Two by two on a phone, and back in the row at `sm`. */}
+                <div className="grid grid-cols-2 gap-2 sm:contents">
+                  <LineField label="Qty">
+                    <Input
+                      value={line.quantity}
+                      onChange={(event) => patchLine(index, { quantity: event.target.value })}
+                      inputMode="decimal"
+                      className="text-right font-mono"
+                      aria-label={`Line ${index + 1} quantity`}
+                    />
+                  </LineField>
+                  <LineField label="Unit price">
+                    <Input
+                      value={line.unitPrice}
+                      onChange={(event) => patchLine(index, { unitPrice: event.target.value })}
+                      inputMode="decimal"
+                      className="text-right font-mono"
+                      placeholder="0.00"
+                      aria-label={`Line ${index + 1} unit price`}
+                    />
+                  </LineField>
+                  <LineField label="Disc %">
+                    <Input
+                      value={line.discountPercent}
+                      onChange={(event) =>
+                        patchLine(index, { discountPercent: event.target.value })
+                      }
+                      inputMode="decimal"
+                      className="text-right font-mono"
+                      placeholder="0"
+                      aria-label={`Line ${index + 1} discount percent`}
+                    />
+                  </LineField>
+                  <LineField label="Tax %">
+                    <Input
+                      value={line.taxRate}
+                      onChange={(event) => patchLine(index, { taxRate: event.target.value })}
+                      inputMode="decimal"
+                      className="text-right font-mono"
+                      placeholder="0"
+                      aria-label={`Line ${index + 1} tax percent`}
+                    />
+                  </LineField>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 sm:contents">
+                  <span className="px-1 text-right font-mono text-sm tabular-nums">
+                    <span className="mr-2 font-sans text-[var(--text-muted)] sm:hidden">
+                      Line total
+                    </span>
+                    {net.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-9 px-0"
+                    aria-label={`Remove line ${index + 1}`}
+                    disabled={lines.length === 1}
+                    onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             );
           })}
