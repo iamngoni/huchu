@@ -23,9 +23,9 @@ import { RecordAttributes } from "./record-attributes";
 import { RelationAttribute } from "./relation-attribute";
 import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
+import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
 import { SiteFormSheet } from "./site-form-sheet";
-import { RecordHistoryTab } from "./record-history-tab";
 
 import { Stack } from "@corelithzw/react";
 
@@ -284,11 +284,14 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
         filesTab({ ref: { kind: "site", id: siteId } }),
         automationTab({ ref: { kind: "site", id: siteId } }),
         {
-          // Sites carry no activity trail of their own, so there is nothing to
-          // filter history out of — the tab stays for consistency.
-          value: "history",
-          label: "History",
-          content: <RecordHistoryTab activities={[]} />,
+          // Was a History tab rendering an empty array, permanently: a site
+          // has no activity foreign key, so nothing could ever appear in it.
+          // A tab kept "for consistency" that can never answer its own
+          // question is worse than one that is absent. Field history is the
+          // history a site genuinely has — its edits are recorded.
+          value: "changes",
+          label: "Field history",
+          content: <FieldHistoryTab entity="SITE" recordId={siteId} />,
         },
       ]}
       rail={

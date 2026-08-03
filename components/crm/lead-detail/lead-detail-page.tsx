@@ -43,6 +43,8 @@ import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet
 
 import { ActivityComposer } from "./activity-composer";
 import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "@/components/crm/records/record-tabs";
+import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
+import { RecordHistoryTab } from "@/components/crm/records/record-history-tab";
 import {
   ActivityStrip,
   CallList,
@@ -390,6 +392,19 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
         mentionsTab({ ref: { kind: "lead", id: leadId } }),
         filesTab({ ref: { kind: "lead", id: leadId } }),
         automationTab({ ref: { kind: "lead", id: leadId } }),
+        {
+          // Leads had neither history tab, while deals, companies, people and
+          // sites had both. The record type people open most was the one with
+          // no answer to "who changed this".
+          value: "history",
+          label: "History",
+          content: <RecordHistoryTab activities={lead.activities} />,
+        },
+        {
+          value: "changes",
+          label: "Field history",
+          content: <FieldHistoryTab entity="LEAD" recordId={leadId} />,
+        },
       ]}
       rail={
         <>

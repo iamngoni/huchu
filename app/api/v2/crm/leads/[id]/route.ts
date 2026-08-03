@@ -3,6 +3,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { scoreLead } from "@/lib/crm/lead-scoring";
 import { prisma } from "@/lib/prisma";
+import { recordFieldChanges } from "@/lib/crm/history";
 import { canEditRecord } from "@/lib/crm/permissions";
 import { crmLeadChannelSchema } from "@/lib/crm/views";
 import {
@@ -121,7 +122,23 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const existing = await prisma.crmLead.findFirst({
       where: { id, companyId: session.user.companyId },
-      select: { id: true, assignedToId: true, customFields: true },
+      // The full row, not just the guard fields: recording what changed needs
+      // the values as they were before the write.
+      select: {
+        id: true,
+        assignedToId: true,
+        customFields: true,
+        title: true,
+        clientId: true,
+        contactName: true,
+        contactEmail: true,
+        contactPhone: true,
+        probability: true,
+        estimatedValue: true,
+        currency: true,
+        source: true,
+        sourceChannel: true,
+      },
     });
     if (!existing) return errorResponse("Lead not found", 404);
     if (!await canEditRecord(session, existing.assignedToId)) {
@@ -176,6 +193,32 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         ...(customFields !== undefined ? { customFields } : {}),
       },
     });
+
+    // Leads recorded nothing. Every other record type wrote a field-change
+    // trail, so "who dropped the value from 40k to 12k" was answerable
+    // everywhere except on the record type people actually open.
+    await recordFieldChanges(prisma, {
+      companyId: session.user.companyId,
+      userId: session.user.id,
+      entity: "LEAD",
+      recordId: id,
+      before: existing,
+      after: updated,
+      fields: [
+        "title",
+        "clientId",
+        "contactName",
+        "contactEmail",
+        "contactPhone",
+        "probability",
+        "estimatedValue",
+        "currency",
+        "source",
+        "sourceChannel",
+        "assignedToId",
+      ],
+    });
+
     return successResponse(updated);
   } catch (error) {
     if (error instanceof z.ZodError) return errorResponse("Validation failed", 400, error.issues);
