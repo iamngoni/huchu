@@ -6,6 +6,7 @@ import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityComposer, type ActivityTarget } from "@/components/crm/lead-detail/activity-composer";
 import { RecordStory, type StoryEvent } from "./record-story";
+import { MentionsTab } from "./mentions-tab";
 import type { CollabEntity } from "@/lib/crm/collaboration";
 import type { CrmTaskRecordRef } from "@/lib/crm/crm-v2";
 
@@ -126,6 +127,19 @@ export function commentsTab({
         currentUserId={currentUserId}
       />
     ),
+  };
+}
+
+/**
+ * Where this record has been written about elsewhere. Every kind gets it,
+ * because a reference to a site in a note on a deal is exactly the connection
+ * that was invisible before.
+ */
+export function mentionsTab({ ref }: { ref: RecordRef }): RecordTab {
+  return {
+    value: "mentions",
+    label: "Mentions",
+    content: <MentionsTab recordId={ref.id} />,
   };
 }
 

@@ -18,7 +18,7 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 import { customFieldAttributes } from "./custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
-import { commentsTab, tasksTab } from "./record-tabs";
+import { commentsTab, mentionsTab, tasksTab } from "./record-tabs";
 import { RecordAttributes } from "./record-attributes";
 import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
@@ -328,6 +328,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
         },
         tasksTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
         commentsTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
+        mentionsTab({ ref: { kind: "person", id: personId } }),
         {
           value: "history",
           label: "History",
