@@ -197,6 +197,10 @@ export function TrendChart({
               key={index}
               className="h-full flex-1"
               onMouseEnter={() => setHovered(index)}
+              // A finger never hovers, so on touch the chart's values were
+              // simply unreadable. `onPointerDown` covers both — a mouse
+              // already had the hover, and a tap now reads the same figure.
+              onPointerDown={() => setHovered(index)}
             />
           ))}
         </div>
@@ -204,13 +208,18 @@ export function TrendChart({
         {hovered !== null ? (
           <div
             className={cn(
-              "pointer-events-none absolute top-0 z-10 min-w-36 -translate-x-1/2 rounded-[var(--radius-md)]",
+              "pointer-events-none absolute top-0 z-10 min-w-32 -translate-x-1/2 rounded-[var(--radius-md)]",
               "border border-[var(--border)] bg-[var(--surface)] p-2 shadow-[var(--shadow-md)]",
             )}
             style={{
-              // Clamped so the card at either end stays on the page rather
-              // than hanging off the side of the card it lives in.
-              left: `${Math.min(88, Math.max(12, (trendX(hovered, length) / TREND_WIDTH) * 100))}%`,
+              // Clamped in pixels rather than percent. A 12–88% window keeps
+              // the centre of a 144px card 43px from the edge of a 358px chart
+              // — which is 29px short, so it still overhung on a phone. Half
+              // the card's own width is the only bound that holds at every
+              // width.
+              left: `clamp(4rem, ${
+                (trendX(hovered, length) / TREND_WIDTH) * 100
+              }%, calc(100% - 4rem))`,
             }}
           >
             <p className="text-sm font-medium text-[var(--text-strong)]">

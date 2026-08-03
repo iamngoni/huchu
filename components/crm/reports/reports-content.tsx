@@ -36,6 +36,7 @@ import {
   type FunnelStageWithDwell,
 } from "./report-charts";
 import { ReportCard, type ReportEntity } from "./report-card";
+import { MobileRow, MobileRows } from "../records/mobile-rows";
 
 type SeriesBucket = { period: string; count: number; value: number };
 
@@ -218,12 +219,17 @@ export function ReportsContent({ currency = "USD" }: { currency?: string }) {
       </p>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <SegmentedControl
-          options={REPORT_RANGES.map((value) => ({ value, label: REPORT_RANGE_LABELS[value] }))}
-          value={range}
-          onValueChange={(value) => setRange(value as ReportRange)}
-          aria-label="Reporting period"
-        />
+        {/* "Last 12 months" and its neighbours run past 400px together, so on
+            a phone the control scrolls inside its own rail rather than
+            stretching the page. */}
+        <div className="scroll-rail max-w-full overflow-x-auto">
+          <SegmentedControl
+            options={REPORT_RANGES.map((value) => ({ value, label: REPORT_RANGE_LABELS[value] }))}
+            value={range}
+            onValueChange={(value) => setRange(value as ReportRange)}
+            aria-label="Reporting period"
+          />
+        </div>
         <p className="text-sm text-[var(--text-muted)]">
           {report.scope === "TEAM"
             ? "Everyone's numbers"
@@ -420,12 +426,15 @@ function renderReportCard(type: string, context: CardContext) {
           ...report.activity.map((bucket) => [bucket.period, String(bucket.count)]),
         ],
         children: (
-          <div className="flex h-24 items-end gap-0.5">
+          // Ninety `flex-1` bars in ~318px is a third of a pixel each — a grey
+          // smear with no bars in it. A floor of 8px and a scroll is what the
+          // insights version already does.
+          <div className="scroll-rail flex h-24 items-end gap-0.5 overflow-x-auto">
             {report.activity.map((bucket) => (
               <div
                 key={bucket.period}
                 title={`${bucket.period}: ${bucket.count}`}
-                className="flex-1 rounded-t bg-[var(--surface-inverse)]"
+                className="min-w-2 flex-1 rounded-t bg-[var(--surface-inverse)]"
                 // A quiet day is a visible gap rather than a straight line
                 // drawn through it.
                 style={{ height: `${(bucket.count / peak) * 100}%`, minHeight: "1px" }}
@@ -465,7 +474,28 @@ function PerformanceTable({
   if (rows.length === 0) return <EmptyState title="Nothing to show yet" />;
 
   return (
-    <table className="w-full text-sm">
+    <>
+    {/* Four columns of figures need about 320px of table before the numbers
+        start colliding, and a widget on a phone has roughly that much in
+        total. So a phone reads it as a list: who, the value they won, and
+        the counts underneath. */}
+    <MobileRows className="md:hidden">
+      {rows.map((row) => (
+        <MobileRow
+          key={row.key}
+          title={row.label}
+          subtitle={`${row.won} won · ${row.lost} lost · ${row.open} open`}
+          value={money(row.wonValue)}
+          status={
+            <span className="font-mono text-sm text-[var(--text-muted)]">
+              {formatRate(row.winRate)}
+            </span>
+          }
+        />
+      ))}
+    </MobileRows>
+
+    <table className="hidden w-full text-sm md:table">
       <thead className="text-left text-sm font-medium text-[var(--text-muted)]">
         <tr>
           <th className="pb-1 font-medium">Name</th>
@@ -485,6 +515,7 @@ function PerformanceTable({
         ))}
       </tbody>
     </table>
+    </>
   );
 }
 

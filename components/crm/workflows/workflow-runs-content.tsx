@@ -99,12 +99,16 @@ export function WorkflowRunsContent() {
       <PageChrome title="Workflow activity" />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <SegmentedControl
-          options={REPORT_RANGES.map((value) => ({ value, label: REPORT_RANGE_LABELS[value] }))}
-          value={range}
-          onValueChange={(value) => setRange(value as ReportRange)}
-          aria-label="Reporting period"
-        />
+        {/* Six range labels run past 400px together; the control scrolls
+            inside its own rail rather than stretching the page. */}
+        <div className="scroll-rail max-w-full overflow-x-auto">
+          <SegmentedControl
+            options={REPORT_RANGES.map((value) => ({ value, label: REPORT_RANGE_LABELS[value] }))}
+            value={range}
+            onValueChange={(value) => setRange(value as ReportRange)}
+            aria-label="Reporting period"
+          />
+        </div>
       </div>
 
       <RunInsightsPanel range={range} />

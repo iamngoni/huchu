@@ -7,6 +7,7 @@ import { Alert, Card, EmptyState, Skeleton, StatCard } from "@corelithzw/react";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { formatRate, type ReportRange } from "@/lib/crm/reports";
 import { formatDuration, type FailureGroup, type RulePerformance, type RunTotals } from "@/lib/crm/run-insights";
+import { RecordList } from "@/components/crm/records/record-list";
 
 type Insights = {
   range: ReportRange;
@@ -116,7 +117,22 @@ export function RunInsightsPanel({ range }: { range: ReportRange }) {
           {insights.byRule.length === 0 ? (
             <EmptyState title="Nothing has run yet" />
           ) : (
-            <table className="w-full text-sm">
+            <>
+            {/* A phone reads this as the list it is: which workflow, how much
+                trouble it is in, and the run counts underneath. These rows go
+                somewhere, so they are links rather than plain rows. */}
+            <RecordList
+              className="md:hidden"
+              rows={insights.byRule.map((rule) => ({
+                id: rule.automationId,
+                href: `/crm/workflows/${rule.automationId}`,
+                title: rule.automationName,
+                subtitle: `${rule.runs} runs · typically ${formatDuration(rule.medianMs)}`,
+                facts: [{ value: formatRate(rule.troubleRate), mono: true }],
+              }))}
+            />
+
+            <table className="hidden w-full text-sm md:table">
               <thead className="text-left text-sm font-medium text-[var(--text-muted)]">
                 <tr>
                   <th className="pb-1 font-medium">Workflow</th>
@@ -153,6 +169,7 @@ export function RunInsightsPanel({ range }: { range: ReportRange }) {
                 ))}
               </tbody>
             </table>
+            </>
           )}
         </Card>
 
