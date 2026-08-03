@@ -37,6 +37,7 @@ import {
   type BlockType,
   type TemplateKind,
 } from "@/lib/crm/blocks";
+import { starterBlocks, startersForKind } from "@/lib/crm/starter-templates";
 import { cn } from "@/lib/utils";
 
 import { VariablePicker } from "./variable-picker";
@@ -472,9 +473,35 @@ export function BlockEditor({
       ))}
 
       {blocks.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[var(--text-muted)]">
-          Empty. Use the + above to add the first block.
-        </p>
+        <div className="py-6 text-center">
+          <p className="text-sm text-[var(--text-muted)]">
+            Empty. Use the + above to add the first block.
+          </p>
+
+          {/* Or don't start from nothing. Somebody who reached a blank
+              template did not necessarily choose one — they may have picked
+              Blank in the dialog and then discovered what that means. */}
+          {startersForKind(kind).length > 0 ? (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-[var(--text-strong)]">Or start from</p>
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                {startersForKind(kind).map((starter) => (
+                  <button
+                    key={starter.id}
+                    type="button"
+                    onClick={() => onChange(starterBlocks(starter, ""))}
+                    className="rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-1.5 text-sm hover:border-[var(--interactive-primary)] hover:bg-[var(--surface-hover)]"
+                  >
+                    <span aria-hidden="true" className="mr-1.5">
+                      {starter.emoji}
+                    </span>
+                    {starter.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
