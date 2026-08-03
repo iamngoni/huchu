@@ -452,7 +452,7 @@ export function WorkflowEditor({ workflowId }: { workflowId: string | null }) {
             >
               {action.type === "CREATE_TASK" ? (
                 <div className="space-y-2">
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Input
                       className="flex-1"
                       value={action.title}
@@ -461,7 +461,7 @@ export function WorkflowEditor({ workflowId }: { workflowId: string | null }) {
                       onChange={(event) => patchAction(index, { title: event.target.value })}
                     />
                     <Input
-                      className="w-28"
+                      className="w-20 sm:w-28"
                       type="number"
                       min={0}
                       value={action.dueInDays}
@@ -471,7 +471,7 @@ export function WorkflowEditor({ workflowId }: { workflowId: string | null }) {
                       }
                     />
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <OptionSelect
                       className="flex-1"
                       value={action.taskType ?? "GENERAL"}
@@ -533,7 +533,7 @@ export function WorkflowEditor({ workflowId }: { workflowId: string | null }) {
               ) : null}
 
               {action.type === "SET_FIELD" ? (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <OptionSelect
                     className="flex-1"
                     value={action.field}

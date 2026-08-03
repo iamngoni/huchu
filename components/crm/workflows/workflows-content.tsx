@@ -100,7 +100,7 @@ export function WorkflowsContent() {
   };
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <PageChrome title="Workflows">
         <Button type="button" asChild>
           <Link href="/crm/workflows/new">

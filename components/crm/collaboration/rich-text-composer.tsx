@@ -358,7 +358,12 @@ export function RichTextComposer({
               placeholder ?? "Write a note. Type @ to mention someone or link a record."
             }
             className={cn(
-              "w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm",
+              // 16px on a phone, because iOS zooms the whole page in when a
+              // field smaller than that takes focus and never zooms back
+              // out. The global rule in globals.css cannot reach this: it
+              // lives in `@layer app`, and utilities are a later layer, so
+              // a `text-sm` written here would win. It has to be said here.
+              "w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-base sm:text-sm",
               "whitespace-pre-wrap break-words",
               "focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]",
               // A contenteditable has no placeholder of its own, and `:empty`
@@ -410,7 +415,9 @@ export function RichTextComposer({
 
           {query !== null && visible.length ? (
             <ul
-              className="absolute z-20 mt-1 w-80 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-raised)] shadow-lg"
+              // Full composer width on a phone; 320px pinned to the left
+              // edge from `sm` up, which is where it started.
+              className="absolute inset-x-0 z-20 mt-1 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-raised)] shadow-lg sm:right-auto sm:w-80"
               role="listbox"
             >
               {visible.map((candidate, index) => {

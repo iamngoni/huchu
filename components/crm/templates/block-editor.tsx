@@ -125,7 +125,7 @@ function FieldEditor({
             onChange({ fieldType: value as (typeof FIELD_TYPES)[number] })
           }
         >
-          <SelectTrigger className="w-40" aria-label="Answer type">
+          <SelectTrigger className="w-full max-w-40" aria-label="Answer type">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -254,7 +254,7 @@ function BlockEditorRow({
             value={String(block.level)}
             onValueChange={(value) => patch({ level: Number(value) })}
           >
-            <SelectTrigger className="w-24" aria-label="Heading level">
+            <SelectTrigger className="w-24 shrink-0" aria-label="Heading level">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -292,7 +292,7 @@ function BlockEditorRow({
 
       {block.type === "spacer" ? (
         <Select value={block.size} onValueChange={(value) => patch({ size: value })}>
-          <SelectTrigger className="w-32" aria-label="Space size">
+          <SelectTrigger className="w-full max-w-32" aria-label="Space size">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -306,7 +306,7 @@ function BlockEditorRow({
       {block.type === "image" ? (
         <div className="space-y-2">
           <Select value={block.source} onValueChange={(value) => patch({ source: value })}>
-            <SelectTrigger className="w-56" aria-label="Image source">
+            <SelectTrigger className="w-full max-w-56" aria-label="Image source">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -395,7 +395,7 @@ function BlockEditorRow({
             onChange={(event) => patch({ label: event.target.value })}
           />
           <Select value={block.party} onValueChange={(value) => patch({ party: value })}>
-            <SelectTrigger className="w-40" aria-label="Who signs">
+            <SelectTrigger className="w-full max-w-40 sm:w-40" aria-label="Who signs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

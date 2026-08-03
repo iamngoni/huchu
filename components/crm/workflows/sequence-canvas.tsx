@@ -161,12 +161,17 @@ export function SequenceInsert({
       <span className="relative z-10 flex size-8 shrink-0 items-center justify-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
+            {/* The dashed circle stays 20px — it sits on a rail between
+                steps and a bigger one would read as a step itself. The
+                button around it is 32px, so a thumb has something to hit. */}
             <button
               type="button"
               aria-label={label}
-              className="flex size-5 items-center justify-center rounded-full border border-dashed border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand)] hover:text-[var(--text)]"
+              className="group/insert flex size-8 items-center justify-center rounded-full"
             >
-              <Plus className="size-3" aria-hidden="true" />
+              <span className="flex size-5 items-center justify-center rounded-full border border-dashed border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] transition-colors group-hover/insert:border-[var(--brand)] group-hover/insert:text-[var(--text)]">
+                <Plus className="size-3" aria-hidden="true" />
+              </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">

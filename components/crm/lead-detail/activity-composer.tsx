@@ -104,9 +104,13 @@ export function ActivityComposer({ target }: { target: ActivityTarget }) {
         placeholder={PLACEHOLDERS[type]}
         rows={3}
       />
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* The keyboard shortcut is the second half of this line and means
+            nothing on a touch keyboard, so a phone reads the first half only
+            and the button stays on the same row. */}
         <p className="text-sm text-[var(--text-muted)]">
-          Type @ to link a person or record. ⌘/Ctrl + Enter to save.
+          Type @ to link a person or record.
+          <span className="hidden sm:inline"> ⌘/Ctrl + Enter to save.</span>
         </p>
         <Button
           size="sm"
