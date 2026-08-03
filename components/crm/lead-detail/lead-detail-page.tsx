@@ -19,7 +19,11 @@ import {
   TrendingUp,
   UserRound,
 } from "@/lib/icons";
-import { updateCrmLeadStage } from "@/lib/crm/crm-v2";
+import {
+  fetchCrmFieldDefinitions,
+  updateCrmLeadStage,
+  type CrmFieldDefinitionRecord,
+} from "@/lib/crm/crm-v2";
 import { visitItemsToQuotationLines } from "@/lib/crm/site-visits";
 import type { CrmDocumentLineInput } from "@/lib/crm/accounting-bridge";
 
@@ -42,6 +46,7 @@ import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet
 import { ActivityComposer } from "./activity-composer";
 import { commentsTab, tasksTab } from "@/components/crm/records/record-tabs";
 import { RecordStory } from "@/components/crm/records/record-story";
+import { customFieldAttributes } from "@/components/crm/records/custom-field-attributes";
 import { RecordAttributes } from "@/components/crm/records/record-attributes";
 import { RecordPageShell } from "@/components/crm/records/record-page-shell";
 import { RelationAttribute } from "@/components/crm/records/relation-attribute";
@@ -99,6 +104,10 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
     queryFn: () => fetchJson<LeadDetail>(`/api/v2/crm/leads/${leadId}`),
   });
 
+  const fieldsQuery = useQuery({
+    queryKey: ["crm", "field-definitions", "LEAD"],
+    queryFn: () => fetchCrmFieldDefinitions("LEAD"),
+  });
   const edit = useAttributeEditor({
     path: `/api/v2/crm/leads/${leadId}`,
     invalidate: [["crm-lead", leadId], ["crm", "leads"]],
@@ -110,6 +119,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
   });
 
   const owners = useMemo(() => teamQuery.data?.data ?? [], [teamQuery.data]);
+  const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
   const lead = leadQuery.data;
 
   const changeStage = useMutation({
@@ -255,6 +265,12 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
               placeholder: "Not recorded",
               ...edit.text("source", lead.source),
             },
+            ...customFieldAttributes({
+              definitions,
+              values: lead.customFields ?? null,
+              onCommit: (key, value) =>
+                edit.save.mutate({ customFields: { [key]: value } }),
+            }),
           ]}
         />
       }

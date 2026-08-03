@@ -43,6 +43,7 @@ import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
 
+import { customFieldAttributes } from "./custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { DealContactsTab } from "./deal-contacts-tab";
@@ -369,6 +370,12 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                     },
                   ]
                 : []),
+              ...customFieldAttributes({
+                definitions,
+                values: deal.customFields,
+                onCommit: (key, value) =>
+                  edit.save.mutate({ customFields: { [key]: value } }),
+              }),
             ]}
           />
         }

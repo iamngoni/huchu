@@ -46,6 +46,9 @@ export type LeadIntakeSubmission = {
 export type LeadDetail = {
   id: string;
   leadNo: string;
+  /** The administrator's own fields. `CrmLead.customFields` has always been
+   *  there; the lead page just never read it. */
+  customFields?: Record<string, unknown> | null;
   title: string | null;
   stage: CrmLeadStage;
   probability: number | null;

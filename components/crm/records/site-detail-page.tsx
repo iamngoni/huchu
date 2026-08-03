@@ -15,6 +15,7 @@ import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
 
+import { customFieldAttributes } from "./custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { commentsTab, tasksTab } from "./record-tabs";
@@ -212,6 +213,12 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
               value: site.accessInstructions,
               placeholder: "No instructions",
             },
+            ...customFieldAttributes({
+              definitions,
+              values: site.customFields,
+              onCommit: (key, value) =>
+                edit.save.mutate({ customFields: { [key]: value } }),
+            }),
           ]}
         />
       }

@@ -17,6 +17,7 @@ import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
+import { customFieldAttributes } from "./custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { CompanyPeopleTab } from "./company-people-tab";
@@ -261,6 +262,12 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
               placeholder: "Not recorded",
               ...edit.text("taxNumber", company.taxNumber),
             },
+            ...customFieldAttributes({
+              definitions,
+              values: company.customFields,
+              onCommit: (key, value) =>
+                edit.save.mutate({ customFields: { [key]: value } }),
+            }),
           ]}
         />
       }

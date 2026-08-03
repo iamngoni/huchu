@@ -5,6 +5,11 @@ import { scoreLead } from "@/lib/crm/lead-scoring";
 import { prisma } from "@/lib/prisma";
 import { canEditRecord } from "@/lib/crm/permissions";
 import { crmLeadChannelSchema } from "@/lib/crm/views";
+import {
+  buildCustomFieldValues,
+  mergeCustomFields,
+  type FieldDefinition,
+} from "@/lib/crm/custom-fields";
 import { isCompanyUser } from "../../_helpers";
 
 const updateSchema = z.object({
@@ -20,6 +25,11 @@ const updateSchema = z.object({
   source: z.string().trim().max(120).nullable().optional(),
   sourceChannel: crmLeadChannelSchema.nullable().optional(),
   assignedToId: z.string().uuid().nullable().optional(),
+  // A lead is the one record type that never accepted the administrator's
+  // own fields, so anything captured on an intake form could not be
+  // corrected afterwards.
+  customFields: z.record(z.string(), z.unknown()).optional(),
+  clearCustomFields: z.array(z.string().trim().max(60)).max(50).optional(),
 });
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -111,7 +121,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const existing = await prisma.crmLead.findFirst({
       where: { id, companyId: session.user.companyId },
-      select: { id: true, assignedToId: true },
+      select: { id: true, assignedToId: true, customFields: true },
     });
     if (!existing) return errorResponse("Lead not found", 404);
     if (!await canEditRecord(session, existing.assignedToId)) {
@@ -128,6 +138,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
     if (!(await isCompanyUser(session.user.companyId, data.assignedToId))) {
       return errorResponse("Invalid assignee", 400);
+    }
+
+    // Merged, not replaced: the record page writes one property at a time,
+    // and a whole-object write would drop every field it did not send.
+    let customFields: ReturnType<typeof mergeCustomFields> | undefined;
+    if (data.customFields || data.clearCustomFields) {
+      const definitions = (await prisma.crmFieldDefinition.findMany({
+        where: { companyId: session.user.companyId, entity: "LEAD", archivedAt: null },
+        orderBy: { position: "asc" },
+      })) as unknown as FieldDefinition[];
+      const { values, errors } = buildCustomFieldValues(definitions, data.customFields, {
+        partial: true,
+      });
+      if (errors.length > 0) return errorResponse("Validation failed", 400, errors);
+      customFields = mergeCustomFields(existing.customFields, values, data.clearCustomFields ?? []);
     }
 
     // Throughout: `undefined` leaves a field alone, an explicit `null` clears
@@ -148,6 +173,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         source: data.source,
         sourceChannel: data.sourceChannel ?? undefined,
         assignedToId: data.assignedToId,
+        ...(customFields !== undefined ? { customFields } : {}),
       },
     });
     return successResponse(updated);
