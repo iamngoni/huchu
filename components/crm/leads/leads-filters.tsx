@@ -349,7 +349,7 @@ export function LeadsFilters({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className={cn("h-9 gap-2", className)}>
+        <Button variant="outline" className={cn(className)}>
           <Funnel className="size-4 opacity-70" />
           Filter
           {activeCount > 0 ? (
@@ -481,7 +481,7 @@ export function LeadsSortButton({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className={cn("h-9 gap-2", className)}>
+        <Button variant="outline" className={cn(className)}>
           <SortAscending className="size-4 opacity-70" />
           Sort
           <span className="text-[var(--text-muted)]">{current?.label}</span>

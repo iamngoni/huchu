@@ -23,8 +23,23 @@ function getIconComponent(iconName: string) {
   return iconRegistry[iconName] ?? Phosphor.Question;
 }
 
+/**
+ * Marks that are strokes rather than shapes.
+ *
+ * A chevron is two strokes meeting at a point. Phosphor's `fill` weight turns
+ * `CaretDown` into a solid triangle — a different mark entirely, and the one
+ * that had been shipping in every dropdown trigger, select, disclosure and
+ * "show more" in the product. The rest of the set stays filled, which is how
+ * the product is drawn; this is only about the ones that are meant to be a
+ * line.
+ */
+const STROKE_WEIGHT_ICONS = /^Caret/;
+
 function createPhosphorIcon(iconName: string, displayName: string): LucideIcon {
   const IconComponent = getIconComponent(iconName);
+  const defaultWeight: PhosphorIconProps["weight"] = STROKE_WEIGHT_ICONS.test(iconName)
+    ? "bold"
+    : "fill";
 
   const Icon = ({
     className,
@@ -52,7 +67,7 @@ function createPhosphorIcon(iconName: string, displayName: string): LucideIcon {
           color: "currentColor",
           ...style,
         }}
-        weight={weight ?? "fill"}
+        weight={weight ?? defaultWeight}
       />
     );
   };
@@ -152,6 +167,7 @@ export const ArrowDownward = createPhosphorIcon("ArrowDown", "ArrowDownward");
 export const ArrowUpward = createPhosphorIcon("ArrowUp", "ArrowUpward");
 export const BarChart3 = createPhosphorIcon("ChartBar", "BarChart3");
 export const Funnel = createPhosphorIcon("Funnel", "Funnel");
+export const SlidersHorizontal = createPhosphorIcon("Sliders", "SlidersHorizontal");
 export const AddressBook = createPhosphorIcon("AddressBook", "AddressBook");
 export const Megaphone = createPhosphorIcon("Megaphone", "Megaphone");
 export const CalendarCheck = createPhosphorIcon("CalendarCheck", "CalendarCheck");

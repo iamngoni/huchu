@@ -80,7 +80,7 @@ export function RecordListShell({
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder={searchPlaceholder}
-            className="h-9 w-full sm:w-64"
+            className="w-full sm:w-64"
             aria-label={searchPlaceholder}
           />
         }

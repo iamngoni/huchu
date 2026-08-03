@@ -266,7 +266,6 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
           <SegmentedControl
             value={layout}
             onValueChange={(value) => setLayout(value as typeof layout)}
-            size="sm"
             ariaLabel="List or board"
             options={[
               { value: "LIST", label: "List" },

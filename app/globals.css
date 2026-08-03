@@ -232,6 +232,51 @@
     }
   }
 
+  /* --- Control geometry -------------------------------------------------
+     Everything that reads as a button is built like one: same height, same
+     gap, same radius. Three places where that had drifted.
+
+     1. `.btn` carries `gap: 8px`, but the design system's Button wraps every
+        child in a `.btn-label` span it never styles. An icon passed as a
+        child therefore lands *inside* that span, where the button's gap
+        cannot reach it — measured at exactly 0px against the words on
+        "New lead", "Filter" and "Fields". The DS's own answer is the
+        `startIcon`/`endIcon` props, which render as siblings of the label;
+        this makes the label behave the same way for the hundreds of call
+        sites that pass an icon as a child instead. `gap: inherit` rather
+        than a number, so a button that sets its own gap keeps it. */
+  .btn-label {
+    display: inline-flex;
+    align-items: center;
+    gap: inherit;
+    min-width: 0;
+  }
+
+  /* 2. A segmented control is a row of buttons, so it stands as tall as one.
+        The DS sizes it off its own scale rather than the control-height
+        scale: `md` came out 34px and `sm` 28px beside 36px and 30px buttons,
+        which is what put a 24px Board/List toggle next to a 36px Filter
+        button in the same toolbar. Item height is the button height less the
+        track's own padding, so the *outer* edges line up — that is the part
+        anybody sees. Font sizes come up to the button's at the same size;
+        the DS's 12px `sm` is below this repo's floor anyway. */
+  .segmented {
+    padding: 3px;
+  }
+  .segmented .segmented-item {
+    height: calc(var(--h-control-md) - 6px);
+    font-size: 14px;
+    gap: 8px;
+  }
+  .segmented.segmented-sm {
+    padding: 2px;
+  }
+  .segmented.segmented-sm .segmented-item {
+    height: calc(var(--h-control-sm) - 4px);
+    font-size: 13px;
+    gap: 6px;
+  }
+
   /* Date input color scheme */
   input[type="date"],
   input[type="datetime-local"] {

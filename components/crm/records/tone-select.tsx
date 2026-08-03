@@ -91,14 +91,12 @@ export function ToneSelect({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          size="sm"
-          // `min-w-0` let the toolbar shrink this below its own content, which
-          // wrapped the caret onto a second line and made the button taller
-          // than every other trigger in the row. It holds its width instead.
-          className={cn(
-            "h-9 shrink-0 flex-nowrap justify-between gap-2 whitespace-nowrap",
-            className,
-          )}
+          // `shrink-0` because the toolbar would otherwise squeeze this below
+          // its own content. The height and the gap come from the button, not
+          // from here: this used to carry `size="sm" h-9`, which is asking for
+          // a 30px control and then forcing 36px back onto it — the habit that
+          // left three different heights in one row.
+          className={cn("shrink-0 justify-between whitespace-nowrap", className)}
           aria-label={label}
         >
           <span className="flex min-w-0 items-center gap-2">

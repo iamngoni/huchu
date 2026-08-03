@@ -260,7 +260,6 @@ export function LeadsWorkspace({
             <SegmentedControl
               value={viewType}
               onValueChange={(value) => setViewType(value as "TABLE" | "BOARD")}
-              size="sm"
               ariaLabel="Board or list"
               options={[
                 { value: "BOARD", label: "Board" },

@@ -126,7 +126,6 @@ export function CrmFollowUpsContent() {
             options={QUEUES.map((value) => ({ value, label: TASK_QUEUE_LABELS[value] }))}
             value={queue}
             onValueChange={(value) => setQueue(value as TaskQueue)}
-            size="sm"
             ariaLabel="Follow-up queue"
           />
         }

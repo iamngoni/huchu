@@ -251,7 +251,6 @@ export function DealsContent({
               setStatusFilter(value as typeof statusFilter);
               setPage(1);
             }}
-            size="sm"
             ariaLabel="Filter by status"
             options={[
               { value: "OPEN", label: "Open" },
@@ -272,7 +271,6 @@ export function DealsContent({
           <SegmentedControl
             value={layout}
             onValueChange={(value) => setLayout(value as typeof layout)}
-            size="sm"
             ariaLabel="Board or list"
             options={[
               { value: "BOARD", label: "Board" },

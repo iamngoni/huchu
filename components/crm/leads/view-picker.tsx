@@ -206,7 +206,7 @@ export function ViewPicker({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9 gap-2 pr-2">
+          <Button variant="outline" className="pr-2">
             <LayoutMark layout={active.layout} />
             <span className="max-w-40 truncate font-medium">{active.name}</span>
             <ChevronDown className="size-3 text-[var(--text-muted)]" />
