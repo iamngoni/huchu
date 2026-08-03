@@ -1279,7 +1279,10 @@ export function DataTable<TData, TValue>({
         className={cn(
           maxBodyHeight ? "overflow-auto" : undefined,
           tableContainerClassName,
-          mobileCardRenderer && "hidden md:block",
+          // Either mobile renderer replaces the table below `md`. Checking only
+          // `mobileCardRenderer` here left every `mobileListRenderer` caller
+          // stacking the list on top of the full table on a phone.
+          (mobileCardRenderer || mobileListRenderer) && "hidden md:block",
         )}
         style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}
       >
