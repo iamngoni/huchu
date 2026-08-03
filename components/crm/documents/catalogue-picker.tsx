@@ -7,53 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { fetchJson } from "@/lib/api-client";
 import { ClipboardList, Package, Search } from "@/lib/icons";
+import {
+  buildSuggestions,
+  type CatalogueProduct,
+  type LinePick,
+  type Suggestion,
+  type VisitItemOption,
+} from "@/lib/crm/quote-suggestions";
 import { cn } from "@/lib/utils";
 
-type PricedProduct = {
-  id: string;
-  code: string;
-  name: string;
-  description?: string | null;
-  unit: string;
-  isActive: boolean;
-  line: {
-    productId: string;
-    code: string;
-    description: string;
-    unitPrice: number;
-    taxRate: number;
-    unit: string;
-    priceSource: string;
-  };
-};
-
-/** A measurement somebody took on site, offered as a line. */
-export type VisitItemOption = {
-  id: string;
-  description: string;
-  quantity: number;
-  unit: string | null;
-  unitPrice: number | null;
-  /** Which visit it was measured on, so two surveys stay distinguishable. */
-  visitLabel: string;
-};
-
-export type CataloguePick = {
-  productId?: string;
-  description: string;
-  unitPrice: number | null;
-  taxRate?: number;
-  quantity?: number;
-};
-
-type Suggestion = {
-  key: string;
-  source: "catalogue" | "visit";
-  title: string;
-  detail: string;
-  trailing: string | null;
-  pick: CataloguePick;
-};
+export type { VisitItemOption };
+/** Kept as the old name: four call sites import it. */
+export type CataloguePick = LinePick;
 
 /**
  * Picking what you sell, instead of retyping it — without taking away typing.
@@ -98,70 +63,18 @@ export function CataloguePicker({
   const { data } = useQuery({
     queryKey: ["catalogue-search", debounced],
     queryFn: () =>
-      fetchJson<{ data: PricedProduct[] }>(
+      fetchJson<{ data: CatalogueProduct[] }>(
         `/api/v2/inventory/products?q=${encodeURIComponent(debounced)}`,
       ),
     enabled: open && debounced.length >= 2,
     staleTime: 60_000,
   });
 
-  const needle = value.trim().toLowerCase();
-
-  // Measured items are matched locally — there are a handful per record, and
-  // they should appear from the first keystroke rather than after two.
-  const visitSuggestions: Suggestion[] = visitItems
-    .filter((item) => !needle || item.description.toLowerCase().includes(needle))
-    .slice(0, 6)
-    .map((item) => ({
-      key: `visit-${item.id}`,
-      source: "visit",
-      title: item.description,
-      detail: [
-        item.quantity ? `${item.quantity}${item.unit ? ` ${item.unit}` : ""}` : null,
-        item.visitLabel,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      trailing:
-        item.unitPrice != null
-          ? item.unitPrice.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })
-          : null,
-      pick: {
-        description: item.description,
-        unitPrice: item.unitPrice,
-        quantity: item.quantity,
-      },
-    }));
-
-  const catalogueSuggestions: Suggestion[] = (data?.data ?? [])
-    .filter((product) => product.isActive)
-    .slice(0, 8)
-    .map((product) => ({
-      key: `product-${product.id}`,
-      source: "catalogue",
-      title: product.name,
-      detail:
-        product.line.priceSource !== "standard"
-          ? `${product.code} · ${product.line.priceSource} price`
-          : product.code,
-      trailing: product.line.unitPrice.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-      pick: {
-        productId: product.id,
-        description: product.line.description || product.name,
-        unitPrice: product.line.unitPrice,
-        taxRate: product.line.taxRate,
-      },
-    }));
-
-  // Measured first: on a job that had a survey, the thing being quoted is
-  // almost always the thing somebody stood in front of and measured.
-  const suggestions = [...visitSuggestions, ...catalogueSuggestions];
+  const suggestions = buildSuggestions({
+    visitItems,
+    products: data?.data ?? [],
+    query: value,
+  });
   const showing = open && suggestions.length > 0;
 
   const choose = (suggestion: Suggestion) => {
