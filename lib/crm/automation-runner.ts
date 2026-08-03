@@ -208,6 +208,10 @@ export async function runAutomations(event: AutomationEvent): Promise<void> {
 
       const actions = (rule.actions ?? []) as AutomationAction[];
       const outcomes: ActionOutcome[] = [];
+      // Measured rather than estimated: "this rule is slow" should be a fact
+      // somebody can check against the others, not a feeling about the rule
+      // that happens to run when the page is busy.
+      const startedAt = Date.now();
 
       for (const action of actions) {
         try {
@@ -234,6 +238,8 @@ export async function runAutomations(event: AutomationEvent): Promise<void> {
             recordId: event.recordId,
             status,
             result: outcomes as unknown as Prisma.InputJsonValue,
+            durationMs: Date.now() - startedAt,
+            actionCount: outcomes.length,
           },
         }),
         prisma.crmAutomation.update({

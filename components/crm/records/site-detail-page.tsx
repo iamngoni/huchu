@@ -18,7 +18,7 @@ import { formatMoney } from "@/components/crm/documents/document-types";
 import { customFieldAttributes } from "./custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
-import { commentsTab, mentionsTab, tasksTab } from "./record-tabs";
+import { automationTab, commentsTab, mentionsTab, tasksTab } from "./record-tabs";
 import { RecordAttributes } from "./record-attributes";
 import { RelationAttribute } from "./relation-attribute";
 import { useAttributeEditor } from "./use-attribute-editor";
@@ -281,6 +281,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
         tasksTab({ ref: { kind: "site", id: siteId }, currentUserId: session?.user?.id }),
         commentsTab({ ref: { kind: "site", id: siteId }, currentUserId: session?.user?.id }),
         mentionsTab({ ref: { kind: "site", id: siteId } }),
+        automationTab({ ref: { kind: "site", id: siteId } }),
         {
           // Sites carry no activity trail of their own, so there is nothing to
           // filter history out of — the tab stays for consistency.

@@ -4,15 +4,17 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Alert, Badge, EmptyState, Stack } from "@corelithzw/react";
+import { Alert, Badge, EmptyState, SegmentedControl, Stack } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { ClientDate } from "@/components/ui/client-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageChrome } from "@/components/layout/page-chrome";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { TRIGGER_LABELS } from "@/lib/crm/automation";
+import { REPORT_RANGES, REPORT_RANGE_LABELS, type ReportRange } from "@/lib/crm/reports";
 import { Rule } from "@/lib/icons";
 
+import { RunInsightsPanel } from "./run-insights-panel";
 import { TRIGGER_ICON } from "./workflow-marks";
 
 type RunRow = {
@@ -80,6 +82,7 @@ function actionLabel(type: string): string {
  */
 export function WorkflowRunsContent() {
   const [status, setStatus] = useState<"all" | "SUCCEEDED" | "FAILED">("all");
+  const [range, setRange] = useState<ReportRange>("30d");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["crm-workflow-runs", status],
@@ -94,6 +97,19 @@ export function WorkflowRunsContent() {
   return (
     <div className="space-y-5">
       <PageChrome title="Workflow activity" />
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SegmentedControl
+          options={REPORT_RANGES.map((value) => ({ value, label: REPORT_RANGE_LABELS[value] }))}
+          value={range}
+          onValueChange={(value) => setRange(value as ReportRange)}
+          aria-label="Reporting period"
+        />
+      </div>
+
+      <RunInsightsPanel range={range} />
+
+      <h2 className="text-base font-semibold text-[var(--text-strong)]">Every firing</h2>
 
       <div className="flex flex-wrap items-center gap-2">
         {(

@@ -8049,6 +8049,13 @@ model CrmAutomationRun {
   status       CrmAutomationRunStatus @default(SUCCEEDED)
   /// Per-action outcomes, and the message when one failed.
   result       Json?
+  /// Wall-clock time the actions took. Measured rather than estimated, so
+  /// "this rule is slow" is a fact somebody can check rather than a feeling.
+  durationMs   Int?
+  /// How many actions this firing actually carried out. The unit of work a
+  /// rule spends — a rule that fires rarely but does eight things each time
+  /// costs more than one that fires often and sets a field.
+  actionCount  Int      @default(0)
   createdAt    DateTime @default(now())
 
   company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)

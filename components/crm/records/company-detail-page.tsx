@@ -21,7 +21,7 @@ import { customFieldAttributes } from "./custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { CompanyPeopleTab } from "./company-people-tab";
-import { commentsTab, mentionsTab, tasksTab } from "./record-tabs";
+import { automationTab, commentsTab, mentionsTab, tasksTab } from "./record-tabs";
 import { RecordAttributes } from "./record-attributes";
 import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
@@ -327,6 +327,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
         tasksTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
         commentsTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
         mentionsTab({ ref: { kind: "company", id: companyId } }),
+        automationTab({ ref: { kind: "company", id: companyId } }),
         {
           value: "history",
           label: "History",

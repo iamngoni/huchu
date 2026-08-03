@@ -7,6 +7,7 @@ import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityComposer, type ActivityTarget } from "@/components/crm/lead-detail/activity-composer";
 import { RecordStory, type StoryEvent } from "./record-story";
 import { MentionsTab } from "./mentions-tab";
+import { AutomationTab } from "./automation-tab";
 import type { CollabEntity } from "@/lib/crm/collaboration";
 import type { CrmTaskRecordRef } from "@/lib/crm/crm-v2";
 
@@ -140,6 +141,31 @@ export function mentionsTab({ ref }: { ref: RecordRef }): RecordTab {
     value: "mentions",
     label: "Mentions",
     content: <MentionsTab recordId={ref.id} />,
+  };
+}
+
+/** The automation layer's name for the same record. */
+const AUTOMATION_ENTITY: Record<RecordKind, "LEAD" | "DEAL" | "PERSON" | "COMPANY" | "SITE"> = {
+  lead: "LEAD",
+  deal: "DEAL",
+  company: "COMPANY",
+  person: "PERSON",
+  site: "SITE",
+};
+
+/**
+ * What the workflows have done here, and what could still fire.
+ *
+ * On every kind rather than only the two that triggers currently reach: a
+ * company page saying "nothing is watching this record" is a useful answer,
+ * and a tab that appears and disappears depending on the record type is a tab
+ * people stop looking for.
+ */
+export function automationTab({ ref }: { ref: RecordRef }): RecordTab {
+  return {
+    value: "automation",
+    label: "Workflows",
+    content: <AutomationTab entity={AUTOMATION_ENTITY[ref.kind]} recordId={ref.id} />,
   };
 }
 
