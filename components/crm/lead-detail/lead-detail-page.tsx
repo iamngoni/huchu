@@ -8,17 +8,21 @@ import type { CrmLeadStage } from "@prisma/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusChip } from "@/components/ui/status-chip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { ArrowRight, Calendar, FileText, Funnel, Pencil } from "@/lib/icons";
+import {
+  ArrowRight,
+  Building2,
+  Funnel,
+  Payments,
+  TrendingUp,
+  UserRound,
+} from "@/lib/icons";
 import { updateCrmLeadStage } from "@/lib/crm/crm-v2";
 import { visitItemsToQuotationLines } from "@/lib/crm/site-visits";
 import type { CrmDocumentLineInput } from "@/lib/crm/accounting-bridge";
 
-import { PageChrome } from "@/components/layout/page-chrome";
 import { DocumentList } from "@/components/crm/documents/document-list";
 import { EntityLink } from "@/components/crm/records/entity-link";
 import { formatMoney, invoiceOutstanding } from "@/components/crm/documents/document-types";
@@ -37,6 +41,10 @@ import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet
 
 import { ActivityComposer } from "./activity-composer";
 import { RecordStory } from "@/components/crm/records/record-story";
+import { RecordAttributes } from "@/components/crm/records/record-attributes";
+import { RecordPageShell } from "@/components/crm/records/record-page-shell";
+import { RelationAttribute } from "@/components/crm/records/relation-attribute";
+import { useAttributeEditor } from "@/components/crm/records/use-attribute-editor";
 import { buildStory } from "@/lib/crm/story";
 import { AttributesPanel } from "./attributes-panel";
 import { StageProgress } from "./stage-progress";
@@ -90,6 +98,11 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
   const leadQuery = useQuery({
     queryKey: ["crm-lead", leadId],
     queryFn: () => fetchJson<LeadDetail>(`/api/v2/crm/leads/${leadId}`),
+  });
+
+  const edit = useAttributeEditor({
+    path: `/api/v2/crm/leads/${leadId}`,
+    invalidate: [["crm-lead", leadId], ["crm", "leads"]],
   });
 
   const teamQuery = useQuery({
@@ -152,74 +165,101 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
   const latestQuote = lead.documents.find((doc) => doc.type === "QUOTATION");
 
   return (
-    <div className="space-y-4">
-      {/* Name, back and actions all live in the top app bar, the same as every
-          other page. What stays here is the part the bar cannot carry: who this
-          lead is with, and where it has got to. */}
-      <PageChrome
-        title={lead.title ?? lead.leadNo}
-        icon={Funnel}
-        backHref="/crm/leads"
-        backLabel="All leads"
-      >
+    <RecordPageShell
+      icon={Funnel}
+      backHref="/crm/leads"
+      backLabel="All leads"
+      title={lead.title ?? lead.leadNo}
+      reference={lead.leadNo}
+      status={{ status: CRM_STAGE_STATUS[lead.stage], label: CRM_STAGE_LABELS[lead.stage] }}
+      subtitle={
         <>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-3.5 w-3.5" />
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={() => setScheduleOpen(true)}
-          >
-            <Calendar className="h-3.5 w-3.5" />
-            Schedule visit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            disabled={!lead.clientId}
-            title={lead.clientId ? undefined : "Attach a client before quoting"}
-            onClick={() => setTab("documents")}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            Documents
-          </Button>
-          {/* Converting is the one thing a qualified lead exists to do, so it
-              is the primary action until it has been done. */}
-          <Button size="sm" className="gap-1.5" onClick={() => setConvertOpen(true)}>
-            <ArrowRight className="h-3.5 w-3.5" />
-            Convert to deal
-          </Button>
+          <EntityLink href={lead.clientId ? `/crm/companies/${lead.clientId}` : null} muted>
+            {lead.client?.name ?? "No client"}
+          </EntityLink>
+          {" · "}
+          <EntityLink href={lead.assignedTo ? `/crm/reps/${lead.assignedTo.id}` : null} muted>
+            {lead.assignedTo?.name ?? "Unassigned"}
+          </EntityLink>
         </>
-      </PageChrome>
-
-      <header className="space-y-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span className="font-mono text-sm text-[var(--text-muted)]">{lead.leadNo}</span>
-          <StatusChip
-            status={CRM_STAGE_STATUS[lead.stage]}
-            label={CRM_STAGE_LABELS[lead.stage]}
-          />
-          <span className="min-w-0 truncate text-sm text-[var(--text-muted)]">
-            <EntityLink
-              href={lead.clientId ? `/crm/companies/${lead.clientId}` : null}
-              muted
-            >
-              {lead.client?.name ?? "No client"}
-            </EntityLink>
-            {" · "}
-            <EntityLink
-              href={lead.assignedTo ? `/crm/reps/${lead.assignedTo.id}` : null}
-              muted
-            >
-              {lead.assignedTo?.name ?? "Unassigned"}
-            </EntityLink>
-          </span>
-        </div>
-
+      }
+      primaryAction={
+        // Converting is the one thing a qualified lead exists to do.
+        <Button size="sm" className="gap-1.5" onClick={() => setConvertOpen(true)}>
+          <ArrowRight className="h-3.5 w-3.5" />
+          Convert to deal
+        </Button>
+      }
+      actions={[
+        { label: "Edit", onSelect: () => setEditOpen(true) },
+        { label: "Schedule a visit", onSelect: () => setScheduleOpen(true) },
+      ]}
+      attributes={
+        // A lead had no property list at all, which is why nothing on it
+        // could be corrected without opening the edit form.
+        <RecordAttributes
+          attributes={[
+            {
+              id: "value",
+              label: "Value",
+              icon: Payments,
+              mono: true,
+              placeholder: "Not sized",
+              ...edit.numeric("estimatedValue", lead.estimatedValue),
+            },
+            {
+              id: "probability",
+              label: "Likelihood",
+              icon: TrendingUp,
+              mono: true,
+              placeholder: "0",
+              ...edit.numeric("probability", lead.probability),
+            },
+            {
+              id: "company",
+              label: "Company",
+              icon: Building2,
+              display: (
+                <RelationAttribute
+                  value={lead.client?.name ?? null}
+                  href={lead.clientId ? `/crm/companies/${lead.clientId}` : null}
+                  types={["COMPANY"]}
+                  placeholder="No company"
+                  searchPlaceholder="Search companies"
+                  onPick={(record) => edit.save.mutate({ clientId: record.id })}
+                  onClear={() => edit.save.mutate({ clientId: null })}
+                />
+              ),
+            },
+            {
+              id: "contact",
+              label: "Contact",
+              icon: UserRound,
+              placeholder: "Nobody named",
+              ...edit.text("contactName", lead.contactName),
+            },
+            {
+              id: "phone",
+              label: "Phone",
+              placeholder: "Not recorded",
+              ...edit.text("contactPhone", lead.contactPhone),
+            },
+            {
+              id: "email",
+              label: "Email",
+              placeholder: "Not recorded",
+              ...edit.text("contactEmail", lead.contactEmail),
+            },
+            {
+              id: "source",
+              label: "Source",
+              placeholder: "Not recorded",
+              ...edit.text("source", lead.source),
+            },
+          ]}
+        />
+      }
+      beforeTabs={
         <StageProgress
           stage={lead.stage}
           disabled={changeStage.isPending}
@@ -232,28 +272,16 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             changeStage.mutate({ stage });
           }}
         />
-      </header>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <ActivityComposer target={{ kind: "lead", id: leadId }} />
-
-          <Tabs value={tab} onValueChange={setTab}>
-            <div className="scroll-rail max-w-full">
-              <TabsList>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                <TabsTrigger value="documents">
-                  Documents{lead.documents.length > 0 ? ` (${lead.documents.length})` : ""}
-                </TabsTrigger>
-                <TabsTrigger value="visits">
-                  Visits{lead.appointments.length > 0 ? ` (${lead.appointments.length})` : ""}
-                </TabsTrigger>
-                <TabsTrigger value="tasks">Tasks</TabsTrigger>
-                <TabsTrigger value="comments">Comments</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="timeline" className="pt-4">
+      }
+      activeTab={tab}
+      onTabChange={setTab}
+      tabs={[
+        {
+          value: "timeline",
+          label: "Timeline",
+          content: (
+            <div className="space-y-4">
+              <ActivityComposer target={{ kind: "lead", id: leadId }} />
               {/* The whole story, not just the activity table: visits, tasks,
                   documents and the day it arrived, in one order. */}
               <RecordStory
@@ -267,40 +295,53 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
                 })}
                 emptyMessage="Nothing has happened on this lead yet. Log a call or a note above to start the trail."
               />
-            </TabsContent>
-
-            <TabsContent value="documents" className="pt-4">
-              <DocumentList
-                basePath={`/api/v2/crm/leads/${leadId}`}
-                currency={lead.currency}
-                documents={lead.documents}
-                // A lead with a name to bill can be quoted; the company is
-                // created from the contact if there is not one already.
-                canCreate={Boolean(lead.clientId || lead.contactName || lead.title)}
-                prefillLines={quotationPrefill}
-                onPrefillConsumed={() => setQuotationPrefill(undefined)}
-              />
-            </TabsContent>
-
-            <TabsContent value="visits" className="pt-4">
-              <VisitsTab
-                appointments={lead.appointments}
-                onSchedule={() => setScheduleOpen(true)}
-                onOpenReport={setReportFor}
-              />
-            </TabsContent>
-
-            <TabsContent value="tasks" className="pt-4">
-              <RecordTasksTab record={{ leadId }} currentUserId={currentUserId} />
-            </TabsContent>
-
-            <TabsContent value="comments" className="pt-4">
-              <CommentThread entity="LEAD" recordId={leadId} currentUserId={currentUserId} />
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        <aside className="space-y-3">
+            </div>
+          ),
+        },
+        {
+          value: "documents",
+          label: "Documents",
+          count: lead.documents.length,
+          content: (
+            <DocumentList
+              basePath={`/api/v2/crm/leads/${leadId}`}
+              currency={lead.currency}
+              documents={lead.documents}
+              // A lead with a name to bill can be quoted; the company is
+              // created from the contact if there is not one already.
+              canCreate={Boolean(lead.clientId || lead.contactName || lead.title)}
+              prefillLines={quotationPrefill}
+              onPrefillConsumed={() => setQuotationPrefill(undefined)}
+            />
+          ),
+        },
+        {
+          value: "visits",
+          label: "Visits",
+          count: lead.appointments.length,
+          content: (
+            <VisitsTab
+              appointments={lead.appointments}
+              onSchedule={() => setScheduleOpen(true)}
+              onOpenReport={setReportFor}
+            />
+          ),
+        },
+        {
+          value: "tasks",
+          label: "Tasks",
+          content: <RecordTasksTab record={{ leadId }} currentUserId={currentUserId} />,
+        },
+        {
+          value: "comments",
+          label: "Comments",
+          content: (
+            <CommentThread entity="LEAD" recordId={leadId} currentUserId={currentUserId} />
+          ),
+        },
+      ]}
+      rail={
+        <>
           <RailSection title="Deal">
             <p className="font-mono text-2xl">
               {formatLeadValue(lead.estimatedValue, lead.currency)}
@@ -395,8 +436,10 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
           <RailSection title="Details">
             <AttributesPanel lead={lead} owners={owners} />
           </RailSection>
-        </aside>
-      </div>
+        </>
+      }
+    >
+
 
       <LeadFormSheet
         open={editOpen}
@@ -464,6 +507,6 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
           )
         }
       />
-    </div>
+    </RecordPageShell>
   );
 }

@@ -59,6 +59,8 @@ export function RecordPageShell({
   onTabChange,
   rail,
   attributes,
+  beforeTabs,
+  children,
 }: {
   backHref: string;
   backLabel: string;
@@ -76,6 +78,15 @@ export function RecordPageShell({
   activeTab: string;
   onTabChange: (value: string) => void;
   rail?: ReactNode;
+  /**
+   * A record-specific band between the properties and the tabs. A lead's
+   * stage stepper lives here: its stages are a fixed enum you click along,
+   * which is neither a property nor a tab.
+   */
+  beforeTabs?: ReactNode;
+  /** Sheets and dialogs the page owns — mounted outside the tab content so
+   *  they survive a tab change. */
+  children?: ReactNode;
   /**
    * The record's properties, shown above the tabs. Notion-style, because a
    * property in a right rail is one a phone never shows and a reader looks at
@@ -137,6 +148,8 @@ export function RecordPageShell({
         <div className="border-y border-[var(--border-subtle)] py-3">{attributes}</div>
       ) : null}
 
+      {beforeTabs}
+
       <div className={rail ? "detail-grid" : "min-w-0"}>
         <div className="min-w-0 space-y-4">
           <Tabs value={activeTab} onValueChange={onTabChange}>
@@ -160,6 +173,8 @@ export function RecordPageShell({
 
         {rail ? <aside className="space-y-3">{rail}</aside> : null}
       </div>
+
+      {children}
     </div>
   );
 }
