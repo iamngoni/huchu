@@ -369,9 +369,11 @@ export function DealsBoard({
 
   if (boardQuery.isLoading && !board) {
     return (
-      <div className="flex gap-3" aria-busy="true">
+      // A phone is about to get a list, so it waits for a list — not a strip
+      // of column skeletons, of which it can see one and a quarter.
+      <div className="space-y-2 lg:flex lg:space-y-0 lg:gap-3" aria-busy="true">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton key={index} className="h-96 w-72 shrink-0" />
+          <Skeleton key={index} className="h-16 w-full lg:h-96 lg:w-72 lg:shrink-0" />
         ))}
       </div>
     );

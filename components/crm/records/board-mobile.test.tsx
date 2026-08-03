@@ -61,7 +61,12 @@ describe("MobileBoard", () => {
     expect(html).toContain("No leads in this stage");
   });
 
-  it("renders nothing when there are no stages at all", () => {
-    expect(renderToStaticMarkup(<MobileBoard stages={[]} />)).toBe("");
+  it("says so when there are no stages at all", () => {
+    // Not an empty document: a phone showing nothing under the toolbar reads
+    // as a page that failed, not a board with nothing in it.
+    const html = renderToStaticMarkup(
+      <MobileBoard stages={[]} emptyTitle="No leads yet" />,
+    );
+    expect(html).toContain("No leads yet");
   });
 });

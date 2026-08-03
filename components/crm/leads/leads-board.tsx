@@ -203,9 +203,9 @@ export function LeadsBoard({
 
   if (boardQuery.isLoading) {
     return (
-      <div className={cn("scroll-rail flex gap-3 overflow-x-auto pb-2", className)}>
+      <div className={cn("space-y-2 lg:flex lg:space-y-0 lg:gap-3 lg:overflow-x-auto lg:pb-2", className)}>
         {Array.from({ length: 5 }).map((_, index) => (
-          <Skeleton key={index} className="h-96 w-72 shrink-0 rounded-[var(--card-radius)]" />
+          <Skeleton key={index} className="h-16 w-full rounded-[var(--card-radius)] lg:h-96 lg:w-72 lg:shrink-0" />
         ))}
       </div>
     );

@@ -2,6 +2,8 @@
 
 import { useState, type ReactNode } from "react";
 
+import { EmptyState } from "@corelithzw/react";
+
 import { RecordList, type RecordListRow } from "./record-list";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +52,18 @@ export function MobileBoard({
     stages.find((stage) => stage.count > 0) ??
     stages[0];
 
-  if (!active) return null;
+  // A board with no stages at all — an unconfigured pipeline, or a filter that
+  // excluded every one. The desktop strip shows an empty rail and its own
+  // toolbar around it; a phone showed nothing whatsoever under the toolbar,
+  // which reads as a page that failed to load rather than one with nothing in
+  // it. Caught by screenshotting a tenant that had no leads.
+  if (!active) {
+    return (
+      <div className={className}>
+        <EmptyState title={emptyTitle} body={emptyBody} />
+      </div>
+    );
+  }
 
   return (
     <div className={cn("space-y-3", className)}>
