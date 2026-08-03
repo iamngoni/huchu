@@ -6,13 +6,17 @@ import { hasCrmFullAccess } from "@/lib/crm/scope";
 import {
   REPORT_RANGES,
   bucketByPeriod,
+  bucketSeries,
   buildFunnel,
   forecast,
   medianCycleDays,
+  medianDaysInStage,
   rangeToDates,
+  shareSlices,
   summarizeGroups,
   winRate,
   type ReportRange,
+  type StageChange,
 } from "@/lib/crm/reports";
 
 /**
@@ -49,6 +53,7 @@ export async function GET(request: NextRequest) {
           wonAt: true,
           lostAt: true,
           source: true,
+          stageId: true,
           assignedToId: true,
           assignedTo: { select: { id: true, name: true } },
           stage: { select: { id: true, name: true, status: true, position: true } },
@@ -74,6 +79,47 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    // How long deals sit in each stage, reconstructed from the stage-change
+    // trail. A separate query rather than part of the fan-out above because it
+    // is keyed on the deals that came back: asking for every stage change in
+    // the company would drag in years of history to answer a question about
+    // this quarter.
+    const stageChanges =
+      deals.length === 0
+        ? []
+        : await prisma.crmActivity.findMany({
+            where: {
+              companyId,
+              type: "STAGE_CHANGE",
+              dealId: { in: deals.map((deal) => deal.id) },
+            },
+            select: { dealId: true, metadata: true, occurredAt: true },
+            orderBy: { occurredAt: "asc" },
+          });
+
+    const transitions: StageChange[] = stageChanges.map((change) => {
+      const metadata = (change.metadata ?? {}) as {
+        fromStageId?: unknown;
+        toStageId?: unknown;
+      };
+      return {
+        dealId: change.dealId!,
+        fromStageId: typeof metadata.fromStageId === "string" ? metadata.fromStageId : null,
+        toStageId: typeof metadata.toStageId === "string" ? metadata.toStageId : null,
+        at: change.occurredAt,
+      };
+    });
+
+    const dwell = medianDaysInStage(
+      deals.map((deal) => ({
+        id: deal.id,
+        createdAt: deal.createdAt,
+        closedAt: deal.wonAt ?? deal.lostAt,
+        currentStageId: deal.stageId,
+      })),
+      transitions,
+    );
+
     // A deal that reached stage 4 also reached stages 1–3, so the funnel counts
     // everything at or past each position. Counting only what sits in a stage
     // right now would show a funnel that widens further down.
@@ -92,7 +138,12 @@ export async function GET(request: NextRequest) {
           value: reached.reduce((sum, deal) => sum + (deal.value ?? 0), 0),
         };
       }),
-    );
+    ).map((stage) => ({
+      // Null rather than zero where nothing has been through: "0 days" reads
+      // as instant, which is the opposite of "we have no idea yet".
+      ...stage,
+      medianDaysInStage: dwell[stage.key] ?? null,
+    }));
 
     const counts = {
       won: deals.filter((deal) => deal.wonAt).length,
@@ -136,6 +187,20 @@ export async function GET(request: NextRequest) {
       return summarizeGroups(Array.from(map.values()));
     };
 
+    const byOwner = groupBy((deal) => ({
+      key: deal.assignedToId ?? "unassigned",
+      label: deal.assignedTo?.name ?? "Unassigned",
+    }));
+    const bySource = groupBy((deal) => ({
+      key: deal.source ?? "unknown",
+      label: deal.source ?? "Not recorded",
+    }));
+
+    // A year of daily points is 365 pixels of noise; a week of weekly points is
+    // one. The bucket follows the range rather than being a setting nobody
+    // would find.
+    const granularity = range === "12m" ? "week" : "day";
+
     return successResponse({
       range,
       from: from.toISOString(),
@@ -153,18 +218,35 @@ export async function GET(request: NextRequest) {
       forecast: forecast(
         openDeals.map((deal) => ({ value: deal.value, probability: deal.probability })),
       ),
-      byOwner: groupBy((deal) => ({
-        key: deal.assignedToId ?? "unassigned",
-        label: deal.assignedTo?.name ?? "Unassigned",
-      })),
-      bySource: groupBy((deal) => ({
-        key: deal.source ?? "unknown",
-        label: deal.source ?? "Not recorded",
-      })),
+      byOwner,
+      bySource,
+      // Where the won money came from, as slices of one total. Value rather
+      // than count: two sources bringing in ten deals each are not equal when
+      // one of them brings in ten times the money.
+      sourceShare: shareSlices(
+        bySource.map((row) => ({ key: row.key, label: row.label, value: row.wonValue })),
+      ),
+      // Won business over time, counted and totalled in the same walk so the
+      // two lines cannot disagree with each other.
+      trend: {
+        granularity,
+        won: bucketSeries(
+          deals
+            .filter((deal) => deal.wonAt)
+            .map((deal) => ({ at: deal.wonAt!, value: deal.value ?? 0 })),
+          { from, to },
+          granularity,
+        ),
+        created: bucketSeries(
+          deals.map((deal) => ({ at: deal.createdAt, value: deal.value ?? 0 })),
+          { from, to },
+          granularity,
+        ),
+      },
       activity: bucketByPeriod(
         activities.map((activity) => activity.occurredAt),
         { from, to },
-        range === "12m" ? "week" : "day",
+        granularity,
       ),
       leads: {
         created: leads.length,

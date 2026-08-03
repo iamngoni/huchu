@@ -166,20 +166,28 @@ export function forecast(
 
 export type ActivityBucket = { period: string; count: number };
 
+export type SeriesPoint = { at: Date | string; value?: number | null };
+export type SeriesBucket = { period: string; count: number; value: number };
+
 /**
- * Roll timestamps into day or week buckets, filling the gaps.
+ * Roll timestamped points into day or week buckets, filling the gaps.
  *
  * Empty periods are emitted as zero rather than skipped: a chart that omits a
  * quiet week draws a straight line through it and hides exactly the thing
  * somebody opened the chart to see.
+ *
+ * Each bucket carries both a count and a summed value, because the two
+ * questions asked of a trend — "how many" and "how much" — are the same walk
+ * over the same rows, and computing them separately is how they end up
+ * disagreeing.
  */
-export function bucketByPeriod(
-  timestamps: (Date | string)[],
+export function bucketSeries(
+  points: SeriesPoint[],
   range: { from: Date; to: Date },
   granularity: "day" | "week" = "day",
-): ActivityBucket[] {
+): SeriesBucket[] {
   const step = granularity === "week" ? 7 : 1;
-  const buckets = new Map<string, number>();
+  const buckets = new Map<string, { count: number; value: number }>();
 
   const cursor = new Date(range.from);
   cursor.setHours(0, 0, 0, 0);
@@ -187,13 +195,13 @@ export function bucketByPeriod(
   end.setHours(0, 0, 0, 0);
 
   while (cursor <= end) {
-    buckets.set(cursor.toISOString().slice(0, 10), 0);
+    buckets.set(cursor.toISOString().slice(0, 10), { count: 0, value: 0 });
     cursor.setDate(cursor.getDate() + step);
   }
 
   const keys = Array.from(buckets.keys());
-  for (const stamp of timestamps) {
-    const date = toDate(stamp);
+  for (const point of points) {
+    const date = toDate(point.at);
     if (Number.isNaN(date.getTime())) continue;
     const day = new Date(date);
     day.setHours(0, 0, 0, 0);
@@ -206,10 +214,163 @@ export function bucketByPeriod(
       if (key <= iso) bucketKey = key;
       else break;
     }
-    if (bucketKey) buckets.set(bucketKey, (buckets.get(bucketKey) ?? 0) + 1);
+    if (!bucketKey) continue;
+    const bucket = buckets.get(bucketKey)!;
+    bucket.count += 1;
+    bucket.value += point.value ?? 0;
   }
 
-  return Array.from(buckets.entries()).map(([period, count]) => ({ period, count }));
+  return Array.from(buckets.entries()).map(([period, bucket]) => ({
+    period,
+    count: bucket.count,
+    value: Math.round(bucket.value * 100) / 100,
+  }));
+}
+
+/** Counts only, for callers that never had a value to sum. */
+export function bucketByPeriod(
+  timestamps: (Date | string)[],
+  range: { from: Date; to: Date },
+  granularity: "day" | "week" = "day",
+): ActivityBucket[] {
+  return bucketSeries(
+    timestamps.map((at) => ({ at })),
+    range,
+    granularity,
+  ).map(({ period, count }) => ({ period, count }));
+}
+
+export type StageChange = {
+  dealId: string;
+  /** Null when the metadata predates stage ids being recorded. */
+  toStageId: string | null;
+  fromStageId: string | null;
+  at: Date | string;
+};
+
+export type DealLife = {
+  id: string;
+  createdAt: Date | string;
+  /** Won or lost; null while it is still running. */
+  closedAt: Date | string | null;
+  currentStageId: string;
+};
+
+/**
+ * How long a deal typically sits in each stage.
+ *
+ * A funnel says how many survive each step; it says nothing about the step
+ * that everything survives and nothing leaves for five weeks. That stage is
+ * usually the expensive one, and it is invisible until it is measured.
+ *
+ * Reconstructed from the stage-change trail rather than stored on the deal:
+ * a `daysInStage` column would only ever describe the stage a deal is in now,
+ * and the question is about the stages it has already been through.
+ *
+ * The stage a deal opened in is taken from the first change's `fromStageId`,
+ * falling back to where it sits now for a deal that has never moved. The last
+ * span runs to the close, or to now for a deal still in flight — a deal that
+ * has been parked in Quoted for six weeks is precisely the thing worth
+ * counting, so excluding open deals would hide it.
+ *
+ * The median, not the mean, for the same reason as the cycle time: one deal
+ * that sat in a stage for a year should not redefine "normal".
+ */
+export function medianDaysInStage(
+  deals: DealLife[],
+  changes: StageChange[],
+  now: Date = new Date(),
+): Record<string, number> {
+  const byDeal = new Map<string, StageChange[]>();
+  for (const change of changes) {
+    const list = byDeal.get(change.dealId);
+    if (list) list.push(change);
+    else byDeal.set(change.dealId, [change]);
+  }
+
+  const durations = new Map<string, number[]>();
+  const push = (stageId: string, days: number) => {
+    if (!Number.isFinite(days)) return;
+    const list = durations.get(stageId);
+    if (list) list.push(Math.max(0, days));
+    else durations.set(stageId, [Math.max(0, days)]);
+  };
+
+  for (const deal of deals) {
+    const moves = (byDeal.get(deal.id) ?? [])
+      .filter((change) => change.toStageId)
+      .sort((a, b) => toDate(a.at).getTime() - toDate(b.at).getTime());
+
+    let stageId = moves[0]?.fromStageId ?? deal.currentStageId;
+    let enteredAt = toDate(deal.createdAt).getTime();
+
+    for (const move of moves) {
+      const at = toDate(move.at).getTime();
+      push(stageId, (at - enteredAt) / 86_400_000);
+      stageId = move.toStageId!;
+      enteredAt = at;
+    }
+
+    const end = deal.closedAt ? toDate(deal.closedAt).getTime() : now.getTime();
+    push(stageId, (end - enteredAt) / 86_400_000);
+  }
+
+  const result: Record<string, number> = {};
+  for (const [stageId, days] of durations) {
+    const sorted = days.sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    const median =
+      sorted.length % 2 === 0
+        ? (sorted[middle - 1] + sorted[middle]) / 2
+        : sorted[middle];
+    result[stageId] = Math.round(median * 10) / 10;
+  }
+  return result;
+}
+
+export type ShareSlice = { key: string; label: string; value: number; share: number };
+
+/**
+ * The top slices of a total, with everything else folded into one.
+ *
+ * A pie with nineteen slivers is a legend, not a chart. Past the limit the
+ * remainder becomes a single "Other" so the shares still sum to one — dropping
+ * the tail instead would draw a pie that quietly lies about the total.
+ *
+ * Zero and negative values are excluded: a slice of nothing has no angle, and
+ * a negative one would eat somebody else's.
+ */
+export function shareSlices(
+  rows: { key: string; label: string; value: number }[],
+  limit = 5,
+): ShareSlice[] {
+  const positive = rows
+    .filter((row) => row.value > 0)
+    .sort((a, b) => b.value - a.value);
+
+  const total = positive.reduce((sum, row) => sum + row.value, 0);
+  if (total <= 0) return [];
+
+  const head = positive.slice(0, limit);
+  const tail = positive.slice(limit);
+  const slices = head.map((row) => ({
+    key: row.key,
+    label: row.label,
+    value: row.value,
+    share: row.value / total,
+  }));
+
+  if (tail.length > 0) {
+    const rest = tail.reduce((sum, row) => sum + row.value, 0);
+    slices.push({
+      key: "__other",
+      label: `Other (${tail.length})`,
+      value: rest,
+      share: rest / total,
+    });
+  }
+
+  return slices;
 }
 
 /** Percent for display, without pretending to precision the data lacks. */

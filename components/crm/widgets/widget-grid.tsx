@@ -167,14 +167,27 @@ export function WidgetGrid({
   editing,
   onChange,
   renderWidget,
+  noun = "widget",
+  adding: controlledAdding,
+  onAddingChange,
 }: {
   scope: OverviewScope;
   widgets: WidgetInstance[];
   editing: boolean;
   onChange: (next: WidgetInstance[]) => void;
   renderWidget: (instance: WidgetInstance) => ReactNode;
+  /** What one of these is called here — "widget" on an overview, "report" on reports. */
+  noun?: string;
+  /** Controlled when the page has its own "Add …" button in the app bar. */
+  adding?: boolean;
+  onAddingChange?: (open: boolean) => void;
 }) {
-  const [adding, setAdding] = useState(false);
+  const [uncontrolledAdding, setUncontrolledAdding] = useState(false);
+  const adding = controlledAdding ?? uncontrolledAdding;
+  const setAdding = (next: boolean) => {
+    setUncontrolledAdding(next);
+    onAddingChange?.(next);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -228,11 +241,11 @@ export function WidgetGrid({
             <div className="col-span-12 lg:col-span-4">
               <button
                 type="button"
-                onClick={() => setAdding((previous) => !previous)}
+                onClick={() => setAdding(!adding)}
                 className="flex h-full min-h-32 w-full flex-col items-center justify-center gap-1 rounded-[var(--card-radius)] border border-dashed border-[var(--border)] text-sm text-[var(--text-muted)] hover:border-[var(--interactive-primary)] hover:text-[var(--text)]"
               >
                 <Plus className="size-5" />
-                Add a widget
+                Add a {noun}
               </button>
             </div>
           ) : null}
