@@ -187,11 +187,25 @@
    Type, colour and canvas all come from the package's `body` rule; this layer
    only adds what the app needs on top of it. */
 
-@layer app {
+/* A default border colour and focus ring, so an element that draws a border
+   without naming a colour gets the theme's rather than the browser's.
+
+   This has to live in `base`, not `app`. A universal selector in a layer that
+   comes *after* `corelith` outranks every design-system rule setting a border
+   colour — specificity never enters into it, later layer simply wins. That is
+   why the selected tab's underline rendered the same grey as the unselected
+   ones: `.utab.current { border-bottom-color: var(--brand) }` was losing to
+   `*`. Every other DS state drawn as a border colour was losing the same way.
+
+   In `base` the order is the one everybody expects: this loses to the design
+   system, and the design system loses to a call site's own `border-*` utility. */
+@layer base {
   * {
     @apply border-border outline-ring/50;
   }
+}
 
+@layer app {
   body {
     position: relative;
     background-image: var(--app-canvas-wash);

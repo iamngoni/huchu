@@ -352,13 +352,17 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 id: "owner",
                 label: "Owner",
                 icon: UserRound,
-                display: (
-                  <EntityLink
-                    href={deal.assignedTo ? `/crm/reps/${deal.assignedTo.id}` : null}
-                    className="text-sm"
-                  >
-                    {deal.assignedTo?.name ?? "Unassigned"}
-                  </EntityLink>
+                placeholder: "Unassigned",
+                // A choice, not a label: who owns a deal is the property that
+                // changes most and was the one you could not change from here.
+                ...edit.choice(
+                  "assignedToId",
+                  deal.assignedTo?.id ?? null,
+                  (teamQuery.data?.data ?? []).map((member) => ({
+                    value: member.id,
+                    label: member.name ?? "Unnamed",
+                  })),
+                  "Leave unassigned",
                 ),
               },
               {

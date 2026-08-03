@@ -105,6 +105,16 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
     path: `/api/v2/crm/companies/${companyId}`,
     invalidate: [["crm", "company", companyId], ["crm", "companies"]],
   });
+  const teamQuery = useQuery({
+    queryKey: ["crm", "team"],
+    queryFn: () => fetchJson<{ data: Array<{ id: string; name: string | null }> }>(
+      "/api/v2/crm/team",
+    ),
+  });
+  const ownerOptions = (teamQuery.data?.data ?? []).map((member) => ({
+    value: member.id,
+    label: member.name ?? "Unnamed",
+  }));
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "COMPANY"],
     queryFn: () => fetchCrmFieldDefinitions("COMPANY"),
@@ -205,13 +215,14 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
               id: "owner",
               label: "Owner",
               icon: UserRound,
-              display: (
-                <EntityLink
-                  href={company.assignedTo ? `/crm/reps/${company.assignedTo.id}` : null}
-                  className="text-sm"
-                >
-                  {company.assignedTo?.name ?? "Unassigned"}
-                </EntityLink>
+              placeholder: "Unassigned",
+              // A choice, not a label: who owns a record is the property that
+              // changes most and was the one you could not change from here.
+              ...edit.choice(
+                "assignedToId",
+                company.assignedTo?.id ?? null,
+                ownerOptions,
+                "Leave unassigned",
               ),
             },
             {

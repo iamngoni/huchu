@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/components/ui/use-toast";
@@ -96,5 +97,21 @@ export function useAttributeEditor({
     },
   });
 
-  return { save, text, required, numeric };
+  /**
+   * A field whose value has to be one of a known set — an owner, a status, a
+   * stage. Empty means null: "unassigned" is a real answer, not a blank.
+   */
+  const choice = (
+    field: string,
+    value: string | null | undefined,
+    options: Array<{ value: string; label: string; leading?: ReactNode }>,
+    clearLabel?: string,
+  ) => ({
+    value: value ?? null,
+    options,
+    clearLabel,
+    onCommit: (next: string) => save.mutate({ [field]: next === "" ? null : next }),
+  });
+
+  return { save, text, required, numeric, choice };
 }
