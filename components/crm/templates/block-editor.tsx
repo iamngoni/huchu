@@ -76,14 +76,14 @@ function BlockInsert({
     <div className="group/insert relative flex h-4 items-center justify-center">
       <span
         aria-hidden="true"
-        className="absolute inset-x-0 top-1/2 h-px bg-[var(--border-subtle)] opacity-0 transition-opacity group-hover/insert:opacity-100"
+        className="absolute inset-x-0 top-1/2 h-px bg-[var(--border-subtle)] opacity-0 transition-opacity group-hover/insert:opacity-100 pointer-coarse:opacity-100"
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
             aria-label={label}
-            className="relative z-10 flex size-5 items-center justify-center rounded-full border border-dashed border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] opacity-0 transition-opacity hover:border-[var(--brand)] hover:text-[var(--text)] focus-visible:opacity-100 group-hover/insert:opacity-100"
+            className="relative z-10 flex size-5 items-center justify-center rounded-full border border-dashed border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] opacity-0 transition-opacity hover:border-[var(--brand)] hover:text-[var(--text)] focus-visible:opacity-100 group-hover/insert:opacity-100 pointer-coarse:opacity-100"
           >
             <Plus className="size-3" aria-hidden="true" />
           </button>
@@ -203,7 +203,7 @@ function BlockEditorRow({
 
   return (
     <div className="group relative rounded-[var(--radius-md)] px-2 py-2 transition-colors hover:bg-[var(--surface-subtle)]">
-      <div className="absolute right-1 top-1 flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+      <div className="absolute right-1 top-1 flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100">
         <Button
           type="button"
           variant="ghost"

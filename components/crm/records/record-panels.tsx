@@ -200,7 +200,7 @@ export function AttachmentsPanel({
               </span>
 
               <Download
-                className="size-4 shrink-0 text-[var(--text-subtle)] opacity-0 group-hover:opacity-100"
+                className="size-4 shrink-0 text-[var(--text-subtle)] opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100"
                 aria-hidden="true"
               />
             </a>

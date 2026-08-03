@@ -159,7 +159,7 @@ export function AttributeHeader({
                   variant="ghost"
                   size="sm"
                   aria-label={`Remove ${key}`}
-                  className="opacity-0 transition-opacity group-hover:opacity-100"
+                  className="opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100"
                   onClick={() => {
                     const next = { ...custom };
                     delete next[key];

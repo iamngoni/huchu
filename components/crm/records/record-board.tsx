@@ -7,7 +7,8 @@ import {
   DragOverlay,
   defaultDropAnimationSideEffects,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCorners,
   useDroppable,
   useSensor,
@@ -66,7 +67,10 @@ function BoardCard({ card }: { card: RecordBoardCard }) {
       }}
       className={cn(
         "rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-3",
-        "cursor-grab shadow-[var(--shadow-xs)] transition-shadow active:cursor-grabbing",
+        // `touch-manipulation` keeps the board scrollable under a finger until
+        // the long-press fires; `select-none` stops the hold raising a text
+        // selection callout over the card it is about to move.
+        "cursor-grab touch-manipulation select-none shadow-[var(--shadow-xs)] transition-shadow active:cursor-grabbing",
         "hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-sm)]",
         isDragging &&
           "border-dashed bg-[var(--surface-muted)] opacity-50 shadow-none [&_*]:invisible",
@@ -167,7 +171,13 @@ export function RecordBoard({
   const [dragging, setDragging] = useState<RecordBoardCard | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // MouseSensor and TouchSensor rather than PointerSensor. PointerSensor
+    // answers touch too, and its 6px threshold is crossed long before any
+    // long-press delay elapses — so with both registered, every attempt to
+    // swipe the board sideways started a drag instead. Splitting them lets a
+    // finger scroll immediately and drag only after a deliberate hold.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 

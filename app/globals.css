@@ -209,10 +209,27 @@
     isolation: isolate;
   }
 
-  /* Prevent iOS zoom on input focus */
+  /* Prevent iOS zoom on input focus.
+
+     `[contenteditable]` is a safety net only: a call site that sets its own
+     `text-sm` still wins, because utilities are a later layer than `app`. Any
+     composer that needs 16px on a phone has to say so itself. */
   @media (max-width: 640px) {
     html { font-size: 16px; }
-    input, select, textarea { font-size: 16px; }
+    input, select, textarea, [contenteditable="true"] { font-size: 16px; }
+  }
+
+  /* A record page is one column on anything smaller than a laptop.
+     `.detail-grid` ships from the design system as a hard `1fr 320px` with no
+     media query of its own — at phone width that crushes the content column to
+     a few pixels beside a full-width rail, and at tablet width it leaves ~380px
+     for a timeline or a table. iPad portrait (768/810/834) all land in that
+     band, so this collapses at `lg` rather than `md`. Precedent: the settings
+     shell, whose rail is 100px narrower, already collapses at 900px. */
+  @media (max-width: 1023.98px) {
+    .detail-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   /* Date input color scheme */

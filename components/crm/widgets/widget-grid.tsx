@@ -4,7 +4,8 @@ import { useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -130,7 +131,7 @@ function WidgetFrame({
           <button
             type="button"
             aria-label={`Move ${definition?.label ?? "widget"}`}
-            className="flex size-7 cursor-grab items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-subtle)] active:cursor-grabbing"
+            className="flex size-7 cursor-grab touch-manipulation select-none items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-subtle)] active:cursor-grabbing pointer-coarse:size-10"
             {...attributes}
             {...listeners}
           >
@@ -190,7 +191,13 @@ export function WidgetGrid({
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // MouseSensor and TouchSensor rather than PointerSensor. PointerSensor
+    // answers touch too, and its 6px threshold is crossed long before any
+    // long-press delay elapses — so with both registered, every attempt to
+    // swipe the board sideways started a drag instead. Splitting them lets a
+    // finger scroll immediately and drag only after a deliberate hold.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 

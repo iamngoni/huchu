@@ -150,6 +150,15 @@ export function RecordPageShell({
 
       {beforeTabs}
 
+      {/* Stacked, the rail goes above the tabs rather than below them.
+          It carries what somebody opened the record to find — what is next,
+          which stage, what is owed, who to ring — and underneath a timeline
+          that runs to fifty entries, nobody would ever reach it. The two
+          asides are mutually exclusive at every width, so no control is
+          duplicated; `.detail-grid` collapses to one column at the same
+          breakpoint (see app/globals.css). */}
+      {rail ? <aside className="space-y-3 lg:hidden">{rail}</aside> : null}
+
       <div className={rail ? "detail-grid" : "min-w-0"}>
         <div className="min-w-0 space-y-4">
           <Tabs value={activeTab} onValueChange={onTabChange}>
@@ -171,7 +180,7 @@ export function RecordPageShell({
           </Tabs>
         </div>
 
-        {rail ? <aside className="space-y-3">{rail}</aside> : null}
+        {rail ? <aside className="hidden space-y-3 lg:block">{rail}</aside> : null}
       </div>
 
       {children}

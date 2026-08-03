@@ -6,7 +6,8 @@ import {
   DragOverlay,
   defaultDropAnimationSideEffects,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCorners,
   useSensor,
   useSensors,
@@ -114,7 +115,13 @@ export function LeadsBoard({
   const sensors = useSensors(
     // A small activation distance keeps a click on the card title a click,
     // not an accidental one-pixel drag.
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // MouseSensor and TouchSensor rather than PointerSensor. PointerSensor
+    // answers touch too, and its 6px threshold is crossed long before any
+    // long-press delay elapses — so with both registered, every attempt to
+    // swipe the board sideways started a drag instead. Splitting them lets a
+    // finger scroll immediately and drag only after a deliberate hold.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
