@@ -30,7 +30,7 @@ import {
   type DocumentLineDraft,
 } from "./document-math";
 import { formatMoney } from "./document-types";
-import { CataloguePicker } from "./catalogue-picker";
+import { CataloguePicker, type VisitItemOption } from "./catalogue-picker";
 import { DocumentTemplatePicker } from "./document-template-picker";
 import { refreshAfterDocumentChange } from "@/lib/crm/refresh";
 
@@ -86,6 +86,22 @@ export function DocumentBuilderSheet({
     queryFn: () =>
       fetchJson<LayoutOption[]>(`/api/document-templates?documentType=${docType}`),
   });
+  // What was measured on this record's visits, offered on every line rather
+  // than only as a one-shot prefill when a report is completed. basePath is
+  // `/api/v2/crm/leads/{id}` or `.../deals/{id}`; the record is read off it
+  // rather than threaded through four callers.
+  const recordMatch = /\/(leads|deals)\/([0-9a-f-]{36})/i.exec(basePath);
+  const visitItemsQuery = useQuery({
+    queryKey: ["crm", "visit-items", basePath],
+    enabled: open && Boolean(recordMatch),
+    queryFn: () =>
+      fetchJson<{ data: VisitItemOption[] }>(
+        `/api/v2/crm/visit-items?${recordMatch![1] === "leads" ? "leadId" : "dealId"}=${recordMatch![2]}`,
+      ),
+    staleTime: 60_000,
+  });
+  const visitItems = visitItemsQuery.data?.data ?? [];
+
   const layoutOptions = useMemo(
     () =>
       (layouts.data ?? [])
@@ -263,12 +279,20 @@ export function DocumentBuilderSheet({
                     sell, with its price and tax already right. */}
                 <CataloguePicker
                   value={line.description}
+                  visitItems={visitItems}
+                  aria-label={`Line ${index + 1} description`}
                   onChange={(value) => patchLine(index, { description: value })}
                   onPick={(pick) =>
                     patchLine(index, {
                       description: pick.description,
-                      unitPrice: pick.unitPrice.toFixed(2),
-                      taxRate: String(pick.taxRate),
+                      // A measured item may carry no price — somebody wrote
+                      // down a size and left the pricing for later. Filling
+                      // the box with "0.00" there would look like a decision.
+                      ...(pick.unitPrice != null
+                        ? { unitPrice: pick.unitPrice.toFixed(2) }
+                        : {}),
+                      ...(pick.taxRate != null ? { taxRate: String(pick.taxRate) } : {}),
+                      ...(pick.quantity != null ? { quantity: String(pick.quantity) } : {}),
                     })
                   }
                   placeholder="What are you charging for?"

@@ -329,13 +329,14 @@ export function VisitReportSheet({
                     <CataloguePicker
                       value={item.description}
                       onChange={(value) => patchItem(index, { description: value })}
+                      aria-label={`Item ${index + 1} description`}
                       onPick={(pick) =>
                         patchItem(index, {
                           description: pick.description,
                           // Only fills a price nobody has typed. Somebody who
                           // has already priced this line measured it on site
                           // and knows something the list does not.
-                          ...(item.unitPrice.trim()
+                          ...(item.unitPrice.trim() || pick.unitPrice == null
                             ? {}
                             : { unitPrice: pick.unitPrice.toFixed(2) }),
                         })
