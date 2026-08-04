@@ -150,6 +150,8 @@ model Company {
   schoolApplicationEvents       SchoolApplicationEvent[]
   schoolHealthRecords           SchoolHealthRecord[]
   schoolHealthEvents            SchoolHealthEvent[]
+  schoolAssignments             SchoolAssignment[]
+  schoolAssignmentSubmissions   SchoolAssignmentSubmission[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
@@ -5548,6 +5550,7 @@ model SchoolTerm {
   timetableSlots         SchoolTimetableSlot[]
   calendarEvents         SchoolCalendarEvent[]
   assessments            SchoolAssessment[]
+  assignments            SchoolAssignment[]
   applications           SchoolApplication[]
   publishWindows      SchoolPublishWindow[]
   feeStructures       SchoolFeeStructure[]
@@ -5682,6 +5685,7 @@ model SchoolClassSubject {
   teacherProfile SchoolTeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
   timetableSlots SchoolTimetableSlot[]
   assessments    SchoolAssessment[]
+  assignments    SchoolAssignment[]
 
   @@unique([companyId, termId, classId, streamId, subjectId])
   @@index([companyId, teacherProfileId, isActive])
@@ -5724,6 +5728,7 @@ model SchoolStudent {
   application            SchoolApplication?
   healthRecord           SchoolHealthRecord?
   healthEvents           SchoolHealthEvent[]
+  assignmentSubmissions  SchoolAssignmentSubmission[]
   attendanceSessionLines SchoolAttendanceSessionLine[]
   feeInvoices            SchoolFeeInvoice[]
   feeReceipts            SchoolFeeReceipt[]
@@ -6695,6 +6700,85 @@ model SchoolHealthEvent {
 
   @@index([companyId, studentId, occurredAt])
   @@index([companyId, occurredAt])
+}
+
+/// Homework, and what came back.
+///
+/// Separate from `SchoolAssessment` on purpose, though they look alike. An
+/// assessment carries marks that roll into a term mark; homework is set,
+/// handed in and looked at, and most of it never carries a mark at all.
+/// Collapsing them would mean every piece of reading counted towards a report
+/// card, or every test needing a due date it does not have.
+model SchoolAssignment {
+  id             String   @id @default(uuid())
+  companyId      String
+  termId         String
+  classSubjectId String
+  title          String
+  instructions   String?
+  /// When it has to be in. Null means "no deadline", which is a real answer for
+  /// reading set over a holiday.
+  dueAt          DateTime?
+  /// Marks available, where it is marked at all. Null means it is not.
+  maxScore       Decimal? @db.Decimal(6, 2)
+  /// Until this is true the class cannot see it — a teacher drafts on Sunday.
+  isPublished    Boolean  @default(false)
+  publishedAt    DateTime?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company      Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  term         SchoolTerm                   @relation(fields: [termId], references: [id], onDelete: Cascade)
+  classSubject SchoolClassSubject           @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+  submissions  SchoolAssignmentSubmission[]
+
+  @@index([companyId, termId, classSubjectId])
+  @@index([companyId, dueAt])
+  @@index([companyId, isPublished])
+}
+
+/// One child's answer to one piece of homework.
+///
+/// A row exists only once the child has done something. "Not handed in" is the
+/// absence of a row, and the screens are built from the class roll outward so
+/// that absence is visible — which is the only thing a teacher opens this for.
+model SchoolAssignmentSubmission {
+  id           String                     @id @default(uuid())
+  companyId    String
+  assignmentId String
+  studentId    String
+  status       SchoolSubmissionStatus     @default(SUBMITTED)
+  submittedAt  DateTime                   @default(now())
+  /// What the child wrote, or a note about what they handed over on paper.
+  content      String?
+  /// An uploaded file, where the school uses them.
+  attachmentUrl String?
+  score        Decimal?                   @db.Decimal(6, 2)
+  feedback     String?
+  markedById   String?
+  markedAt     DateTime?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+
+  company    Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignment SchoolAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    SchoolStudent    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, assignmentId, studentId])
+  @@index([companyId, studentId, submittedAt])
+}
+
+enum SchoolSubmissionStatus {
+  /// In, on time.
+  SUBMITTED
+  /// In, after the deadline. Recorded rather than refused — a school still
+  /// wants the work, and lateness is a fact about it, not a reason to lose it.
+  LATE
+  /// Marked and handed back.
+  RETURNED
+  /// Sent back to be done again.
+  RESUBMIT
 }
 
 enum SchoolHealthEventKind {

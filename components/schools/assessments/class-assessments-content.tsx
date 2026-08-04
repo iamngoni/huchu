@@ -25,8 +25,9 @@ import {
 } from "@/lib/schools/assessments-v2";
 import { AssessmentFormSheet, type AssessmentFormValues } from "./assessment-form-sheet";
 import { MarkEntrySheet } from "./mark-entry-sheet";
+import { HomeworkContent } from "./homework-content";
 
-type View = "work" | "marks";
+type View = "work" | "homework" | "marks";
 
 const KIND_OPTIONS = (Object.keys(ASSESSMENT_KIND_LABELS) as AssessmentKind[]).map(
   (kind) => ({ value: kind, label: ASSESSMENT_KIND_LABELS[kind] }),
@@ -242,6 +243,7 @@ export function ClassAssessmentsContent({
       <VerticalDataViews
         items={[
           { id: "work", label: "Work set", count: assessments.length },
+          { id: "homework", label: "Homework" },
           { id: "marks", label: "Term marks" },
         ]}
         value={view}
@@ -371,6 +373,14 @@ export function ClassAssessmentsContent({
               )}
             </MobileList>
           </div>
+        ) : null}
+
+        {view === "homework" ? (
+          <HomeworkContent
+            classId={classId}
+            streamId={streamFilter || undefined}
+            subjects={subjects}
+          />
         ) : null}
 
         {view === "marks" ? (

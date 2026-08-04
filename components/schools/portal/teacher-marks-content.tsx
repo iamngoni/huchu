@@ -19,6 +19,7 @@ import {
 } from "@/lib/schools/assessments-v2";
 import { AssessmentFormSheet, type AssessmentFormValues } from "../assessments/assessment-form-sheet";
 import { MarkEntrySheet } from "../assessments/mark-entry-sheet";
+import { HomeworkContent } from "../assessments/homework-content";
 
 const KIND_OPTIONS = (Object.keys(ASSESSMENT_KIND_LABELS) as AssessmentKind[]).map(
   (kind) => ({ value: kind, label: ASSESSMENT_KIND_LABELS[kind] }),
@@ -249,6 +250,14 @@ export function TeacherMarksContent() {
         error={createMutation.isError ? actionError : null}
         onSubmit={(values) => createMutation.mutate(values)}
       />
+
+      {/* A teacher's homework sits alongside her marks rather than on a
+          different page: both are "the work I have set", and splitting them
+          means two places to look on the same evening. */}
+      <div className="pt-2">
+        <h2 className="text-section-title">Homework</h2>
+        <HomeworkContent subjects={subjectOptions} />
+      </div>
 
       <MarkEntrySheet
         assessmentId={markingId}

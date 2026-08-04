@@ -154,6 +154,19 @@ export function MarkEntrySheet({
         </div>
       }
     >
+      {/* In the body rather than in `description`, which the design system
+          renders `sr-only`. "Out of 20" is the number every mark on this sheet
+          is entered against. */}
+      {sheet ? (
+        <p className="text-sm text-muted-foreground">
+          {sheet.assessment.classSubject.class.name}
+          {sheet.assessment.classSubject.stream
+            ? ` ${sheet.assessment.classSubject.stream.name}`
+            : ""}{" "}
+          · out of {maxScore}
+        </p>
+      ) : null}
+
       {sheetQuery.error ? (
         <Alert variant="destructive">
           <AlertTitle>Unable to load the mark sheet</AlertTitle>
