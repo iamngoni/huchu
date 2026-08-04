@@ -30,7 +30,56 @@ The alternative is a per-school "teaching days of the week" setting. I did not
 build it because it is a settings screen, a migration and a UI for something
 that may affect zero of your schools. Say the word and it is half a day.
 
+### 3. Overlapping grade bands are refused in code, not by the database
+
+Two bands covering the same mark give one score two grades. Postgres can make
+that unrepresentable — `EXCLUDE USING gist ("schemeId" WITH =,
+numrange("minScore","maxScore",'[]') WITH &&)` — but only with the `btree_gist`
+extension, and `prisma migrate deploy` already has a known failure on an empty
+database. Requiring an extension raises the cost of a failed deploy above the
+cost of this bug, so the rule lives in `findBandProblems` and the one route that
+writes bands calls it.
+
+Cost to change: one migration, one `CREATE EXTENSION`. Say the word if your
+Postgres has `btree_gist` and you would rather have the constraint.
+
+### 4. An absent child is left out of the average, not scored zero
+
+Off sick for one of three tests, she is marked on the other two. The alternative
+— an absence scores zero — is what some schools do, and it is a policy, not a
+bug either way. If yours counts absences as zero, it is a flag on the grading
+scheme and about an hour's work.
+
+### 5. A subject with no exam yet reports its continuous mark whole
+
+Mid-term, before any paper has been sat, a 30/70 scheme would otherwise report a
+child who scored 80 on everything set as having 24. The mark carries a caveat
+saying which side is missing. The alternative is to report nothing until both
+sides exist, which makes the screen useless for two thirds of the term.
+
+### 6. The teacher, parent and student portal navigations point at pages that do not exist
+
+`/portal/teacher/classes`, `/portal/teacher/moderation`, `/portal/parent/fees`
+and nine others are links in `lib/platform/gating/portal-isolation.ts` with no
+route behind them. They are Iteration 6, and they will be built there. Until
+then a portal user clicking them gets a 404.
+
+I fixed the one that was a typo rather than a missing page —
+`/portal/teacher/registers` should have been `/portal/teacher/register` — and
+left the rest, because stripping the nav now means rebuilding it in three
+commits' time. **If you would rather the nav only showed what exists, say so and
+it is ten minutes.**
+
+### 7. Portals must not use the dashboard shell
+
+Noted from your message mid-run. `/portal/teacher/register` and
+`/portal/teacher/marks` currently render inside the same shell as the admin
+side, because they were built before that instruction. They need the portal
+layout from `docs/design-system/portals/`, and I will do that as part of
+Iteration 6 rather than half-doing it now — the other portal pages do not exist
+yet, and the shell is worth building once against all of them.
+
 ---
 
-_Changelog of this document lives in the roadmap; this file is a wall, not a
+_The changelog for this work lives in the roadmap; this file is a wall, not a
 log._

@@ -361,6 +361,8 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/schools/boarding", featureKey: "schools.boarding" },
   { scope: "api", prefix: "/api/v2/schools/teachers", featureKey: "schools.teachers" },
   { scope: "api", prefix: "/api/v2/schools/results", featureKey: "schools.results" },
+  { scope: "api", prefix: "/api/v2/schools/assessments", featureKey: "schools.results" },
+  { scope: "api", prefix: "/api/v2/schools/grading-schemes", featureKey: "schools.results" },
   { scope: "api", prefix: "/api/v2/schools/portal/parent/children", featureKey: "schools.portal.parent" },
   { scope: "api", prefix: "/api/v2/schools/portal/student/me", featureKey: "schools.portal.student" },
   { scope: "api", prefix: "/api/v2/schools/portal/teacher/me", featureKey: "schools.portal.teacher" },

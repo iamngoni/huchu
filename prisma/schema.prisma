@@ -142,6 +142,10 @@ model Company {
   schoolRooms                   SchoolRoom[]
   schoolTimetableSlots          SchoolTimetableSlot[]
   schoolCalendarEvents          SchoolCalendarEvent[]
+  schoolGradingSchemes          SchoolGradingScheme[]
+  schoolGradingBands            SchoolGradingBand[]
+  schoolAssessments             SchoolAssessment[]
+  schoolAssessmentScores        SchoolAssessmentScore[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
@@ -5538,6 +5542,7 @@ model SchoolTerm {
   periods                SchoolPeriod[]
   timetableSlots         SchoolTimetableSlot[]
   calendarEvents         SchoolCalendarEvent[]
+  assessments            SchoolAssessment[]
   publishWindows      SchoolPublishWindow[]
   feeStructures       SchoolFeeStructure[]
   feeInvoices         SchoolFeeInvoice[]
@@ -5661,6 +5666,7 @@ model SchoolClassSubject {
   subject        SchoolSubject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   teacherProfile SchoolTeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
   timetableSlots SchoolTimetableSlot[]
+  assessments    SchoolAssessment[]
 
   @@unique([companyId, termId, classId, streamId, subjectId])
   @@index([companyId, teacherProfileId, isActive])
@@ -5699,6 +5705,7 @@ model SchoolStudent {
   leaveRequests          SchoolLeaveRequest[]
   boardingMovementLogs   SchoolBoardingMovementLog[]
   resultLines            SchoolResultLine[]
+  assessmentScores       SchoolAssessmentScore[]
   attendanceSessionLines SchoolAttendanceSessionLine[]
   feeInvoices            SchoolFeeInvoice[]
   feeReceipts            SchoolFeeReceipt[]
@@ -6390,6 +6397,142 @@ enum SchoolCalendarEventKind {
   EXAM
   EVENT
   STAFF_ONLY
+}
+
+/// A school's marking scheme: what counts, and what a mark is called.
+///
+/// The weights are here rather than on the subject because a school marks the
+/// same way across its subjects — "30 continuous, 70 exam" is a policy, and a
+/// school that genuinely marks art differently from maths can hold two schemes.
+/// Continuous and exam weights must add to 100; the database enforces it,
+/// because a scheme summing to 90 produces term marks nobody notices are ten
+/// per cent light.
+model SchoolGradingScheme {
+  id               String   @id @default(uuid())
+  companyId        String
+  code             String
+  name             String
+  /// Percent of the term mark carried by class work, tests and practicals.
+  continuousWeight Decimal  @db.Decimal(5, 2) @default(30)
+  /// Percent carried by the end-of-term paper.
+  examWeight       Decimal  @db.Decimal(5, 2) @default(70)
+  /// The mark at or above which a subject is passed, when the bands do not say.
+  passMark         Decimal  @db.Decimal(5, 2) @default(50)
+  isDefault        Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bands   SchoolGradingBand[]
+
+  @@unique([companyId, code])
+  @@index([companyId, isActive])
+}
+
+/// One row of the grade table: 75-100 is an A, and so on.
+///
+/// Bands are inclusive at both ends and may not overlap within a scheme — a
+/// score with two grades is a report card that disagrees with itself. The
+/// non-overlap rule is enforced in `lib/schools/grading.ts` rather than by the
+/// database; see the note there.
+model SchoolGradingBand {
+  id        String   @id @default(uuid())
+  companyId String
+  schemeId  String
+  grade     String
+  minScore  Decimal  @db.Decimal(5, 2)
+  maxScore  Decimal  @db.Decimal(5, 2)
+  /// For schools that aggregate points rather than letters. Null where unused.
+  points    Int?
+  remark    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  scheme  SchoolGradingScheme @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, schemeId, grade])
+  @@index([companyId, schemeId, minScore])
+}
+
+/// A piece of work that carries marks: a test, a practical, the exam.
+///
+/// It hangs off `SchoolClassSubject` rather than off a class and a subject
+/// separately, because that assignment already answers who teaches it — and a
+/// mark sheet whose owner disagrees with the timetable is the bug this avoids.
+/// That one link also serves both shapes of school: a primary class teacher
+/// holds every assignment for her one class, a secondary subject teacher holds
+/// one subject across several.
+model SchoolAssessment {
+  id             String                 @id @default(uuid())
+  companyId      String
+  termId         String
+  classSubjectId String
+  kind           SchoolAssessmentKind
+  title          String
+  /// Marks available. Scores are recorded out of this and converted to a
+  /// percentage on the way into a term mark, so a test out of 20 and a paper
+  /// out of 100 can sit in the same average.
+  maxScore       Decimal                @db.Decimal(6, 2)
+  /// Weight relative to other assessments *of the same kind*. Two tests
+  /// weighted 1 and 3 make the second count three times as much.
+  weight         Decimal                @db.Decimal(6, 2) @default(1)
+  assessedOn     DateTime?              @db.Date
+  status         SchoolAssessmentStatus @default(OPEN)
+  createdById    String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  company      Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  term         SchoolTerm              @relation(fields: [termId], references: [id], onDelete: Cascade)
+  classSubject SchoolClassSubject      @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+  scores       SchoolAssessmentScore[]
+
+  @@index([companyId, termId, classSubjectId])
+  @@index([companyId, classSubjectId, kind])
+  @@index([companyId, status])
+}
+
+/// One student's mark for one assessment.
+///
+/// `score` is nullable and `isAbsent` is separate because "nobody has marked
+/// this yet" and "she was not there" are different facts, and storing the
+/// second as a zero drags a whole term mark down for an illness.
+model SchoolAssessmentScore {
+  id           String   @id @default(uuid())
+  companyId    String
+  assessmentId String
+  studentId    String
+  score        Decimal? @db.Decimal(6, 2)
+  isAbsent     Boolean  @default(false)
+  comment      String?
+  markedById   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company    Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assessment SchoolAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student    SchoolStudent    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, assessmentId, studentId])
+  @@index([companyId, studentId])
+}
+
+enum SchoolAssessmentKind {
+  /// Class work, tests, homework — everything on the continuous side.
+  CONTINUOUS
+  /// The end-of-term paper.
+  EXAM
+  /// Marked continuously, but kept apart so a report can show it separately.
+  PRACTICAL
+}
+
+enum SchoolAssessmentStatus {
+  /// Marks may be entered and changed.
+  OPEN
+  /// Marks are in and the sheet is closed. Reopening is a deliberate act.
+  LOCKED
 }
 
 enum CarSalesLeadStatus {

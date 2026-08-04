@@ -47,7 +47,11 @@ export function FilterSelect({
   const id = `filter-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   return (
-    <div className={className ?? "min-w-0 flex-1 sm:max-w-[220px]"}>
+    // `basis-[180px]` rather than a bare `flex-1`: three filters on one row
+    // shrink each other until the chosen option is clipped mid-word — "Every
+    // subje" — and a filter that cannot say what it is set to is worse than one
+    // that wrapped onto a second line.
+    <div className={className ?? "min-w-0 flex-1 basis-[180px] sm:max-w-[220px]"}>
       <Label htmlFor={id} className="text-sm text-muted-foreground">
         {label}
       </Label>

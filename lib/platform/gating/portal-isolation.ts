@@ -183,14 +183,14 @@ export function getPortalNavigation(role: PortalRole): PortalNavItem[] {
     TEACHER: [
       { href: "/portal/teacher", label: "Dashboard" },
       { href: "/portal/teacher/classes", label: "My Classes" },
-      { href: "/portal/teacher/registers", label: "Registers" },
+      { href: "/portal/teacher/register", label: "Take the register" },
       { href: "/portal/teacher/marks", label: "Marks Entry" },
       { href: "/portal/teacher/moderation", label: "Moderation" },
     ],
     HOD: [
       { href: "/portal/teacher", label: "Dashboard" },
       { href: "/portal/teacher/classes", label: "My Classes" },
-      { href: "/portal/teacher/registers", label: "Registers" },
+      { href: "/portal/teacher/register", label: "Take the register" },
       { href: "/portal/teacher/marks", label: "Marks Entry" },
       { href: "/portal/teacher/moderation", label: "Moderation" },
       { href: "/portal/teacher/approvals", label: "Approvals" },
