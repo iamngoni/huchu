@@ -14,6 +14,7 @@ import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   emitSchoolFeeAccountingEvent,
   refreshFeeInvoiceBalance,
+  type SchoolFeePostingResult,
 } from "../_helpers";
 
 const querySchema = z.object({
@@ -400,8 +401,13 @@ export async function POST(request: NextRequest) {
 
     if (!created) return errorResponse("Failed to create fee receipt", 500);
 
+    // The posting outcome travels back with the receipt. Swallowing it would
+    // put the school exactly where it was before: money taken, ledger silent,
+    // and nobody told until a reconciliation months later.
+    let accounting: SchoolFeePostingResult | null = null;
     if (created.status === "POSTED") {
-      await emitSchoolFeeAccountingEvent({
+      accounting = await emitSchoolFeeAccountingEvent({
+        actorRole: session.user.role,
         companyId,
         actorId: session.user.id,
         eventType: "SCHOOL_FEE_RECEIPT_POSTED",
@@ -422,11 +428,17 @@ export async function POST(request: NextRequest) {
           })),
         },
       }).catch((error) => {
-        console.error("[Accounting] School fee receipt event capture failed:", error);
+        console.error("[Accounting] School fee receipt posting failed:", error);
+        return {
+          accountingStatus: "FAILED" as const,
+          journalEntryId: null,
+          accountingError:
+            error instanceof Error ? error.message : "Accounting posting failed",
+        };
       });
     }
 
-    return successResponse(created, 201);
+    return successResponse({ ...created, accounting }, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse("Validation failed", 400, error.issues);

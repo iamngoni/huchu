@@ -71,7 +71,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (!result) return errorResponse("Fee receipt not found", 404);
 
-    await emitSchoolFeeAccountingEvent({
+    const accounting = await emitSchoolFeeAccountingEvent({
+      actorRole: session.user.role,
       companyId,
       actorId: session.user.id,
       eventType: "SCHOOL_FEE_RECEIPT_VOIDED",
@@ -93,10 +94,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         })),
       },
     }).catch((error) => {
-      console.error("[Accounting] School fee receipt void event capture failed:", error);
+      console.error("[Accounting] School fee receipt void posting failed:", error);
+      return {
+        accountingStatus: "FAILED" as const,
+        journalEntryId: null,
+        accountingError:
+          error instanceof Error ? error.message : "Accounting posting failed",
+      };
     });
 
-    return successResponse(result);
+    return successResponse({ ...result, accounting });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse("Validation failed", 400, error.issues);

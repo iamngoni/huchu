@@ -3,7 +3,7 @@ import {
   type AccountingSourceType,
   type SchoolFeeInvoiceStatus,
 } from "@prisma/client";
-import { captureAccountingEvent } from "@/lib/accounting/integration";
+import { createJournalEntryFromSource } from "@/lib/accounting/posting";
 
 export type SchoolFeeAccountingEventType =
   | "SCHOOL_FEE_INVOICE_ISSUED"
@@ -27,6 +27,8 @@ type SchoolFeeAccountingEventInput = {
   payload?: Record<string, unknown>;
   invertDirection?: boolean;
   version?: number;
+  /** Lets a period-lock override be attributed. Null for ordinary postings. */
+  actorRole?: string | null;
 };
 
 function toMoney(value: number) {
@@ -74,9 +76,45 @@ function buildPostingSourceId(input: {
   return `SCHOOL_FEE_RECEIPT:${input.sourceId}`;
 }
 
+/**
+ * Failures that mean "not yet", not "never".
+ *
+ * A locked period is the ordinary case of a receipt taken after month end. The
+ * event stays PENDING and `retryPendingAccountingEvents` — the same drain the
+ * replay endpoint and `pnpm platform:accounting-replay` use — posts it once the
+ * period reopens. Anything else is a real posting failure and is surfaced.
+ */
+const PENDING_POSTING_CODES = new Set([
+  "PERIOD_LOCKED",
+  "PERIOD_OVERRIDE_FORBIDDEN",
+  "PERIOD_OVERRIDE_REASON_REQUIRED",
+]);
+
+export type SchoolFeePostingResult = {
+  accountingStatus: "POSTED" | "PENDING" | "FAILED";
+  journalEntryId: string | null;
+  accountingError: string | null;
+};
+
+/**
+ * Post a school fee event to the ledger.
+ *
+ * This used to call `captureAccountingEvent` and stop, which wrote an
+ * `AccountingIntegrationEvent` with status PENDING and produced no journal
+ * entry. The only things that turned those rows into ledger movements were the
+ * replay endpoint and a CLI, both run by hand — so fee income, the pack's whole
+ * wedge, sat outside the trial balance until somebody remembered.
+ *
+ * It now does what retail's `postRetailJournal` does: posts inline through
+ * `createJournalEntryFromSource`, which creates the integration event itself,
+ * resolves the posting rule, writes the balanced entry and syncs the AR
+ * subledger. Idempotency is unchanged — the source id is still
+ * `SCHOOL_FEE_RECEIPT:{id}` and friends, so a repeated call returns the
+ * existing entry rather than a second one.
+ */
 export async function emitSchoolFeeAccountingEvent(
   input: SchoolFeeAccountingEventInput,
-) {
+): Promise<SchoolFeePostingResult> {
   const sourceType = toPostingSourceType(input.eventType);
   const postingSourceId = buildPostingSourceId({
     eventType: input.eventType,
@@ -85,31 +123,43 @@ export async function emitSchoolFeeAccountingEvent(
   const version = input.version ?? 1;
   const idempotencyKey = `schools:${input.eventType}:${input.sourceId}:v${version}`;
 
-  return captureAccountingEvent({
+  const result = await createJournalEntryFromSource({
     companyId: input.companyId,
-    sourceDomain: "schools-fees",
-    sourceAction: input.eventType,
     sourceType,
     sourceId: postingSourceId,
     entryDate: input.entryDate,
     description: `${input.eventType} (${input.sourceRef})`,
+    createdById: input.actorId,
     amount: toMoneyOrZero(input.amount),
     netAmount: toMoneyOrZero(input.netAmount),
     taxAmount: toMoneyOrZero(input.taxAmount),
     grossAmount: toMoneyOrZero(input.grossAmount ?? input.amount),
     currency: input.currency ?? "USD",
-    createdById: input.actorId,
-    status: "PENDING",
+    actorRole: input.actorRole ?? null,
+    invertDirection: input.invertDirection === true,
     payload: {
       idempotencyKey,
       eventType: input.eventType,
       sourceRef: input.sourceRef,
       sourceId: input.sourceId,
       postingSourceId,
-      invertDirection: input.invertDirection === true,
       ...input.payload,
     },
   });
+
+  if (result.entryId || result.skipped) {
+    return {
+      accountingStatus: "POSTED",
+      journalEntryId: result.entryId ?? null,
+      accountingError: null,
+    };
+  }
+
+  return {
+    accountingStatus: PENDING_POSTING_CODES.has(result.code ?? "") ? "PENDING" : "FAILED",
+    journalEntryId: null,
+    accountingError: result.error ?? "Accounting posting failed",
+  };
 }
 
 export function recalculateFeeInvoiceStatus(input: {
