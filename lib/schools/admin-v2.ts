@@ -382,3 +382,129 @@ export async function fetchHostelDetail(hostelId: string) {
   );
   return response.data;
 }
+
+// ---------------------------------------------------------------------------
+// Academic calendar — years and terms
+// ---------------------------------------------------------------------------
+
+export type SchoolsTermRecord = {
+  id: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  academicYear: { id: string; code: string; name: string; isActive: boolean };
+  _count: {
+    enrollments: number;
+    feeInvoices: number;
+    resultSheets: number;
+    classSubjects: number;
+  };
+};
+
+export type SchoolsAcademicYearRecord = {
+  id: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  terms: Array<{
+    id: string;
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  }>;
+  _count: { terms: number; classes: number };
+};
+
+export async function fetchSchoolsAcademicYears(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+} = {}) {
+  const response = await fetchJson<ApiResponse<Paginated<SchoolsAcademicYearRecord>>>(
+    `/api/v2/schools/academic-years${buildQuery(params)}`,
+  );
+  return response.data;
+}
+
+export async function createSchoolsAcademicYear(input: {
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive?: boolean;
+}) {
+  const response = await fetchJson<ApiResponse<SchoolsAcademicYearRecord>>(
+    "/api/v2/schools/academic-years",
+    { method: "POST", body: JSON.stringify(input) },
+  );
+  return response.data;
+}
+
+export async function updateSchoolsAcademicYear(
+  id: string,
+  input: Partial<{
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  }>,
+) {
+  const response = await fetchJson<ApiResponse<SchoolsAcademicYearRecord>>(
+    `/api/v2/schools/academic-years/${id}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+  );
+  return response.data;
+}
+
+export async function fetchSchoolsTerms(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  academicYearId?: string;
+  isActive?: boolean;
+} = {}) {
+  const response = await fetchJson<ApiResponse<Paginated<SchoolsTermRecord>>>(
+    `/api/v2/schools/terms${buildQuery(params)}`,
+  );
+  return response.data;
+}
+
+export async function createSchoolsTerm(input: {
+  academicYearId: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive?: boolean;
+}) {
+  const response = await fetchJson<ApiResponse<SchoolsTermRecord>>(
+    "/api/v2/schools/terms",
+    { method: "POST", body: JSON.stringify(input) },
+  );
+  return response.data;
+}
+
+export async function updateSchoolsTerm(
+  id: string,
+  input: Partial<{
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  }>,
+) {
+  const response = await fetchJson<ApiResponse<SchoolsTermRecord>>(
+    `/api/v2/schools/terms/${id}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+  );
+  return response.data;
+}

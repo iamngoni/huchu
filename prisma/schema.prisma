@@ -5437,6 +5437,10 @@ enum SchoolAttendanceEntryStatus {
   EXCUSED
 }
 
+/// Partial unique index `SchoolAcademicYear_companyId_active_key` and check
+/// constraint `SchoolAcademicYear_dates_ordered` are enforced in the database
+/// but cannot be expressed in Prisma schema. See
+/// migrations/20260804120000_school_calendar_single_active. Do not drop them.
 model SchoolAcademicYear {
   id        String   @id @default(uuid())
   companyId String
@@ -5456,6 +5460,10 @@ model SchoolAcademicYear {
   @@index([companyId, isActive])
 }
 
+/// Partial unique index `SchoolTerm_academicYearId_active_key` and check
+/// constraint `SchoolTerm_dates_ordered` are enforced in the database but
+/// cannot be expressed in Prisma schema. See
+/// migrations/20260804120000_school_calendar_single_active. Do not drop them.
 model SchoolTerm {
   id             String   @id @default(uuid())
   companyId      String

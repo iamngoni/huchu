@@ -16,11 +16,14 @@ import {
   type SchoolsClassRecord,
   type SchoolsSubjectRecord,
 } from "@/lib/schools/admin-v2";
+import { SchoolsCalendarContent } from "./schools-calendar-content";
 
-type AcademicsView = "classes" | "subjects";
+type AcademicsView = "years" | "terms" | "classes" | "subjects";
 
 export function SchoolsAcademicsContent() {
-  const [activeView, setActiveView] = useState<AcademicsView>("classes");
+  // The calendar leads the rail: a term has to exist before a class, an
+  // enrolment or an invoice can be recorded against one.
+  const [activeView, setActiveView] = useState<AcademicsView>("years");
 
   const classesQuery = useQuery({
     queryKey: ["schools", "academics", "classes"],
@@ -138,6 +141,8 @@ export function SchoolsAcademicsContent() {
 
       <VerticalDataViews
         items={[
+          { id: "years", label: "Academic Years" },
+          { id: "terms", label: "Terms" },
           { id: "classes", label: "Classes", count: classes.length },
           { id: "subjects", label: "Subjects", count: subjects.length },
         ]}
@@ -145,6 +150,10 @@ export function SchoolsAcademicsContent() {
         onValueChange={(value) => setActiveView(value as AcademicsView)}
         railLabel="Academics Views"
       >
+        {activeView === "years" || activeView === "terms" ? (
+          <SchoolsCalendarContent view={activeView} />
+        ) : null}
+
         <div className={activeView === "classes" ? "space-y-2" : "hidden"}>
           <h2 className="text-section-title">Class and Stream Structure</h2>
           <DataTable
