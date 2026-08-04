@@ -7,6 +7,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   activateTerm,
   findOverlappingTerm,
@@ -48,6 +49,9 @@ export async function GET(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.academics", "view");
+    if (denied) return errorResponse(denied, 403);
     const { id } = await context.params;
     if (!isValidUUID(id)) return errorResponse("Invalid term id", 400);
 
@@ -72,6 +76,9 @@ export async function PATCH(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.academics", "edit");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await context.params;
     if (!isValidUUID(id)) return errorResponse("Invalid term id", 400);
@@ -166,6 +173,9 @@ export async function DELETE(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.academics", "archive");
+    if (denied) return errorResponse(denied, 403);
     const { id } = await context.params;
     if (!isValidUUID(id)) return errorResponse("Invalid term id", 400);
 

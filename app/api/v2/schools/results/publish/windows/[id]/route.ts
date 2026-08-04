@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 
 const updateWindowSchema = z.object({
   status: z.enum(["SCHEDULED", "OPEN", "CLOSED"]).optional(),
@@ -20,6 +21,9 @@ export async function PATCH(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.results", "publish");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 

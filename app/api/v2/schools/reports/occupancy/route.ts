@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { generateOccupancyReport } from "@/lib/schools/reports";
 
 export async function GET(request: NextRequest) {
@@ -7,6 +8,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.reports", "view");
+    if (denied) return errorResponse(denied, 403);
 
     const report = await generateOccupancyReport(session.user.companyId);
 

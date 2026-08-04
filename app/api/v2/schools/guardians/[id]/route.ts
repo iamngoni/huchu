@@ -9,6 +9,7 @@ import {
 } from "@/lib/api-utils";
 import { normalizeProvidedId } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   isUniqueConstraintError,
   normalizeOptionalNullableString,
@@ -62,6 +63,9 @@ export async function GET(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "view");
+    if (denied) return errorResponse(denied, 403);
     const { id } = await params;
 
     if (!isValidUUID(id)) {
@@ -95,6 +99,9 @@ export async function PATCH(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "edit");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 
@@ -170,6 +177,9 @@ export async function DELETE(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "archive");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 

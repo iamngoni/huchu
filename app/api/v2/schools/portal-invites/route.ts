@@ -8,6 +8,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { canViewAnyPortalSubject } from "@/lib/schools/portal-identity";
 import { InviteError, issuePortalInvite } from "@/lib/schools/portal-invites";
 
@@ -44,6 +45,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "view");
+    if (denied) return errorResponse(denied, 403);
 
     if (!canViewAnyPortalSubject(session.user.role)) {
       return errorResponse("Portal invitations are managed by school staff", 403);
@@ -108,6 +112,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "create");
+    if (denied) return errorResponse(denied, 403);
 
     if (!canViewAnyPortalSubject(session.user.role)) {
       return errorResponse("Portal invitations are issued by school staff", 403);

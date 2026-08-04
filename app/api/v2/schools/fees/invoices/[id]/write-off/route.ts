@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { emitSchoolFeeAccountingEvent } from "../../../_helpers";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -15,6 +16,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "write-off");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
     const body = await request.json();

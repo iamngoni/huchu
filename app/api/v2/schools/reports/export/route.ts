@@ -10,6 +10,7 @@ import {
   exportReportToPDF,
 } from "@/lib/schools/reports";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 
 const querySchema = z.object({
   reportType: z.enum(["collections", "arrears", "enrollment", "occupancy"]),
@@ -25,6 +26,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.reports", "view");
+    if (denied) return errorResponse(denied, 403);
 
     const { searchParams } = new URL(request.url);
     const query = querySchema.parse({

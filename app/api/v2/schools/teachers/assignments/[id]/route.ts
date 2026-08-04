@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 
 const updateAssignmentSchema = z.object({
   termId: z.string().uuid().optional(),
@@ -20,6 +21,9 @@ export async function PATCH(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.teachers", "edit");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 
@@ -132,6 +136,9 @@ export async function DELETE(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.teachers", "archive");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 

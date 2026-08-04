@@ -5,6 +5,7 @@ import {
   successResponse,
   validateSession,
 } from "@/lib/api-utils";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { canViewAnyPortalSubject } from "@/lib/schools/portal-identity";
 import { revokePortalInvite } from "@/lib/schools/portal-invites";
 
@@ -16,6 +17,9 @@ export async function POST(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "invite");
+    if (denied) return errorResponse(denied, 403);
 
     if (!canViewAnyPortalSubject(session.user.role)) {
       return errorResponse("Portal invitations are managed by school staff", 403);

@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-utils";
 import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   emitSchoolFeeAccountingEvent,
   refreshFeeInvoiceBalance,
@@ -92,6 +93,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "view");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -179,6 +183,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "receive-payment");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
     const body = await request.json();

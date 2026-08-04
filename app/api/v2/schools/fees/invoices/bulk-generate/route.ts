@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import {
   errorResponse,
   successResponse,
   validateSession,
 } from "@/lib/api-utils";
-import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
+import { reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   emitSchoolFeeAccountingEvent,
   refreshFeeInvoiceBalance,
@@ -43,6 +45,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "issue");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
     const body = await request.json();
@@ -79,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Build student query
-    const studentWhere: any = {
+    const studentWhere: Prisma.SchoolStudentWhereInput = {
       companyId,
       status: "ACTIVE", // Only generate for active students
     };

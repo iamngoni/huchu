@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 
 export async function GET(request: NextRequest) {
   try {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "view");
+    if (denied) return errorResponse(denied, 403);
     return successResponse({
       success: true,
       data: {

@@ -9,6 +9,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 
 const querySchema = z.object({
   search: z.string().trim().min(1).optional(),
@@ -48,6 +49,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "view");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -127,6 +131,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "create");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
     const body = await request.json();

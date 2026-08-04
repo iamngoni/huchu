@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { writeModerationAction } from "@/lib/schools/governance-v2";
 
 const unpublishSchema = z.object({
@@ -16,6 +17,9 @@ export async function POST(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.results", "unpublish");
+    if (denied) return errorResponse(denied, 403);
     const { id } = await params;
 
     const body = await request.json();
