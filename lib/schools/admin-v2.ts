@@ -210,6 +210,7 @@ export async function fetchSchoolsGuardians(params: {
   limit?: number;
   search?: string;
   studentId?: string;
+  hasPortalAccount?: boolean;
 } = {}) {
   const query = buildQuery(params);
   const response = await fetchJson<Paginated<SchoolsGuardianRecord>>(

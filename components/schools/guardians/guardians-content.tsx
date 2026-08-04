@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
-import { MobileList, MobileListEmpty } from "@corelithzw/react";
+import { FilterChips, MobileList, MobileListEmpty } from "@corelithzw/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,13 +13,30 @@ import { PortalInviteDialog } from "@/components/schools/portal/portal-invite-di
 import { fetchSchoolsGuardians } from "@/lib/schools/admin-v2";
 import type { SchoolsGuardianRecord } from "@/lib/schools/admin-v2";
 
+type AccountFilter = "all" | "with-account" | "without-account";
+
+const ACCOUNT_OPTIONS: Array<{ value: AccountFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "with-account", label: "On the portal" },
+  { value: "without-account", label: "Not invited" },
+];
+
 export function GuardiansContent() {
   const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
+  // This list is where invitations are issued, so "who is not on the portal
+  // yet" is the question it is asked most, and the answer was to read the
+  // Portal column of all hundred rows.
+  const [accountFilter, setAccountFilter] = useState<AccountFilter>("all");
 
   const guardiansQuery = useQuery({
-    queryKey: ["schools", "guardians", "list"],
-    queryFn: () => fetchSchoolsGuardians({ limit: 100 }),
+    queryKey: ["schools", "guardians", "list", accountFilter],
+    queryFn: () =>
+      fetchSchoolsGuardians({
+        limit: 100,
+        hasPortalAccount:
+          accountFilter === "all" ? undefined : accountFilter === "with-account",
+      }),
   });
 
   const guardians = useMemo(
@@ -59,8 +76,10 @@ export function GuardiansContent() {
       },
       {
         id: "name",
+        // Surname first, matching the `lastName, firstName` sort the API
+        // applies — otherwise an alphabetical list reads as an unsorted one.
         header: "Name",
-        cell: ({ row }) => `${row.original.firstName} ${row.original.lastName}`,
+        cell: ({ row }) => `${row.original.lastName}, ${row.original.firstName}`,
       },
       {
         id: "phone",
@@ -123,6 +142,13 @@ export function GuardiansContent() {
         </Button>
       </div>
 
+      <FilterChips
+        aria-label="Filter guardians by portal account"
+        value={accountFilter}
+        options={ACCOUNT_OPTIONS}
+        onChange={(value) => setAccountFilter(value as AccountFilter)}
+      />
+
       <DataTable
         data={guardians}
         columns={columns}
@@ -141,7 +167,7 @@ export function GuardiansContent() {
               rows.map(({ row }) => (
                 <MobileList.Row
                   key={row.id}
-                  title={`${row.firstName} ${row.lastName}`}
+                  title={`${row.lastName}, ${row.firstName}`}
                   // "Portal" was a `<Badge>` in `trailing`, where the design
                   // system's `1fr 14px` row grid sizes that column for a
                   // chevron and `.mobile-list` clips the overflow — so the

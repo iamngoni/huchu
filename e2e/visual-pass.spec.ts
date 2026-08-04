@@ -69,6 +69,7 @@ const PAGES = [
   { name: "academics", path: "/schools/academics", heading: "Academics Setup" },
   { name: "guardians", path: "/schools/guardians", heading: "Guardians" },
   { name: "students", path: "/schools/students", heading: "Students" },
+  { name: "teachers", path: "/schools/teachers", heading: "Teachers" },
 ];
 
 /**
@@ -162,11 +163,15 @@ for (const viewport of VIEWPORTS) {
           "a password field is on screen — this is a sign-in page, not the app",
         ).toHaveCount(0);
 
+        // Visible only. A bare `text=/Loading/i` also matches every ancestor
+        // that contains the string and every hidden tab panel on the page, so
+        // it counted six matches for one spinner and could never reach zero
+        // while an unrelated inactive view was still fetching.
         await expect
-          .poll(async () => page.locator("text=/Loading/i").count(), {
-            timeout: 30_000,
-            intervals: [500],
-          })
+          .poll(
+            async () => page.getByText(/Loading/i).filter({ visible: true }).count(),
+            { timeout: 30_000, intervals: [500] },
+          )
           .toBe(0);
 
         await page.screenshot({

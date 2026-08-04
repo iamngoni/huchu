@@ -444,7 +444,7 @@ export function SchoolsFeesContent() {
         railLabel="Fee Views"
       >
         <div className={activeView === "invoices" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Fee Invoices</h2>
             <div className="flex gap-2">
               <Button
@@ -470,7 +470,7 @@ export function SchoolsFeesContent() {
         </div>
 
         <div className={activeView === "receipts" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Fee Receipts</h2>
             <Button size="sm" onClick={() => setReceiptDialogOpen(true)}>
               Record Receipt

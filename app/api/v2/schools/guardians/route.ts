@@ -16,6 +16,15 @@ import { isUniqueConstraintError, normalizeOptionalNullableString } from "../_he
 const guardianQuerySchema = z.object({
   search: z.string().trim().min(1).optional(),
   studentId: z.string().uuid().optional(),
+  /**
+   * Whether the guardian has claimed a portal account. The list is where
+   * invitations are issued from, so "who is still not on the portal" is the
+   * question it is asked most often and there was no way to ask it.
+   */
+  hasPortalAccount: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
 });
 
 const guardianStudentLinkSchema = z.object({
@@ -72,6 +81,7 @@ export async function GET(request: NextRequest) {
     const query = guardianQuerySchema.parse({
       search: searchParams.get("search") ?? undefined,
       studentId: searchParams.get("studentId") ?? undefined,
+      hasPortalAccount: searchParams.get("hasPortalAccount") ?? undefined,
     });
 
     const where: Prisma.SchoolGuardianWhereInput = {
@@ -87,6 +97,9 @@ export async function GET(request: NextRequest) {
         { email: { contains: query.search, mode: "insensitive" } },
         { nationalId: { contains: query.search, mode: "insensitive" } },
       ];
+    }
+    if (query.hasPortalAccount !== undefined) {
+      where.userId = query.hasPortalAccount ? { not: null } : null;
     }
     if (query.studentId) {
       where.studentLinks = {

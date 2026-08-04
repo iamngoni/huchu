@@ -120,7 +120,18 @@ export async function GET(request: NextRequest) {
       prisma.schoolStudent.findMany({
         where,
         include: studentInclude,
-        orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { createdAt: "desc" }],
+        // Class first, then surname — a register, which is the order a school
+        // reads a student list in. `level` rather than `name` so the ladder
+        // runs ECD, Grade 1…7, Form 1…6 instead of alphabetically by label.
+        // Postgres sorts NULLs last on ASC, so students with no class land at
+        // the end under their own heading rather than at the top.
+        orderBy: [
+          { currentClass: { level: "asc" } },
+          { currentClass: { name: "asc" } },
+          { currentStream: { name: "asc" } },
+          { lastName: "asc" },
+          { firstName: "asc" },
+        ],
         skip,
         take: limit,
       }),

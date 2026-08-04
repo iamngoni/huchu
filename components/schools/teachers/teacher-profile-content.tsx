@@ -121,7 +121,10 @@ export function TeacherProfileContent({ teacherId }: { teacherId: string }) {
       assignmentCount: entry.count,
       classCount: entry.classes.size,
     }));
-  }, [teacher?.assignments]);
+    // `teacher`, not `teacher?.assignments`: the body reads `teacher` itself on
+    // the guard line, so the narrower dependency the compiler cannot verify was
+    // enough to disable optimisation for the whole component.
+  }, [teacher]);
 
   if (profileQuery.error) {
     return (

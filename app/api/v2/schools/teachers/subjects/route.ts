@@ -62,7 +62,10 @@ export async function GET(request: NextRequest) {
         include: {
           _count: { select: { classSubjects: true } },
         },
-        orderBy: [{ isActive: "desc" }, { code: "asc" }],
+        // Alphabetical by the name on screen. Retired subjects sort in place
+        // rather than being bumped to the bottom; whether a subject is still
+        // taught is a filter, not an order.
+        orderBy: [{ name: "asc" }, { code: "asc" }],
         skip,
         take: limit,
       }),

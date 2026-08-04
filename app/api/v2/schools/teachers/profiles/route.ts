@@ -66,7 +66,14 @@ export async function GET(request: NextRequest) {
           user: { select: { id: true, name: true, email: true, isActive: true } },
           _count: { select: { assignments: true } },
         },
-        orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }, { createdAt: "desc" }],
+        // Alphabetical by the name on screen. This was `isActive desc,
+        // updatedAt desc`, so the staff list reshuffled itself every time
+        // anyone edited a profile and there was no way to find a teacher by
+        // running an eye down it. Active-versus-left is a filter, not an order.
+        orderBy: [
+          { user: { name: "asc" } },
+          { employeeCode: "asc" },
+        ],
         skip,
         take: limit,
       }),

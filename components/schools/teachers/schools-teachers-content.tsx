@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FilterChips, MobileList, MobileListEmpty } from "@corelithzw/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,24 @@ import {
 
 type TeachersView = "profiles" | "subjects" | "assignments";
 
+/**
+ * "Still here" versus "has left" for staff, and "still taught" for subjects.
+ * Both were previously baked into the sort — `isActive desc` — which made the
+ * list neither alphabetical nor filterable. It is a filter now, and the order
+ * is plain alphabetical.
+ */
+type ActiveFilter = "all" | "active" | "inactive";
+
+const ACTIVE_OPTIONS: Array<{ value: ActiveFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
+function activeParam(filter: ActiveFilter) {
+  return filter === "all" ? undefined : filter === "active";
+}
+
 const initialSubjectForm = { code: "", name: "", isCore: false, passMark: "50" };
 const initialTeacherForm = {
   userId: "",
@@ -45,6 +64,8 @@ const initialTeacherForm = {
 export function SchoolsTeachersContent() {
   const [activeView, setActiveView] = useState<TeachersView>("profiles");
   const queryClient = useQueryClient();
+  const [profileActiveFilter, setProfileActiveFilter] = useState<ActiveFilter>("all");
+  const [subjectActiveFilter, setSubjectActiveFilter] = useState<ActiveFilter>("all");
 
   const [subjectDialogOpen, setSubjectDialogOpen] = useState(false);
   const [subjectForm, setSubjectForm] = useState(initialSubjectForm);
@@ -122,12 +143,22 @@ export function SchoolsTeachersContent() {
     queryFn: () => fetchTeacherProfileUsers({ page: 1, limit: 500, active: true }),
   });
   const profilesQuery = useQuery({
-    queryKey: ["schools", "teachers", "profiles"],
-    queryFn: () => fetchTeacherProfiles({ page: 1, limit: 200 }),
+    queryKey: ["schools", "teachers", "profiles", profileActiveFilter],
+    queryFn: () =>
+      fetchTeacherProfiles({
+        page: 1,
+        limit: 200,
+        isActive: activeParam(profileActiveFilter),
+      }),
   });
   const subjectsQuery = useQuery({
-    queryKey: ["schools", "teachers", "subjects"],
-    queryFn: () => fetchTeacherSubjects({ page: 1, limit: 200 }),
+    queryKey: ["schools", "teachers", "subjects", subjectActiveFilter],
+    queryFn: () =>
+      fetchTeacherSubjects({
+        page: 1,
+        limit: 200,
+        isActive: activeParam(subjectActiveFilter),
+      }),
   });
   const assignmentsQuery = useQuery({
     queryKey: ["schools", "teachers", "assignments"],
@@ -214,10 +245,12 @@ export function SchoolsTeachersContent() {
       {
         id: "subject",
         header: "Subject",
+        // Name first: the list is sorted by name, and leading with the code
+        // made an alphabetical list look arbitrary.
         cell: ({ row }) => (
           <div>
-            <div className="font-medium">{row.original.code}</div>
-            <div className="text-xs text-muted-foreground">{row.original.name}</div>
+            <div className="font-medium">{row.original.name}</div>
+            <div className="text-xs text-muted-foreground">{row.original.code}</div>
           </div>
         ),
       },
@@ -331,35 +364,100 @@ export function SchoolsTeachersContent() {
         railLabel="Teacher Views"
       >
         <div className={activeView === "profiles" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Teacher Profiles</h2>
             <Button size="sm" onClick={openTeacherDialog}>
               Add Teacher
             </Button>
           </div>
+          <FilterChips
+            aria-label="Filter teachers by status"
+            value={profileActiveFilter}
+            options={ACTIVE_OPTIONS}
+            onChange={(value) => setProfileActiveFilter(value as ActiveFilter)}
+          />
           <DataTable
             data={profiles}
             columns={profileColumns}
             searchPlaceholder="Search teacher profiles"
             searchSubmitLabel="Search"
             pagination={{ enabled: true }}
+            mobileListRenderer={({ rows }) => (
+              <MobileList>
+                {rows.length === 0 ? (
+                  <MobileListEmpty>
+                    {profilesQuery.isLoading ? "Loading profiles…" : "No profiles found."}
+                  </MobileListEmpty>
+                ) : (
+                  rows.map(({ row }) => (
+                    <MobileList.Row
+                      key={row.id}
+                      title={row.user.name ?? row.employeeCode}
+                      subtitle={[
+                        row.employeeCode,
+                        row.department,
+                        row.isHod ? "HOD" : null,
+                        row.isClassTeacher ? "Class teacher" : null,
+                        row.isActive ? null : "Inactive",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                      onClick={() => {
+                        window.location.href = `/schools/teachers/${row.id}`;
+                      }}
+                    />
+                  ))
+                )}
+              </MobileList>
+            )}
             emptyState={profilesQuery.isLoading ? "Loading profiles..." : "No profiles found."}
           />
         </div>
 
         <div className={activeView === "subjects" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Subjects</h2>
             <Button size="sm" onClick={() => setSubjectDialogOpen(true)}>
               Add Subject
             </Button>
           </div>
+          <FilterChips
+            aria-label="Filter subjects by status"
+            value={subjectActiveFilter}
+            options={ACTIVE_OPTIONS}
+            onChange={(value) => setSubjectActiveFilter(value as ActiveFilter)}
+          />
           <DataTable
             data={subjects}
             columns={subjectColumns}
             searchPlaceholder="Search subjects"
             searchSubmitLabel="Search"
             pagination={{ enabled: true }}
+            mobileListRenderer={({ rows }) => (
+              <MobileList>
+                {rows.length === 0 ? (
+                  <MobileListEmpty>
+                    {subjectsQuery.isLoading ? "Loading subjects…" : "No subjects found."}
+                  </MobileListEmpty>
+                ) : (
+                  rows.map(({ row }) => (
+                    <MobileList.Row
+                      key={row.id}
+                      static
+                      title={row.name}
+                      subtitle={[
+                        row.code,
+                        row.isCore ? "Core" : "Optional",
+                        `Pass ${row.passMark}%`,
+                        row.isActive ? null : "Inactive",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    />
+                  ))
+                )}
+              </MobileList>
+            )}
             emptyState={subjectsQuery.isLoading ? "Loading subjects..." : "No subjects found."}
           />
         </div>
@@ -372,6 +470,39 @@ export function SchoolsTeachersContent() {
             searchPlaceholder="Search assignments"
             searchSubmitLabel="Search"
             pagination={{ enabled: true }}
+            rowGroup={(row) => ({
+              key: `${row.class.id}:${row.stream?.id ?? ""}`,
+              label: row.stream
+                ? `${row.class.name} · ${row.stream.name}`
+                : row.class.name,
+            })}
+            mobileListRenderer={({ rows }) => (
+              <MobileList>
+                {rows.length === 0 ? (
+                  <MobileListEmpty>
+                    {assignmentsQuery.isLoading
+                      ? "Loading assignments…"
+                      : "No assignments found."}
+                  </MobileListEmpty>
+                ) : (
+                  rows.map(({ row }) => (
+                    <MobileList.Row
+                      key={row.id}
+                      static
+                      title={`${row.subject.code} - ${row.subject.name}`}
+                      subtitle={[
+                        row.class.name,
+                        row.stream?.name,
+                        row.teacherProfile?.user.name,
+                        row.term.name,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    />
+                  ))
+                )}
+              </MobileList>
+            )}
             emptyState={
               assignmentsQuery.isLoading ? "Loading assignments..." : "No assignments found."
             }

@@ -96,7 +96,15 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+        // Class, then subject, then teacher — the order a timetable is read
+        // in. This was `updatedAt desc`, so the list reshuffled on every edit
+        // and the same class's subjects were scattered through it.
+        orderBy: [
+          { class: { level: "asc" } },
+          { class: { name: "asc" } },
+          { subject: { name: "asc" } },
+          { teacherProfile: { user: { name: "asc" } } },
+        ],
         skip,
         take: limit,
       }),

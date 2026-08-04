@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MobileList, MobileListEmpty } from "@corelithzw/react";
+import {
+  FilterChips,
+  MobileList,
+  MobileListEmpty,
+  MobileListSectionHeader,
+} from "@corelithzw/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +44,52 @@ import {
 
 type StudentsView = "students" | "guardians";
 
+type StudentStatusFilter = "all" | "ACTIVE" | "APPLICANT" | "SUSPENDED" | "GRADUATED" | "WITHDRAWN";
+type BoardingFilter = "all" | "boarding" | "day";
+type GuardianAccountFilter = "all" | "with-account" | "without-account";
+
+const STUDENT_STATUS_OPTIONS: Array<{ value: StudentStatusFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "APPLICANT", label: "Applicant" },
+  { value: "SUSPENDED", label: "Suspended" },
+  { value: "GRADUATED", label: "Graduated" },
+  { value: "WITHDRAWN", label: "Withdrawn" },
+];
+
+const BOARDING_OPTIONS: Array<{ value: BoardingFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "boarding", label: "Boarders" },
+  { value: "day", label: "Day scholars" },
+];
+
+const GUARDIAN_ACCOUNT_OPTIONS: Array<{ value: GuardianAccountFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "with-account", label: "On the portal" },
+  { value: "without-account", label: "Not invited" },
+];
+
+/**
+ * The heading a student sits under, and the sort key that has to agree with it.
+ *
+ * `rowGroup` groups what is adjacent rather than reordering, so this has to
+ * match `orderBy` in `/api/v2/schools/students` — class level, then class, then
+ * stream. A student with no class is its own group at the end rather than an
+ * unlabelled run, because "not placed yet" is a thing a registrar needs to see.
+ */
+function classGroupFor(student: SchoolsStudentRecord) {
+  if (!student.currentClass) {
+    return { key: "unplaced", label: "Not in a class" };
+  }
+  const stream = student.currentStream?.name;
+  return {
+    key: `${student.currentClass.id}:${student.currentStream?.id ?? ""}`,
+    label: stream
+      ? `${student.currentClass.name} · ${stream}`
+      : student.currentClass.name,
+  };
+}
+
 function statusBadge(status: string) {
   if (status === "ACTIVE") return <Badge variant="secondary">Active</Badge>;
   if (status === "APPLICANT") return <Badge variant="outline">Applicant</Badge>;
@@ -62,6 +113,13 @@ export function SchoolsStudentsContent() {
 
   const [classFilter, setClassFilter] = useState<string>("");
   const [streamFilter, setStreamFilter] = useState<string>("");
+  // Both were already accepted by `/api/v2/schools/students` and neither had a
+  // control, so a registrar could not answer "who has left?" or "who boards?"
+  // without reading the whole directory.
+  const [statusFilter, setStatusFilter] = useState<StudentStatusFilter>("all");
+  const [boardingFilter, setBoardingFilter] = useState<BoardingFilter>("all");
+  const [guardianAccountFilter, setGuardianAccountFilter] =
+    useState<GuardianAccountFilter>("all");
 
   const createStudentMutation = useMutation({
     mutationFn: async (payload: typeof studentForm) =>
@@ -129,18 +187,37 @@ export function SchoolsStudentsContent() {
   };
 
   const studentsQuery = useQuery({
-    queryKey: ["schools", "students", "directory", classFilter, streamFilter],
+    queryKey: [
+      "schools",
+      "students",
+      "directory",
+      classFilter,
+      streamFilter,
+      statusFilter,
+      boardingFilter,
+    ],
     queryFn: () =>
       fetchSchoolsStudents({
         page: 1,
         limit: 200,
         classId: classFilter || undefined,
         streamId: streamFilter || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        isBoarding:
+          boardingFilter === "all" ? undefined : boardingFilter === "boarding",
       }),
   });
   const guardiansQuery = useQuery({
-    queryKey: ["schools", "guardians", "directory"],
-    queryFn: () => fetchSchoolsGuardians({ page: 1, limit: 200 }),
+    queryKey: ["schools", "guardians", "directory", guardianAccountFilter],
+    queryFn: () =>
+      fetchSchoolsGuardians({
+        page: 1,
+        limit: 200,
+        hasPortalAccount:
+          guardianAccountFilter === "all"
+            ? undefined
+            : guardianAccountFilter === "with-account",
+      }),
   });
   const classesQuery = useQuery({
     queryKey: ["schools", "classes", "list"],
@@ -183,14 +260,17 @@ export function SchoolsStudentsContent() {
         header: "Student",
         cell: ({ row }) => (
           <div>
+            {/* Surname first, because that is the sort key. Rendered
+                "Rudo Chirwa" over a list ordered by "Chirwa", the column read
+                as unsorted and there was no way to tell it was not. */}
             <div className="font-medium">
-              {row.original.studentNo} -{" "}
               <Link href={`/schools/students/${row.original.id}`} className="hover:underline">
-                {row.original.firstName} {row.original.lastName}
+                {row.original.lastName}, {row.original.firstName}
               </Link>
             </div>
             <div className="text-xs text-muted-foreground">
-              Admission: {row.original.admissionNo || "-"}
+              {row.original.studentNo}
+              {row.original.admissionNo ? ` · Admission ${row.original.admissionNo}` : ""}
             </div>
           </div>
         ),
@@ -247,10 +327,11 @@ export function SchoolsStudentsContent() {
         cell: ({ row }) => (
           <div>
             <div className="font-medium">
-              {row.original.guardianNo} - {row.original.firstName} {row.original.lastName}
+              {row.original.lastName}, {row.original.firstName}
             </div>
             <div className="text-xs text-muted-foreground">
-              {row.original.phone} {row.original.email ? ` / ${row.original.email}` : ""}
+              {row.original.guardianNo} · {row.original.phone}
+              {row.original.email ? ` · ${row.original.email}` : ""}
             </div>
           </div>
         ),
@@ -292,7 +373,7 @@ export function SchoolsStudentsContent() {
         railLabel="Directory Views"
       >
         <div className={activeView === "students" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Student Directory</h2>
             <Button size="sm" onClick={() => setStudentDialogOpen(true)}>
               Add Student
@@ -337,12 +418,30 @@ export function SchoolsStudentsContent() {
               </Select>
             )}
           </div>
+          {/* Chips rather than more selects: both are short, closed lists, and
+              `FilterChips` scrolls sideways on a phone instead of stacking two
+              full-width dropdowns above the register. */}
+          <div className="space-y-1">
+            <FilterChips
+              aria-label="Filter students by status"
+              value={statusFilter}
+              options={STUDENT_STATUS_OPTIONS}
+              onChange={(value) => setStatusFilter(value as StudentStatusFilter)}
+            />
+            <FilterChips
+              aria-label="Filter students by boarding"
+              value={boardingFilter}
+              options={BOARDING_OPTIONS}
+              onChange={(value) => setBoardingFilter(value as BoardingFilter)}
+            />
+          </div>
           <DataTable
             data={students}
             columns={studentColumns}
             searchPlaceholder="Search students"
             searchSubmitLabel="Search"
             pagination={{ enabled: true }}
+            rowGroup={classGroupFor}
             mobileListRenderer={({ rows }) => (
               <MobileList>
                 {rows.length === 0 ? (
@@ -352,28 +451,35 @@ export function SchoolsStudentsContent() {
                       : "No students found."}
                   </MobileListEmpty>
                 ) : (
-                  rows.map(({ row }) => (
-                    <MobileList.Row
-                      key={row.id}
-                      title={`${row.firstName} ${row.lastName}`}
-                      // Status goes in the subtitle, not `trailing`. The design
-                      // system's row is a `1fr 14px` grid — the trailing column
-                      // is sized for a chevron — and `.mobile-list` is
-                      // `overflow: clip`, so a badge there is cut mid-word
-                      // rather than wrapped or scrolled.
-                      subtitle={[
-                        row.studentNo,
-                        row.currentClass?.name,
-                        row.currentStream?.name,
-                        row.isBoarding ? "Boarder" : "Day scholar",
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                      onClick={() => {
-                        window.location.href = `/schools/students/${row.id}`;
-                      }}
-                    />
-                  ))
+                  rows.map(({ row }, index) => {
+                    const group = classGroupFor(row);
+                    const previous = index > 0 ? classGroupFor(rows[index - 1].row) : null;
+                    return (
+                      <Fragment key={row.id}>
+                        {group.key !== previous?.key ? (
+                          <MobileListSectionHeader>{group.label}</MobileListSectionHeader>
+                        ) : null}
+                        <MobileList.Row
+                          title={`${row.lastName}, ${row.firstName}`}
+                          // Status goes in the subtitle, not `trailing`. The
+                          // design system's row is a `1fr 14px` grid — the
+                          // trailing column is sized for a chevron — and
+                          // `.mobile-list` is `overflow: clip`, so a badge there
+                          // is cut mid-word rather than wrapped or scrolled.
+                          // Class is omitted: it is the heading above the row.
+                          subtitle={[
+                            row.studentNo,
+                            row.isBoarding ? "Boarder" : "Day scholar",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                          onClick={() => {
+                            window.location.href = `/schools/students/${row.id}`;
+                          }}
+                        />
+                      </Fragment>
+                    );
+                  })
                 )}
               </MobileList>
             )}
@@ -384,12 +490,18 @@ export function SchoolsStudentsContent() {
         </div>
 
         <div className={activeView === "guardians" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Guardian Directory</h2>
             <Button size="sm" onClick={() => setGuardianDialogOpen(true)}>
               Add Guardian
             </Button>
           </div>
+          <FilterChips
+            aria-label="Filter guardians by portal account"
+            value={guardianAccountFilter}
+            options={GUARDIAN_ACCOUNT_OPTIONS}
+            onChange={(value) => setGuardianAccountFilter(value as GuardianAccountFilter)}
+          />
           <DataTable
             data={guardians}
             columns={guardianColumns}
