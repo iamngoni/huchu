@@ -11,8 +11,9 @@ import { NumericCell } from "@/components/ui/numeric-cell";
 import { VerticalDataViews } from "@/components/ui/vertical-data-views";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchHostelDetail, type HostelDetail } from "@/lib/schools/admin-v2";
+import { BedBoardContent } from "./bed-board-content";
 
-type HostelDetailView = "rooms" | "allocations" | "leaveRequests";
+type HostelDetailView = "board" | "rooms" | "allocations" | "leaveRequests";
 
 type RoomRow = HostelDetail["rooms"][number];
 type BedRow = RoomRow["beds"][number];
@@ -56,7 +57,9 @@ function allocationStatusBadge(status: string) {
 }
 
 export function SchoolsHostelDetailContent({ hostelId }: { hostelId: string }) {
-  const [activeView, setActiveView] = useState<HostelDetailView>("rooms");
+  // The bed board leads: a warden opens this page with a new boarder standing
+  // in front of them, and the question is where there is space.
+  const [activeView, setActiveView] = useState<HostelDetailView>("board");
 
   const hostelQuery = useQuery({
     queryKey: ["schools", "boarding", "hostels", hostelId],
@@ -65,10 +68,14 @@ export function SchoolsHostelDetailContent({ hostelId }: { hostelId: string }) {
 
   const leaveRequestsQuery = useQuery({
     queryKey: ["schools", "boarding", "hostels", hostelId, "leave-requests"],
+    // `successResponse` does not wrap, and this route returns
+    // `paginationResponse` — so the body is `{ data, pagination }` and reading
+    // `.data.data` threw on every render, painting a red "data is undefined"
+    // banner over a page that was otherwise fine. Same trap as `bb7f70b`.
     queryFn: () =>
-      fetchJson<{ success: boolean; data: { data: LeaveRequestRow[] } }>(
+      fetchJson<{ data: LeaveRequestRow[] }>(
         `/api/v2/schools/boarding/leave-requests?hostelId=${hostelId}&page=1&limit=200`,
-      ).then((res) => res.data.data),
+      ).then((res) => res.data),
   });
 
   const hostel = hostelQuery.data;
@@ -306,6 +313,7 @@ export function SchoolsHostelDetailContent({ hostelId }: { hostelId: string }) {
 
       <VerticalDataViews
         items={[
+          { id: "board", label: "Bed board" },
           { id: "rooms", label: "Rooms & Beds", count: rooms.length },
           { id: "allocations", label: "Current Allocations", count: allocations.length },
           {
@@ -318,6 +326,8 @@ export function SchoolsHostelDetailContent({ hostelId }: { hostelId: string }) {
         onValueChange={(value) => setActiveView(value as HostelDetailView)}
         railLabel="Hostel Views"
       >
+        {activeView === "board" ? <BedBoardContent hostelId={hostelId} /> : null}
+
         <div className={activeView === "rooms" ? "space-y-2" : "hidden"}>
           <h2 className="text-section-title">Rooms & Beds</h2>
           <DataTable
