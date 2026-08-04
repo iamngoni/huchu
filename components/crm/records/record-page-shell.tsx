@@ -157,7 +157,7 @@ export function RecordPageShell({
           asides are mutually exclusive at every width, so no control is
           duplicated; `.detail-grid` collapses to one column at the same
           breakpoint (see app/globals.css). */}
-      {rail ? <aside className="space-y-3 lg:hidden">{rail}</aside> : null}
+      {rail ? <aside className="space-y-5 lg:hidden">{rail}</aside> : null}
 
       <div className={rail ? "detail-grid" : "min-w-0"}>
         <div className="min-w-0 space-y-4">
@@ -180,7 +180,7 @@ export function RecordPageShell({
           </Tabs>
         </div>
 
-        {rail ? <aside className="hidden space-y-3 lg:block">{rail}</aside> : null}
+        {rail ? <aside className="hidden space-y-5 lg:block">{rail}</aside> : null}
       </div>
 
       {children}
@@ -188,7 +188,18 @@ export function RecordPageShell({
   );
 }
 
-/** A titled block in the record page's right rail. */
+/**
+ * A titled block in the record page's rail.
+ *
+ * No frame. A record has seven or eight of these — the value, the score, what
+ * is next, the last email, what is owed — and a border around each turned the
+ * rail into a column of boxes that all shout equally, which on a phone is the
+ * first thing anybody sees. The heading already says where one section stops
+ * and the next starts; a box around it says the same thing twice, louder.
+ *
+ * Headings are small and quiet on purpose. They are signposts for the figures
+ * beneath them, and the figures are the content.
+ */
 export function RailSection({
   title,
   action,
@@ -199,9 +210,9 @@ export function RailSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-[var(--text-strong)]">
+    <section>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]">
           {title}
         </h3>
         {action}

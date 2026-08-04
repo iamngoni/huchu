@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { Badge, Chip, Stack } from "@corelithzw/react";
+import { Badge, Stack } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { ClientDate } from "@/components/ui/client-date";
 import { EntityLink } from "@/components/crm/records/entity-link";
@@ -124,20 +124,26 @@ export function ActivityStrip({ counts }: { counts: ActivityCount[] }) {
     return <p className="text-sm text-[var(--text-muted)]">Nothing logged yet.</p>;
   }
 
+  // Figures, not chips. A chip draws a bordered box around each number, so
+  // four kinds of contact became four boxes inside a fifth — five frames to
+  // say "three calls". The numbers are the content; they only need to be
+  // bigger than their labels to read as figures.
   return (
-    <ul className="flex flex-wrap gap-1.5">
+    <dl className="flex flex-wrap gap-x-5 gap-y-1">
       {counts
         .filter((entry) => entry.count > 0)
         .map((entry) => (
-          <li key={entry.label}>
-            <Chip asChild accent="gray" leading={entry.icon}>
-              <span>
-                <span className="font-mono">{entry.count}</span> {entry.label}
-              </span>
-            </Chip>
-          </li>
+          <div key={entry.label} className="flex items-baseline gap-1.5">
+            <dt className="sr-only">{entry.label}</dt>
+            <dd className="font-mono text-base tabular-nums text-[var(--text-strong)]">
+              {entry.count}
+            </dd>
+            <span aria-hidden="true" className="text-sm text-[var(--text-muted)]">
+              {entry.label}
+            </span>
+          </div>
         ))}
-    </ul>
+    </dl>
   );
 }
 
@@ -243,7 +249,7 @@ export function NextInteractionCard({
 }) {
   if (!interaction) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <p className="text-sm text-[var(--text-muted)]">{emptyMessage}</p>
         {action}
       </div>
@@ -252,17 +258,12 @@ export function NextInteractionCard({
 
   const countdown = timeToStart(interaction.at);
 
+  // Two lines and one coloured word. The badge that used to sit up here made
+  // "in 3 days" as loud as "overdue", so lateness — the only thing on this
+  // panel worth a colour — had to compete with the ordinary case for it. Now
+  // the timing is plain text until it is late, and then it is red.
   return (
-    <div className="space-y-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-sm text-[var(--text-muted)]">
-          {INTERACTION_LABEL[interaction.kind]}
-        </span>
-        <Badge tone={countdown.past ? "danger" : countdown.imminent ? "warn" : "neutral"}>
-          {countdown.past ? `Overdue ${countdown.label}` : countdown.label}
-        </Badge>
-      </div>
-
+    <div className="space-y-1">
       {interaction.href ? (
         <EntityLink href={interaction.href}>{interaction.title}</EntityLink>
       ) : (
@@ -270,7 +271,16 @@ export function NextInteractionCard({
       )}
 
       <p className="text-sm text-[var(--text-muted)]">
-        <ClientDate value={interaction.at} mode="datetime" />
+        <span
+          className={cn(
+            countdown.past && "font-medium text-[var(--status-error-text)]",
+            countdown.imminent && !countdown.past && "font-medium text-[var(--text-strong)]",
+          )}
+        >
+          {countdown.past ? `Overdue ${countdown.label}` : countdown.label}
+        </span>
+        {" · "}
+        {INTERACTION_LABEL[interaction.kind]}
         {interaction.assigneeName ? ` · ${interaction.assigneeName}` : ""}
       </p>
 

@@ -56,7 +56,10 @@ import {
 import { RecordStory } from "@/components/crm/records/record-story";
 import { customFieldAttributes } from "@/components/crm/records/custom-field-attributes";
 import { RecordAttributes } from "@/components/crm/records/record-attributes";
-import { RecordPageShell } from "@/components/crm/records/record-page-shell";
+// RailSection comes from the shell rather than being redefined here: this
+// file had its own copy, which is why the rail on a lead kept its frames
+// when every other record lost theirs.
+import { RailSection, RecordPageShell } from "@/components/crm/records/record-page-shell";
 import { RelationAttribute } from "@/components/crm/records/relation-attribute";
 import { useAttributeEditor } from "@/components/crm/records/use-attribute-editor";
 import { buildStory } from "@/lib/crm/story";
@@ -79,17 +82,6 @@ function draftsToLines(drafts: MeasurementDraft[]): CrmDocumentLineInput[] {
       specNotes: draft.specNotes || null,
       unitPrice: draft.unitPrice ? Number(draft.unitPrice) : null,
     })),
-  );
-}
-
-function RailSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
-      <h3 className="mb-2 text-sm font-semibold text-[var(--text-muted)]">
-        {title}
-      </h3>
-      {children}
-    </section>
   );
 }
 
