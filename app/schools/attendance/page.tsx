@@ -1,9 +1,12 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/layout/page-heading";
-import { SchoolsAttendanceContent } from "@/components/schools/attendance/schools-attendance-content";
+import { GradePicker } from "@/components/schools/common/grade-picker";
 import { authOptions } from "@/lib/auth";
 
+/**
+ * Attendance starts with "whose register?" — see the note on `GradePicker`.
+ */
 export default async function SchoolsAttendancePage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -12,10 +15,11 @@ export default async function SchoolsAttendancePage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading
-        title="Attendance"
+      <PageHeading title="Attendance" />
+      <GradePicker
+        basePath="/schools/attendance"
+        emptyHint="A register is taken per class. Set the class ladder up under Academics first."
       />
-      <SchoolsAttendanceContent />
     </div>
   );
 }

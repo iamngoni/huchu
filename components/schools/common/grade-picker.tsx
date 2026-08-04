@@ -9,29 +9,37 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getApiErrorMessage } from "@/lib/api-client";
-import {
-  fetchSchoolsClasses,
-  type SchoolsClassRecord,
-} from "@/lib/schools/admin-v2";
+import { fetchSchoolsClasses, type SchoolsClassRecord } from "@/lib/schools/admin-v2";
 
 /**
- * Which year group, before which student.
+ * Which year group, before which record.
  *
- * A school with 800 students has no use for a page listing 800 students — it is
- * not a directory anyone reads, it is a page you immediately filter. The year
- * group is how a school is actually organised and how every register, mark
- * sheet and fee run is scoped, so it belongs in the navigation rather than in a
- * dropdown above a list that has already loaded everything.
+ * A school with 800 students has no use for a page listing 800 students, and
+ * the same is true of a register, a mark sheet or a fee run. The year group is
+ * how a school is organised and how every one of those is scoped, so it belongs
+ * in the navigation rather than in a dropdown above a list that has already
+ * loaded everything.
  *
- * Search is the exception and stays here: someone looking for one child by name
- * does not know or care which form they are in, and making them guess first
- * would be worse than the list this page replaces.
+ * Shared rather than copied per surface: students, attendance and anything else
+ * that starts "which class?" should pick the same way, and a second
+ * implementation is where the two drift apart.
  */
-export function GradePickerContent() {
+export function GradePicker({
+  basePath,
+  summarise,
+  emptyHint,
+}: {
+  /** Where a year group leads — `/schools/attendance` gives `…/class/<id>`. */
+  basePath: string;
+  /** The line under each year group's name. Defaults to the student count. */
+  summarise?: (schoolClass: SchoolsClassRecord) => string;
+  /** Shown when the school has no classes at all. */
+  emptyHint?: string;
+}) {
   const [search, setSearch] = useState("");
 
   const classesQuery = useQuery({
-    queryKey: ["schools", "students", "grades"],
+    queryKey: ["schools", "grades"],
     queryFn: () => fetchSchoolsClasses({ page: 1, limit: 200 }),
   });
 
@@ -50,15 +58,15 @@ export function GradePickerContent() {
     );
   }, [classes, search]);
 
-  const totalStudents = classes.reduce(
-    (sum, schoolClass) => sum + schoolClass._count.students,
-    0,
-  );
+  const describe =
+    summarise ??
+    ((schoolClass: SchoolsClassRecord) =>
+      `${schoolClass._count.students} student${schoolClass._count.students === 1 ? "" : "s"}`);
 
   if (classesQuery.error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Unable to load classes</AlertTitle>
+        <AlertTitle>Unable to load year groups</AlertTitle>
         <AlertDescription>{getApiErrorMessage(classesQuery.error)}</AlertDescription>
       </Alert>
     );
@@ -66,38 +74,32 @@ export function GradePickerContent() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0 flex-1 sm:max-w-[320px]">
-          <Label htmlFor="grade-search" className="text-sm text-muted-foreground">
-            Find a year group
-          </Label>
-          <Input
-            id="grade-search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Form 2, Grade 5…"
-          />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {totalStudents} student{totalStudents === 1 ? "" : "s"} across{" "}
-          {classes.length} year group{classes.length === 1 ? "" : "s"}
-        </p>
+      <div className="min-w-0 sm:max-w-[320px]">
+        <Label htmlFor="grade-search" className="text-sm text-muted-foreground">
+          Find a year group
+        </Label>
+        <Input
+          id="grade-search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Form 2, Grade 5…"
+        />
       </div>
 
       {classes.length === 0 && !classesQuery.isLoading ? (
         <Alert>
           <AlertTitle>No classes yet</AlertTitle>
           <AlertDescription>
-            Students are organised by year group. Set the class ladder up under
-            Academics first.
+            {emptyHint ??
+              "Everything here is organised by year group. Set the class ladder up under Academics first."}
           </AlertDescription>
         </Alert>
       ) : null}
 
-      {/* One card per year group on anything with room, a list on a phone. The
-          streams are links of their own: "Form 2 Blue" is where a class teacher
-          actually works, and making them open Form 2 and filter again would put
-          the thing they came for one level too deep. */}
+      {/* Cards where there is room, a list on a phone. Streams are links of
+          their own: "Form 2 Blue" is the unit a class teacher works in, and
+          making them open Form 2 and filter again would put the thing they came
+          for one level too deep. */}
       <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
         {matching.map((schoolClass) => (
           <div
@@ -105,22 +107,18 @@ export function GradePickerContent() {
             className="rounded-xl border border-[var(--edge-subtle)] bg-[var(--surface)] p-4"
           >
             <Link
-              href={`/schools/students/class/${schoolClass.id}`}
+              href={`${basePath}/class/${schoolClass.id}`}
               className="text-base font-medium hover:underline"
             >
               {schoolClass.name}
             </Link>
-            <p className="text-sm text-muted-foreground">
-              {schoolClass._count.students} student
-              {schoolClass._count.students === 1 ? "" : "s"}
-              {schoolClass.capacity ? ` of ${schoolClass.capacity}` : ""}
-            </p>
+            <p className="text-sm text-muted-foreground">{describe(schoolClass)}</p>
             {schoolClass.streams && schoolClass.streams.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {schoolClass.streams.map((stream) => (
                   <Link
                     key={stream.id}
-                    href={`/schools/students/class/${schoolClass.id}?streamId=${stream.id}`}
+                    href={`${basePath}/class/${schoolClass.id}?streamId=${stream.id}`}
                     className="rounded-md border border-[var(--edge-subtle)] px-2 py-1 text-sm text-muted-foreground hover:bg-[var(--surface-muted)]"
                   >
                     {stream.name}
@@ -143,16 +141,9 @@ export function GradePickerContent() {
               <MobileList.Row
                 key={schoolClass.id}
                 title={schoolClass.name}
-                subtitle={[
-                  `${schoolClass._count.students} student${schoolClass._count.students === 1 ? "" : "s"}`,
-                  schoolClass._count.streams > 0
-                    ? `${schoolClass._count.streams} class${schoolClass._count.streams === 1 ? "" : "es"}`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+                subtitle={describe(schoolClass)}
                 onClick={() => {
-                  window.location.href = `/schools/students/class/${schoolClass.id}`;
+                  window.location.href = `${basePath}/class/${schoolClass.id}`;
                 }}
               />
             ))
