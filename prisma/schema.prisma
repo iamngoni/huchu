@@ -1057,6 +1057,7 @@ model Employee {
 
   company                   Company                    @relation(fields: [companyId], references: [id])
   user                      User?                      @relation("EmployeeUser", fields: [userId], references: [id])
+  schoolTeacherProfile      SchoolTeacherProfile?      @relation("SchoolTeacherProfileEmployee")
   department                Department?                @relation(fields: [departmentId], references: [id])
   grade                     JobGrade?                  @relation(fields: [gradeId], references: [id])
   supervisor                Employee?                  @relation("EmployeeSupervisor", fields: [supervisorId], references: [id])
@@ -5615,6 +5616,13 @@ model SchoolTeacherProfile {
   id             String   @id @default(uuid())
   companyId      String
   userId         String
+  /// The HR record for the same person.
+  ///
+  /// Nullable because a school can run its timetable before payroll knows the
+  /// teacher exists, and unique because one employee is one teacher — without
+  /// it, two profiles could point at the same member of staff and the school
+  /// would have two of her.
+  employeeId     String?  @unique
   employeeCode   String
   department     String?
   isClassTeacher Boolean  @default(false)
@@ -5625,6 +5633,7 @@ model SchoolTeacherProfile {
 
   company     Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employee    Employee?            @relation("SchoolTeacherProfileEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
   assignments    SchoolClassSubject[]
   timetableSlots SchoolTimetableSlot[]
 

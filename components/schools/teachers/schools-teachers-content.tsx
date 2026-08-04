@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { NumericCell } from "@/components/ui/numeric-cell";
+import { EmployeeLinkCell } from "./employee-link-cell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VerticalDataViews } from "@/components/ui/vertical-data-views";
 import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
@@ -266,6 +267,14 @@ export function SchoolsTeachersContent() {
         cell: ({ row }) => <NumericCell>{row.original._count.assignments}</NumericCell>,
       },
       {
+        // In the list rather than on a detail page: the useful question is
+        // "which of my staff are not joined up", and that is only answerable
+        // from here.
+        id: "hr",
+        header: "HR record",
+        cell: ({ row }) => <EmployeeLinkCell profile={row.original} />,
+      },
+      {
         id: "active",
         header: "Active",
         cell: ({ row }) => (
@@ -437,6 +446,7 @@ export function SchoolsTeachersContent() {
                       subtitle={[
                         row.employeeCode,
                         row.department,
+                        row.employee ? `HR ${row.employee.employeeId}` : "No HR record",
                         row.isHod ? "HOD" : null,
                         row.isClassTeacher ? "Class teacher" : null,
                         row.isActive ? null : "Inactive",

@@ -145,8 +145,48 @@ export type TeacherProfileRecord = {
   isHod: boolean;
   isActive: boolean;
   user: { id: string; name: string; email: string; isActive: boolean };
+  /** The HR record for the same person. Null until somebody links them. */
+  employee: {
+    id: string;
+    employeeId: string;
+    name: string;
+    jobTitle: string | null;
+  } | null;
   _count: { assignments: number };
 };
+
+export type EmployeeSuggestionRecord = {
+  id: string;
+  employeeId: string;
+  name: string;
+  jobTitle: string | null;
+  phone: string;
+  reason: string;
+  confidence: "certain" | "likely" | "possible";
+};
+
+export async function fetchEmployeeSuggestions(teacherProfileId: string) {
+  return fetchJson<{ suggestions: EmployeeSuggestionRecord[] }>(
+    `/api/v2/schools/teachers/profiles/${teacherProfileId}/employee`,
+  );
+}
+
+export async function linkTeacherEmployee(
+  teacherProfileId: string,
+  employeeId: string,
+) {
+  return fetchJson<{ id: string; employeeId: string | null }>(
+    `/api/v2/schools/teachers/profiles/${teacherProfileId}/employee`,
+    { method: "PUT", body: JSON.stringify({ employeeId }) },
+  );
+}
+
+export async function unlinkTeacherEmployee(teacherProfileId: string) {
+  return fetchJson<{ id: string; employeeId: string | null }>(
+    `/api/v2/schools/teachers/profiles/${teacherProfileId}/employee`,
+    { method: "DELETE" },
+  );
+}
 
 export type TeacherSubjectRecord = {
   id: string;

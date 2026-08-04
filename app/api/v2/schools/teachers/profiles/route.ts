@@ -64,6 +64,9 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           user: { select: { id: true, name: true, email: true, isActive: true } },
+          // The HR record for the same person, so the list can say which
+          // teachers are not joined up yet rather than leaving it invisible.
+          employee: { select: { id: true, employeeId: true, name: true, jobTitle: true } },
           _count: { select: { assignments: true } },
         },
         // Alphabetical by the name on screen. This was `isActive desc,
@@ -123,6 +126,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         user: { select: { id: true, name: true, email: true, isActive: true } },
+        employee: { select: { id: true, employeeId: true, name: true, jobTitle: true } },
         _count: { select: { assignments: true } },
       },
     });
