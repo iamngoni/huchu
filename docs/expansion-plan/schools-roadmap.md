@@ -16,6 +16,9 @@ schools pull request.
 - **Iterations ship in order.** Each one leaves a product that works end to end. A later iteration
   never leaves an earlier one broken to get started.
 - **New scope** joins the iteration it belongs to as the next free ID in that iteration's block.
+- **IDs become permanent once a commit references them.** Iteration 6 was renumbered on 2026-08-04,
+  before any of its stories had started, because one story per portal screen hid the fact that a
+  screen carries a dozen separate promises. No started story has ever been renumbered.
 - **Changelog rows land one commit behind.** A commit cannot contain its own hash, so the row
   describing a piece of work is written in the commit after it. Amending to insert the hash is not
   an option — it changes the hash again.
@@ -128,31 +131,88 @@ The models the pack promises but does not have.
 
 ## Iteration 6 — Portals
 
-Built to the prototypes in `docs/design-system/portals/`. Every feature in a demo is required.
+Built to the prototypes in `docs/design-system/portals/`. Every feature in a demo is required, so
+the stories are one per capability rather than one per screen — a screen that half works is not a
+promise kept. Numbering is blocked per portal (parent 1–19, student 20–39, teacher 40–59) so a
+capability found later joins its own portal rather than the end of the list.
+
+### Parent — mobile
 
 | ID | Story | Acceptance signal | Status |
 |---|---|---|---|
-| S-6.1 | As a parent, I switch between my children and see attendance, marks and balance for each | Parent portal Home to prototype parity | `todo` |
-| S-6.2 | As a parent, I read my fee invoices by line, download receipts and open a statement | Parent portal Fees to prototype parity | `todo` |
-| S-6.3 | As a parent, I read school news and reply | News with threaded replies | `todo` |
-| S-6.4 | As a parent, I manage my own profile, language and security | Profile, language picker, 2FA with spare recovery codes | `todo` |
-| S-6.5 | As a student, I see my timetable by day and week | Student portal timetable — depends on S-1.1 | `todo` |
-| S-6.6 | As a student, I see assignments and hand work in | Student assignments to prototype parity — depends on S-1.9 | `todo` |
-| S-6.7 | As a student, I see my marks and report card by term | Student marks — depends on S-1.3 and S-5.2 | `todo` |
-| S-6.8 | As a student, I borrow, return, renew and reserve library books and settle fines | Student library to prototype parity — depends on S-1.10 | `todo` |
-| S-6.9 | As a student, I set goals and sign in with a PIN | Goals, PIN sign-in, PIN change and recovery, theme | `todo` |
-| S-6.10 | As a teacher, I open my day and take the register for each lesson | Teacher Today to prototype parity | `todo` |
-| S-6.11 | As a teacher, I enter marks with my own columns and publish them to parents | Teacher Marks to prototype parity, including the papers-to-mark queue | `todo` |
-| S-6.12 | As a teacher, I plan lessons and set homework from the portal | Teacher Lessons to prototype parity — depends on S-1.11 and S-1.9 | `todo` |
-| S-6.13 | As a teacher, I sign out safely from a shared device | Shared-device sign-out, settings, help centre | `todo` |
+| S-6.1 | As a parent, I sign in with a code sent to me rather than a password I will forget | OTP entry to prototype parity, including resend and the wrong-code state | `todo` |
+| S-6.2 | As a parent with more than one child, I switch between them anywhere in the portal | Child switcher and quick-pick, with the choice persisting across screens | `todo` |
+| S-6.3 | As a parent, my home screen tells me what changed for this child since I last looked | Home to prototype parity: attendance, marks, balance, unread notices | `todo` |
+| S-6.4 | As a parent, I see my child's attendance and can open any single day | Attendance summary plus day detail — depends on S-1.2 for what counts as a school day | `todo` |
+| S-6.5 | As a parent, I read my child's published marks | Marks to prototype parity, gated by publish window and `canReceiveAcademicResults` | `todo` |
+| S-6.6 | As a parent, I see what I owe, broken down by what it is for | Invoice lines — tuition, boarding levy, sports, books, aftercare — not one total | `todo` |
+| S-6.7 | As a parent, I download a receipt for a payment I made | Receipt as a rendered document — depends on S-5.1 | `todo` |
+| S-6.8 | As a parent, I open a statement for the term | Statement to prototype parity, downloadable | `todo` |
+| S-6.9 | As a parent, I pay fees from my phone | EcoCash, OneMoney, bank transfer and card, recorded against the invoice and reconciled into the receipt flow — depends on S-7.3 | `todo` |
+| S-6.10 | As a parent, I pay part of a bill now and the rest later | Split payment to prototype parity | `todo` |
+| S-6.11 | As a parent, I look back at what I have paid, by child and by method | Payment history with both filters | `todo` |
+| S-6.12 | As a parent, I read school notices | Notices to prototype parity, with read state | `todo` |
+| S-6.13 | As a parent, I reply to a notice and see other replies | Threaded replies — depends on S-7.1 | `todo` |
+| S-6.14 | As a parent, I message my child's teacher and attach a file | Threads with attachments — depends on S-7.1 and `lib/uploads/` | `todo` |
+| S-6.15 | As a parent, I see school events, say whether we are coming, and add one to my calendar | Events, RSVP and calendar export — depends on S-1.2 | `todo` |
+| S-6.16 | As a parent, I change my language | Language picker to prototype parity | `todo` |
+| S-6.17 | As a parent, I turn on extra security and keep spare codes | Two-factor enrolment with recovery codes | `todo` |
+| S-6.18 | As a parent, I can see where I am signed in and end a session | Session list and end-session | `todo` |
+| S-6.19 | As a parent, I can find an answer without ringing the office | Help and FAQ to prototype parity | `todo` |
+
+### Student — mobile and tablet
+
+| ID | Story | Acceptance signal | Status |
+|---|---|---|---|
+| S-6.20 | As a student, I sign in with a PIN | PIN entry to prototype parity | `todo` |
+| S-6.21 | As a student, I change my PIN, or recover it when I forget | Change and forgotten-PIN flows | `todo` |
+| S-6.22 | As a student, I see my timetable for today and for the week | Day and week views — depends on S-1.1 | `todo` |
+| S-6.23 | As a student, I open a class from my timetable | Class detail to prototype parity | `todo` |
+| S-6.24 | As a student, I see what work is set and filter it | Assignment list with filters — depends on S-1.9 | `todo` |
+| S-6.25 | As a student, I hand work in and see that it arrived | Hand-in flow with the handed-in state — depends on S-1.9 | `todo` |
+| S-6.26 | As a student, I see my marks for the term | Marks to prototype parity — depends on S-1.3 | `todo` |
+| S-6.27 | As a student, I open my report card | Report card by term — depends on S-1.3 and S-5.2 | `todo` |
+| S-6.28 | As a student, I browse the library and borrow a book | Catalogue and borrow — depends on S-1.10 | `todo` |
+| S-6.29 | As a student, I return a book, including by scanning it | Return and scan-to-return — depends on S-1.10 | `todo` |
+| S-6.30 | As a student, I renew a loan or reserve a book that is out | Renew and reserve — depends on S-1.10 | `todo` |
+| S-6.31 | As a student, I see what I owe in fines and settle it | Fines and fine payment — depends on S-1.10 and S-7.3 | `todo` |
+| S-6.32 | As a student, I set a goal for a subject and watch it move | Goals to prototype parity — depends on S-1.13 | `todo` |
+| S-6.33 | As a student, I choose how often I am notified | Notifications with cadence preference — depends on S-9.5 | `todo` |
+| S-6.34 | As a student, I edit my profile and pick a theme | Profile editing and theme | `todo` |
+| S-6.35 | As a student, I find help and say whether it helped | Help centre with helpfulness feedback | `todo` |
+
+### Teacher — tablet and desktop
+
+| ID | Story | Acceptance signal | Status |
+|---|---|---|---|
+| S-6.40 | As a teacher, I open my day and see the lessons I am teaching | Today to prototype parity — depends on S-1.1 | `todo` |
+| S-6.41 | As a teacher, I take the register for a lesson, marking the whole class present in one action | Register with mark-all and per-student override | `todo` |
+| S-6.42 | As a teacher, I look back at attendance I have taken | Attendance history to prototype parity | `todo` |
+| S-6.43 | As a teacher, I enter marks cell by cell and they save as I go | Gradebook entry and save — depends on S-1.3 | `todo` |
+| S-6.44 | As a teacher, I add my own assessment column | Custom columns — depends on S-1.3 | `todo` |
+| S-6.45 | As a teacher, I work through the papers still to mark | Papers-to-mark queue with filters | `todo` |
+| S-6.46 | As a teacher, I send marks to parents under the school's rules | Publish to parents, gated by publish window and the school's publishing rules | `todo` |
+| S-6.47 | As a teacher, I hold a conversation with a parent | Message threads — depends on S-7.1 | `todo` |
+| S-6.48 | As a teacher, I answer common questions in one tap | Quick replies — depends on S-7.1 | `todo` |
+| S-6.49 | As a teacher, I send one message to a whole class | Broadcast — depends on S-7.1 | `todo` |
+| S-6.50 | As a teacher, I see my week | Timetable week view — depends on S-1.1 | `todo` |
+| S-6.51 | As a teacher, I plan a lesson | Lesson plans — depends on S-1.11 | `todo` |
+| S-6.52 | As a teacher, I copy last week's lessons forward | Copy-from-last-week — depends on S-1.11 | `todo` |
+| S-6.53 | As a teacher, I stand in for a colleague and see their lesson | Cover lessons — depends on S-1.11 | `todo` |
+| S-6.54 | As a teacher, I set homework and see it land with the class | Assignment authoring — depends on S-1.9 | `todo` |
+| S-6.55 | As a teacher, I keep teaching resources and upload new ones | Resource library with upload — depends on S-1.12 | `todo` |
+| S-6.56 | As a teacher, I book and manage parent meetings | Meetings to prototype parity — depends on S-1.14 | `todo` |
+| S-6.57 | As a teacher, I see how my classes are doing | Teacher reports to prototype parity | `todo` |
+| S-6.58 | As a teacher, I control notifications, publishing, appearance, security and privacy | The five settings panels to prototype parity | `todo` |
+| S-6.59 | As a teacher on a shared staffroom device, I am signed out safely when I walk away | Shared-device sign-out and idle lock | `todo` |
 
 ## Iteration 7 — Messaging and payments
 
 | ID | Story | Acceptance signal | Status |
 |---|---|---|---|
 | S-7.1 | As a teacher and a parent, we hold a conversation that updates without refreshing | One messaging primitive serving teacher↔parent threads, whole-class broadcast and notice replies; realtime delivery, not polling | `todo` |
-| S-7.2 | As a teacher, I answer quickly and message a whole class at once | Quick replies and class broadcast | `todo` |
-| S-7.3 | As a parent, I pay fees from the portal by EcoCash, OneMoney, bank transfer or card | Payment recorded against the invoice, reconciled into the existing receipt and allocation flow, posted through accounting | `todo` |
+| S-7.2 | As a teacher, I answer quickly and message a whole class at once | The broadcast and quick-reply primitives S-6.48 and S-6.49 sit on | `todo` |
+| S-7.3 | As a parent, I pay fees from the portal by EcoCash, OneMoney, bank transfer or card | The payment primitive S-6.9, S-6.10 and S-6.31 sit on: recorded against the invoice, reconciled into the existing receipt and allocation flow, posted through accounting | `todo` |
 | S-7.4 | As a bursar, I can see and reconcile portal payments by method | Payment history filtered by method; reconciliation to receipts | `todo` |
 
 ## Iteration 8 — Offline
