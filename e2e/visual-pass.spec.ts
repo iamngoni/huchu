@@ -78,6 +78,7 @@ const PAGES = [
   { name: "attendance", path: "/schools/attendance", heading: "Attendance" },
   { name: "teachers", path: "/schools/teachers", heading: "Teachers" },
   { name: "results", path: "/schools/results", heading: "Results" },
+  { name: "class-results", path: "/schools/results/class/515bcc28-5300-49b9-8187-abf2f2d44988", heading: "Form 1 marks" },
   { name: "timetable", path: "/schools/timetable", heading: "Timetable" },
 ];
 
