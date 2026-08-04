@@ -27,6 +27,55 @@ Sources this roadmap is derived from: `docs/expansion-plan/schools-production-re
 `docs/design-system/portals/README.md` (portal build contract — every feature in the three
 prototypes is mandatory), `app/home/site-data.ts` and `lib/marketing/pricing.ts` (what is sold).
 
+## Standing instructions
+
+These are not preferences. They decide where work goes and what it may be built from, and a change
+that violates one is a regression whatever else it does. **Read this section before starting a
+story.**
+
+### Where a feature lives
+
+- **Classroom work lives in the teacher portal.** Lessons, mark capture, homework, the register,
+  teaching resources, parent messages, parent meetings — if a teacher does it as part of running
+  their classes, it is a teacher portal screen and it does not appear on the admin dashboard.
+- **The admin dashboard is for administration.** Admissions, enrolment, guardians, fees, boarding
+  and welfare, transport, the master timetable, moderation and publishing, board reporting,
+  documents. The office is not running lessons day to day.
+- **Oversight is not the same as doing.** "Which registers were not taken" is an admin screen;
+  taking one is not. "Approve these marks" is an admin screen; entering them is not. When a domain
+  appears on both sides, they are different screens answering different questions, not one screen
+  shared.
+- **A student's own work lives in the student portal** — timetable, homework hand-in, marks,
+  library, goals.
+- Before building anything, name the person who does it. That name decides the surface.
+
+### How a portal is built
+
+- **Portals do not use the dashboard shell.** Each portal owns its chrome: the teacher portal is a
+  class-and-term-anchored rail (SHL·07), the student portal is a mobile shell with bottom tabs.
+- **The prototypes in `docs/design-system/portals/` are the contract** — design, structure and
+  layout are replicated, not reinterpreted. Every feature present in a demo is required.
+
+### How anything is built
+
+- **Always refer to the design system documentation** (`docs/design-system/`) before writing a
+  surface. Never roll a new primitive and never hand-build what already exists: compose from
+  `@corelithzw/react` and the repo's existing wrappers.
+- **Read component props from `node_modules/@corelithzw/react/dist/index.d.ts`**, never from memory.
+- No hard-coded colours, sizes, durations or font stacks. Role tokens only.
+- Filters are dropdowns or popovers. Never rows of pills.
+- Sidebar navigation uses expanding groups, matching the other modules.
+- Year group and class are **navigation**, not a filter: you reach a list through its group.
+- **People have faces.** Students and staff carry avatars wherever they are listed.
+- **The library is a grid of covers**, not rows of text — a book is recognised by its cover.
+- Every pass is screenshotted and the screenshots are shown.
+
+### Order of work
+
+Iterations otherwise ship in order, with one deliberate exception recorded on 2026-08-04: the two
+portals in Iteration 6 (teacher, then student) are being finished ahead of the rest of the admin
+dashboard, because the classroom features already built have no correct home until they exist.
+
 ## Definition of Done
 
 Every story, no exceptions:
@@ -102,7 +151,7 @@ The models the pack promises but does not have.
 |---|---|---|---|
 | S-1.1 | As a timetabler, I can build a timetable of periods, rooms and slots, and be warned of clashes | `SchoolPeriod` / `SchoolRoom` / `SchoolTimetableSlot`; teacher, room and class conflicts rejected; copy-forward from last term | `done` |
 | S-1.2 | As a registrar, I can set the school calendar and holidays | `SchoolCalendarEvent`; "registers not taken" becomes computable | `done` |
-| S-1.3 | As a teacher, I record assessments that roll into a term mark under the school's grading scheme | `SchoolAssessment` → `SchoolAssessmentScore` → `SchoolResultLine`; `SchoolGradingScheme` with bands; CA/exam weighting. **Two shapes, not one:** in a primary school a class teacher records every subject for her one class; in a secondary school a subject teacher records her subject across several classes. The entry screen has to serve both, and the office needs the same screen for a teacher who is away — so this is teacher *and* admin work, not portal-only. | `todo` |
+| S-1.3 | As a teacher, I record assessments that roll into a term mark under the school's grading scheme | `SchoolAssessment` → `SchoolAssessmentScore` → `SchoolResultLine`; `SchoolGradingScheme` with bands; CA/exam weighting. **Two shapes, not one:** in a primary school a class teacher records every subject for her one class; in a secondary school a subject teacher records her subject across several classes. Capture is teacher portal work; the office's screen is the moderation and publishing one, not a second entry screen. | `done` |
 | S-1.4 | As a registrar, I take an applicant from application through offer to enrolment | `SchoolApplication` pipeline with a board and duplicate detection | `done` |
 | S-1.5 | As a head, I roll the school into the next year in one reviewable batch | Promote / repeat / graduate / transfer as a single reviewed operation | `done` |
 | S-1.6 | As a warden, bed allocation respects gender policy and capacity | Allocation rejects a policy or capacity breach; the check-then-write race is closed by a constraint | `done` |
@@ -112,9 +161,9 @@ The models the pack promises but does not have.
 | S-1.10 | As a librarian, I lend, return, renew and reserve books, and charge overdue fines | Library and lending model; fine payable in the student portal | `done` |
 | S-1.11 | As a teacher, I plan lessons and arrange cover | Lesson plans, cover lessons, copy-from-last-week | `done` |
 | S-1.12 | As a teacher, I keep a resource library I can upload to | Teaching resources; link-only until the Iteration 5 upload work lands | `done` |
-| S-1.13 | As a student, I set and track a goal per subject | Student goals, per the student prototype | `todo` |
-| S-1.14 | As a teacher, I book and manage parent meetings | Meetings and appointments | `todo` |
-| S-1.15 | As a transport officer, I run routes, stops and rider registers, billed with fees | Transport — a paid add-on in `SCHOOL_ADD_ONS` | `todo` |
+| S-1.13 | As a student, I set and track a goal per subject | Student goals, one per subject and term, with the baseline stamped when the goal is first set; surfaces in the student portal | `done` |
+| S-1.14 | As a teacher, I book and manage parent meetings | Free slots created as rows so a parent can see availability; one live slot per teacher per time; surfaces in the teacher portal | `done` |
+| S-1.15 | As a transport officer, I run routes, stops and rider registers, billed with fees | Transport — a paid add-on in `SCHOOL_ADD_ONS`. Office work, so it keeps its admin screen; billing is reported, never posted | `done` |
 | S-1.16 | As a timetabler, I build a term's timetable in one action rather than one lesson at a time | Greedy first-fit over the term's assignments, respecting every clash rule, adding to what is there and never moving a hand-placed lesson; what it cannot place is reported | `done` |
 | S-1.17 | As a head of department, I allocate a teacher to a subject across several year groups at once | Bulk allocation that creates and reassigns in one action, re-pointing any timetable slots the assignment already had | `done` |
 
@@ -135,18 +184,23 @@ The models the pack promises but does not have.
 | ID | Story | Acceptance signal | Status |
 |---|---|---|---|
 | S-3.1 | As an operator, I provision a tenant as a school and it is ready to use | `provisionSchool` seeds year, terms, class ladder, subjects, grading scheme, a fee structure, accounting defaults and roles; invoked by the org-provision wizard on `TEMPLATE_SCHOOLS`. Grading scheme deferred to S-1.3, which introduces the model. | `done` |
-| S-3.2 | As an operator, I can build a new production database from the migration history | `prisma migrate deploy` succeeds on an empty database — currently fails at `20260728090000_add_crm_record_marks` because no migration creates `CrmClient` | `todo` |
+| S-3.2 | As an operator, I can build a new production database from the migration history | `prisma migrate deploy` succeeds on an empty database. It does not today: a migration inherited from another module alters a table no earlier migration creates, so the history only replays against a database that was built by `db push`. Schools cannot be provisioned onto fresh infrastructure until it does | `todo` |
 | S-3.3 | As a school switching systems, my existing records are imported | Students, guardians, classes, fee structures and opening balances — the `$199` migration add-on | `todo` |
 
 ## Iteration 4 — Record surface
 
+The record page — an identity strip, editable attributes and a tab per relationship — exists in this
+repo already, but it is owned by one module and hard-wired to that module's tables. A student is as
+much a record as anything else it serves, so this iteration makes the surface record-type agnostic
+and then points the school's six record types at it. No school-specific copy of it is to be written.
+
 | ID | Story | Acceptance signal | Status |
 |---|---|---|---|
-| S-4.1 | As an engineer, the record surface is shared rather than CRM-owned | `components/crm/records/` → `components/records/`, `lib/crm/` → `lib/records/`, behind a record-type registry; imports re-pointed, no behaviour change | `todo` |
-| S-4.2 | As an engineer, any record can be the subject of a task, comment, mention, follow or file | `subjectType` + `subjectId` added to `CrmTask` / `CrmComment` / `CrmMention` / `CrmFollower` / `CrmRecordFile`; backfilled, dual-written, CRM FK columns dropped in a later change | `todo` |
-| S-4.3 | As a registrar, students, guardians, teachers, classes, subjects and hostels are record pages | Identity strip, editable attributes, Overview tab on narrow screens, one tab per relationship | `todo` |
+| S-4.1 | As an engineer, the record surface belongs to no single module | Record components and helpers moved out of their owning module into a shared home behind a record-type registry; imports re-pointed, no behaviour change | `todo` |
+| S-4.2 | As an engineer, any record can be the subject of a task, comment, mention, follow or file | Tasks, comments, mentions, followers and files keyed by `subjectType` + `subjectId` rather than by a foreign key to one module's table; backfilled and dual-written before the old columns are dropped | `todo` |
+| S-4.3 | As a registrar, students, guardians, teachers, classes, subjects and hostels are record pages | Identity strip with the person's avatar, editable attributes, Overview tab on narrow screens, one tab per relationship | `todo` |
 | S-4.4 | As a school, I can add my own fields to a student or guardian | Custom fields on school record types | `todo` |
-| S-4.5 | As a registrar, I can find a student, guardian or staff member by search | School search — generalised from `lib/crm/search.ts` or built deliberately | `todo` |
+| S-4.5 | As a registrar, I can find a student, guardian or staff member by search | School search over the shared record index, not a second search engine | `todo` |
 | S-4.6 | As anyone in a school, I reach a list through its year group rather than scrolling one list of everybody | Year group is a route, not a filter: a picker, then the list for that group. Students, attendance and results done; fees in progress | `wip` |
 
 ## Iteration 5 — Documents
@@ -209,6 +263,7 @@ capability found later joins its own portal rather than the end of the list.
 | S-6.33 | As a student, I choose how often I am notified | Notifications with cadence preference — depends on S-9.5 | `todo` |
 | S-6.34 | As a student, I edit my profile and pick a theme | Profile editing and theme | `todo` |
 | S-6.35 | As a student, I find help and say whether it helped | Help centre with helpfulness feedback | `todo` |
+| S-6.36 | As a student, the portal is its own app rather than the staff dashboard with a different menu | Mobile shell to prototype parity: app bar, bottom tabs (Home · Timetable · Marks · Profile), full-bleed screens. No dashboard chrome anywhere under `/portal/student` | `todo` |
 
 ### Teacher — tablet and desktop
 
@@ -234,6 +289,8 @@ capability found later joins its own portal rather than the end of the list.
 | S-6.57 | As a teacher, I see how my classes are doing | Teacher reports to prototype parity | `todo` |
 | S-6.58 | As a teacher, I control notifications, publishing, appearance, security and privacy | The five settings panels to prototype parity | `todo` |
 | S-6.59 | As a teacher on a shared staffroom device, I am signed out safely when I walk away | Shared-device sign-out and idle lock | `todo` |
+| S-6.60 | As a teacher, the portal is anchored to the class I am teaching, not to a module tree | Portal shell to prototype parity (SHL·07): own side rail with the class list above the navigation, own top bar, groups for daily work / more / account. The chosen class is held by the shell so the register, the mark sheet and the planner cannot disagree about whose lesson it is. No dashboard chrome anywhere under `/portal/teacher` | `wip` |
+| S-6.61 | As a teacher, I meet classroom work in one place instead of two | Lesson plans, teaching resources, homework and mark capture removed from the admin navigation and the schools route registry; the office keeps oversight — unmarked registers, moderation, publishing — and nothing else | `todo` |
 
 ## Iteration 7 — Messaging and payments
 
@@ -274,6 +331,8 @@ once it returns."
 | S-10.1 | As anyone on a phone, every school admin surface works at 390×844 | Screenshotted, fixed, re-shot; no horizontal body scroll; controls one height | `todo` |
 | S-10.2 | As anyone on a tablet, every school surface works at 768×1024 | Screenshotted, fixed, re-shot | `todo` |
 | S-10.3 | As anyone on a phone, every portal surface matches its prototype | All three portals screenshot-compared against `docs/design-system/portals/` | `todo` |
+| S-10.4 | As anyone reading a list of people, I can tell them apart at a glance | Students and staff carry an avatar wherever they are listed — registers, mark sheets, class lists, message threads, admin tables and record pages. Initials with a colour derived from the name until a photo exists | `todo` |
+| S-10.5 | As anyone browsing the library, I recognise a book by its cover | Catalogue is a grid of covers in the student portal and in the admin catalogue, not rows of text. Loans and fines stay a list, because a debt is not browsed | `todo` |
 
 ## Parked
 
@@ -304,7 +363,7 @@ Newest first. One entry per commit that changes implementation status.
 | 2026-08-04 | `8cc9f37` | S-4.6 | Screenshot-verified the moved attendance and results views — 27/27 across nine pages and three viewports. One failure on the first run was cold-compile timing, not a defect: the phone test hits each route first and the results endpoint answered in 58ms once warm. Recorded rather than silently re-run, because a spec that only passes on the second attempt is worth knowing about. The teacher portal register is still not screenshot-verified: it lives on a portal host with a teacher login the visual pass is not set up for. |
 | 2026-08-04 | `4c6fa7a` | S-4.6, S-6.41 | **A workflow in the wrong place.** Taking a register was built under `/schools`. It is a teacher's job, the roadmap already had it as S-6.41 in the teacher portal, and the result was a school administrator able to mark any child in the school present from a page that let them pick any class. Moved to `/portal/teacher/register`, with classes from `/portal/teacher/me/classes` — the teacher's own, which is the S-0.2 identity rule applied where it was missing. `/schools/attendance` became the question an office asks at 09:15: which registers have not come in, built from the class ladder outward because a view listing only submitted registers cannot show the missing ones. Results moved to year-group navigation at the same time. |
 | 2026-08-04 | `bc03645` | S-4.6 | Attendance by year group, and a register that takes a register. `/schools/attendance` had been a roster with five counters that listed every student in the school and could not record that any of them was present — the sessions API had supported lines throughout and nothing called it. Everyone starts present, which is a real decision with a real risk stated in the code: a register submitted unread marks an absent child present, and it is still right, because forty taps a morning gets filled in at lunchtime from memory. `GradePicker` became shared rather than copied. `termId` on the sessions endpoint defaults to the current term. The register's date is built from local parts — `toISOString()` would file an 08:00 register in Harare as the previous day. |
-| 2026-08-04 | `482739d` | S-4.6 | Grade before student, dropdown filters, grouped schools sidebar. Three pieces of feedback on the preceding commits. Students opens on year groups rather than listing 800 people; filters became one labelled `FilterSelect` because a screen of chip rows never says what any row is for; the sidebar follows the CRM pattern of groups that expand to their children. Also app-wide: breadcrumbs title-cased record ids, so every detail route read "515bcc28 5300 49b9 8187 Abf2f2d44988" — the segment is dropped now, with a test proving a merely-hexadecimal segment is left alone. |
+| 2026-08-04 | `482739d` | S-4.6 | Grade before student, dropdown filters, grouped schools sidebar. Three pieces of feedback on the preceding commits. Students opens on year groups rather than listing 800 people; filters became one labelled `FilterSelect` because a screen of chip rows never says what any row is for; the sidebar follows the pattern the other modules use, of groups that expand to their children. Also app-wide: breadcrumbs title-cased record ids, so every detail route read "515bcc28 5300 49b9 8187 Abf2f2d44988" — the segment is dropped now, with a test proving a merely-hexadecimal segment is left alone. |
 | 2026-08-04 | `ecf7e12` | S-1.16, S-1.17 → `done` | **Authoring tools, because a term start is two half-days of clicking.** Twelve classes with ten subjects each is 120 lessons to place, every one able to collide with the class, the teacher or the room; a HOD allocating maths across six forms does the same thing six times and the sixth is where the mistake goes in. `autoFillTimetable` is a greedy first-fit — deliberately not a solver, because a solver needs an objective (spread doubles, protect Friday afternoon, keep frees contiguous) that no school has told us, and a wrong objective silently produces a plausible timetable nobody can teach. It fills period-major so a subject spreads across the week rather than stacking on Monday, adds to what is already there, and never moves a hand-placed lesson. `allocateTeacherToClasses` treats creating and reassigning as one action, since "who teaches Form 2 maths" is the question either way, and re-points the timetable slots a reassigned lesson already had — those columns are what the teacher-clash index protects. Both report what they could not do rather than reporting success: an assignment given four lessons instead of five, or a lesson that now clashes, is the part somebody has to act on, so the sheets stay open holding it. 7 tests. Verified against the running API: 18 lessons placed on a re-run at a higher target, 3 allocations created. |
 | 2026-08-04 | `209d7dc` | S-1.1 → `done` | The timetable screen, and the route Iteration 0 removed. Two viewpoints on the same lessons — by class and by teacher — because "what is Form 2 doing on Tuesday" and "where is Ms Banda at 10:20" are the two questions a timetable is asked. The grid is `lg` and up: a week of periods against days does not survive 390px at a legible size, and below `lg` the same lessons are a day at a time. The visual pass gained a 1440px viewport for this; without one it would never have looked at the grid. A lesson is chosen from the term's existing class-subject assignments rather than by picking class, subject and teacher separately, since those three together *are* an assignment. Timetable is back in the nav, the route registry and the workspace rail under `schools.core` — S-0.7 removed all three, and this is the story that was to restore them. **Three defects the visual pass found that typecheck, lint and 1188 unit tests could not.** The page 500'd on a module-not-found for `dns`: the client component imported `formatMinute` from a module that imports `prisma`, pulling `pg` into the browser bundle; the pure helpers now live in `timetable-format`. `fetchSchoolsTimetable` unwrapped `.data` from a response `successResponse` never wraps — the exact bug fixed in `bb7f70b`, reintroduced four commits later against a note in the same file warning about it. And a grid cell holding three classes' lessons said nothing about which was which. A fourth was environmental rather than a defect: the dev server held a Prisma client generated before the new models, so every timetable call 500'd on `prisma.schoolPeriod` being undefined. 15/15 across five pages and three viewports on 27 seeded lessons. Copy-forward verified against the running API: 27 copied, a second run copying nothing. |
 | 2026-08-04 | `cce1f7c` | S-1.1 → `wip` | Timetable API. `GET /api/v2/schools/timetable` is deliberately unpaginated — the caller draws a grid of days against periods, and a timetable missing half its lessons because they fell on page two is worse than none; a term's slots are bounded by days x periods x classes. The periods travel with the slots because the grid needs its rows even where nothing is scheduled. Clashes come back as 409 with every conflict in the details, so a timetabler fixes the placement once rather than meeting the class, the teacher and the room one refused save at a time; PATCH passes the slot's own id as `excludeSlotId`, without which nudging the room of a lesson that is not moving would be refused by the lesson itself. PATCH moves a lesson and nothing else — which class, subject and teacher it is belongs to the assignment. Deleting a period is refused with a count rather than cascading its lessons away, and turning one into break time with lessons still in it is refused too. No route-registry change needed: the existing `/api/v2/schools` entry maps to `schools.core`. The guard-coverage test picked the six new files up on its own, at 86 files. |

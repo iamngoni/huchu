@@ -70,19 +70,14 @@ left the rest, because stripping the nav now means rebuilding it in three
 commits' time. **If you would rather the nav only showed what exists, say so and
 it is ten minutes.**
 
-### 7. Portals must not use the dashboard shell
+### 7. Portals must not use the dashboard shell — done
 
-Noted from your message mid-run. `/portal/teacher/register` and
-`/portal/teacher/marks` currently render inside the same shell as the admin
-side, because they were built before that instruction. They need the portal
-layout from `docs/design-system/portals/`, and I will do that as part of
-Iteration 6 rather than half-doing it now — the other portal pages do not exist
-yet, and the shell is worth building once against all of them.
+`/portal/**` already bypassed the dashboard chrome in `app-shell.tsx`; what was
+missing was a shell of its own. The teacher portal now has one, built from the
+design system's `AppShell` + `NavRail` rather than hand-rolled, with the class
+list held above the navigation so every screen agrees which lesson it is
+looking at. The student portal's is next.
 
----
-
-_The changelog for this work lives in the roadmap; this file is a wall, not a
-log._
 
 ### 8. Provisioning creates students with a current class but no enrolment rows
 
@@ -99,3 +94,50 @@ answer.
 The fix is to have `provisionSchool` (and any bulk student import) write an
 enrolment alongside the student. Half a day, and it wants a backfill for
 existing tenants. **Worth doing before a real school goes live** — say the word.
+
+### 9. The teacher portal wears the tenant's brand, not the prototype's purple
+
+`teacher.html` sets its own purple accent (`--te-brand: #6D28D9`) to mark the
+portal as a distinct surface. I did not copy the hex. Two rules in
+`docs/design-system/05-rules.md` point the other way — "never hard-code a hex"
+and "pick the role token" — and the workspace branding system already paints
+`--brand` per tenant, so a hard-coded purple would ignore a school's own colours
+on the one surface its staff use most.
+
+The portal therefore uses `--brand` and reads blue by default, purple for a
+school whose branding is purple. If you want the portal to be purple *because
+it is a portal*, that is a per-surface accent token rather than a literal, and
+it wants adding to the design system rather than to this repo.
+
+Cost to change: one token declaration on the portal shell.
+
+### 10. Parent messaging has no model yet
+
+Both prototypes have it — the teacher's Messages screen and the parent's
+notice replies — and the roadmap already carries it as S-7.1, deliberately as
+one primitive rather than three. It needs a thread model, an attachment path
+and realtime delivery, which is a domain of its own rather than a screen.
+
+The teacher portal's Messages screen is therefore the one place I cannot build
+to the prototype from what exists. I will build it when S-7.1 lands rather than
+faking a thread list against notices.
+
+### 11. Where classroom work went
+
+Acting on your instruction, these leave the admin dashboard for the teacher
+portal: lesson plans, teaching resources, homework, mark capture, the register
+itself. The office keeps what it actually does — who has *not* marked, marks
+moderation, publishing, and every admissions, fees, boarding, welfare and
+transport screen.
+
+Two calls inside that I want to flag:
+
+- **The master timetable stays with the office.** A teacher sees their week; a
+  timetabler builds everybody's. Same tables, two screens.
+- **Library is split.** Borrowing and browsing are a student portal screen;
+  the catalogue, stock and fines are the librarian's, which is office work.
+
+---
+
+_The changelog for this work lives in the roadmap; this file is a wall, not a
+log._

@@ -451,6 +451,13 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
       "schools.boarding",
       "schools.teachers",
       "schools.results",
+      // The portal shell the three school portals are gated behind. Without it
+      // `schools.portal.*` resolves to "requires portal.core" and every portal
+      // route on a Schools Suite tenant redirects to /access-blocked — three
+      // features enabled and none of them reachable. The suite sells "parent
+      // and teacher portals on any phone browser", so the shell is part of the
+      // suite rather than a separate purchase.
+      "portal.core",
       "schools.portal.parent",
       "schools.portal.student",
       "schools.portal.teacher",
