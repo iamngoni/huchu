@@ -159,6 +159,12 @@ model Company {
   schoolLessonPlans             SchoolLessonPlan[]
   schoolCoverAssignments        SchoolCoverAssignment[]
   schoolTeachingResources       SchoolTeachingResource[]
+  schoolStudentGoals            SchoolStudentGoal[]
+  schoolParentMeetings          SchoolParentMeeting[]
+  schoolTransportRoutes         SchoolTransportRoute[]
+  schoolTransportStops          SchoolTransportStop[]
+  schoolTransportRiders         SchoolTransportRider[]
+  schoolTransportBoardings      SchoolTransportBoarding[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
@@ -5559,6 +5565,8 @@ model SchoolTerm {
   assessments            SchoolAssessment[]
   assignments            SchoolAssignment[]
   lessonPlans            SchoolLessonPlan[]
+  studentGoals           SchoolStudentGoal[]
+  transportRiders        SchoolTransportRider[]
   applications           SchoolApplication[]
   publishWindows      SchoolPublishWindow[]
   feeStructures       SchoolFeeStructure[]
@@ -5651,6 +5659,7 @@ model SchoolTeacherProfile {
   assignments    SchoolClassSubject[]
   timetableSlots SchoolTimetableSlot[]
   coverAssignments SchoolCoverAssignment[] @relation("SchoolCoverTeacher")
+  parentMeetings   SchoolParentMeeting[]   @relation("SchoolParentMeetingTeacher")
   teachingResources SchoolTeachingResource[] @relation("SchoolResourceUploader")
 
   @@unique([companyId, userId])
@@ -5671,6 +5680,7 @@ model SchoolSubject {
 
   company       Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   teachingResources SchoolTeachingResource[]
+  studentGoals      SchoolStudentGoal[]
   classSubjects SchoolClassSubject[]
 
   @@unique([companyId, code])
@@ -5744,6 +5754,9 @@ model SchoolStudent {
   assignmentSubmissions  SchoolAssignmentSubmission[]
   bookLoans              SchoolBookLoan[]
   bookReservations       SchoolBookReservation[]
+  goals                  SchoolStudentGoal[]
+  parentMeetings         SchoolParentMeeting[]
+  transportRiderships    SchoolTransportRider[]
   attendanceSessionLines SchoolAttendanceSessionLine[]
   feeInvoices            SchoolFeeInvoice[]
   feeReceipts            SchoolFeeReceipt[]
@@ -5778,6 +5791,8 @@ model SchoolGuardian {
   user          User?                   @relation("SchoolGuardianPortalUser", fields: [userId], references: [id], onDelete: SetNull)
   studentLinks  SchoolStudentGuardian[]
   portalInvites SchoolPortalInvite[]
+
+  parentMeetings SchoolParentMeeting[]
 
   @@unique([companyId, guardianNo])
   @@unique([companyId, userId])
@@ -6989,6 +7004,173 @@ model SchoolTeachingResource {
 
   @@index([companyId, subjectId])
   @@index([companyId, isShared, title])
+}
+
+/// What a child is aiming for in one subject this term.
+///
+/// Set by the student, agreed with the teacher. Deliberately a target *mark*
+/// and a sentence about how, because "I want a B" without "by doing the past
+/// papers" is a wish rather than a goal.
+model SchoolStudentGoal {
+  id           String   @id @default(uuid())
+  companyId    String
+  studentId    String
+  termId       String
+  subjectId    String
+  /// The mark they are aiming for, as a percentage.
+  targetMark   Decimal? @db.Decimal(5, 2)
+  /// What they will do to get there.
+  plan         String?
+  /// Where they were when the goal was set, so progress is measurable.
+  baselineMark Decimal? @db.Decimal(5, 2)
+  achievedAt   DateTime?
+  /// The teacher's note. Null until somebody has looked.
+  teacherNote  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  student SchoolStudent @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term    SchoolTerm    @relation(fields: [termId], references: [id], onDelete: Cascade)
+  subject SchoolSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, studentId, termId, subjectId])
+  @@index([companyId, termId, subjectId])
+}
+
+/// A parents' evening slot, booked or free.
+///
+/// A row per slot rather than per booking, so an unbooked ten minutes is a row
+/// somebody can take — the same rule as the bed board and the register. A list
+/// of bookings cannot show a parent when the teacher is free.
+model SchoolParentMeeting {
+  id               String   @id @default(uuid())
+  companyId        String
+  teacherProfileId String
+  /// Null while the slot is free.
+  studentId        String?
+  guardianId       String?
+  startsAt         DateTime
+  endsAt           DateTime
+  location         String?
+  notes            String?
+  /// What was said. Filled in afterwards.
+  outcome          String?
+  bookedAt         DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company        Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  teacherProfile SchoolTeacherProfile  @relation("SchoolParentMeetingTeacher", fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  student        SchoolStudent?        @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  guardian       SchoolGuardian?       @relation(fields: [guardianId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, teacherProfileId, startsAt])
+  @@index([companyId, startsAt])
+  @@index([companyId, studentId])
+}
+
+/// A school bus route.
+model SchoolTransportRoute {
+  id          String   @id @default(uuid())
+  companyId   String
+  code        String
+  name        String
+  /// Charged per term to every rider. Billed through the fee structure.
+  termFee     Decimal? @db.Decimal(10, 2)
+  vehicleReg  String?
+  driverName  String?
+  driverPhone String?
+  capacity    Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stops   SchoolTransportStop[]
+  riders  SchoolTransportRider[]
+
+  @@unique([companyId, code])
+  @@index([companyId, isActive])
+}
+
+/// Where the bus stops, in order.
+model SchoolTransportStop {
+  id           String   @id @default(uuid())
+  companyId    String
+  routeId      String
+  name         String
+  /// Order along the route. Two stops cannot share one.
+  sequence     Int
+  /// Minutes from midnight, like the timetable periods and for the same reason:
+  /// a pick-up is a wall-clock fact about a morning, not an instant.
+  pickupMinute Int?
+  dropMinute   Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  route   SchoolTransportRoute   @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  riders  SchoolTransportRider[]
+
+  @@unique([companyId, routeId, sequence])
+  @@index([companyId, routeId])
+}
+
+/// A child who rides the bus.
+model SchoolTransportRider {
+  id        String   @id @default(uuid())
+  companyId String
+  routeId   String
+  stopId    String?
+  studentId String
+  termId    String
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+  /// The fee invoice the term's transport charge went onto.
+  feeInvoiceId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  route   SchoolTransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stop    SchoolTransportStop? @relation(fields: [stopId], references: [id], onDelete: SetNull)
+  student SchoolStudent        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term    SchoolTerm           @relation(fields: [termId], references: [id], onDelete: Cascade)
+  boardings SchoolTransportBoarding[]
+
+  @@index([companyId, routeId, termId])
+  @@index([companyId, studentId])
+}
+
+/// Who actually got on the bus this morning.
+///
+/// The register a driver keeps. Separate from the rider list because being
+/// entitled to ride and being on the bus are different facts, and the second is
+/// the one a parent rings about.
+model SchoolTransportBoarding {
+  id         String                      @id @default(uuid())
+  companyId  String
+  riderId    String
+  onDate     DateTime                    @db.Date
+  direction  SchoolTransportDirection
+  boarded    Boolean                     @default(true)
+  recordedById String?
+  createdAt  DateTime                    @default(now())
+
+  company Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  rider   SchoolTransportRider @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, riderId, onDate, direction])
+  @@index([companyId, onDate])
+}
+
+enum SchoolTransportDirection {
+  /// Home to school.
+  MORNING
+  /// School to home.
+  AFTERNOON
 }
 
 enum SchoolSubmissionStatus {

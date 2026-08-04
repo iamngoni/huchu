@@ -288,6 +288,7 @@ export const navSections: NavSection[] = [
 
       { href: "/schools/finance", icon: ReceiptLong, label: "Fees and finance", group: "money" },
 
+      { href: "/schools/transport", icon: LocalShipping, label: "Transport", group: "admin" },
       { href: "/schools/notices", icon: EventNote, label: "Notices", group: "admin" },
       { href: "/schools/reports", icon: BarChart3, label: "School reports", group: "admin" },
       { href: "/schools/documents", icon: FileText, label: "Documents", group: "admin" },
