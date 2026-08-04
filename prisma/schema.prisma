@@ -929,6 +929,8 @@ model User {
   crmTemplatesCreated               CrmTemplate[]                  @relation("CrmTemplateCreatedBy")
   crmFieldChanges                   CrmFieldChange[]               @relation("CrmFieldChangeChangedBy")
   schoolTeacherProfiles             SchoolTeacherProfile[]
+  schoolStudentPortalAccount        SchoolStudent[]                @relation("SchoolStudentPortalUser")
+  schoolGuardianPortalAccount       SchoolGuardian[]               @relation("SchoolGuardianPortalUser")
   schoolResultModerationActions     SchoolResultModerationAction[] @relation("SchoolResultModerationActionActor")
   schoolLeaveRequestsApproved       SchoolLeaveRequest[]           @relation("SchoolLeaveRequestApprovedBy")
   schoolLeaveRequestsCheckedOut     SchoolLeaveRequest[]           @relation("SchoolLeaveRequestCheckedOutBy")
@@ -5612,6 +5614,11 @@ model SchoolClassSubject {
 model SchoolStudent {
   id              String              @id @default(uuid())
   companyId       String
+  /// The portal account for this student. Null until the invite is claimed.
+  /// Identity used to be inferred by matching the session email's local part
+  /// against studentNo, which let anyone with a chosen email read another
+  /// child's records.
+  userId          String?
   studentNo       String
   admissionNo     String?
   firstName       String
@@ -5627,6 +5634,7 @@ model SchoolStudent {
   updatedAt       DateTime            @updatedAt
 
   company                Company                       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user                   User?                         @relation("SchoolStudentPortalUser", fields: [userId], references: [id], onDelete: SetNull)
   currentClass           SchoolClass?                  @relation(fields: [currentClassId], references: [id], onDelete: SetNull)
   currentStream          SchoolStream?                 @relation(fields: [currentStreamId], references: [id], onDelete: SetNull)
   guardianLinks          SchoolStudentGuardian[]
@@ -5642,6 +5650,7 @@ model SchoolStudent {
 
   @@unique([companyId, studentNo])
   @@unique([companyId, admissionNo])
+  @@unique([companyId, userId])
   @@index([companyId, status])
   @@index([currentClassId])
 }
@@ -5649,6 +5658,10 @@ model SchoolStudent {
 model SchoolGuardian {
   id         String   @id @default(uuid())
   companyId  String
+  /// The portal account for this guardian. Null until the invite is claimed.
+  /// Identity used to be matched on `email`, which is nullable and not unique,
+  /// so two guardians sharing a household address saw each other's children.
+  userId     String?
   guardianNo String
   firstName  String
   lastName   String
@@ -5660,9 +5673,11 @@ model SchoolGuardian {
   updatedAt  DateTime @updatedAt
 
   company      Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user         User?                   @relation("SchoolGuardianPortalUser", fields: [userId], references: [id], onDelete: SetNull)
   studentLinks SchoolStudentGuardian[]
 
   @@unique([companyId, guardianNo])
+  @@unique([companyId, userId])
   @@index([companyId, phone])
 }
 

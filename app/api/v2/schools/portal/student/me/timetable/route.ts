@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { isPrivilegedRole } from "@/lib/schools/governance-v2";
+import { resolvePortalStudent } from "@/lib/schools/portal-identity";
 
 function deriveSlot(index: number) {
   const slots = [
@@ -24,25 +24,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const requestedStudentId = searchParams.get("studentId");
 
-    const privileged = isPrivilegedRole(session.user.role);
-    const emailPrefix = session.user.email?.split("@")[0]?.trim()?.toUpperCase();
-
-    const student = await prisma.schoolStudent.findFirst({
-      where: {
+    const resolution = await resolvePortalStudent(
+      {
         companyId,
-        ...(privileged && requestedStudentId
-          ? { id: requestedStudentId }
-          : emailPrefix
-            ? { studentNo: emailPrefix }
-            : { id: "__none__" }),
+        userId: session.user.id,
+        role: session.user.role,
+        requestedId: requestedStudentId,
       },
-      select: {
-        id: true,
-        studentNo: true,
-        firstName: true,
-        lastName: true,
+      {
+        select: {
+          id: true,
+          studentNo: true,
+          firstName: true,
+          lastName: true,
+        },
       },
-    });
+    );
+    if (resolution.kind === "forbidden") {
+      return errorResponse("Student portal does not allow overriding self scope", 403);
+    }
+    const student = resolution.subject;
     if (!student) return errorResponse("Student profile not found", 404);
 
     const activeEnrollment = await prisma.schoolEnrollment.findFirst({

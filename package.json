@@ -23,6 +23,7 @@
     "platform:accounting-replay": "tsx scripts/platform/accounting-replay.ts",
     "platform:accounting-backfill-events": "tsx scripts/platform/accounting-backfill-events.ts",
     "backfill:gold-valuations": "tsx scripts/backfill-gold-valuations.ts",
+    "backfill:school-portal-links": "tsx scripts/backfill-school-portal-user-links.ts",
     "backfill:gold-accounting-usd": "tsx scripts/backfill-gold-accounting-usd.ts",
     "templates:seed-defaults": "tsx scripts/seed-document-templates.ts",
     "worker:pdf": "tsx scripts/pdf-worker.ts",

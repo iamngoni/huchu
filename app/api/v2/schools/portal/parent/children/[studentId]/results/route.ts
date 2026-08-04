@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { isPrivilegedRole } from "@/lib/schools/governance-v2";
+import {
+  canViewAnyPortalSubject,
+  getGuardianChildLink,
+  resolvePortalGuardian,
+} from "@/lib/schools/portal-identity";
 
 type RouteParams = { params: Promise<{ studentId: string }> };
 
@@ -15,30 +19,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { searchParams } = new URL(request.url);
     const guardianId = searchParams.get("guardianId");
 
-    if (!isPrivilegedRole(session.user.role)) {
-      const guardian = await prisma.schoolGuardian.findFirst({
-        where: {
+    if (!canViewAnyPortalSubject(session.user.role)) {
+      const resolution = await resolvePortalGuardian(
+        {
           companyId,
-          ...(session.user.email
-            ? { email: { equals: session.user.email, mode: "insensitive" } }
-            : { id: "__none__" }),
+          userId: session.user.id,
+          role: session.user.role,
+          requestedId: guardianId,
         },
-        select: { id: true },
-      });
-      if (!guardian) {
+        { select: { id: true } },
+      );
+
+      if (resolution.kind === "forbidden") {
+        return errorResponse(
+          "Cannot query results for a different guardian context",
+          403,
+        );
+      }
+      if (!resolution.subject) {
         return errorResponse("Guardian context not found", 404);
       }
-      if (guardianId && guardianId !== guardian.id) {
-        return errorResponse("Cannot query results for a different guardian context", 403);
-      }
 
-      const link = await prisma.schoolStudentGuardian.findFirst({
-        where: {
-          companyId,
-          studentId,
-          guardianId: guardian.id,
-        },
-        select: { id: true, canReceiveAcademicResults: true },
+      const link = await getGuardianChildLink({
+        companyId,
+        guardianId: resolution.subject.id,
+        studentId,
       });
       if (!link) {
         return errorResponse("Student is not linked to this parent account", 403);

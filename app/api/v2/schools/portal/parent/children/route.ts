@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { isPrivilegedRole } from "@/lib/schools/governance-v2";
+import { resolvePortalGuardian } from "@/lib/schools/portal-identity";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,23 +12,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const guardianId = searchParams.get("guardianId");
 
-    const privileged = isPrivilegedRole(session.user.role);
-    const guardian = await prisma.schoolGuardian.findFirst({
-      where: {
+    const resolution = await resolvePortalGuardian(
+      {
         companyId,
-        ...(privileged && guardianId
-          ? { id: guardianId }
-          : session.user.email
-            ? { email: { equals: session.user.email, mode: "insensitive" } }
-            : { id: "__none__" }),
+        userId: session.user.id,
+        role: session.user.role,
+        requestedId: guardianId,
       },
-      select: {
-        id: true,
-        guardianNo: true,
-        firstName: true,
-        lastName: true,
+      {
+        select: {
+          id: true,
+          guardianNo: true,
+          firstName: true,
+          lastName: true,
+        },
       },
-    });
+    );
+    if (resolution.kind === "forbidden") {
+      return errorResponse("Parent portal does not allow overriding self scope", 403);
+    }
+    const guardian = resolution.subject;
     if (!guardian) {
       return successResponse({
         success: true,

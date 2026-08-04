@@ -15,6 +15,10 @@ import {
   getTeacherProfile,
   isPrivilegedRole,
 } from "@/lib/schools/governance-v2";
+import {
+  resolvePortalGuardian,
+  resolvePortalStudent,
+} from "@/lib/schools/portal-identity";
 
 const parentPortalQuerySchema = z.object({
   guardianId: z.string().uuid().optional(),
@@ -126,52 +130,14 @@ export async function handleParentPortalGet(request: NextRequest) {
     const role = session.user.role;
     const notices = await fetchPortalNotices(companyId, session.user.id);
 
-    const privileged = isPrivilegedRole(role);
-    if (!privileged && !session.user.email) {
-      return buildPortalEnvelope("portal-parent", companyId, {
-        guardian: null,
-        children: [],
-        attendance: [],
-        results: [],
-        boarding: [],
-        fees: [],
-        notices,
-        summary: {
-          linkedChildren: 0,
-          attendanceProfiles: 0,
-          publishedResultLines: 0,
-          activeBoardingAllocations: 0,
-          outstandingBalance: 0,
-          unreadNotices: notices.filter((notice) => !notice.isRead).length,
-          hasLinkedGuardian: false,
-        },
-      });
-    }
-    const guardianLookupWhere: Prisma.SchoolGuardianWhereInput = {
-      companyId,
-      ...(query.guardianId && privileged
-        ? { id: query.guardianId }
-        : session.user.email
-          ? { email: { equals: session.user.email, mode: "insensitive" } }
-          : {}),
-    };
-
-    let guardian = await prisma.schoolGuardian.findFirst({
-      where: guardianLookupWhere,
-      select: {
-        id: true,
-        guardianNo: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
+    const resolution = await resolvePortalGuardian(
+      {
+        companyId,
+        userId: session.user.id,
+        role,
+        requestedId: query.guardianId,
       },
-    });
-
-    if (!guardian && !query.guardianId && privileged) {
-      guardian = await prisma.schoolGuardian.findFirst({
-        where: { companyId },
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      {
         select: {
           id: true,
           guardianNo: true,
@@ -180,8 +146,14 @@ export async function handleParentPortalGet(request: NextRequest) {
           email: true,
           phone: true,
         },
-      });
+      },
+    );
+
+    if (resolution.kind === "forbidden") {
+      return errorResponse("Parent portal does not allow overriding self scope", 403);
     }
+
+    const guardian = resolution.subject;
 
     if (!guardian) {
       return buildPortalEnvelope("portal-parent", companyId, {
@@ -407,38 +379,44 @@ export async function handleStudentPortalGet(request: NextRequest) {
       studentNo: searchParams.get("studentNo") ?? undefined,
     });
 
-    const emailPrefix = session.user.email?.split("@")[0]?.trim() ?? null;
     if (!privileged && (query.studentId || query.studentNo)) {
       return errorResponse("Student portal does not allow overriding self scope", 403);
     }
 
-    let student = await prisma.schoolStudent.findFirst({
-      where: {
-        companyId,
-        ...(privileged && query.studentId
-          ? { id: query.studentId }
-          : privileged && query.studentNo
-            ? { studentNo: query.studentNo.toUpperCase() }
-            : emailPrefix
-              ? { studentNo: emailPrefix.toUpperCase() }
-              : {}),
-      },
-      include: {
-        currentClass: { select: { id: true, code: true, name: true } },
-        currentStream: { select: { id: true, code: true, name: true } },
-      },
-    });
+    // Staff may name a student by number as well as by id; both are resolved to
+    // an id before anything is read, so the resolver has one way in.
+    const requestedId =
+      query.studentId ??
+      (query.studentNo
+        ? (
+            await prisma.schoolStudent.findFirst({
+              where: { companyId, studentNo: query.studentNo.toUpperCase() },
+              select: { id: true },
+            })
+          )?.id ?? "__no-such-student__"
+        : null);
 
-    if (!student && privileged) {
-      student = await prisma.schoolStudent.findFirst({
-        where: { companyId },
-        include: {
+    const resolution = await resolvePortalStudent(
+      { companyId, userId: session.user.id, role: session.user.role, requestedId },
+      {
+        select: {
+          id: true,
+          studentNo: true,
+          firstName: true,
+          lastName: true,
+          status: true,
+          isBoarding: true,
           currentClass: { select: { id: true, code: true, name: true } },
           currentStream: { select: { id: true, code: true, name: true } },
         },
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      });
+      },
+    );
+
+    if (resolution.kind === "forbidden") {
+      return errorResponse("Student portal does not allow overriding self scope", 403);
     }
+
+    const student = resolution.subject;
 
     if (!student) {
       return buildPortalEnvelope("portal-student", companyId, {

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { isPrivilegedRole } from "@/lib/schools/governance-v2";
+import {
+  canViewAnyPortalSubject,
+  getGuardianChildLink,
+  resolvePortalGuardian,
+} from "@/lib/schools/portal-identity";
 
 type RouteParams = { params: Promise<{ studentId: string }> };
 
@@ -15,38 +19,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { searchParams } = new URL(request.url);
     const guardianId = searchParams.get("guardianId");
 
-    const isPrivileged = isPrivilegedRole(session.user.role);
-    let hasFinanceAccess = false;
-
-    if (isPrivileged) {
-      hasFinanceAccess = true;
-    } else {
-      const guardian = await prisma.schoolGuardian.findFirst({
-        where: {
+    if (!canViewAnyPortalSubject(session.user.role)) {
+      // A parent's own account is the only guardian context they get. The
+      // previous code looked the guardian up by whatever `guardianId` was
+      // passed and only compared it afterwards, so the comparison could never
+      // fail — any parent could read another family's fees by guessing an id.
+      const resolution = await resolvePortalGuardian(
+        {
           companyId,
-          ...(guardianId
-            ? { id: guardianId }
-            : session.user.email
-              ? { email: { equals: session.user.email, mode: "insensitive" } }
-              : { id: "__none__" }),
+          userId: session.user.id,
+          role: session.user.role,
+          requestedId: guardianId,
         },
-        select: { id: true },
-      });
+        { select: { id: true } },
+      );
 
-      if (!guardian) {
-        return errorResponse("Guardian context not found", 404);
-      }
-      if (guardianId && guardianId !== guardian.id) {
+      if (resolution.kind === "forbidden") {
         return errorResponse("Cannot query fees for a different guardian context", 403);
       }
+      if (!resolution.subject) {
+        return errorResponse("Guardian context not found", 404);
+      }
 
-      const link = await prisma.schoolStudentGuardian.findFirst({
-        where: {
-          companyId,
-          studentId,
-          guardianId: guardian.id,
-        },
-        select: { id: true, canReceiveFinancials: true },
+      const link = await getGuardianChildLink({
+        companyId,
+        guardianId: resolution.subject.id,
+        studentId,
       });
 
       if (!link) {
@@ -55,11 +53,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       if (!link.canReceiveFinancials) {
         return errorResponse("Financial visibility is disabled for this parent link", 403);
       }
-      hasFinanceAccess = true;
-    }
-
-    if (!hasFinanceAccess) {
-      return errorResponse("Insufficient access to student fees", 403);
     }
 
     const student = await prisma.schoolStudent.findFirst({
