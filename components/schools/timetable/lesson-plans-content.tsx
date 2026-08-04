@@ -1,0 +1,511 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MobileList, MobileListEmpty, MobileListSectionHeader } from "@corelithzw/react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
+import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
+import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import { fetchTeacherProfiles } from "@/lib/schools/admin-v2";
+import { DAY_NAMES, formatMinute } from "@/lib/schools/timetable-format";
+
+type Plan = {
+  id: string;
+  lessonDate: string;
+  topic: string;
+  objectives: string | null;
+  activities: string | null;
+  homeworkNote: string | null;
+  reflection: string | null;
+  slot: {
+    id: string;
+    dayOfWeek: number;
+    period: { code: string; name: string; startMinute: number };
+  } | null;
+  classSubject: {
+    id: string;
+    subject: { id: string; name: string };
+    class: { id: string; name: string };
+    stream: { id: string; name: string } | null;
+  };
+  cover: {
+    id: string;
+    reason: string | null;
+    coveringTeacher: { id: string; user: { name: string | null } };
+  } | null;
+};
+
+type SubjectOption = {
+  id: string;
+  subject: { name: string };
+  class?: { name: string };
+  stream: { name: string } | null;
+};
+
+/** Monday of the week containing `date`, as YYYY-MM-DD. */
+function weekStartOf(date: Date) {
+  const copy = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+  const day = copy.getUTCDay();
+  // Sunday is 0, and a school week starts on Monday.
+  copy.setUTCDate(copy.getUTCDate() - (day === 0 ? 6 : day - 1));
+  return copy.toISOString().slice(0, 10);
+}
+
+function addWeeks(iso: string, weeks: number) {
+  const date = new Date(`${iso}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + weeks * 7);
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * A week of lesson plans, and who is covering what.
+ *
+ * A week rather than a term, because that is the unit a teacher plans in and
+ * the unit copy-forward works on. "Most of next week is last week's shape with
+ * different topics" is the observation the whole screen is built around —
+ * retyping the objectives is what stops teachers planning at all.
+ */
+export function LessonPlansContent({
+  subjects,
+  mine,
+}: {
+  subjects: SubjectOption[];
+  /** The teacher portal's view: only their own lessons. */
+  mine?: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [weekStart, setWeekStart] = useState(() => weekStartOf(new Date()));
+  const [subjectFilter, setSubjectFilter] = useState("");
+  const [editing, setEditing] = useState<Plan | null>(null);
+  const [creatingFor, setCreatingFor] = useState<string | null>(null);
+  const [coverFor, setCoverFor] = useState<Plan | null>(null);
+  const [coverTeacher, setCoverTeacher] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [draft, setDraft] = useState({
+    topic: "",
+    objectives: "",
+    activities: "",
+    homeworkNote: "",
+    reflection: "",
+    lessonDate: "",
+  });
+
+  const weekQuery = useQuery({
+    queryKey: ["schools", "lesson-plans", weekStart, subjectFilter, mine ?? false],
+    queryFn: () =>
+      fetchJson<{ plans: Plan[] }>(
+        `/api/v2/schools/lesson-plans?${new URLSearchParams({
+          weekStart,
+          ...(subjectFilter ? { classSubjectId: subjectFilter } : {}),
+          ...(mine ? { mine: "true" } : {}),
+        }).toString()}`,
+      ),
+  });
+
+  const teachersQuery = useQuery({
+    queryKey: ["schools", "teachers", "cover"],
+    queryFn: () => fetchTeacherProfiles({ page: 1, limit: 200 }),
+    enabled: coverFor !== null,
+  });
+
+  const plans = useMemo(() => weekQuery.data?.plans ?? [], [weekQuery.data]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, Plan[]>();
+    for (const plan of plans) {
+      const key = plan.lessonDate.slice(0, 10);
+      const bucket = map.get(key);
+      if (bucket) bucket.push(plan);
+      else map.set(key, [plan]);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [plans]);
+
+  const saveMutation = useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      fetchJson("/api/v2/schools/lesson-plans", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      setActionError(null);
+      setEditing(null);
+      setCreatingFor(null);
+      setCoverFor(null);
+      setCoverTeacher("");
+      void queryClient.invalidateQueries({ queryKey: ["schools", "lesson-plans"] });
+    },
+    onError: (error) => setActionError(getApiErrorMessage(error)),
+  });
+
+  const copyMutation = useMutation({
+    mutationFn: () =>
+      fetchJson<{ copied: number; skipped: number; message: string | null }>(
+        "/api/v2/schools/lesson-plans",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "copy-week",
+            classSubjectId: subjectFilter,
+            fromWeekStart: addWeeks(weekStart, -1),
+            toWeekStart: weekStart,
+          }),
+        },
+      ),
+    onSuccess: (result) => {
+      setActionError(null);
+      setNote(
+        `${result.copied} lesson${result.copied === 1 ? "" : "s"} copied from last week` +
+          (result.message ? `. ${result.message}` : ""),
+      );
+      void queryClient.invalidateQueries({ queryKey: ["schools", "lesson-plans"] });
+    },
+    onError: (error) => setActionError(getApiErrorMessage(error)),
+  });
+
+  const covered = plans.filter((plan) => plan.cover).length;
+
+  return (
+    <div className="space-y-4">
+      {weekQuery.error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Unable to load the week</AlertTitle>
+          <AlertDescription>{getApiErrorMessage(weekQuery.error)}</AlertDescription>
+        </Alert>
+      ) : null}
+      {actionError ? (
+        <Alert variant="destructive">
+          <AlertTitle>That did not work</AlertTitle>
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
+      ) : null}
+      {note ? (
+        <Alert>
+          <AlertTitle>Copied</AlertTitle>
+          <AlertDescription>{note}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <FilterBar>
+          <div className="min-w-0 flex-1 basis-[180px] sm:max-w-[200px]">
+            <Label htmlFor="week-start" className="text-sm text-muted-foreground">
+              Week beginning
+            </Label>
+            <Input
+              id="week-start"
+              type="date"
+              value={weekStart}
+              onChange={(event) =>
+                setWeekStart(weekStartOf(new Date(`${event.target.value}T00:00:00Z`)))
+              }
+            />
+          </div>
+          <FilterSelect
+            label="Subject"
+            allLabel="Everything I teach"
+            value={subjectFilter}
+            options={subjects.map((option) => ({
+              value: option.id,
+              label: `${option.subject.name}${option.class ? ` — ${option.class.name}` : ""}`,
+            }))}
+            onChange={setSubjectFilter}
+          />
+        </FilterBar>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <Button variant="outline" onClick={() => setWeekStart(addWeeks(weekStart, -1))}>
+            Last week
+          </Button>
+          <Button variant="outline" onClick={() => setWeekStart(addWeeks(weekStart, 1))}>
+            Next week
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!subjectFilter || copyMutation.isPending}
+            onClick={() => copyMutation.mutate()}
+            title={
+              subjectFilter
+                ? undefined
+                : "Choose a subject first — copy-forward works one subject at a time"
+            }
+          >
+            {copyMutation.isPending ? "Copying…" : "Copy last week"}
+          </Button>
+          <Button
+            disabled={subjects.length === 0}
+            onClick={() => {
+              setCreatingFor(subjectFilter || subjects[0]?.id || "");
+              setDraft({
+                topic: "",
+                objectives: "",
+                activities: "",
+                homeworkNote: "",
+                reflection: "",
+                lessonDate: weekStart,
+              });
+            }}
+          >
+            Plan a lesson
+          </Button>
+        </div>
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        {plans.length} lesson{plans.length === 1 ? "" : "s"} planned for the week of{" "}
+        {weekStart}
+        {covered > 0 ? ` · ${covered} covered` : ""}
+      </p>
+
+      <MobileList>
+        {grouped.length === 0 ? (
+          <MobileListEmpty>
+            {weekQuery.isLoading
+              ? "Loading the week…"
+              : "Nothing planned. Copy last week, or plan a lesson."}
+          </MobileListEmpty>
+        ) : (
+          grouped.map(([day, dayPlans]) => (
+            <div key={day}>
+              <MobileListSectionHeader>
+                {DAY_NAMES[new Date(`${day}T00:00:00Z`).getUTCDay() || 7] ?? day} · {day}
+              </MobileListSectionHeader>
+              {dayPlans.map((plan) => (
+                <MobileList.Row
+                  key={plan.id}
+                  static
+                  title={plan.topic}
+                  subtitle={
+                    <span className="mt-1 flex flex-wrap items-center gap-2">
+                      <span>
+                        {plan.classSubject.subject.name} · {plan.classSubject.class.name}
+                        {plan.slot
+                          ? ` · ${plan.slot.period.code} ${formatMinute(plan.slot.period.startMinute)}`
+                          : ""}
+                      </span>
+                      {plan.cover ? (
+                        <Badge variant="secondary">
+                          Covered by {plan.cover.coveringTeacher.user.name ?? "somebody"}
+                        </Badge>
+                      ) : null}
+                      {plan.reflection ? (
+                        <Badge variant="outline">Reflected on</Badge>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditing(plan);
+                          setDraft({
+                            topic: plan.topic,
+                            objectives: plan.objectives ?? "",
+                            activities: plan.activities ?? "",
+                            homeworkNote: plan.homeworkNote ?? "",
+                            reflection: plan.reflection ?? "",
+                            lessonDate: plan.lessonDate.slice(0, 10),
+                          });
+                        }}
+                      >
+                        Open
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setCoverFor(plan);
+                          setCoverTeacher("");
+                        }}
+                      >
+                        {plan.cover ? "Change cover" : "Arrange cover"}
+                      </Button>
+                    </span>
+                  }
+                />
+              ))}
+            </div>
+          ))
+        )}
+      </MobileList>
+
+      <RecordDialog
+        open={editing !== null || creatingFor !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditing(null);
+            setCreatingFor(null);
+          }
+        }}
+        title={editing ? editing.topic : "Plan a lesson"}
+        size="lg"
+        errors={actionError ? [actionError] : undefined}
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (saveMutation.isPending || !draft.topic.trim()) return;
+          saveMutation.mutate({
+            action: "save",
+            ...(editing ? { id: editing.id } : {}),
+            classSubjectId: editing ? editing.classSubject.id : creatingFor,
+            slotId: editing?.slot?.id ?? null,
+            lessonDate: draft.lessonDate,
+            topic: draft.topic.trim(),
+            objectives: draft.objectives.trim() || null,
+            activities: draft.activities.trim() || null,
+            homeworkNote: draft.homeworkNote.trim() || null,
+            reflection: draft.reflection.trim() || null,
+          });
+        }}
+        footer={
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEditing(null);
+                setCreatingFor(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!draft.topic.trim() || saveMutation.isPending}>
+              {saveMutation.isPending ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="plan-date">Date</Label>
+            <Input
+              id="plan-date"
+              type="date"
+              value={draft.lessonDate}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, lessonDate: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="plan-topic">Topic</Label>
+            <Input
+              id="plan-topic"
+              value={draft.topic}
+              maxLength={300}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, topic: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="plan-objectives">By the end they will be able to</Label>
+            <Textarea
+              id="plan-objectives"
+              rows={2}
+              value={draft.objectives}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, objectives: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="plan-activities">What happens in the lesson</Label>
+            <Textarea
+              id="plan-activities"
+              rows={3}
+              value={draft.activities}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, activities: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="plan-homework">Homework set</Label>
+            <Input
+              id="plan-homework"
+              value={draft.homeworkNote}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, homeworkNote: event.target.value }))
+              }
+            />
+          </div>
+          {editing ? (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="plan-reflection">Afterwards</Label>
+              <Textarea
+                id="plan-reflection"
+                rows={2}
+                value={draft.reflection}
+                placeholder="Ran out of time on the last two questions"
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, reflection: event.target.value }))
+                }
+              />
+              <p className="text-sm text-muted-foreground">
+                Not carried forward when the week is copied — it is about this
+                lesson.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </RecordDialog>
+
+      <RecordDialog
+        open={coverFor !== null}
+        onOpenChange={(open) => {
+          if (!open) setCoverFor(null);
+        }}
+        title="Arrange cover"
+        size="md"
+        errors={actionError ? [actionError] : undefined}
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!coverFor || !coverTeacher || saveMutation.isPending) return;
+          saveMutation.mutate({
+            action: "cover",
+            lessonPlanId: coverFor.id,
+            coveringTeacherProfileId: coverTeacher,
+          });
+        }}
+        footer={
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setCoverFor(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!coverTeacher || saveMutation.isPending}>
+              {saveMutation.isPending ? "Arranging…" : "Arrange it"}
+            </Button>
+          </div>
+        }
+      >
+        {coverFor ? (
+          <p className="text-sm text-muted-foreground">
+            {coverFor.topic} · {coverFor.classSubject.subject.name} ·{" "}
+            {coverFor.classSubject.class.name} · {coverFor.lessonDate.slice(0, 10)}
+          </p>
+        ) : null}
+        <FilterSelect
+          label="Who is taking it"
+          allLabel="Choose a teacher"
+          value={coverTeacher}
+          options={(teachersQuery.data?.data ?? []).map((profile) => ({
+            value: profile.id,
+            label: profile.user.name ?? profile.employeeCode,
+          }))}
+          onChange={setCoverTeacher}
+        />
+        <p className="text-sm text-muted-foreground">
+          A teacher already teaching in that period is refused — the clash is
+          checked against the timetable.
+        </p>
+      </RecordDialog>
+    </div>
+  );
+}

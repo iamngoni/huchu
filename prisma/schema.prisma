@@ -156,6 +156,9 @@ model Company {
   schoolBookCopies              SchoolBookCopy[]
   schoolBookLoans               SchoolBookLoan[]
   schoolBookReservations        SchoolBookReservation[]
+  schoolLessonPlans             SchoolLessonPlan[]
+  schoolCoverAssignments        SchoolCoverAssignment[]
+  schoolTeachingResources       SchoolTeachingResource[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
@@ -5555,6 +5558,7 @@ model SchoolTerm {
   calendarEvents         SchoolCalendarEvent[]
   assessments            SchoolAssessment[]
   assignments            SchoolAssignment[]
+  lessonPlans            SchoolLessonPlan[]
   applications           SchoolApplication[]
   publishWindows      SchoolPublishWindow[]
   feeStructures       SchoolFeeStructure[]
@@ -5584,6 +5588,7 @@ model SchoolClass {
   streams        SchoolStream[]
   students       SchoolStudent[]
   applications   SchoolApplication[]
+  teachingResources SchoolTeachingResource[]
   enrollments    SchoolEnrollment[]
   resultSheets   SchoolResultSheet[]
   classSubjects  SchoolClassSubject[]
@@ -5645,6 +5650,8 @@ model SchoolTeacherProfile {
   employee    Employee?            @relation("SchoolTeacherProfileEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
   assignments    SchoolClassSubject[]
   timetableSlots SchoolTimetableSlot[]
+  coverAssignments SchoolCoverAssignment[] @relation("SchoolCoverTeacher")
+  teachingResources SchoolTeachingResource[] @relation("SchoolResourceUploader")
 
   @@unique([companyId, userId])
   @@unique([companyId, employeeCode])
@@ -5663,6 +5670,7 @@ model SchoolSubject {
   updatedAt DateTime @updatedAt
 
   company       Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  teachingResources SchoolTeachingResource[]
   classSubjects SchoolClassSubject[]
 
   @@unique([companyId, code])
@@ -5690,6 +5698,7 @@ model SchoolClassSubject {
   timetableSlots SchoolTimetableSlot[]
   assessments    SchoolAssessment[]
   assignments    SchoolAssignment[]
+  lessonPlans    SchoolLessonPlan[]
 
   @@unique([companyId, termId, classId, streamId, subjectId])
   @@index([companyId, teacherProfileId, isActive])
@@ -6380,6 +6389,8 @@ model SchoolTimetableSlot {
   /// would slip past a plain unique index. Those two are partial unique
   /// indexes in migration 20260804160000_school_timetable — a `\dt` on the
   /// database shows constraints this file does not.
+  lessonPlans SchoolLessonPlan[]
+
   @@unique([companyId, termId, dayOfWeek, periodId, teacherProfileId])
   /// The same lesson scheduled twice in one slot.
   @@unique([companyId, termId, dayOfWeek, periodId, classSubjectId])
@@ -6885,6 +6896,99 @@ model SchoolBookReservation {
 
   @@index([companyId, bookId, reservedAt])
   @@index([companyId, studentId])
+}
+
+/// What a teacher plans to teach, and who teaches it if she is away.
+///
+/// Hangs off the timetable slot where there is one, so "cover for period 3 on
+/// Tuesday" resolves to a room, a class and a time without anybody retyping
+/// them. A plan with no slot is still legitimate — a teacher plans a topic
+/// before the timetable is built, and a double period may be one plan.
+model SchoolLessonPlan {
+  id             String   @id @default(uuid())
+  companyId      String
+  termId         String
+  classSubjectId String
+  /// The lesson on the timetable this plans for. Null for a plan written
+  /// against a week rather than a slot.
+  slotId         String?
+  /// The day it is taught. Held separately from the slot because a slot is a
+  /// weekly pattern and a plan is for one Tuesday.
+  lessonDate     DateTime @db.Date
+  topic          String
+  objectives     String?
+  activities     String?
+  resourcesNote  String?
+  homeworkNote   String?
+  /// Filled in afterwards: what actually happened.
+  reflection     String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company      Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  term         SchoolTerm           @relation(fields: [termId], references: [id], onDelete: Cascade)
+  classSubject SchoolClassSubject   @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+  slot         SchoolTimetableSlot? @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  cover        SchoolCoverAssignment?
+
+  @@index([companyId, termId, classSubjectId, lessonDate])
+  @@index([companyId, lessonDate])
+}
+
+/// Somebody else taking a lesson.
+///
+/// Against the lesson plan rather than the timetable slot, because cover is for
+/// one Tuesday and a slot is every Tuesday. Arranging cover for a slot would
+/// hand the class over permanently.
+model SchoolCoverAssignment {
+  id             String   @id @default(uuid())
+  companyId      String
+  lessonPlanId   String   @unique
+  /// The teacher standing in.
+  coveringTeacherProfileId String
+  reason         String?
+  arrangedById   String?
+  arrangedAt     DateTime @default(now())
+
+  company          Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lessonPlan       SchoolLessonPlan     @relation(fields: [lessonPlanId], references: [id], onDelete: Cascade)
+  coveringTeacher  SchoolTeacherProfile @relation("SchoolCoverTeacher", fields: [coveringTeacherProfileId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, coveringTeacherProfileId])
+}
+
+/// A worksheet, a slide deck, a past paper.
+///
+/// Scoped to a subject rather than to a class, because a Form 2 worksheet is
+/// the same worksheet next year and pinning it to a class means re-uploading it
+/// every September.
+model SchoolTeachingResource {
+  id           String   @id @default(uuid())
+  companyId    String
+  subjectId    String?
+  /// Which year group it suits, where that is known. Null means "any".
+  classId      String?
+  title        String
+  description  String?
+  /// Where the file lives. Null for a link-only resource.
+  fileUrl      String?
+  linkUrl      String?
+  fileSize     Int?
+  mimeType     String?
+  /// Whether other teachers may see it. A draft worksheet is not a shared one.
+  isShared     Boolean  @default(true)
+  uploadedByProfileId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subject SchoolSubject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  class   SchoolClass?          @relation(fields: [classId], references: [id], onDelete: SetNull)
+  uploadedBy SchoolTeacherProfile? @relation("SchoolResourceUploader", fields: [uploadedByProfileId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, subjectId])
+  @@index([companyId, isShared, title])
 }
 
 enum SchoolSubmissionStatus {

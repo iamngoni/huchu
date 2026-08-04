@@ -273,6 +273,8 @@ export const navSections: NavSection[] = [
       { href: "/schools/academics", icon: TableRows, label: "Academics setup", group: "teaching" },
       { href: "/schools/timetable", icon: Calendar, label: "Timetable", group: "teaching" },
       { href: "/schools/library", icon: Calendar, label: "Library", group: "teaching" },
+      { href: "/schools/lesson-plans", icon: Calendar, label: "Lesson plans", group: "teaching" },
+      { href: "/schools/resources", icon: Calendar, label: "Teaching resources", group: "teaching" },
       { href: "/schools/classes", icon: TableRows, label: "Classes", group: "teaching" },
       { href: "/schools/subjects", icon: TableRows, label: "Subjects", group: "teaching" },
 
