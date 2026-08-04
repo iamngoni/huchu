@@ -72,6 +72,9 @@ const PAGES = [
   { name: "academics", path: "/schools/academics", heading: "Academics Setup" },
   { name: "guardians", path: "/schools/guardians", heading: "Guardians" },
   { name: "students", path: "/schools/students", heading: "Students" },
+  // The year group a class teacher actually works in. Resolved server-side, so
+  // the heading is the class name rather than "Students".
+  { name: "class-students", path: "/schools/students/class/515bcc28-5300-49b9-8187-abf2f2d44988", heading: "Form 1" },
   { name: "teachers", path: "/schools/teachers", heading: "Teachers" },
   { name: "timetable", path: "/schools/timetable", heading: "Timetable" },
 ];

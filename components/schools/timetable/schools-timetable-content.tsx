@@ -2,18 +2,11 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FilterChips, MobileList, MobileListEmpty } from "@corelithzw/react";
+import { MobileList, MobileListEmpty } from "@corelithzw/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { DAY_NAMES, formatMinute } from "@/lib/schools/timetable-format";
 import {
@@ -23,9 +16,16 @@ import {
   fetchTeacherAssignments,
   fetchTeacherProfiles,
   fetchSchoolsClasses,
+  fetchSchoolsTerms,
   type SchoolsTimetableSlotRecord,
 } from "@/lib/schools/admin-v2";
+import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { LessonFormSheet, type LessonFormValues } from "./lesson-form-sheet";
+import {
+  CopyForwardSheet,
+  type CopyForwardResult,
+  type CopyForwardValues,
+} from "./copy-forward-sheet";
 
 /**
  * The week, as a timetabler reads it.
@@ -47,7 +47,7 @@ const WEEKDAYS = [1, 2, 3, 4, 5];
 
 type Viewpoint = "class" | "teacher";
 
-const VIEWPOINT_OPTIONS: Array<{ value: Viewpoint; label: string }> = [
+const VIEWPOINT_OPTIONS = [
   { value: "class", label: "By class" },
   { value: "teacher", label: "By teacher" },
 ];
@@ -80,6 +80,9 @@ export function SchoolsTimetableContent() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetDefaults, setSheetDefaults] = useState({ dayOfWeek: 1, periodId: "" });
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const [copyResult, setCopyResult] = useState<CopyForwardResult | null>(null);
 
   const timetableQuery = useQuery({
     queryKey: ["schools", "timetable", viewpoint, classFilter, teacherFilter],
@@ -110,6 +113,10 @@ export function SchoolsTimetableContent() {
     queryKey: ["schools", "timetable", "periods"],
     queryFn: () => fetchSchoolsPeriods({ page: 1, limit: 100 }),
   });
+  const termsQuery = useQuery({
+    queryKey: ["schools", "timetable", "terms"],
+    queryFn: () => fetchSchoolsTerms({ page: 1, limit: 100 }),
+  });
 
   const timetable = timetableQuery.data;
   const slots = useMemo(() => timetable?.slots ?? [], [timetable]);
@@ -124,6 +131,7 @@ export function SchoolsTimetableContent() {
     () => assignmentsQuery.data?.data ?? [],
     [assignmentsQuery.data],
   );
+  const terms = useMemo(() => termsQuery.data?.data ?? [], [termsQuery.data]);
 
   /** Weekend columns only when the school actually teaches then. */
   const days = useMemo(() => {
@@ -178,6 +186,26 @@ export function SchoolsTimetableContent() {
     },
   });
 
+  const copyForward = useMutation({
+    mutationFn: async (values: CopyForwardValues) =>
+      fetchJson<CopyForwardResult>("/api/v2/schools/timetable/copy-forward", {
+        method: "POST",
+        body: JSON.stringify(values),
+      }),
+    onSuccess: (result) => {
+      // The sheet stays open holding the counts. Closing on success would hide
+      // "12 lessons skipped, the target term has no assignment for them",
+      // which is the part the timetabler has to act on.
+      queryClient.invalidateQueries({ queryKey: ["schools", "timetable"] });
+      setCopyResult(result);
+      setCopyError(null);
+    },
+    onError: (error) => {
+      setCopyResult(null);
+      setCopyError(getApiErrorMessage(error));
+    },
+  });
+
   function openSheet(dayOfWeek: number, periodId: string) {
     setSubmitError(null);
     setSheetDefaults({ dayOfWeek, periodId });
@@ -200,13 +228,27 @@ export function SchoolsTimetableContent() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-section-title">The week</h2>
-        <Button
-          size="sm"
-          disabled={periods.length === 0 || assignments.length === 0}
-          onClick={() => openSheet(selectedDay, firstTeachingPeriodId)}
-        >
-          Add lesson
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={terms.length < 2}
+            onClick={() => {
+              setCopyError(null);
+              setCopyResult(null);
+              setCopyOpen(true);
+            }}
+          >
+            Copy forward
+          </Button>
+          <Button
+            size="sm"
+            disabled={periods.length === 0 || assignments.length === 0}
+            onClick={() => openSheet(selectedDay, firstTeachingPeriodId)}
+          >
+            Add lesson
+          </Button>
+        </div>
       </div>
 
       {periods.length === 0 ? (
@@ -219,60 +261,50 @@ export function SchoolsTimetableContent() {
         </Alert>
       ) : null}
 
-      <FilterChips
-        aria-label="Timetable viewpoint"
-        value={viewpoint}
-        options={VIEWPOINT_OPTIONS}
-        onChange={(value) => setViewpoint(value as Viewpoint)}
-      />
-
-      {viewpoint === "class" ? (
-        <Select
-          value={classFilter || "all"}
-          onValueChange={(value) => setClassFilter(value === "all" ? "" : value)}
-        >
-          <SelectTrigger className="w-full sm:w-[240px]">
-            <SelectValue placeholder="All classes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All classes</SelectItem>
-            {classes.map((schoolClass) => (
-              <SelectItem key={schoolClass.id} value={schoolClass.id}>
-                {schoolClass.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <Select
-          value={teacherFilter || "all"}
-          onValueChange={(value) => setTeacherFilter(value === "all" ? "" : value)}
-        >
-          <SelectTrigger className="w-full sm:w-[240px]">
-            <SelectValue placeholder="All teachers" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All teachers</SelectItem>
-            {teachers.map((teacher) => (
-              <SelectItem key={teacher.id} value={teacher.id}>
-                {teacher.user.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+      <FilterBar>
+        <FilterSelect
+          label="Show"
+          allLabel="By class"
+          value={viewpoint === "class" ? "" : viewpoint}
+          options={VIEWPOINT_OPTIONS}
+          onChange={(value) => setViewpoint((value || "class") as Viewpoint)}
+        />
+        {viewpoint === "class" ? (
+          <FilterSelect
+            label="Class"
+            allLabel="All classes"
+            value={classFilter}
+            options={classes.map((schoolClass) => ({
+              value: schoolClass.id,
+              label: schoolClass.name,
+            }))}
+            onChange={setClassFilter}
+          />
+        ) : (
+          <FilterSelect
+            label="Teacher"
+            allLabel="All teachers"
+            value={teacherFilter}
+            options={teachers.map((teacher) => ({
+              value: teacher.id,
+              label: teacher.user.name,
+            }))}
+            onChange={setTeacherFilter}
+          />
+        )}
+      </FilterBar>
 
       {/* Phone and tablet: one day at a time. */}
       <div className="space-y-2 lg:hidden">
-        <FilterChips
-          aria-label="Day of the week"
-          value={String(selectedDay)}
-          options={days.map((day) => ({
-            value: String(day),
-            label: DAY_NAMES[day].slice(0, 3),
-          }))}
-          onChange={(value) => setSelectedDay(Number(value))}
-        />
+        <FilterBar>
+          <FilterSelect
+            label="Day"
+            allLabel={DAY_NAMES[selectedDay]}
+            value={String(selectedDay)}
+            options={days.map((day) => ({ value: String(day), label: DAY_NAMES[day] }))}
+            onChange={(value) => setSelectedDay(Number(value) || selectedDay)}
+          />
+        </FilterBar>
         <MobileList>
           {daySlots.length === 0 ? (
             <MobileListEmpty>
@@ -407,6 +439,23 @@ export function SchoolsTimetableContent() {
         isSubmitting={addLesson.isPending}
         error={submitError}
         onSubmit={(values) => addLesson.mutate(values)}
+      />
+
+      <CopyForwardSheet
+        open={copyOpen}
+        onOpenChange={(open) => {
+          setCopyOpen(open);
+          if (!open) {
+            setCopyError(null);
+            setCopyResult(null);
+          }
+        }}
+        terms={terms}
+        currentTermId={timetable?.termId ?? null}
+        isSubmitting={copyForward.isPending}
+        error={copyError}
+        result={copyResult}
+        onSubmit={(values) => copyForward.mutate(values)}
       />
     </div>
   );

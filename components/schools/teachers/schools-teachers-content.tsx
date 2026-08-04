@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FilterChips, MobileList, MobileListEmpty } from "@corelithzw/react";
+import { MobileList, MobileListEmpty } from "@corelithzw/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { NumericCell } from "@/components/ui/numeric-cell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VerticalDataViews } from "@/components/ui/vertical-data-views";
+import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
   fetchTeacherProfileUsers,
@@ -42,8 +43,7 @@ type TeachersView = "profiles" | "subjects" | "assignments";
  */
 type ActiveFilter = "all" | "active" | "inactive";
 
-const ACTIVE_OPTIONS: Array<{ value: ActiveFilter; label: string }> = [
-  { value: "all", label: "All" },
+const ACTIVE_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
 ];
@@ -370,12 +370,15 @@ export function SchoolsTeachersContent() {
               Add Teacher
             </Button>
           </div>
-          <FilterChips
-            aria-label="Filter teachers by status"
-            value={profileActiveFilter}
-            options={ACTIVE_OPTIONS}
-            onChange={(value) => setProfileActiveFilter(value as ActiveFilter)}
-          />
+          <FilterBar>
+            <FilterSelect
+              label="Status"
+              allLabel="Everyone"
+              value={profileActiveFilter === "all" ? "" : profileActiveFilter}
+              options={ACTIVE_OPTIONS}
+              onChange={(value) => setProfileActiveFilter((value || "all") as ActiveFilter)}
+            />
+          </FilterBar>
           <DataTable
             data={profiles}
             columns={profileColumns}
@@ -421,12 +424,15 @@ export function SchoolsTeachersContent() {
               Add Subject
             </Button>
           </div>
-          <FilterChips
-            aria-label="Filter subjects by status"
-            value={subjectActiveFilter}
-            options={ACTIVE_OPTIONS}
-            onChange={(value) => setSubjectActiveFilter(value as ActiveFilter)}
-          />
+          <FilterBar>
+            <FilterSelect
+              label="Status"
+              allLabel="All subjects"
+              value={subjectActiveFilter === "all" ? "" : subjectActiveFilter}
+              options={ACTIVE_OPTIONS}
+              onChange={(value) => setSubjectActiveFilter((value || "all") as ActiveFilter)}
+            />
+          </FilterBar>
           <DataTable
             data={subjects}
             columns={subjectColumns}

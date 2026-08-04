@@ -237,27 +237,55 @@ export const navSections: NavSection[] = [
       { href: "/stores/price-lists", icon: Scale, label: "Price lists", group: "selling" },
     ],
   },
+  // A school is not one thing you open either. Fifteen flat entries read as an
+  // inventory of pages rather than as navigation, and "Academics" next to
+  // "Results Moderation" next to "Documents" gives no sense of which of them a
+  // registrar, a bursar and a class teacher each live in. Grouped the way a
+  // school is actually organised — the people, the teaching week, the money,
+  // the paperwork — each group expanding to its own children, which is the
+  // pattern the CRM section above already sets.
+  //
+  // Every group shares `schools.core`, so a tenant without the module loses the
+  // whole set rather than being left with six empty headings.
   {
     id: "schools",
     title: "School Operations",
     description: "Full school management operations and portals",
     featureKey: "schools.core",
+    flattenGroups: true,
+    groups: [
+      { id: "people", label: "People" },
+      { id: "teaching", label: "Teaching" },
+      { id: "attendance", label: "Attendance and welfare" },
+      { id: "assessment", label: "Assessment" },
+      { id: "money", label: "Fees" },
+      { id: "admin", label: "Office" },
+    ],
     items: [
       { href: "/schools", icon: Building2, label: "School Overview" },
-      { href: "/schools/students", icon: Users, label: "Students" },
-      { href: "/schools/admissions", icon: EventNote, label: "Admissions" },
-      { href: "/schools/academics", icon: TableRows, label: "Academics" },
-      { href: "/schools/timetable", icon: TableRows, label: "Timetable" },
-      { href: "/schools/attendance", icon: UserCheck, label: "Attendance" },
-      { href: "/schools/boarding", icon: Home, label: "Boarding" },
-      { href: "/schools/teachers", icon: ManageAccounts, label: "Teachers" },
-      { href: "/schools/assessments", icon: FileCheck, label: "Assessments" },
-      { href: "/schools/results/moderation", icon: FileCheck, label: "Results Moderation" },
-      { href: "/schools/results/publish", icon: FileCheck, label: "Results Publishing" },
-      { href: "/schools/finance", icon: ReceiptLong, label: "Finance" },
-      { href: "/schools/notices", icon: EventNote, label: "Notices" },
-      { href: "/schools/reports", icon: BarChart3, label: "School Reports" },
-      { href: "/schools/documents", icon: FileText, label: "Documents" },
+
+      { href: "/schools/students", icon: Users, label: "Students", group: "people" },
+      { href: "/schools/guardians", icon: Users, label: "Guardians", group: "people" },
+      { href: "/schools/teachers", icon: ManageAccounts, label: "Teachers", group: "people" },
+      { href: "/schools/admissions", icon: EventNote, label: "Admissions", group: "people" },
+
+      { href: "/schools/academics", icon: TableRows, label: "Academics setup", group: "teaching" },
+      { href: "/schools/timetable", icon: Calendar, label: "Timetable", group: "teaching" },
+      { href: "/schools/classes", icon: TableRows, label: "Classes", group: "teaching" },
+      { href: "/schools/subjects", icon: TableRows, label: "Subjects", group: "teaching" },
+
+      { href: "/schools/attendance", icon: UserCheck, label: "Attendance", group: "attendance" },
+      { href: "/schools/boarding", icon: Home, label: "Boarding", group: "attendance" },
+
+      { href: "/schools/assessments", icon: FileCheck, label: "Assessments", group: "assessment" },
+      { href: "/schools/results/moderation", icon: FileCheck, label: "Moderation", group: "assessment" },
+      { href: "/schools/results/publish", icon: FileCheck, label: "Results publishing", group: "assessment" },
+
+      { href: "/schools/finance", icon: ReceiptLong, label: "Fees and finance", group: "money" },
+
+      { href: "/schools/notices", icon: EventNote, label: "Notices", group: "admin" },
+      { href: "/schools/reports", icon: BarChart3, label: "School reports", group: "admin" },
+      { href: "/schools/documents", icon: FileText, label: "Documents", group: "admin" },
     ],
   },
   {

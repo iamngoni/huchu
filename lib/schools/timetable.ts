@@ -436,3 +436,139 @@ export async function copyTimetableToTerm(input: {
 
   return { copied, skippedNoAssignment, skippedClash };
 }
+
+/**
+ * Fill a term's timetable from its class-subject assignments.
+ *
+ * The everyday problem this solves: a school with 12 classes and 10 subjects
+ * each has 120 lessons to place by hand, every one of which can collide with
+ * the class, the teacher or the room. Placing them one at a time through a
+ * dialog is a morning's work and the reason timetables get built in a
+ * spreadsheet and typed in afterwards.
+ *
+ * This is a greedy first-fit, not an optimiser. It walks the assignments in a
+ * stable order and drops each lesson into the first free (day, period) that
+ * breaks none of the three rules. Deliberately not a solver: a solver would
+ * need an objective — spread doubles, protect Friday afternoon, keep a
+ * teacher's frees contiguous — that no school has told us, and a wrong
+ * objective silently produces a plausible timetable nobody can teach. First-fit
+ * produces a *starting point* the timetabler then moves lessons around in,
+ * which is how this work is actually done.
+ *
+ * It never moves or deletes an existing lesson. Anything already placed is
+ * treated as fixed, so running this on a half-built timetable fills the gaps
+ * rather than rewriting somebody's decisions.
+ *
+ * `periodsPerSubject` is how many lessons a week each assignment should get.
+ * Anything it cannot place is reported, because a timetable that quietly gave
+ * Form 2 four maths lessons instead of five is worse than one that says so.
+ */
+export async function autoFillTimetable(input: {
+  companyId: string;
+  termId: string;
+  /** ISO days the school teaches on. Defaults to Monday–Friday. */
+  days?: number[];
+  /** Lessons a week per class-subject assignment. Defaults to 1. */
+  periodsPerSubject?: number;
+  /** Limit to one class, for filling a single year group. */
+  classId?: string;
+}): Promise<{
+  placed: number;
+  unplaced: Array<{ classSubjectId: string; label: string; wanted: number; placed: number }>;
+}> {
+  const days = input.days ?? [1, 2, 3, 4, 5];
+  const wanted = Math.max(1, input.periodsPerSubject ?? 1);
+
+  const [assignments, periods] = await Promise.all([
+    prisma.schoolClassSubject.findMany({
+      where: {
+        companyId: input.companyId,
+        termId: input.termId,
+        isActive: true,
+        ...(input.classId ? { classId: input.classId } : {}),
+      },
+      select: {
+        id: true,
+        class: { select: { name: true, level: true } },
+        stream: { select: { name: true } },
+        subject: { select: { name: true } },
+      },
+      // Stable and meaningful: the ladder in order, then the subject, so a
+      // re-run over the same data produces the same timetable.
+      orderBy: [
+        { class: { level: "asc" } },
+        { class: { name: "asc" } },
+        { subject: { name: "asc" } },
+      ],
+    }),
+    prisma.schoolPeriod.findMany({
+      where: {
+        companyId: input.companyId,
+        isTeaching: true,
+        OR: [{ termId: input.termId }, { termId: null }],
+      },
+      select: { id: true },
+      orderBy: [{ sequence: "asc" }, { startMinute: "asc" }],
+    }),
+  ]);
+
+  let placed = 0;
+  const unplaced: Array<{
+    classSubjectId: string;
+    label: string;
+    wanted: number;
+    placed: number;
+  }> = [];
+
+  for (const assignment of assignments) {
+    const label = [
+      assignment.class.name,
+      assignment.stream?.name,
+      assignment.subject.name,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const already = await prisma.schoolTimetableSlot.count({
+      where: {
+        companyId: input.companyId,
+        termId: input.termId,
+        classSubjectId: assignment.id,
+      },
+    });
+
+    let placedHere = already;
+
+    // Period-major rather than day-major: filling period 1 across the week
+    // before period 2 spreads a subject through the days instead of stacking
+    // Monday, which is what a school means by a timetable.
+    outer: for (const period of periods) {
+      for (const dayOfWeek of days) {
+        if (placedHere >= wanted) break outer;
+
+        const result = await createTimetableSlot({
+          companyId: input.companyId,
+          termId: input.termId,
+          classSubjectId: assignment.id,
+          periodId: period.id,
+          dayOfWeek,
+        });
+        if (result.ok) {
+          placedHere += 1;
+          placed += 1;
+        }
+      }
+    }
+
+    if (placedHere < wanted) {
+      unplaced.push({
+        classSubjectId: assignment.id,
+        label,
+        wanted,
+        placed: placedHere,
+      });
+    }
+  }
+
+  return { placed, unplaced };
+}

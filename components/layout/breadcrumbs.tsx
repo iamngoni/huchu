@@ -41,6 +41,7 @@ const routeLabels: Record<string, string> = {
   "supplier-performance": "Supplier Performance",
   "variance-aging": "Variance & Aging",
   unassigned: "Unassigned",
+  class: "Year group",
   held: "Held / Draft",
   "approval-requests": "Approval Requests",
   "password-reset": "Password Reset",
@@ -109,6 +110,18 @@ const viewLabels: Record<string, Record<string, string>> = {
   },
 };
 
+/**
+ * A record id, not a word.
+ *
+ * Every detail route ends in one, and title-casing it produced crumbs like
+ * "515bcc28 5300 49b9 8187 Abf2f2d44988" in the top bar. An opaque id says less
+ * than nothing to a reader, so the segment is dropped and the trail ends at the
+ * list it came from — the page's own heading is what names the record.
+ */
+function isOpaqueId(segment: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment);
+}
+
 function toTitleCase(value: string) {
   return value
     .split("-")
@@ -121,6 +134,7 @@ export function buildCrumbs(pathname: string, view?: string | null): Crumb[] {
   const crumbs: Crumb[] = [{ label: "Home", href: "/" }];
 
   segments.forEach((segment, index) => {
+    if (isOpaqueId(segment)) return;
     const href = `/${segments.slice(0, index + 1).join("/")}`;
     let label = routeLabels[segment] ?? toTitleCase(segment);
     if (index === 1) {

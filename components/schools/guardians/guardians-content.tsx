@@ -4,19 +4,19 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
-import { FilterChips, MobileList, MobileListEmpty } from "@corelithzw/react";
+import { MobileList, MobileListEmpty } from "@corelithzw/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { PortalInviteDialog } from "@/components/schools/portal/portal-invite-dialog";
+import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { fetchSchoolsGuardians } from "@/lib/schools/admin-v2";
 import type { SchoolsGuardianRecord } from "@/lib/schools/admin-v2";
 
 type AccountFilter = "all" | "with-account" | "without-account";
 
-const ACCOUNT_OPTIONS: Array<{ value: AccountFilter; label: string }> = [
-  { value: "all", label: "All" },
+const ACCOUNT_OPTIONS = [
   { value: "with-account", label: "On the portal" },
   { value: "without-account", label: "Not invited" },
 ];
@@ -142,12 +142,15 @@ export function GuardiansContent() {
         </Button>
       </div>
 
-      <FilterChips
-        aria-label="Filter guardians by portal account"
-        value={accountFilter}
-        options={ACCOUNT_OPTIONS}
-        onChange={(value) => setAccountFilter(value as AccountFilter)}
-      />
+      <FilterBar>
+        <FilterSelect
+          label="Portal account"
+          allLabel="Everyone"
+          value={accountFilter === "all" ? "" : accountFilter}
+          options={ACCOUNT_OPTIONS}
+          onChange={(value) => setAccountFilter((value || "all") as AccountFilter)}
+        />
+      </FilterBar>
 
       <DataTable
         data={guardians}

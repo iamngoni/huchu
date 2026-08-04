@@ -4,12 +4,13 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
-import { FilterChips, MobileList, MobileListEmpty } from "@corelithzw/react";
+import { MobileList, MobileListEmpty } from "@corelithzw/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { NumericCell } from "@/components/ui/numeric-cell";
 import { VerticalDataViews } from "@/components/ui/vertical-data-views";
+import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { getApiErrorMessage } from "@/lib/api-client";
 import {
   fetchSchoolsClasses,
@@ -24,8 +25,7 @@ type AcademicsView = "years" | "terms" | "classes" | "subjects";
 /** Whether a subject is still taught. A filter, not part of the sort order. */
 type SubjectFilter = "all" | "core" | "optional" | "inactive";
 
-const SUBJECT_OPTIONS: Array<{ value: SubjectFilter; label: string }> = [
-  { value: "all", label: "All" },
+const SUBJECT_OPTIONS = [
   { value: "core", label: "Core" },
   { value: "optional", label: "Optional" },
   { value: "inactive", label: "Retired" },
@@ -223,12 +223,15 @@ export function SchoolsAcademicsContent() {
 
         <div className={activeView === "subjects" ? "space-y-2" : "hidden"}>
           <h2 className="text-section-title">Subject Catalog</h2>
-          <FilterChips
-            aria-label="Filter subjects"
-            value={subjectFilter}
-            options={SUBJECT_OPTIONS}
-            onChange={(value) => setSubjectFilter(value as SubjectFilter)}
-          />
+          <FilterBar>
+            <FilterSelect
+              label="Subject type"
+              allLabel="All subjects"
+              value={subjectFilter === "all" ? "" : subjectFilter}
+              options={SUBJECT_OPTIONS}
+              onChange={(value) => setSubjectFilter((value || "all") as SubjectFilter)}
+            />
+          </FilterBar>
           <DataTable
             data={subjects}
             columns={subjectColumns}
