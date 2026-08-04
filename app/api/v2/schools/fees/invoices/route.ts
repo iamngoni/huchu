@@ -19,6 +19,14 @@ import {
 const querySchema = z.object({
   search: z.string().trim().min(1).optional(),
   studentId: z.string().uuid().optional(),
+  /**
+   * The year group a bursar is chasing. Filtered through the student's current
+   * class rather than stored on the invoice: an invoice belongs to a student
+   * and a term, and the class is the student's, so copying it here would give
+   * two answers the moment a child moves up.
+   */
+  classId: z.string().uuid().optional(),
+  streamId: z.string().uuid().optional(),
   termId: z.string().uuid().optional(),
   status: z
     .enum(["DRAFT", "ISSUED", "PART_PAID", "PAID", "VOIDED", "WRITEOFF"])
@@ -78,6 +86,8 @@ export async function GET(request: NextRequest) {
     const query = querySchema.parse({
       search: searchParams.get("search") ?? undefined,
       studentId: searchParams.get("studentId") ?? undefined,
+      classId: searchParams.get("classId") ?? undefined,
+      streamId: searchParams.get("streamId") ?? undefined,
       termId: searchParams.get("termId") ?? undefined,
       status: searchParams.get("status") ?? undefined,
       includeLines: searchParams.get("includeLines") ?? undefined,
@@ -85,6 +95,12 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.SchoolFeeInvoiceWhereInput = { companyId };
     if (query.studentId) where.studentId = query.studentId;
+    if (query.classId || query.streamId) {
+      where.student = {
+        ...(query.classId ? { currentClassId: query.classId } : {}),
+        ...(query.streamId ? { currentStreamId: query.streamId } : {}),
+      };
+    }
     if (query.termId) where.termId = query.termId;
     if (query.status) where.status = query.status;
     if (query.search) {

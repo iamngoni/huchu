@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { test, expect } from "@playwright/test";
+import { request, test, expect } from "@playwright/test";
 
 /**
  * Visual pass over the school surfaces.
@@ -79,6 +79,7 @@ const PAGES = [
   { name: "teachers", path: "/schools/teachers", heading: "Teachers" },
   { name: "results", path: "/schools/results", heading: "Results" },
   { name: "class-results", path: "/schools/results/class/515bcc28-5300-49b9-8187-abf2f2d44988", heading: "Form 1 marks" },
+  { name: "class-fees", path: "/schools/finance/class/515bcc28-5300-49b9-8187-abf2f2d44988", heading: "Form 1 fees" },
   { name: "timetable", path: "/schools/timetable", heading: "Timetable" },
 ];
 
@@ -138,7 +139,30 @@ test.beforeAll(async ({ browser }) => {
 
   await context.storageState({ path: AUTH_STATE });
   await context.close();
+
+  await warmRoutes();
 });
+
+/**
+ * Ask for every page once before any test measures one.
+ *
+ * The dev server compiles a route on first request, and the first viewport to
+ * reach a cold route can spend longer than the 30-second data gate waiting for
+ * it — so the phone run failed three separate times on pages that were fine at
+ * the next two viewports. That is an artefact of the harness, not of the
+ * product, and re-running until it passes is how a flaky suite gets trusted
+ * when it should not be. Compile them up front instead.
+ */
+async function warmRoutes() {
+  const probe = await request.newContext({
+    baseURL: process.env.E2E_BASE_URL,
+    storageState: AUTH_STATE,
+  });
+  for (const target of PAGES) {
+    await probe.get(target.path).catch(() => undefined);
+  }
+  await probe.dispose();
+}
 
 for (const viewport of VIEWPORTS) {
   test.describe(`${viewport.name} ${viewport.width}x${viewport.height}`, () => {

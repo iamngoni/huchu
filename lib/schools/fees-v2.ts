@@ -152,6 +152,9 @@ export async function fetchSchoolFeeInvoices(params: {
   limit?: number;
   search?: string;
   studentId?: string;
+  /** Filtered through the student's current class — see the route's note. */
+  classId?: string;
+  streamId?: string;
   termId?: string;
   status?: "DRAFT" | "ISSUED" | "PART_PAID" | "PAID" | "VOIDED" | "WRITEOFF";
 } = {}) {
