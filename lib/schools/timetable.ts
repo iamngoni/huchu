@@ -572,3 +572,94 @@ export async function autoFillTimetable(input: {
 
   return { placed, unplaced };
 }
+
+export type BulkAllocationOutcome = {
+  created: number;
+  reassigned: number;
+  unchanged: number;
+  /** Slots whose teacher changed and who is now double-booked. */
+  nowClashing: string[];
+};
+
+/**
+ * Give one teacher a subject across several classes at once.
+ *
+ * Allocation is the other half-day of work a term start costs. A head of
+ * department assigning maths across six forms does the same thing six times
+ * through a dialog, and the sixth is where the mistake goes in.
+ *
+ * Creating an assignment and *moving* one are the same request here on
+ * purpose: the question a HOD is answering is "who teaches Form 2 maths this
+ * term", and whether a row already exists is an implementation detail they
+ * should not have to know before choosing a menu item.
+ *
+ * A reassignment re-copies the derived columns on any timetable slot the
+ * assignment already has, because those columns are what the teacher-clash
+ * index protects. Slots the new teacher cannot take are reported rather than
+ * deleted — the same rule `syncSlotDenormalisation` follows, and for the same
+ * reason.
+ */
+export async function allocateTeacherToClasses(input: {
+  companyId: string;
+  termId: string;
+  subjectId: string;
+  teacherProfileId: string;
+  /** Each class, optionally narrowed to one stream. */
+  targets: Array<{ classId: string; streamId?: string | null }>;
+}): Promise<BulkAllocationOutcome> {
+  const outcome: BulkAllocationOutcome = {
+    created: 0,
+    reassigned: 0,
+    unchanged: 0,
+    nowClashing: [],
+  };
+
+  for (const target of input.targets) {
+    const streamId = target.streamId ?? null;
+
+    const existing = await prisma.schoolClassSubject.findFirst({
+      where: {
+        companyId: input.companyId,
+        termId: input.termId,
+        classId: target.classId,
+        streamId,
+        subjectId: input.subjectId,
+      },
+      select: { id: true, teacherProfileId: true },
+    });
+
+    if (!existing) {
+      await prisma.schoolClassSubject.create({
+        data: {
+          companyId: input.companyId,
+          termId: input.termId,
+          classId: target.classId,
+          streamId,
+          subjectId: input.subjectId,
+          teacherProfileId: input.teacherProfileId,
+        },
+      });
+      outcome.created += 1;
+      continue;
+    }
+
+    if (existing.teacherProfileId === input.teacherProfileId) {
+      outcome.unchanged += 1;
+      continue;
+    }
+
+    await prisma.schoolClassSubject.update({
+      where: { id: existing.id },
+      data: { teacherProfileId: input.teacherProfileId },
+    });
+    outcome.reassigned += 1;
+
+    const synced = await syncSlotDenormalisation({
+      companyId: input.companyId,
+      classSubjectId: existing.id,
+    });
+    outcome.nowClashing.push(...synced.nowClashing);
+  }
+
+  return outcome;
+}

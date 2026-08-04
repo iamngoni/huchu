@@ -14,6 +14,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import {
+  allocateTeacherToClasses,
+  autoFillTimetable,
   copyTimetableToTerm,
   createTimetableSlot,
   findOverlappingPeriod,
@@ -833,5 +835,173 @@ describe("copy forward", () => {
       where: { companyId, termId: otherTermId },
     });
     expect(total).toBe(1);
+  });
+});
+
+describe("auto-fill", () => {
+  it("places every assignment without breaking a clash rule", async () => {
+    const otherClass = await prisma.schoolClass.create({
+      data: { companyId, code: `AF-${Date.now()}`, name: "Auto Form", level: 20 },
+    });
+    await makeAssignment({ subjectId: subjectAId, teacherProfileId: teacherAId });
+    await makeAssignment({ subjectId: subjectBId, teacherProfileId: teacherBId });
+    await makeAssignment({
+      subjectId: subjectAId,
+      teacherProfileId: teacherAId,
+      classId: otherClass.id,
+      streamId: null,
+    });
+
+    const result = await autoFillTimetable({ companyId, termId, periodsPerSubject: 2 });
+
+    expect(result.placed).toBe(6);
+    expect(result.unplaced).toEqual([]);
+
+    // The rules held. If any had been broken the insert would have thrown, so
+    // this asserts the shape a timetabler would check: nobody in two places.
+    const slots = await prisma.schoolTimetableSlot.findMany({
+      where: { companyId, termId },
+      select: { dayOfWeek: true, periodId: true, teacherProfileId: true, classId: true },
+    });
+    const teacherSlots = new Set(
+      slots.map((s) => `${s.dayOfWeek}:${s.periodId}:${s.teacherProfileId}`),
+    );
+    expect(teacherSlots.size).toBe(slots.length);
+    const classSlots = new Set(
+      slots.map((s) => `${s.dayOfWeek}:${s.periodId}:${s.classId}`),
+    );
+    expect(classSlots.size).toBe(slots.length);
+  });
+
+  it("adds to a half-built timetable instead of rewriting it", async () => {
+    const maths = await makeAssignment({
+      subjectId: subjectAId,
+      teacherProfileId: teacherAId,
+    });
+    const placedByHand = await createTimetableSlot({
+      companyId,
+      termId,
+      classSubjectId: maths.id,
+      periodId: periodTwoId,
+      dayOfWeek: 4,
+      roomId,
+    });
+    expect(placedByHand.ok).toBe(true);
+    if (!placedByHand.ok) return;
+
+    await autoFillTimetable({ companyId, termId, periodsPerSubject: 2 });
+
+    // The hand-placed lesson is exactly where it was put, room and all.
+    const kept = await prisma.schoolTimetableSlot.findUnique({
+      where: { id: placedByHand.slotId },
+      select: { dayOfWeek: true, periodId: true, roomId: true },
+    });
+    expect(kept).toEqual({ dayOfWeek: 4, periodId: periodTwoId, roomId });
+  });
+
+  it("reports what it could not place rather than silently under-filling", async () => {
+    await makeAssignment({ subjectId: subjectAId, teacherProfileId: teacherAId });
+
+    // Five teaching periods x five days is 25 slots for this class, so asking
+    // for 30 cannot be satisfied.
+    const result = await autoFillTimetable({ companyId, termId, periodsPerSubject: 30 });
+
+    expect(result.unplaced).toHaveLength(1);
+    expect(result.unplaced[0].wanted).toBe(30);
+    expect(result.unplaced[0].placed).toBeLessThan(30);
+    expect(result.unplaced[0].label).toContain("Mathematics");
+  });
+
+  it("never schedules into a non-teaching period", async () => {
+    await makeAssignment({ subjectId: subjectAId, teacherProfileId: teacherAId });
+    await autoFillTimetable({ companyId, termId, periodsPerSubject: 5 });
+
+    const inBreak = await prisma.schoolTimetableSlot.count({
+      where: { companyId, termId, periodId: breakPeriodId },
+    });
+    expect(inBreak).toBe(0);
+  });
+});
+
+describe("bulk teacher allocation", () => {
+  it("creates the assignments that do not exist and moves the ones that do", async () => {
+    const otherClass = await prisma.schoolClass.create({
+      data: { companyId, code: `BA-${Date.now()}`, name: "Bulk Form", level: 21 },
+    });
+    // One already exists, under a different teacher.
+    await makeAssignment({ subjectId: subjectAId, teacherProfileId: teacherBId });
+
+    const result = await allocateTeacherToClasses({
+      companyId,
+      termId,
+      subjectId: subjectAId,
+      teacherProfileId: teacherAId,
+      targets: [
+        { classId, streamId },
+        { classId: otherClass.id, streamId: null },
+      ],
+    });
+
+    expect(result.reassigned).toBe(1);
+    expect(result.created).toBe(1);
+    expect(result.unchanged).toBe(0);
+
+    const rows = await prisma.schoolClassSubject.findMany({
+      where: { companyId, termId, subjectId: subjectAId },
+      select: { teacherProfileId: true },
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.teacherProfileId === teacherAId)).toBe(true);
+  });
+
+  it("is idempotent", async () => {
+    await allocateTeacherToClasses({
+      companyId,
+      termId,
+      subjectId: subjectAId,
+      teacherProfileId: teacherAId,
+      targets: [{ classId, streamId }],
+    });
+    const again = await allocateTeacherToClasses({
+      companyId,
+      termId,
+      subjectId: subjectAId,
+      teacherProfileId: teacherAId,
+      targets: [{ classId, streamId }],
+    });
+
+    expect(again.unchanged).toBe(1);
+    expect(again.created).toBe(0);
+    expect(again.reassigned).toBe(0);
+  });
+
+  it("re-points the timetable slots a reassigned lesson already had", async () => {
+    const maths = await makeAssignment({
+      subjectId: subjectAId,
+      teacherProfileId: teacherBId,
+    });
+    await createTimetableSlot({
+      companyId,
+      termId,
+      classSubjectId: maths.id,
+      periodId: periodOneId,
+      dayOfWeek: 5,
+    });
+
+    await allocateTeacherToClasses({
+      companyId,
+      termId,
+      subjectId: subjectAId,
+      teacherProfileId: teacherAId,
+      targets: [{ classId, streamId }],
+    });
+
+    // The slot follows the assignment, or the teacher-clash index would be
+    // protecting somebody who no longer teaches the lesson.
+    const slot = await prisma.schoolTimetableSlot.findFirst({
+      where: { companyId, classSubjectId: maths.id },
+      select: { teacherProfileId: true },
+    });
+    expect(slot?.teacherProfileId).toBe(teacherAId);
   });
 });

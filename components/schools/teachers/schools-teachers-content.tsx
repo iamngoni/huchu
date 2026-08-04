@@ -21,12 +21,18 @@ import { NumericCell } from "@/components/ui/numeric-cell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VerticalDataViews } from "@/components/ui/vertical-data-views";
 import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
+import {
+  BulkAllocationSheet,
+  type BulkAllocationResult,
+  type BulkAllocationValues,
+} from "./bulk-allocation-sheet";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
   fetchTeacherProfileUsers,
   fetchTeacherAssignments,
   fetchTeacherProfiles,
   fetchTeacherSubjects,
+  fetchSchoolsClasses,
   type TeacherAssignmentRecord,
   type TeacherProfileRecord,
   type TeacherProfileUserRecord,
@@ -66,6 +72,9 @@ export function SchoolsTeachersContent() {
   const queryClient = useQueryClient();
   const [profileActiveFilter, setProfileActiveFilter] = useState<ActiveFilter>("all");
   const [subjectActiveFilter, setSubjectActiveFilter] = useState<ActiveFilter>("all");
+  const [allocateOpen, setAllocateOpen] = useState(false);
+  const [allocateError, setAllocateError] = useState<string | null>(null);
+  const [allocateResult, setAllocateResult] = useState<BulkAllocationResult | null>(null);
 
   const [subjectDialogOpen, setSubjectDialogOpen] = useState(false);
   const [subjectForm, setSubjectForm] = useState(initialSubjectForm);
@@ -164,6 +173,10 @@ export function SchoolsTeachersContent() {
     queryKey: ["schools", "teachers", "assignments"],
     queryFn: () => fetchTeacherAssignments({ page: 1, limit: 200 }),
   });
+  const classesQuery = useQuery({
+    queryKey: ["schools", "teachers", "classes"],
+    queryFn: () => fetchSchoolsClasses({ page: 1, limit: 200 }),
+  });
 
   const profiles = useMemo(() => profilesQuery.data?.data ?? [], [profilesQuery.data]);
   const subjects = useMemo(() => subjectsQuery.data?.data ?? [], [subjectsQuery.data]);
@@ -175,6 +188,31 @@ export function SchoolsTeachersContent() {
     () => teacherUsersQuery.data?.data ?? [],
     [teacherUsersQuery.data],
   );
+  const classes = useMemo(() => classesQuery.data?.data ?? [], [classesQuery.data]);
+
+  const allocate = useMutation({
+    mutationFn: async (values: BulkAllocationValues) =>
+      fetchJson<BulkAllocationResult>("/api/v2/schools/teachers/assignments/bulk", {
+        method: "POST",
+        body: JSON.stringify({
+          subjectId: values.subjectId,
+          teacherProfileId: values.teacherProfileId,
+          targets: values.classIds.map((classId) => ({ classId })),
+        }),
+      }),
+    onSuccess: (result) => {
+      // Kept open: "3 lessons now clash" is the part that needs acting on.
+      queryClient.invalidateQueries({ queryKey: ["schools", "teachers"] });
+      queryClient.invalidateQueries({ queryKey: ["schools", "timetable"] });
+      setAllocateResult(result);
+      setAllocateError(null);
+    },
+    onError: (error) => {
+      setAllocateResult(null);
+      setAllocateError(getApiErrorMessage(error));
+    },
+  });
+
   const profiledUserIds = useMemo(() => new Set(profiles.map((profile) => profile.user.id)), [profiles]);
   const availableTeacherUsers = useMemo(
     () => teacherUsers.filter((user) => !profiledUserIds.has(user.id)),
@@ -469,7 +507,20 @@ export function SchoolsTeachersContent() {
         </div>
 
         <div className={activeView === "assignments" ? "space-y-2" : "hidden"}>
-          <h2 className="text-section-title">Class-Subject Assignments</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-section-title">Class-Subject Assignments</h2>
+            <Button
+              size="sm"
+              disabled={subjects.length === 0 || profiles.length === 0}
+              onClick={() => {
+                setAllocateError(null);
+                setAllocateResult(null);
+                setAllocateOpen(true);
+              }}
+            >
+              Allocate a teacher
+            </Button>
+          </div>
           <DataTable
             data={assignments}
             columns={assignmentColumns}
@@ -701,6 +752,24 @@ export function SchoolsTeachersContent() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <BulkAllocationSheet
+        open={allocateOpen}
+        onOpenChange={(open) => {
+          setAllocateOpen(open);
+          if (!open) {
+            setAllocateError(null);
+            setAllocateResult(null);
+          }
+        }}
+        subjects={subjects}
+        teachers={profiles}
+        classes={classes}
+        isSubmitting={allocate.isPending}
+        error={allocateError}
+        result={allocateResult}
+        onSubmit={(values) => allocate.mutate(values)}
+      />
     </div>
   );
 }

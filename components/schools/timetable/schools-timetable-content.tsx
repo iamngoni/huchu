@@ -22,6 +22,11 @@ import {
 import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { LessonFormSheet, type LessonFormValues } from "./lesson-form-sheet";
 import {
+  AutoFillSheet,
+  type AutoFillResult,
+  type AutoFillValues,
+} from "./auto-fill-sheet";
+import {
   CopyForwardSheet,
   type CopyForwardResult,
   type CopyForwardValues,
@@ -83,6 +88,9 @@ export function SchoolsTimetableContent() {
   const [copyOpen, setCopyOpen] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
   const [copyResult, setCopyResult] = useState<CopyForwardResult | null>(null);
+  const [autoFillOpen, setAutoFillOpen] = useState(false);
+  const [autoFillError, setAutoFillError] = useState<string | null>(null);
+  const [autoFillResult, setAutoFillResult] = useState<AutoFillResult | null>(null);
 
   const timetableQuery = useQuery({
     queryKey: ["schools", "timetable", viewpoint, classFilter, teacherFilter],
@@ -206,6 +214,30 @@ export function SchoolsTimetableContent() {
     },
   });
 
+  const autoFill = useMutation({
+    mutationFn: async (values: AutoFillValues) =>
+      fetchJson<AutoFillResult>("/api/v2/schools/timetable/auto-fill", {
+        method: "POST",
+        body: JSON.stringify({
+          classId: values.classId || undefined,
+          days: values.days,
+          periodsPerSubject: values.periodsPerSubject,
+        }),
+      }),
+    onSuccess: (result) => {
+      // Held open on purpose, like copy-forward: "9 assignments could not be
+      // given a full week" is the part the timetabler has to act on, and
+      // closing the sheet would throw it away.
+      queryClient.invalidateQueries({ queryKey: ["schools", "timetable"] });
+      setAutoFillResult(result);
+      setAutoFillError(null);
+    },
+    onError: (error) => {
+      setAutoFillResult(null);
+      setAutoFillError(getApiErrorMessage(error));
+    },
+  });
+
   function openSheet(dayOfWeek: number, periodId: string) {
     setSubmitError(null);
     setSheetDefaults({ dayOfWeek, periodId });
@@ -229,6 +261,18 @@ export function SchoolsTimetableContent() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-section-title">The week</h2>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={periods.length === 0 || assignments.length === 0}
+            onClick={() => {
+              setAutoFillError(null);
+              setAutoFillResult(null);
+              setAutoFillOpen(true);
+            }}
+          >
+            Build timetable
+          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -439,6 +483,22 @@ export function SchoolsTimetableContent() {
         isSubmitting={addLesson.isPending}
         error={submitError}
         onSubmit={(values) => addLesson.mutate(values)}
+      />
+
+      <AutoFillSheet
+        open={autoFillOpen}
+        onOpenChange={(open) => {
+          setAutoFillOpen(open);
+          if (!open) {
+            setAutoFillError(null);
+            setAutoFillResult(null);
+          }
+        }}
+        classes={classes}
+        isSubmitting={autoFill.isPending}
+        error={autoFillError}
+        result={autoFillResult}
+        onSubmit={(values) => autoFill.mutate(values)}
       />
 
       <CopyForwardSheet
