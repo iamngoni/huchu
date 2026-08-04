@@ -269,14 +269,17 @@ export function SchoolsCalendarContent({
                       key={row.id}
                       static={row.isActive}
                       title={`${row.code} - ${row.name}`}
-                      subtitle={`${formatRange(row.startDate, row.endDate)} · ${
-                        row._count.terms
-                      } terms`}
-                      trailing={
-                        row.isActive ? (
-                          <Badge variant="secondary">Current</Badge>
-                        ) : undefined
-                      }
+                      // "Current" reads on the subtitle line rather than as a
+                      // badge in `trailing`: the design system's row is a
+                      // `1fr 14px` grid sized for a chevron and `.mobile-list`
+                      // is `overflow: clip`, so a badge there was cut mid-word.
+                      subtitle={[
+                        formatRange(row.startDate, row.endDate),
+                        `${row._count.terms} terms`,
+                        row.isActive ? "Current" : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                       onClick={
                         row.isActive ? undefined : () => activateYear.mutate(row.id)
                       }
@@ -332,12 +335,12 @@ export function SchoolsCalendarContent({
                       key={row.id}
                       static={row.isActive}
                       title={`${row.academicYear.code} · ${row.code} - ${row.name}`}
-                      subtitle={formatRange(row.startDate, row.endDate)}
-                      trailing={
-                        row.isActive ? (
-                          <Badge variant="secondary">Current</Badge>
-                        ) : undefined
-                      }
+                      subtitle={[
+                        formatRange(row.startDate, row.endDate),
+                        row.isActive ? "Current" : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                       onClick={
                         row.isActive
                           ? undefined

@@ -142,12 +142,19 @@ export function GuardiansContent() {
                 <MobileList.Row
                   key={row.id}
                   title={`${row.firstName} ${row.lastName}`}
-                  subtitle={`${row.guardianNo} · ${row.phone} · ${
-                    row._count?.studentLinks ?? 0
-                  } children`}
-                  trailing={
-                    row.userId ? <Badge variant="secondary">Portal</Badge> : undefined
-                  }
+                  // "Portal" was a `<Badge>` in `trailing`, where the design
+                  // system's `1fr 14px` row grid sizes that column for a
+                  // chevron and `.mobile-list` clips the overflow — so the
+                  // badge was cut mid-word on every guardian who had claimed an
+                  // account. It reads as text on the subtitle line instead.
+                  subtitle={[
+                    row.guardianNo,
+                    row.phone,
+                    `${row._count?.studentLinks ?? 0} children`,
+                    row.userId ? "Portal" : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                   onClick={() => {
                     window.location.href = `/schools/guardians/${row.id}`;
                   }}

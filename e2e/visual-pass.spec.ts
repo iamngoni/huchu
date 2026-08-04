@@ -174,23 +174,90 @@ for (const viewport of VIEWPORTS) {
           fullPage: true,
         });
 
+        // What counts as overflow needs care in both directions.
+        //
         // Body scrollWidth alone is too weak: a clipped inner container leaves
-        // the body itself the right width while the content it holds is cut
-        // off. Measure every element against the viewport and report the worst.
+        // the body the right width while the content it holds is cut off.
+        //
+        // But "every element fits the viewport" is too strong, and wrongly so.
+        // A wide table inside its own `overflow-x: auto` container is the
+        // design system's deliberate answer at tablet widths — `tabletScrollable`
+        // is on by default — and the user swipes the table, not the page. An
+        // element that overflows a scroll container is working as intended.
+        //
+        // So: walk up from each element, and only count it when nothing above it
+        // scrolls or clips horizontally. That is the case where the content is
+        // genuinely unreachable or drags the page sideways.
         const widest = await page.evaluate(() => {
           const viewportWidth = document.documentElement.clientWidth;
           let worst = { selector: "", right: 0 };
+
+          const describe = (element: Element) =>
+            `${element.tagName.toLowerCase()}.${(element.getAttribute("class") ?? "").slice(0, 60)}`;
+
+          // Walk up to whichever comes first: something that scrolls (the
+          // content is reachable), or something that clips (it is not).
+          const containerFor = (element: Element) => {
+            let parent = element.parentElement;
+            while (parent && parent !== document.documentElement) {
+              const overflowX = getComputedStyle(parent).overflowX;
+              if (overflowX === "auto" || overflowX === "scroll") {
+                return { kind: "scrolls" as const, element: parent };
+              }
+              if (overflowX === "hidden" || overflowX === "clip") {
+                return { kind: "clips" as const, element: parent };
+              }
+              parent = parent.parentElement;
+            }
+            return null;
+          };
+
+          const clipped: string[] = [];
+
           for (const element of Array.from(document.querySelectorAll("*"))) {
             const rect = element.getBoundingClientRect();
             if (rect.width === 0 || rect.height === 0) continue;
-            if (rect.right > worst.right) {
-              const tag = element.tagName.toLowerCase();
-              const cls = (element.getAttribute("class") ?? "").slice(0, 60);
-              worst = { selector: `${tag}.${cls}`, right: Math.round(rect.right) };
+
+            const container = containerFor(element);
+
+            // Content cut off by an ancestor that does not scroll. Truncation
+            // with an ellipsis does not land here — the text is replaced, so
+            // the element's own box stays inside its container. Only content
+            // that is genuinely lost sticks out.
+            if (container?.kind === "clips") {
+              const bounds = container.element.getBoundingClientRect();
+              if (rect.right > bounds.right + 1 && clipped.length < 5) {
+                clipped.push(
+                  `${describe(element)} reaches ${Math.round(rect.right)}px, ` +
+                    `clipped by ${describe(container.element)} at ${Math.round(bounds.right)}px`,
+                );
+              }
             }
+
+            if (rect.right <= worst.right) continue;
+            if (container) continue;
+            worst = { selector: describe(element), right: Math.round(rect.right) };
           }
-          return { ...worst, viewportWidth, bodyScroll: document.body.scrollWidth };
+
+          return {
+            ...worst,
+            clipped,
+            viewportWidth,
+            documentScroll: document.documentElement.scrollWidth,
+          };
         });
+
+        expect(
+          widest.clipped,
+          `${target.path} at ${viewport.width}px: content is cut off by a non-scrolling ancestor`,
+        ).toEqual([]);
+
+        // The page itself must never scroll sideways, whatever is inside it.
+        expect(
+          widest.documentScroll,
+          `${target.path} at ${viewport.width}px: the page scrolls horizontally ` +
+            `(${widest.documentScroll}px of content in a ${widest.viewportWidth}px viewport)`,
+        ).toBeLessThanOrEqual(widest.viewportWidth + 1);
 
         // Row counts go in the log because "no overflow" over an empty table is
         // not the same result as "no overflow" over a full one, and the
@@ -199,7 +266,8 @@ for (const viewport of VIEWPORTS) {
         const rows = await page.locator("table tbody tr, [data-slot='mobile-list-row']").count();
         console.log(
           `RESULT ${viewport.name} ${target.name}: rows=${rows} ` +
-            `widest=${widest.right}px viewport=${widest.viewportWidth}px (${widest.selector})`,
+            `widest=${widest.right}px doc=${widest.documentScroll}px ` +
+            `viewport=${widest.viewportWidth}px (${widest.selector})`,
         );
 
         expect(

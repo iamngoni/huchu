@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MobileList, MobileListEmpty } from "@corelithzw/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -342,6 +343,40 @@ export function SchoolsStudentsContent() {
             searchPlaceholder="Search students"
             searchSubmitLabel="Search"
             pagination={{ enabled: true }}
+            mobileListRenderer={({ rows }) => (
+              <MobileList>
+                {rows.length === 0 ? (
+                  <MobileListEmpty>
+                    {studentsQuery.isLoading
+                      ? "Loading students…"
+                      : "No students found."}
+                  </MobileListEmpty>
+                ) : (
+                  rows.map(({ row }) => (
+                    <MobileList.Row
+                      key={row.id}
+                      title={`${row.firstName} ${row.lastName}`}
+                      // Status goes in the subtitle, not `trailing`. The design
+                      // system's row is a `1fr 14px` grid — the trailing column
+                      // is sized for a chevron — and `.mobile-list` is
+                      // `overflow: clip`, so a badge there is cut mid-word
+                      // rather than wrapped or scrolled.
+                      subtitle={[
+                        row.studentNo,
+                        row.currentClass?.name,
+                        row.currentStream?.name,
+                        row.isBoarding ? "Boarder" : "Day scholar",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                      onClick={() => {
+                        window.location.href = `/schools/students/${row.id}`;
+                      }}
+                    />
+                  ))
+                )}
+              </MobileList>
+            )}
             emptyState={
               studentsQuery.isLoading ? "Loading students..." : "No students found."
             }
@@ -361,6 +396,34 @@ export function SchoolsStudentsContent() {
             searchPlaceholder="Search guardians"
             searchSubmitLabel="Search"
             pagination={{ enabled: true }}
+            mobileListRenderer={({ rows }) => (
+              <MobileList>
+                {rows.length === 0 ? (
+                  <MobileListEmpty>
+                    {guardiansQuery.isLoading
+                      ? "Loading guardians…"
+                      : "No guardians found."}
+                  </MobileListEmpty>
+                ) : (
+                  rows.map(({ row }) => (
+                    <MobileList.Row
+                      key={row.id}
+                      title={`${row.firstName} ${row.lastName}`}
+                      subtitle={[
+                        row.guardianNo,
+                        row.phone,
+                        `${row._count.studentLinks} linked`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                      onClick={() => {
+                        window.location.href = `/schools/guardians/${row.id}`;
+                      }}
+                    />
+                  ))
+                )}
+              </MobileList>
+            )}
             emptyState={
               guardiansQuery.isLoading ? "Loading guardians..." : "No guardians found."
             }
