@@ -1,11 +1,11 @@
 import { getServerSession } from "next-auth";
 import { notFound, redirect } from "next/navigation";
 import { PageHeading } from "@/components/layout/page-heading";
-import { ClassRegisterContent } from "@/components/schools/attendance/class-register-content";
+import { ClassResultsContent } from "@/components/schools/results/class-results-content";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export default async function ClassRegisterPage({
+export default async function ClassResultsPage({
   params,
   searchParams,
 }: {
@@ -28,8 +28,8 @@ export default async function ClassRegisterPage({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading title={`${schoolClass.name} register`} />
-      <ClassRegisterContent classId={schoolClass.id} initialStreamId={streamId} />
+      <PageHeading title={`${schoolClass.name} marks`} />
+      <ClassResultsContent classId={schoolClass.id} initialStreamId={streamId} />
     </div>
   );
 }

@@ -10,11 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import {
-  fetchSchoolsClasses,
-  fetchSchoolsStudents,
-  type SchoolsStudentRecord,
-} from "@/lib/schools/admin-v2";
+import { fetchSchoolsStudents, type SchoolsStudentRecord } from "@/lib/schools/admin-v2";
+import { fetchTeacherPortalClasses } from "@/lib/schools/schools-v2";
 
 type EntryStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
@@ -36,7 +33,17 @@ function today() {
 }
 
 /**
- * Taking the register for one class.
+ * Taking the register, in the teacher's portal.
+ *
+ * This lives here and not under `/schools` because taking a register is a
+ * teacher's job, not an administrator's. The admin side answers "which
+ * registers have been taken", which is a different question with a different
+ * screen; the two were briefly the same page, which is how a school
+ * administrator ended up able to mark any child in the school present.
+ *
+ * The classes come from `/portal/teacher/me/classes`, so a teacher is offered
+ * their own and nobody else's — the portal identity rule from S-0.2, rather
+ * than a picker over the whole school.
  *
  * The everyday workflow, and the one that has to survive being done on a phone
  * in a corridor at 07:30. Everyone starts present, because in a class of forty
@@ -49,27 +56,37 @@ function today() {
  * tedious gets filled in at lunchtime from memory, which is worse than the
  * default being wrong occasionally.
  */
-export function ClassRegisterContent({
-  classId,
-  initialStreamId,
-}: {
-  classId: string;
-  initialStreamId?: string;
-}) {
+export function TeacherRegisterContent() {
   const queryClient = useQueryClient();
-  const [streamFilter, setStreamFilter] = useState(initialStreamId ?? "");
+  const [classId, setClassId] = useState("");
+  const [streamFilter, setStreamFilter] = useState("");
   const [date, setDate] = useState(today());
   const [marks, setMarks] = useState<Record<string, EntryStatus>>({});
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<number | null>(null);
 
   const classesQuery = useQuery({
-    queryKey: ["schools", "grades"],
-    queryFn: () => fetchSchoolsClasses({ page: 1, limit: 200 }),
+    queryKey: ["portal", "teacher", "classes"],
+    queryFn: () => fetchTeacherPortalClasses(),
   });
 
+  /** The teacher's own classes, one entry per class rather than per subject. */
+  const myClasses = useMemo(() => {
+    const seen = new Map<string, { id: string; name: string }>();
+    for (const assignment of classesQuery.data?.assignments ?? []) {
+      if (!seen.has(assignment.class.id)) {
+        seen.set(assignment.class.id, {
+          id: assignment.class.id,
+          name: assignment.class.name,
+        });
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [classesQuery.data]);
+
   const studentsQuery = useQuery({
-    queryKey: ["schools", "register", classId, streamFilter],
+    enabled: Boolean(classId),
+    queryKey: ["portal", "teacher", "register", classId, streamFilter],
     queryFn: () =>
       fetchSchoolsStudents({
         page: 1,
@@ -85,11 +102,7 @@ export function ClassRegisterContent({
     () => studentsQuery.data?.data ?? [],
     [studentsQuery.data],
   );
-  const schoolClass = useMemo(
-    () => (classesQuery.data?.data ?? []).find((row) => row.id === classId) ?? null,
-    [classesQuery.data, classId],
-  );
-  const streams = schoolClass?.streams ?? [];
+
 
   function statusOf(student: SchoolsStudentRecord): EntryStatus {
     return marks[student.id] ?? "PRESENT";
@@ -148,19 +161,18 @@ export function ClassRegisterContent({
   return (
     <div className="space-y-4">
       <FilterBar>
-        {streams.length > 0 ? (
-          <FilterSelect
-            label="Class"
-            allLabel="Every class"
-            value={streamFilter}
-            options={streams.map((stream) => ({ value: stream.id, label: stream.name }))}
-            onChange={(value) => {
-              setStreamFilter(value);
-              setMarks({});
-              setSaved(null);
-            }}
-          />
-        ) : null}
+        <FilterSelect
+          label="Class"
+          allLabel="Choose a class"
+          value={classId}
+          options={myClasses.map((row) => ({ value: row.id, label: row.name }))}
+          onChange={(value) => {
+            setClassId(value);
+            setStreamFilter("");
+            setMarks({});
+            setSaved(null);
+          }}
+        />
         <div className="min-w-0 flex-1 sm:max-w-[200px]">
           <Label htmlFor="register-date" className="text-sm text-muted-foreground">
             Date
@@ -227,9 +239,11 @@ export function ClassRegisterContent({
       <MobileList>
         {students.length === 0 ? (
           <MobileListEmpty>
-            {studentsQuery.isLoading
-              ? "Loading the class…"
-              : "No active students in this class."}
+            {!classId
+              ? "Choose one of your classes to take its register."
+              : studentsQuery.isLoading
+                ? "Loading the class…"
+                : "No active students in this class."}
           </MobileListEmpty>
         ) : (
           students.map((student) => {

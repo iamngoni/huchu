@@ -76,8 +76,8 @@ const PAGES = [
   // the heading is the class name rather than "Students".
   { name: "class-students", path: "/schools/students/class/515bcc28-5300-49b9-8187-abf2f2d44988", heading: "Form 1" },
   { name: "attendance", path: "/schools/attendance", heading: "Attendance" },
-  { name: "register", path: "/schools/attendance/class/515bcc28-5300-49b9-8187-abf2f2d44988", heading: "Form 1 register" },
   { name: "teachers", path: "/schools/teachers", heading: "Teachers" },
+  { name: "results", path: "/schools/results", heading: "Results" },
   { name: "timetable", path: "/schools/timetable", heading: "Timetable" },
 ];
 

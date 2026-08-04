@@ -252,3 +252,31 @@ export async function fetchSchoolsBoardingLeaveRequests(params: {
   );
   return response.data;
 }
+
+export type TeacherPortalClasses = {
+  resource: "portal-teacher-classes";
+  companyId: string;
+  assignments: Array<{
+    id: string;
+    class: { id: string; code: string; name: string };
+    stream: { id: string; code: string; name: string } | null;
+    subject: { id: string; code: string; name: string };
+    term: { id: string; code: string; name: string };
+  }>;
+  summary: { assignments: number; classes: number; terms: number };
+};
+
+/**
+ * The classes this teacher actually teaches.
+ *
+ * The route wraps its own payload in `{ success, data }` before handing it to
+ * `successResponse` — which does not wrap — so the body really is
+ * `{ success, data }` and `.data` is correct here. Not the case for the routes
+ * that pass a bare object; see the note at the top of `admin-v2.ts`.
+ */
+export async function fetchTeacherPortalClasses(params: { termId?: string } = {}) {
+  const response = await fetchJson<ApiResponse<TeacherPortalClasses>>(
+    `/api/v2/schools/portal/teacher/me/classes${buildQuery(params)}`,
+  );
+  return response.data;
+}
