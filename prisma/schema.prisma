@@ -152,6 +152,10 @@ model Company {
   schoolHealthEvents            SchoolHealthEvent[]
   schoolAssignments             SchoolAssignment[]
   schoolAssignmentSubmissions   SchoolAssignmentSubmission[]
+  schoolBooks                   SchoolBook[]
+  schoolBookCopies              SchoolBookCopy[]
+  schoolBookLoans               SchoolBookLoan[]
+  schoolBookReservations        SchoolBookReservation[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
@@ -5729,6 +5733,8 @@ model SchoolStudent {
   healthRecord           SchoolHealthRecord?
   healthEvents           SchoolHealthEvent[]
   assignmentSubmissions  SchoolAssignmentSubmission[]
+  bookLoans              SchoolBookLoan[]
+  bookReservations       SchoolBookReservation[]
   attendanceSessionLines SchoolAttendanceSessionLine[]
   feeInvoices            SchoolFeeInvoice[]
   feeReceipts            SchoolFeeReceipt[]
@@ -6767,6 +6773,118 @@ model SchoolAssignmentSubmission {
 
   @@unique([companyId, assignmentId, studentId])
   @@index([companyId, studentId, submittedAt])
+}
+
+/// A title the library holds, and how many of it.
+///
+/// A title is not a copy. Three copies of the same book are one `SchoolBook`
+/// and three `SchoolBookCopy` rows, because a loan is of a *copy* — the one
+/// with the coffee stain and the barcode — and a school that lends "the title"
+/// cannot tell you which one is missing.
+model SchoolBook {
+  id          String   @id @default(uuid())
+  companyId   String
+  /// ISBN where there is one. Not unique: a school legitimately holds two
+  /// editions, and older stock often has none at all.
+  isbn        String?
+  title       String
+  author      String?
+  publisher   String?
+  category    String?
+  /// Where it lives on the shelves.
+  shelfMark   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company      Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  copies       SchoolBookCopy[]
+  reservations SchoolBookReservation[] @relation("SchoolBookReservationBook")
+
+  @@index([companyId, title])
+  @@index([companyId, isbn])
+}
+
+/// One physical book on one shelf.
+model SchoolBookCopy {
+  id         String              @id @default(uuid())
+  companyId  String
+  bookId     String
+  /// What is written on the spine label or the barcode.
+  copyCode   String
+  condition  String?
+  /// Withdrawn copies stay as rows: "what happened to accession 0421" is a
+  /// question an auditor asks.
+  isWithdrawn Boolean            @default(false)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  company Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  book    SchoolBook        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  loans   SchoolBookLoan[]
+
+  @@unique([companyId, copyCode])
+  @@index([companyId, bookId])
+}
+
+/// One copy, out with one borrower, and back again.
+///
+/// A row per loan rather than a status on the copy: "who had this in March" is
+/// the question a librarian is asked, and a status field answers only "who has
+/// it now".
+model SchoolBookLoan {
+  id          String              @id @default(uuid())
+  companyId   String
+  copyId      String
+  studentId   String
+  borrowedAt  DateTime            @default(now())
+  dueAt       DateTime
+  returnedAt  DateTime?
+  /// How many times it has been renewed. Schools cap this.
+  renewals    Int                 @default(0)
+  /// Charged when it comes back late, in the school's own currency. Null until
+  /// the book is back and somebody has worked out what is owed.
+  fineAmount  Decimal?            @db.Decimal(10, 2)
+  finePaidAt  DateTime?
+  /// The fee invoice the fine was put on, where the school bills it.
+  feeInvoiceId String?
+  issuedById  String?
+  returnedById String?
+  notes       String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  copy    SchoolBookCopy @relation(fields: [copyId], references: [id], onDelete: Cascade)
+  student SchoolStudent  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, studentId, borrowedAt])
+  @@index([companyId, dueAt])
+  @@index([companyId, returnedAt])
+}
+
+/// Somebody waiting for a title that is out.
+///
+/// Against the *title*, not a copy: a reader wants the book, not a particular
+/// one, and holding a reservation against a copy means a returned twin does not
+/// satisfy it.
+model SchoolBookReservation {
+  id         String   @id @default(uuid())
+  companyId  String
+  bookId     String
+  studentId  String
+  reservedAt DateTime @default(now())
+  /// Set when a copy comes back and is put aside for this reader.
+  readyAt    DateTime?
+  /// Set when they collect it, or when the reservation is dropped.
+  closedAt   DateTime?
+  createdAt  DateTime @default(now())
+
+  company Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  book    SchoolBook    @relation("SchoolBookReservationBook", fields: [bookId], references: [id], onDelete: Cascade)
+  student SchoolStudent @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, bookId, reservedAt])
+  @@index([companyId, studentId])
 }
 
 enum SchoolSubmissionStatus {
