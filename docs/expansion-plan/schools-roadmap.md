@@ -106,7 +106,7 @@ The models the pack promises but does not have.
 
 | ID | Story | Acceptance signal | Status |
 |---|---|---|---|
-| S-3.1 | As an operator, I provision a tenant as a school and it is ready to use | `provisionSchool` seeds year, terms, class ladder, subjects, grading scheme, a fee structure, accounting defaults and roles; invoked by the org-provision wizard on `TEMPLATE_SCHOOLS` | `todo` |
+| S-3.1 | As an operator, I provision a tenant as a school and it is ready to use | `provisionSchool` seeds year, terms, class ladder, subjects, grading scheme, a fee structure, accounting defaults and roles; invoked by the org-provision wizard on `TEMPLATE_SCHOOLS`. Grading scheme deferred to S-1.3, which introduces the model. | `done` |
 | S-3.2 | As an operator, I can build a new production database from the migration history | `prisma migrate deploy` succeeds on an empty database — currently fails at `20260728090000_add_crm_record_marks` because no migration creates `CrmClient` | `todo` |
 | S-3.3 | As a school switching systems, my existing records are imported | Students, guardians, classes, fee structures and opening balances — the `$199` migration add-on | `todo` |
 

@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import type { Prisma } from "@prisma/client";
 
 import { prisma, disconnectPrisma } from "./prisma";
+import { provisionSchool } from "../../lib/schools/provision";
 import {
   getSubdomainReservation as getOrgSubdomainReservation,
   previewProvisionBundle,
@@ -1987,6 +1988,16 @@ async function applyClientTemplate(input: ApplySubscriptionTemplateInput): Promi
     });
   }
 
+  // A schools template that leaves the tenant without a term hands over a
+  // workspace whose first screen cannot be used, so opening the school is part
+  // of applying the template rather than a follow-up somebody has to remember.
+  // Idempotent, so re-applying the template does not disturb a school already
+  // running.
+  let schoolProvisioning: Awaited<ReturnType<typeof provisionSchool>> | null = null;
+  if (workspaceProfile === "SCHOOLS") {
+    schoolProvisioning = await provisionSchool({ companyId: input.companyId });
+  }
+
   const audit = await appendAuditEvent({
     actor: input.actor,
     action: "SUBSCRIPTION_APPLY_TEMPLATE",
@@ -2007,6 +2018,14 @@ async function applyClientTemplate(input: ApplySubscriptionTemplateInput): Promi
       enabledFeatureCount: enabledFeatures.length,
       disabledFeatureCount: disabledFeatures.length,
       workspaceProfile,
+      ...(schoolProvisioning
+        ? {
+            schoolAcademicYear: schoolProvisioning.academicYear.code,
+            schoolTermsOpened: schoolProvisioning.terms.length,
+            schoolClassesCreated: schoolProvisioning.classesCreated,
+            schoolSubjectsCreated: schoolProvisioning.subjectsCreated,
+          }
+        : {}),
     },
   });
 
