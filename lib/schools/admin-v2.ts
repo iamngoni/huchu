@@ -554,3 +554,113 @@ export async function issuePortalInvites(
   });
   return response.data;
 }
+
+// ---------------------------------------------------------------------------
+// Timetable (S-1.1)
+// ---------------------------------------------------------------------------
+
+export type SchoolsPeriodRecord = {
+  id: string;
+  code: string;
+  name: string;
+  /** Minutes from midnight. `formatMinute` in `lib/schools/timetable` renders it. */
+  startMinute: number;
+  endMinute: number;
+  sequence: number;
+  isTeaching: boolean;
+  termId: string | null;
+  term?: { id: string; code: string; name: string } | null;
+  _count?: { slots: number };
+};
+
+export type SchoolsRoomRecord = {
+  id: string;
+  code: string;
+  name: string;
+  capacity: number | null;
+  kind: string | null;
+  isActive: boolean;
+  _count?: { slots: number };
+};
+
+export type SchoolsTimetableSlotRecord = {
+  id: string;
+  dayOfWeek: number;
+  termId: string;
+  periodId: string;
+  period: {
+    id: string;
+    code: string;
+    name: string;
+    startMinute: number;
+    endMinute: number;
+    sequence: number;
+  };
+  room: { id: string; code: string; name: string } | null;
+  classSubject: {
+    id: string;
+    subject: { id: string; code: string; name: string };
+    class: { id: string; code: string; name: string };
+    stream: { id: string; code: string; name: string } | null;
+    teacherProfile: {
+      id: string;
+      employeeCode: string;
+      user: { id: string; name: string | null };
+    };
+  };
+};
+
+export type SchoolsTimetable = {
+  termId: string;
+  periods: SchoolsPeriodRecord[];
+  slots: SchoolsTimetableSlotRecord[];
+};
+
+export async function fetchSchoolsPeriods(params: {
+  page?: number;
+  limit?: number;
+  termId?: string;
+  isTeaching?: boolean;
+} = {}) {
+  const query = buildQuery(params);
+  const response = await fetchJson<Paginated<SchoolsPeriodRecord>>(
+    `/api/v2/schools/periods${query}`,
+  );
+  return response;
+}
+
+export async function fetchSchoolsRooms(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+} = {}) {
+  const query = buildQuery(params);
+  const response = await fetchJson<Paginated<SchoolsRoomRecord>>(
+    `/api/v2/schools/rooms${query}`,
+  );
+  return response;
+}
+
+/**
+ * The whole timetable for a term, not a page of it — the endpoint is
+ * unpaginated because the caller draws a grid, so this returns the object
+ * rather than a `Paginated`.
+ */
+export async function fetchSchoolsTimetable(params: {
+  termId?: string;
+  classId?: string;
+  streamId?: string;
+  teacherProfileId?: string;
+  roomId?: string;
+} = {}) {
+  const query = buildQuery(params);
+  // Not `ApiResponse<T>`: `successResponse` does not wrap, so `.data` here
+  // would be undefined and the grid would render empty for ever. This is the
+  // same trap the note at the top of this file describes — reintroduced once
+  // already, hence the reminder at the call site.
+  const response = await fetchJson<SchoolsTimetable>(
+    `/api/v2/schools/timetable${query}`,
+  );
+  return response;
+}

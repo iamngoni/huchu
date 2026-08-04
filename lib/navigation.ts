@@ -247,6 +247,7 @@ export const navSections: NavSection[] = [
       { href: "/schools/students", icon: Users, label: "Students" },
       { href: "/schools/admissions", icon: EventNote, label: "Admissions" },
       { href: "/schools/academics", icon: TableRows, label: "Academics" },
+      { href: "/schools/timetable", icon: TableRows, label: "Timetable" },
       { href: "/schools/attendance", icon: UserCheck, label: "Attendance" },
       { href: "/schools/boarding", icon: Home, label: "Boarding" },
       { href: "/schools/teachers", icon: ManageAccounts, label: "Teachers" },

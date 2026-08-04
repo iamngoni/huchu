@@ -63,6 +63,9 @@ test.skip(
 const VIEWPORTS = [
   { name: "phone", width: 390, height: 844, hasTouch: true },
   { name: "tablet", width: 768, height: 1024, hasTouch: true },
+  // The timetable grid is deliberately `lg` and up; without a desktop
+  // viewport the pass would never look at it.
+  { name: "desktop", width: 1440, height: 900, hasTouch: false },
 ];
 
 const PAGES = [
@@ -70,6 +73,7 @@ const PAGES = [
   { name: "guardians", path: "/schools/guardians", heading: "Guardians" },
   { name: "students", path: "/schools/students", heading: "Students" },
   { name: "teachers", path: "/schools/teachers", heading: "Teachers" },
+  { name: "timetable", path: "/schools/timetable", heading: "Timetable" },
 ];
 
 /**
