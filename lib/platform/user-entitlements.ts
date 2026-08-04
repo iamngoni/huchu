@@ -74,6 +74,8 @@ const ROLE_PREFIX_ALLOWLIST: Record<string, readonly string[] | null> = {
     "accounting.tax",
     "accounting.zimra.",
   ],
+  HOD: SCHOOL_SHARED_ALLOW_PREFIXES,
+  WARDEN: SCHOOL_SHARED_ALLOW_PREFIXES,
   TEACHER: [
     ...SCHOOL_SHARED_ALLOW_PREFIXES,
     "schools.attendance",
@@ -172,6 +174,8 @@ const MANAGED_USER_ROLE_VALUES = [
   "SCHOOL_ADMIN",
   "REGISTRAR",
   "BURSAR",
+  "HOD",
+  "WARDEN",
   "TEACHER",
   "PARENT",
   "STUDENT",

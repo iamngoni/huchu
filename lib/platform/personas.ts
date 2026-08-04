@@ -45,28 +45,113 @@ export const PERSONAS: PersonaDefinition[] = [
   { code: "RETAIL_MANAGER", domain: "retail", label: "Retail Manager", description: "Pricing, promotions, cash-up approvals, and retail governance." },
 ];
 
+/** Everything a school resource can be asked to do. */
+const SCHOOL_FULL_ACTIONS: string[] = [
+  "view",
+  "create",
+  "edit",
+  "archive",
+  "approve",
+  "invite",
+  "capture",
+  "submit",
+  "moderate",
+  "request-changes",
+  "publish",
+  "unpublish",
+  "issue",
+  "receive-payment",
+  "waive",
+  "write-off",
+  "void",
+  "refund",
+  "allocate-bed",
+  "approve-leave",
+  "check-in",
+  "check-out",
+];
+
 const PERMISSIONS_BY_PERSONA: Record<PersonaCode, PersonaPermission[]> = {
+  // The school grants were written as a sketch — SCHOOL_ADMIN carried no
+  // `schools.fees` at all despite being described as full administration, so
+  // enforcing them as they stood would have locked the head out of the fee
+  // ledger. They are now complete, and each persona's spread follows the
+  // description it already carried in PERSONAS above.
   SCHOOL_ADMIN: [
-    { resource: "schools.students", actions: ["view", "create", "edit", "archive"] },
-    { resource: "schools.boarding", actions: ["view", "create", "edit", "approve"] },
-    { resource: "schools.results", actions: ["view", "publish", "unpublish"] },
+    { resource: "schools.academics", actions: SCHOOL_FULL_ACTIONS },
+    { resource: "schools.admissions", actions: SCHOOL_FULL_ACTIONS },
+    { resource: "schools.students", actions: SCHOOL_FULL_ACTIONS },
+    { resource: "schools.teachers", actions: SCHOOL_FULL_ACTIONS },
+    { resource: "schools.attendance", actions: SCHOOL_FULL_ACTIONS },
+    { resource: "schools.fees", actions: SCHOOL_FULL_ACTIONS },
+    { resource: "schools.boarding", actions: SCHOOL_FULL_ACTIONS },
+    { resource: "schools.results", actions: SCHOOL_FULL_ACTIONS },
+    { resource: "schools.reports", actions: SCHOOL_FULL_ACTIONS },
   ],
   REGISTRAR: [
+    { resource: "schools.academics", actions: ["view", "create", "edit"] },
     { resource: "schools.admissions", actions: ["view", "create", "edit", "approve"] },
-    { resource: "schools.students", actions: ["view", "create", "edit"] },
+    { resource: "schools.students", actions: ["view", "create", "edit", "archive", "invite"] },
+    { resource: "schools.teachers", actions: ["view", "create", "edit"] },
+    { resource: "schools.attendance", actions: ["view"] },
+    { resource: "schools.fees", actions: ["view"] },
+    { resource: "schools.boarding", actions: ["view"] },
+    { resource: "schools.results", actions: ["view"] },
+    { resource: "schools.reports", actions: ["view"] },
   ],
   BURSAR: [
-    { resource: "schools.fees", actions: ["view", "create", "issue", "receive-payment"] },
+    { resource: "schools.academics", actions: ["view"] },
+    { resource: "schools.admissions", actions: ["view"] },
+    { resource: "schools.students", actions: ["view", "invite"] },
+    {
+      resource: "schools.fees",
+      actions: [
+        "view",
+        "create",
+        "edit",
+        "issue",
+        "receive-payment",
+        "waive",
+        "write-off",
+        "void",
+        "refund",
+      ],
+    },
+    { resource: "schools.reports", actions: ["view"] },
   ],
   HOD: [
-    { resource: "schools.results", actions: ["view", "moderate", "request-changes"] },
+    { resource: "schools.academics", actions: ["view"] },
+    { resource: "schools.students", actions: ["view"] },
+    { resource: "schools.teachers", actions: ["view"] },
+    { resource: "schools.attendance", actions: ["view"] },
+    {
+      resource: "schools.results",
+      actions: ["view", "moderate", "request-changes", "approve"],
+    },
+    { resource: "schools.reports", actions: ["view"] },
   ],
   TEACHER: [
+    { resource: "schools.academics", actions: ["view"] },
+    { resource: "schools.students", actions: ["view"] },
     { resource: "schools.attendance", actions: ["view", "capture", "submit"] },
     { resource: "schools.results", actions: ["view", "capture", "submit"] },
   ],
   WARDEN: [
-    { resource: "schools.boarding", actions: ["view", "allocate-bed", "approve-leave", "check-in", "check-out"] },
+    { resource: "schools.students", actions: ["view"] },
+    { resource: "schools.attendance", actions: ["view"] },
+    {
+      resource: "schools.boarding",
+      actions: [
+        "view",
+        "create",
+        "edit",
+        "allocate-bed",
+        "approve-leave",
+        "check-in",
+        "check-out",
+      ],
+    },
+    { resource: "schools.reports", actions: ["view"] },
   ],
   PARENT: [
     { resource: "schools.portal.parent", actions: ["view-linked-students", "view-fees", "view-results"] },
@@ -120,4 +205,37 @@ export function hasPersonaPermission(
         permission.resource === resource && permission.actions.includes(action),
     ),
   );
+}
+
+
+/**
+ * The persona a signed-in user acts as.
+ *
+ * The persona catalogue has always described what each role may do, but nothing
+ * mapped a `UserRole` onto a `PersonaCode`, so `hasPersonaPermission` had zero
+ * call sites and the grants were decoration. This is that map.
+ *
+ * `SUPERADMIN` and `MANAGER` return null deliberately: they are the tenant's
+ * own administrators and are not constrained by a vertical persona. Callers
+ * check for them before asking here.
+ */
+const ROLE_TO_PERSONA: Record<string, PersonaCode> = {
+  SCHOOL_ADMIN: "SCHOOL_ADMIN",
+  REGISTRAR: "REGISTRAR",
+  BURSAR: "BURSAR",
+  HOD: "HOD",
+  WARDEN: "WARDEN",
+  TEACHER: "TEACHER",
+  PARENT: "PARENT",
+  STUDENT: "STUDENT",
+  AUTO_MANAGER: "SALES_MANAGER",
+  SALES_EXEC: "SALES_EXEC",
+  SHOP_MANAGER: "RETAIL_MANAGER",
+  CASHIER: "CASHIER",
+  STOCK_CLERK: "STOCK_CLERK",
+};
+
+export function personaForRole(role?: string | null): PersonaCode | null {
+  if (!role) return null;
+  return ROLE_TO_PERSONA[role.trim().toUpperCase()] ?? null;
 }

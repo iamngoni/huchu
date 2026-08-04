@@ -827,6 +827,8 @@ enum UserRole {
   SCHOOL_ADMIN
   REGISTRAR
   BURSAR
+  HOD
+  WARDEN
   TEACHER
   PARENT
   STUDENT
@@ -3263,14 +3265,14 @@ model StockLocation {
 }
 
 model InventoryItem {
-  id           String @id @default(uuid())
+  id           String  @id @default(uuid())
   itemCode     String
   name         String
   category     String // FUEL, SPARES, CONSUMABLES, PPE, REAGENTS
   unit         String // litres, kg, pieces, etc.
   siteId       String
   locationId   String
-  currentStock Float  @default(0)
+  currentStock Float   @default(0)
   minStock     Float?
   maxStock     Float?
   unitCost     Float?
@@ -4341,7 +4343,7 @@ model SalesInvoice {
   createdBy        User?              @relation("SalesInvoiceCreatedBy", fields: [createdById], references: [id])
   issuedBy         User?              @relation("SalesInvoiceIssuedBy", fields: [issuedById], references: [id])
 
-  fromQuotation    SalesQuotation?    @relation("SalesInvoiceFromQuotation", fields: [quotationId], references: [id], onDelete: SetNull)
+  fromQuotation SalesQuotation? @relation("SalesInvoiceFromQuotation", fields: [quotationId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, status])
@@ -5716,8 +5718,8 @@ model SchoolGuardian {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  company      Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  user         User?                   @relation("SchoolGuardianPortalUser", fields: [userId], references: [id], onDelete: SetNull)
+  company       Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user          User?                   @relation("SchoolGuardianPortalUser", fields: [userId], references: [id], onDelete: SetNull)
   studentLinks  SchoolStudentGuardian[]
   portalInvites SchoolPortalInvite[]
 
@@ -6477,7 +6479,7 @@ model CrmClient {
   avatarUrl          String?
   /// A colour for this record, Notion-style. One of the design system's
   /// accent names; null means it takes its colour from its own name.
-  accent         String?
+  accent             String?
   /// A single emoji standing in for this record, shown where a picture would
   /// be. Falls back to the entity's own icon when unset.
   emoji              String?
@@ -6538,9 +6540,9 @@ model CrmClient {
   deals             CrmDeal[]
   sites             CrmSite[]
 
-  collectionNotes   CrmCollectionNote[]
+  collectionNotes CrmCollectionNote[]
 
-  workOrders     CrmWorkOrder[]
+  workOrders CrmWorkOrder[]
 
   @@unique([companyId, clientNo])
   @@index([companyId, emailNormalized])
@@ -6552,51 +6554,51 @@ model CrmClient {
 }
 
 model CrmLead {
-  id             String         @id @default(uuid())
+  id                String         @id @default(uuid())
   /// The same mark and colour every other record carries.
-  emoji          String?
-  avatarUrl      String?
-  accent         String?
-  companyId      String
-  leadNo         String
-  title          String?
-  clientId       String?
-  contactName    String?
-  contactEmail   String?
-  contactPhone   String?
-  stage          CrmLeadStage   @default(NEW)
-  probability    Int?
-  estimatedValue Float?
-  currency       String         @default("USD")
-  services       String[]       @default([])
-  details        Json?
-  source         String?
-  sourceChannel  CrmLeadChannel @default(MANUAL)
-  utmSource      String?
-  utmMedium      String?
-  utmCampaign    String?
-  utmTerm        String?
-  utmContent     String?
-  referrer       String?
-  landingPage    String?
-  assignedToId   String?
-  createdById    String?
-  lostReason     String?
-  firstContactAt DateTime?
-  wonAt          DateTime?
-  lostAt         DateTime?
-  customFields   Json?
+  emoji             String?
+  avatarUrl         String?
+  accent            String?
+  companyId         String
+  leadNo            String
+  title             String?
+  clientId          String?
+  contactName       String?
+  contactEmail      String?
+  contactPhone      String?
+  stage             CrmLeadStage   @default(NEW)
+  probability       Int?
+  estimatedValue    Float?
+  currency          String         @default("USD")
+  services          String[]       @default([])
+  details           Json?
+  source            String?
+  sourceChannel     CrmLeadChannel @default(MANUAL)
+  utmSource         String?
+  utmMedium         String?
+  utmCampaign       String?
+  utmTerm           String?
+  utmContent        String?
+  referrer          String?
+  landingPage       String?
+  assignedToId      String?
+  createdById       String?
+  lostReason        String?
+  firstContactAt    DateTime?
+  wonAt             DateTime?
+  lostAt            DateTime?
+  customFields      Json?
   /// Transparent rule-based score; see lib/crm/lead-scoring.ts.
-  score          Int?
+  score             Int?
   /// Set when the lead was qualified into a deal. A converted lead is
   /// read-only history — the deal carries the work from then on.
-  convertedAt      DateTime?
-  convertedById    String?
-  convertedDealId  String?
+  convertedAt       DateTime?
+  convertedById     String?
+  convertedDealId   String?
   convertedPersonId String?
   convertedClientId String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   company           Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   client            CrmClient?            @relation(fields: [clientId], references: [id])
@@ -6626,41 +6628,41 @@ model CrmLead {
 }
 
 model CrmLeadDocument {
-  id          String          @id @default(uuid())
-  companyId   String
-  leadId      String?
-  dealId      String?
-  type        CrmDocumentType
-  quotationId String?
-  invoiceId   String?
-  receiptId   String?
-  amount      Float
-  currency    String          @default("USD")
+  id               String          @id @default(uuid())
+  companyId        String
+  leadId           String?
+  dealId           String?
+  type             CrmDocumentType
+  quotationId      String?
+  invoiceId        String?
+  receiptId        String?
+  amount           Float
+  currency         String          @default("USD")
   /// Quote revisions. v1 is the first thing sent; each later one supersedes
   /// the last, and the chain is what makes "what did we actually agree" a
   /// question with an answer.
-  version     Int             @default(1)
-  supersedesId String?
+  version          Int             @default(1)
+  supersedesId     String?
   /// Why this revision exists — "customer asked for the cheaper panel".
-  revisionNote String?
+  revisionNote     String?
   /// An invoice raised as money down against the quote, before the work. A
   /// deposit is billed, not just received — but it means something different
   /// from "some of the bill", and the deal's billing summary reports it apart.
-  isDeposit   Boolean         @default(false)
+  isDeposit        Boolean         @default(false)
   /// The document layout this renders through. Null means the company default.
   renderTemplateId String?
-  createdById String?
-  createdAt   DateTime        @default(now())
+  createdById      String?
+  createdAt        DateTime        @default(now())
 
-  supersedes  CrmLeadDocument?  @relation("CrmDocumentRevision", fields: [supersedesId], references: [id], onDelete: SetNull)
-  supersededBy CrmLeadDocument[] @relation("CrmDocumentRevision")
-  company           Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  lead              CrmLead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  deal              CrmDeal?             @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  quotation         SalesQuotation?      @relation("CrmLeadDocQuotation", fields: [quotationId], references: [id])
-  invoice           SalesInvoice?        @relation("CrmLeadDocInvoice", fields: [invoiceId], references: [id])
-  receipt           SalesReceipt?        @relation("CrmLeadDocReceipt", fields: [receiptId], references: [id])
-  createdBy         User?                @relation("CrmLeadDocCreatedBy", fields: [createdById], references: [id])
+  supersedes        CrmLeadDocument?      @relation("CrmDocumentRevision", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy      CrmLeadDocument[]     @relation("CrmDocumentRevision")
+  company           Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead              CrmLead?              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal              CrmDeal?              @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  quotation         SalesQuotation?       @relation("CrmLeadDocQuotation", fields: [quotationId], references: [id])
+  invoice           SalesInvoice?         @relation("CrmLeadDocInvoice", fields: [invoiceId], references: [id])
+  receipt           SalesReceipt?         @relation("CrmLeadDocReceipt", fields: [receiptId], references: [id])
+  createdBy         User?                 @relation("CrmLeadDocCreatedBy", fields: [createdById], references: [id])
   approval          CrmDocumentApproval?
   commissionEntries CrmCommissionEntry[]
   discountApprovals CrmDiscountApproval[]
@@ -6930,18 +6932,18 @@ model CrmSavedView {
 /// nobody needs. What somebody wants when a number looks wrong is which number,
 /// what it was, and who moved it — and that is a row per field, not per save.
 model CrmFieldChange {
-  id        String   @id @default(uuid())
-  companyId String
+  id          String   @id @default(uuid())
+  companyId   String
   /// LEAD, DEAL, PERSON, CLIENT, SITE — the same vocabulary as comments.
-  entity    String
-  recordId  String
-  field     String
+  entity      String
+  recordId    String
+  field       String
   /// Stored as text on purpose: this table is read by people, not joined on,
   /// and a Json column would make "what did the stage used to be" a cast.
-  oldValue  String?
-  newValue  String?
+  oldValue    String?
+  newValue    String?
   changedById String?
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   changedBy User?   @relation("CrmFieldChangeChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
@@ -6951,7 +6953,7 @@ model CrmFieldChange {
 }
 
 model CrmTemplate {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   companyId      String
   name           String
   kind           String
@@ -6960,25 +6962,25 @@ model CrmTemplate {
   /// The body, as an ordered block list.
   blocks         Json
   /// Shared templates are the team's; unshared ones are the author's drafts.
-  isShared       Boolean  @default(true)
-  isActive       Boolean  @default(true)
+  isShared       Boolean   @default(true)
+  isActive       Boolean   @default(true)
   /// Which record type this is for, and optionally which record.
   linkedEntity   String?
   linkedRecordId String?
   /// Public form links. Null for templates that are never published.
-  publicToken    String?  @unique
+  publicToken    String?   @unique
   /// Counted rather than derived: a view is not a row worth keeping, and
   /// "how many people opened this" should not cost a table scan.
-  viewCount      Int      @default(0)
-  submitCount    Int      @default(0)
+  viewCount      Int       @default(0)
+  submitCount    Int       @default(0)
   lastViewedAt   DateTime?
   lastSubmitAt   DateTime?
   createdById    String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  company   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy User?                @relation("CrmTemplateCreatedBy", fields: [createdById], references: [id])
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?              @relation("CrmTemplateCreatedBy", fields: [createdById], references: [id])
   events    CrmTemplateEvent[]
 
   @@unique([companyId, name, kind])
@@ -7513,49 +7515,49 @@ enum CrmForecastCategory {
 }
 
 model CrmPerson {
-  id                 String               @id @default(uuid())
+  id                  String               @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
-  avatarUrl          String?
+  avatarUrl           String?
   /// A colour for this record, Notion-style. One of the design system's
   /// accent names; null means it takes its colour from its own name.
-  accent         String?
+  accent              String?
   /// A single emoji standing in for this record, shown where a picture would
   /// be. Falls back to the entity's own icon when unset.
-  emoji              String?
-  companyId          String
-  personNo           String
-  firstName          String
-  lastName           String?
+  emoji               String?
+  companyId           String
+  personNo            String
+  firstName           String
+  lastName            String?
   /// Denormalised "First Last" for search and display ordering.
-  fullName           String
-  jobTitle           String?
-  email              String?
-  emailNormalized    String?
-  additionalEmails   String[]             @default([])
-  phone              String?
-  phoneE164          String?
-  additionalPhones   String[]             @default([])
-  contactType        CrmContactType       @default(CUSTOMER)
-  preferredChannel   CrmPreferredChannel?
-  addressLine        String?
-  city               String?
-  country            String?
-  notes              String?
-  tags               String[]             @default([])
+  fullName            String
+  jobTitle            String?
+  email               String?
+  emailNormalized     String?
+  additionalEmails    String[]             @default([])
+  phone               String?
+  phoneE164           String?
+  additionalPhones    String[]             @default([])
+  contactType         CrmContactType       @default(CUSTOMER)
+  preferredChannel    CrmPreferredChannel?
+  addressLine         String?
+  city                String?
+  country             String?
+  notes               String?
+  tags                String[]             @default([])
   /// Primary employer. Additional affiliations live in CrmPersonCompany.
-  clientId           String?
-  assignedToId       String?
+  clientId            String?
+  assignedToId        String?
   /// Where this record came from: MANUAL, IMPORT, LEAD_CONVERSION, INTAKE_FORM.
-  sourceType         String               @default("MANUAL")
+  sourceType          String               @default("MANUAL")
   convertedFromLeadId String?
-  customFields       Json?
-  lastContactedAt    DateTime?
-  archivedAt         DateTime?
+  customFields        Json?
+  lastContactedAt     DateTime?
+  archivedAt          DateTime?
   /// Set when this record was merged away; reads redirect to the survivor.
-  mergedIntoId       String?
-  createdById        String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  mergedIntoId        String?
+  createdById         String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   company        Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   client         CrmClient?         @relation("CrmPersonPrimaryCompany", fields: [clientId], references: [id], onDelete: SetNull)
@@ -7571,7 +7573,7 @@ model CrmPerson {
   leadsConverted CrmLead[]          @relation("CrmLeadConvertedPerson")
   tasks          CrmTask[]
   comments       CrmComment[]
-  files             CrmRecordFile[]
+  files          CrmRecordFile[]
 
   @@unique([companyId, personNo])
   @@index([companyId, fullName])
@@ -7601,14 +7603,14 @@ model CrmPersonCompany {
 }
 
 model CrmSite {
-  id                 String   @id @default(uuid())
+  id                 String    @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
-  avatarUrl   String?
+  avatarUrl          String?
   /// A colour for this record, Notion-style. One of the design system's
   /// accent names; null means it takes its colour from its own name.
-  accent         String?
+  accent             String?
   /// A single emoji standing in for this record. Falls back to the entity icon.
-  emoji       String?
+  emoji              String?
   companyId          String
   siteNo             String
   name               String
@@ -7623,12 +7625,12 @@ model CrmSite {
   siteConditions     String?
   photos             Json?
   notes              String?
-  tags               String[] @default([])
+  tags               String[]  @default([])
   customFields       Json?
   archivedAt         DateTime?
   createdById        String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   client         CrmClient?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
@@ -7638,9 +7640,9 @@ model CrmSite {
   appointments   CrmAppointment[]
   tasks          CrmTask[]
   comments       CrmComment[]
-  files             CrmRecordFile[]
+  files          CrmRecordFile[]
 
-  workOrders     CrmWorkOrder[]
+  workOrders CrmWorkOrder[]
 
   @@unique([companyId, siteNo])
   @@index([companyId, name])
@@ -7652,43 +7654,43 @@ model CrmSite {
 /// stage, value, quotes, visits and payments. A lead is only the unqualified
 /// enquiry that may produce one.
 model CrmDeal {
-  id                String               @id @default(uuid())
+  id                  String              @id @default(uuid())
   /// A picture chosen for this record. Wins over the emoji when set.
-  avatarUrl   String?
+  avatarUrl           String?
   /// A colour for this record, Notion-style. One of the design system's
   /// accent names; null means it takes its colour from its own name.
-  accent         String?
+  accent              String?
   /// A single emoji standing in for this record. Falls back to the entity icon.
-  emoji       String?
-  companyId         String
-  dealNo            String
-  title             String
-  clientId          String?
-  primaryContactId  String?
-  siteId            String?
-  pipelineId        String
-  stageId           String
-  status            CrmDealStatus        @default(OPEN)
-  value             Float?
-  currency          String               @default("USD")
-  probability       Int?
-  forecastCategory  CrmForecastCategory  @default(PIPELINE)
-  expectedCloseDate DateTime?
-  assignedToId      String?
-  services          String[]             @default([])
-  source            String?
-  sourceChannel     CrmLeadChannel       @default(MANUAL)
-  lostReason        String?
-  customFields      Json?
+  emoji               String?
+  companyId           String
+  dealNo              String
+  title               String
+  clientId            String?
+  primaryContactId    String?
+  siteId              String?
+  pipelineId          String
+  stageId             String
+  status              CrmDealStatus       @default(OPEN)
+  value               Float?
+  currency            String              @default("USD")
+  probability         Int?
+  forecastCategory    CrmForecastCategory @default(PIPELINE)
+  expectedCloseDate   DateTime?
+  assignedToId        String?
+  services            String[]            @default([])
+  source              String?
+  sourceChannel       CrmLeadChannel      @default(MANUAL)
+  lostReason          String?
+  customFields        Json?
   /// Stamped on every stage move so "days in stage" needs no timeline scan.
-  stageEnteredAt    DateTime             @default(now())
-  wonAt             DateTime?
-  lostAt            DateTime?
+  stageEnteredAt      DateTime            @default(now())
+  wonAt               DateTime?
+  lostAt              DateTime?
   convertedFromLeadId String?
-  archivedAt        DateTime?
-  createdById       String?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  archivedAt          DateTime?
+  createdById         String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   client         CrmClient?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
@@ -7704,11 +7706,11 @@ model CrmDeal {
   appointments   CrmAppointment[]
   documents      CrmLeadDocument[]
   leadsConverted CrmLead[]         @relation("CrmLeadConvertedDeal")
-  tasks             CrmTask[]
-  comments          CrmComment[]
-  files             CrmRecordFile[]
+  tasks          CrmTask[]
+  comments       CrmComment[]
+  files          CrmRecordFile[]
 
-  workOrders     CrmWorkOrder[]
+  workOrders CrmWorkOrder[]
 
   @@unique([companyId, dealNo])
   @@index([companyId, stageId])
@@ -7741,17 +7743,17 @@ model CrmDealContact {
 // ---------------------------------------------------------------------------
 
 model CrmPipeline {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   companyId   String
   name        String
   description String?
   /// The pipeline new deals land in when none is chosen.
-  isDefault   Boolean   @default(false)
-  isActive    Boolean   @default(true)
-  position    Int       @default(0)
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  position    Int      @default(0)
   createdById String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdBy User?              @relation("CrmPipelineCreatedBy", fields: [createdById], references: [id])
@@ -7876,8 +7878,8 @@ model CrmList {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy User             @relation("CrmListCreatedBy", fields: [createdById], references: [id])
+  company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User            @relation("CrmListCreatedBy", fields: [createdById], references: [id])
   members   CrmListMember[]
 
   @@unique([companyId, entity, name])
@@ -7977,11 +7979,11 @@ model CrmTask {
 
   // The record this task is about. Exactly one is set in practice, but the
   // schema allows several so a task can be filed against a deal and its site.
-  leadId    String?
-  dealId    String?
-  clientId  String?
-  personId  String?
-  siteId    String?
+  leadId   String?
+  dealId   String?
+  clientId String?
+  personId String?
+  siteId   String?
 
   recurrence         CrmRecurrence @default(NONE)
   /// Every N periods, e.g. every 2 weeks. Ignored when recurrence is NONE.
@@ -8012,15 +8014,15 @@ model CrmTask {
 /// Internal collaboration, deliberately separate from the customer-facing
 /// activity timeline. A comment is something the team says to itself.
 model CrmComment {
-  id         String    @id @default(uuid())
-  companyId  String
-  body       String
+  id           String    @id @default(uuid())
+  companyId    String
+  body         String
   /// Reply threading, one level deep. Threads of threads help nobody.
-  parentId   String?
-  isPinned   Boolean   @default(false)
-  resolvedAt DateTime?
+  parentId     String?
+  isPinned     Boolean   @default(false)
+  resolvedAt   DateTime?
   resolvedById String?
-  editedAt   DateTime?
+  editedAt     DateTime?
 
   leadId   String?
   dealId   String?
@@ -8032,17 +8034,17 @@ model CrmComment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy  User            @relation("CrmCommentCreatedBy", fields: [createdById], references: [id])
-  resolvedBy User?           @relation("CrmCommentResolvedBy", fields: [resolvedById], references: [id])
-  parent     CrmComment?     @relation("CrmCommentThread", fields: [parentId], references: [id], onDelete: Cascade)
-  replies    CrmComment[]    @relation("CrmCommentThread")
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy  User         @relation("CrmCommentCreatedBy", fields: [createdById], references: [id])
+  resolvedBy User?        @relation("CrmCommentResolvedBy", fields: [resolvedById], references: [id])
+  parent     CrmComment?  @relation("CrmCommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    CrmComment[] @relation("CrmCommentThread")
   mentions   CrmMention[]
-  lead       CrmLead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  deal       CrmDeal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  client     CrmClient?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  person     CrmPerson?      @relation(fields: [personId], references: [id], onDelete: Cascade)
-  site       CrmSite?        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  lead       CrmLead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal       CrmDeal?     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  client     CrmClient?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  person     CrmPerson?   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  site       CrmSite?     @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([companyId, dealId, createdAt])
   @@index([companyId, leadId, createdAt])
@@ -8101,12 +8103,12 @@ model CrmRecordFile {
 }
 
 model CrmMention {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   companyId String
   commentId String
   userId    String
   readAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   company Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   comment CrmComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
@@ -8137,24 +8139,24 @@ model CrmFollower {
 /// because the shape changes as rules are added, and a migration per rule type
 /// is a tax nobody should pay for a settings screen.
 model CrmAutomation {
-  id          String              @id @default(uuid())
-  companyId   String
-  name        String
-  description String?
-  trigger     CrmAutomationTrigger
+  id            String               @id @default(uuid())
+  companyId     String
+  name          String
+  description   String?
+  trigger       CrmAutomationTrigger
   /// Trigger-specific settings, e.g. which stage, how many days of silence.
   triggerConfig Json?
   /// All must hold for the actions to run. Empty means "always".
-  conditions  Json?
+  conditions    Json?
   /// Run in order. A failing action is logged and the rest still run.
-  actions     Json
-  isEnabled   Boolean             @default(true)
+  actions       Json
+  isEnabled     Boolean              @default(true)
   /// Bumped every time the rule fires, so a runaway rule is visible.
-  runCount    Int                 @default(0)
-  lastRunAt   DateTime?
-  createdById String?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  runCount      Int                  @default(0)
+  lastRunAt     DateTime?
+  createdById   String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdBy User?              @relation("CrmAutomationCreatedBy", fields: [createdById], references: [id])
@@ -8167,7 +8169,7 @@ model CrmAutomation {
 /// answer, and so a rule that is quietly failing is visible rather than
 /// mysterious.
 model CrmAutomationRun {
-  id           String   @id @default(uuid())
+  id           String                 @id @default(uuid())
   companyId    String
   automationId String
   /// What it fired on.
@@ -8182,8 +8184,8 @@ model CrmAutomationRun {
   /// How many actions this firing actually carried out. The unit of work a
   /// rule spends — a rule that fires rarely but does eight things each time
   /// costs more than one that fires often and sets a field.
-  actionCount  Int      @default(0)
-  createdAt    DateTime @default(now())
+  actionCount  Int                    @default(0)
+  createdAt    DateTime               @default(now())
 
   company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   automation CrmAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
@@ -8209,28 +8211,26 @@ enum CrmAutomationRunStatus {
   FAILED
 }
 
-
-
 /// A discount a rep can't give on their own.
 ///
 /// Kept as a request rather than a block: the rep builds the quote they think
 /// will win, and a manager says yes or no. Blocking outright just gets the
 /// discount hidden in the unit price.
 model CrmDiscountApproval {
-  id          String                    @id @default(uuid())
-  companyId   String
-  documentId  String
+  id              String              @id @default(uuid())
+  companyId       String
+  documentId      String
   /// The discount asked for, as a percentage of the undiscounted total.
   discountPercent Float
   discountAmount  Float
-  reason      String?
-  status      CrmApprovalDecision       @default(PENDING)
-  requestedById String
-  decidedById String?
-  decidedAt   DateTime?
-  decisionNote String?
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
+  reason          String?
+  status          CrmApprovalDecision @default(PENDING)
+  requestedById   String
+  decidedById     String?
+  decidedAt       DateTime?
+  decisionNote    String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   document    CrmLeadDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -8247,18 +8247,18 @@ model CrmDiscountApproval {
 /// turns a chase list into a plan, and a broken promise is a stronger signal
 /// than another day of silence.
 model CrmCollectionNote {
-  id          String                @id @default(uuid())
-  companyId   String
-  documentId  String
-  invoiceId   String?
-  clientId    String?
-  outcome     CrmCollectionOutcome
+  id             String               @id @default(uuid())
+  companyId      String
+  documentId     String
+  invoiceId      String?
+  clientId       String?
+  outcome        CrmCollectionOutcome
   /// When they said they would pay.
-  promisedAt  DateTime?
+  promisedAt     DateTime?
   promisedAmount Float?
-  notes       String?
-  createdById String?
-  createdAt   DateTime              @default(now())
+  notes          String?
+  createdById    String?
+  createdAt      DateTime             @default(now())
 
   company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   document  CrmLeadDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -8283,34 +8283,34 @@ model CrmCollectionNote {
 /// That separation is deliberate — a service has a Product and no stock at all,
 /// and a stocked product has one Product and one InventoryItem per site.
 model Product {
-  id          String        @id @default(uuid())
-  companyId   String
+  id                 String        @id @default(uuid())
+  companyId          String
   /// Code or SKU. Unique per company so imports and scanners agree.
-  code        String
-  name        String
-  description String?
-  kind        ProductKind   @default(GOODS)
-  category    String?
-  unit        UnitOfMeasure @default(EACH)
+  code               String
+  name               String
+  description        String?
+  kind               ProductKind   @default(GOODS)
+  category           String?
+  unit               UnitOfMeasure @default(EACH)
   /// Free text when `unit` is OTHER, e.g. "per pallet".
-  unitLabel   String?
+  unitLabel          String?
   /// The fallback price, used when no price list has an entry for this item.
-  standardPrice Float       @default(0)
-  costPrice     Float?
-  defaultTaxRate Float      @default(0)
-  currency      String      @default("USD")
+  standardPrice      Float         @default(0)
+  costPrice          Float?
+  defaultTaxRate     Float         @default(0)
+  currency           String        @default("USD")
   /// The most a seller may discount without approval. Null means no ceiling.
   maxDiscountPercent Float?
-  imageUrl    String?
-  notes       String?
-  isActive    Boolean       @default(true)
-  archivedAt  DateTime?
+  imageUrl           String?
+  notes              String?
+  isActive           Boolean       @default(true)
+  archivedAt         DateTime?
   /// Free-form per-module extras, so a module can carry a field the others
   /// don't need without a migration that touches everyone.
-  attributes  Json?
-  createdById String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  attributes         Json?
+  createdById        String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   company        Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdBy      User?               @relation("ProductCreatedBy", fields: [createdById], references: [id])
@@ -8327,18 +8327,18 @@ model Product {
 /// Kept deliberately simple per the spec: a list holds a price per product,
 /// optionally from a minimum quantity. No formulas, no rule engine.
 model PriceList {
-  id          String        @id @default(uuid())
-  companyId   String
-  name        String
-  kind        PriceListKind @default(STANDARD)
+  id        String        @id @default(uuid())
+  companyId String
+  name      String
+  kind      PriceListKind @default(STANDARD)
   /// Used when a customer or module asks for no list in particular.
-  isDefault   Boolean       @default(false)
+  isDefault Boolean       @default(false)
   /// Region-specific lists say which region they serve.
-  region      String?
-  currency    String        @default("USD")
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  region    String?
+  currency  String        @default("USD")
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   entries ProductPrice[]
@@ -8419,17 +8419,17 @@ enum CrmCollectionOutcome {
 /// and assigns an Employee technician. None of that describes installing what
 /// a customer just bought at their own address.
 model CrmWorkOrder {
-  id          String              @id @default(uuid())
+  id          String             @id @default(uuid())
   companyId   String
   workOrderNo String
   title       String
   description String?
-  status      CrmWorkOrderStatus  @default(DRAFT)
-  priority    CrmTaskPriority     @default(NORMAL)
+  status      CrmWorkOrderStatus @default(DRAFT)
+  priority    CrmTaskPriority    @default(NORMAL)
 
-  dealId    String?
-  clientId  String?
-  siteId    String?
+  dealId     String?
+  clientId   String?
+  siteId     String?
   /// The quote whose lines became this job's checklist.
   documentId String?
 
@@ -8441,37 +8441,37 @@ model CrmWorkOrder {
   /// Whoever is answerable for the job. The rest of the crew are users too,
   /// held as ids because a crew is assembled per job, not a standing team.
   assignedToId String?
-  crewIds      String[]  @default([])
+  crewIds      String[] @default([])
 
   /// Client sign-off (/s/<token>). A job is not finished because the crew
   /// says so; it is finished when the person paying agrees it is. Null until
   /// somebody asks for the sign-off.
-  signOffToken     String?   @unique
-  signOffAskedAt   DateTime?
-  signOffAt        DateTime?
+  signOffToken   String?   @unique
+  signOffAskedAt DateTime?
+  signOffAt      DateTime?
   /// Typed by the client on their own phone — the name IS the signature.
-  signOffName      String?
+  signOffName    String?
   /// 1–5, optional. A job can be signed off without being rated.
-  signOffRating    Int?
-  signOffNotes     String?
+  signOffRating  Int?
+  signOffNotes   String?
 
-  addressLine String?
-  accessNotes String?
+  addressLine  String?
+  accessNotes  String?
   contactName  String?
   contactPhone String?
 
   /// Signed off on site. A job with no signature is a job the customer can
   /// still say never happened.
-  signedByName  String?
-  signatureUrl  String?
-  signedAt      DateTime?
+  signedByName    String?
+  signatureUrl    String?
+  signedAt        DateTime?
   /// Out of five, asked at the door while the work is fresh.
-  customerRating Int?
+  customerRating  Int?
   completionNotes String?
   /// Before-and-after photographs, same shape as a site visit's.
-  photos       Json?
+  photos          Json?
   /// Why it stalled, when it did.
-  blockedReason String?
+  blockedReason   String?
 
   customFields Json?
   createdById  String?
@@ -8495,21 +8495,21 @@ model CrmWorkOrder {
 
 /// One thing to do or install, usually lifted from the quote that was won.
 model CrmWorkOrderItem {
-  id          String   @id @default(uuid())
-  companyId   String
-  workOrderId String
-  position    Int      @default(0)
-  description String
-  quantity    Float    @default(1)
+  id                String   @id @default(uuid())
+  companyId         String
+  workOrderId       String
+  position          Int      @default(0)
+  description       String
+  quantity          Float    @default(1)
   /// How much of it is actually done, so a part-finished job is visible as
   /// part-finished rather than as either done or not started.
-  completedQuantity Float @default(0)
-  unit        String?
+  completedQuantity Float    @default(0)
+  unit              String?
   /// The shared catalogue item this line installs, when it came from one.
-  productId   String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  productId         String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   workOrder CrmWorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)

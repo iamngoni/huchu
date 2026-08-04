@@ -22,6 +22,8 @@ export const USER_ROLE_LABELS: Partial<Record<UserRole, string>> = {
   SCHOOL_ADMIN: "School Admin",
   REGISTRAR: "Registrar",
   BURSAR: "Bursar",
+  HOD: "Head of Department",
+  WARDEN: "Warden",
   TEACHER: "Teacher",
   PARENT: "Parent",
   STUDENT: "Student",
@@ -39,7 +41,20 @@ export const VERTICAL_ROLE_REGISTRY: Record<ManagedWorkspaceProfile, VerticalRol
   SCRAP_METAL: { roles: ["SUPERADMIN", "MANAGER", "OPERATOR"] },
   AUTOS: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "AUTO_MANAGER", "SALES_EXEC", "FINANCE_OFFICER"] },
   RETAIL: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "SHOP_MANAGER", "CASHIER", "STOCK_CLERK", "FINANCE_OFFICER"] },
-  SCHOOLS: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "FINANCE_OFFICER"] },
+  SCHOOLS: {
+    roles: [
+      "SUPERADMIN",
+      "MANAGER",
+      "CLERK",
+      "FINANCE_OFFICER",
+      "SCHOOL_ADMIN",
+      "REGISTRAR",
+      "BURSAR",
+      "HOD",
+      "WARDEN",
+      "TEACHER",
+    ],
+  },
   GENERAL: { roles: ["SUPERADMIN", "MANAGER", "CLERK", "OPERATOR", "FINANCE_OFFICER"] },
 };
 
