@@ -15,9 +15,12 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
 import {
   canViewAnyPortalSubject,
+  consentDeniedMessage,
   getGuardianChildLink,
+  guardianMaySee,
   resolvePortalGuardian,
   resolvePortalStudent,
+  studentIdsWithConsent,
 } from "./portal-identity";
 
 let companyId: string;
@@ -390,5 +393,78 @@ describe("one account, one subject — MIGRATION WITNESS", () => {
     });
     expect(a.userId).toBeNull();
     expect(b.userId).toBeNull();
+  });
+});
+
+describe("guardian consent — a test per flag", () => {
+  it("withholds financials when the flag is off, independently of results", async () => {
+    const link = await prisma.schoolStudentGuardian.findFirst({
+      where: { companyId, guardianId: moyoGuardianId, studentId: moyoStudentId },
+      select: { id: true },
+    });
+
+    await prisma.schoolStudentGuardian.update({
+      where: { id: link!.id },
+      data: { canReceiveFinancials: false, canReceiveAcademicResults: true },
+    });
+
+    const fresh = await getGuardianChildLink({
+      companyId,
+      guardianId: moyoGuardianId,
+      studentId: moyoStudentId,
+    });
+
+    expect(guardianMaySee(fresh!, "financials")).toBe(false);
+    expect(guardianMaySee(fresh!, "academic-results")).toBe(true);
+    expect(studentIdsWithConsent([{ ...fresh!, studentId: moyoStudentId }], "financials")).toEqual([]);
+    expect(
+      studentIdsWithConsent([{ ...fresh!, studentId: moyoStudentId }], "academic-results"),
+    ).toEqual([moyoStudentId]);
+  });
+
+  it("withholds results when the flag is off, independently of financials", async () => {
+    const link = await prisma.schoolStudentGuardian.findFirst({
+      where: { companyId, guardianId: moyoGuardianId, studentId: moyoStudentId },
+      select: { id: true },
+    });
+
+    await prisma.schoolStudentGuardian.update({
+      where: { id: link!.id },
+      data: { canReceiveFinancials: true, canReceiveAcademicResults: false },
+    });
+
+    const fresh = await getGuardianChildLink({
+      companyId,
+      guardianId: moyoGuardianId,
+      studentId: moyoStudentId,
+    });
+
+    expect(guardianMaySee(fresh!, "academic-results")).toBe(false);
+    expect(guardianMaySee(fresh!, "financials")).toBe(true);
+  });
+
+  it("filters a mixed set of children per flag", () => {
+    const links = [
+      {
+        studentId: "child-a",
+        canReceiveFinancials: true,
+        canReceiveAcademicResults: false,
+      },
+      {
+        studentId: "child-b",
+        canReceiveFinancials: false,
+        canReceiveAcademicResults: true,
+      },
+    ];
+
+    // A guardian may be on the financial list for one child and the academic
+    // list for another. Consent is per relationship, not per person.
+    expect(studentIdsWithConsent(links, "financials")).toEqual(["child-a"]);
+    expect(studentIdsWithConsent(links, "academic-results")).toEqual(["child-b"]);
+  });
+
+  it("says which kind of visibility was withheld", () => {
+    expect(consentDeniedMessage("financials")).toContain("Financial");
+    expect(consentDeniedMessage("academic-results")).toContain("Academic");
   });
 });

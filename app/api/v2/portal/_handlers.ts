@@ -18,6 +18,7 @@ import {
 import {
   resolvePortalGuardian,
   resolvePortalStudent,
+  studentIdsWithConsent,
 } from "@/lib/schools/portal-identity";
 
 const parentPortalQuerySchema = z.object({
@@ -224,12 +225,8 @@ export async function handleParentPortalGet(request: NextRequest) {
     });
 
     const studentIds = links.map((link) => link.studentId);
-    const academicEnabledStudentIds = links
-      .filter((link) => link.canReceiveAcademicResults)
-      .map((link) => link.studentId);
-    const financeEnabledStudentIds = links
-      .filter((link) => link.canReceiveFinancials)
-      .map((link) => link.studentId);
+    const academicEnabledStudentIds = studentIdsWithConsent(links, "academic-results");
+    const financeEnabledStudentIds = studentIdsWithConsent(links, "financials");
     const [resultLines, boardingAllocations, feeInvoices] = await Promise.all([
       academicEnabledStudentIds.length > 0
         ? prisma.schoolResultLine.findMany({

@@ -125,11 +125,52 @@ export async function resolvePortalGuardian<S extends Prisma.SchoolGuardianSelec
 }
 
 /**
+ * What a guardian may be shown about a child.
+ *
+ * The two flags live on the `SchoolStudentGuardian` link because consent is a
+ * property of the relationship, not of the parent: a father may receive results
+ * for one child and not another, and a separated parent may be on the academic
+ * list but off the financial one.
+ */
+export type GuardianConsentKind = "financials" | "academic-results";
+
+type ConsentBearingLink = {
+  canReceiveFinancials: boolean;
+  canReceiveAcademicResults: boolean;
+};
+
+export function guardianMaySee(link: ConsentBearingLink, kind: GuardianConsentKind) {
+  return kind === "financials"
+    ? link.canReceiveFinancials
+    : link.canReceiveAcademicResults;
+}
+
+/** The message a portal shows when consent is withheld. */
+export function consentDeniedMessage(kind: GuardianConsentKind) {
+  return kind === "financials"
+    ? "Financial visibility is disabled for this parent link"
+    : "Academic visibility is disabled for this parent link";
+}
+
+/**
+ * The children this guardian may be shown `kind` for.
+ *
+ * The aggregate parent portal reads several children at once, so it filters
+ * rather than refusing. Using the same predicate as the single-child routes is
+ * the point: three inline copies of one rule is how a rule drifts.
+ */
+export function studentIdsWithConsent<T extends ConsentBearingLink & { studentId: string }>(
+  links: T[],
+  kind: GuardianConsentKind,
+) {
+  return links.filter((link) => guardianMaySee(link, kind)).map((link) => link.studentId);
+}
+
+/**
  * Is this guardian linked to this student, and may they see this kind of data?
  *
- * `canReceiveFinancials` and `canReceiveAcademicResults` live on the link row.
- * They were previously honoured by hiding UI, which is not a control — S-0.4
- * makes every route that returns money or marks call this first.
+ * The flags were previously honoured by hiding UI, which is not a control —
+ * every route that returns money or marks calls this first.
  */
 export async function getGuardianChildLink(input: {
   companyId: string;

@@ -3,7 +3,9 @@ import { errorResponse, successResponse, validateSession } from "@/lib/api-utils
 import { prisma } from "@/lib/prisma";
 import {
   canViewAnyPortalSubject,
+  consentDeniedMessage,
   getGuardianChildLink,
+  guardianMaySee,
   resolvePortalGuardian,
 } from "@/lib/schools/portal-identity";
 
@@ -50,8 +52,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       if (!link) {
         return errorResponse("Student is not linked to this parent account", 403);
       }
-      if (!link.canReceiveFinancials) {
-        return errorResponse("Financial visibility is disabled for this parent link", 403);
+      if (!guardianMaySee(link, "financials")) {
+        return errorResponse(consentDeniedMessage("financials"), 403);
       }
     }
 
