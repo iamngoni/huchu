@@ -277,6 +277,7 @@ export const navSections: NavSection[] = [
 
       { href: "/schools/attendance", icon: UserCheck, label: "Attendance", group: "attendance" },
       { href: "/schools/boarding", icon: Home, label: "Boarding", group: "attendance" },
+      { href: "/schools/boarding/welfare", icon: Home, label: "Health and welfare", group: "attendance" },
 
       { href: "/schools/assessments", icon: FileCheck, label: "Assessments & marks", group: "assessment" },
       { href: "/schools/results/moderation", icon: FileCheck, label: "Moderation", group: "assessment" },

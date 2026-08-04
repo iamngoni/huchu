@@ -148,6 +148,8 @@ model Company {
   schoolAssessmentScores        SchoolAssessmentScore[]
   schoolApplications            SchoolApplication[]
   schoolApplicationEvents       SchoolApplicationEvent[]
+  schoolHealthRecords           SchoolHealthRecord[]
+  schoolHealthEvents            SchoolHealthEvent[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
@@ -5720,6 +5722,8 @@ model SchoolStudent {
   resultLines            SchoolResultLine[]
   assessmentScores       SchoolAssessmentScore[]
   application            SchoolApplication?
+  healthRecord           SchoolHealthRecord?
+  healthEvents           SchoolHealthEvent[]
   attendanceSessionLines SchoolAttendanceSessionLine[]
   feeInvoices            SchoolFeeInvoice[]
   feeReceipts            SchoolFeeReceipt[]
@@ -6620,6 +6624,90 @@ model SchoolApplicationEvent {
   application SchoolApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([companyId, applicationId, actedAt])
+}
+
+/// What the sanatorium has to know before it treats a child.
+///
+/// One row per student, not a log: allergies, conditions, blood group and the
+/// doctor are standing facts, and a warden reaching for them at two in the
+/// morning should find one record rather than the most recent of several.
+/// Visits and medication go in `SchoolHealthEvent`, which *is* a log.
+model SchoolHealthRecord {
+  id                 String   @id @default(uuid())
+  companyId          String
+  studentId          String   @unique
+  bloodGroup         String?
+  /// Free text, deliberately. "Peanuts, and she carries an EpiPen in her bag"
+  /// is the sentence a nurse needs, and a tag list loses the second half.
+  allergies          String?
+  chronicConditions  String?
+  medications        String?
+  dietaryRequirements String?
+  doctorName         String?
+  doctorPhone        String?
+  medicalAidProvider String?
+  medicalAidNumber   String?
+  /// Whether the school may give ordinary first aid without ringing home.
+  consentFirstAid    Boolean  @default(false)
+  /// Whether the school may take the child to hospital in an emergency.
+  consentEmergencyTreatment Boolean @default(false)
+  /// Whether the child may be photographed for the newsletter and the website.
+  consentPhotography Boolean  @default(false)
+  /// Whether the child may leave the grounds on a school trip.
+  consentOutings     Boolean  @default(false)
+  /// Who gave the consents, and when. Null means nobody has been asked.
+  consentGivenBy     String?
+  consentGivenAt     DateTime?
+  notes              String?
+  updatedById        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  student SchoolStudent @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  events  SchoolHealthEvent[]
+
+  @@index([companyId])
+}
+
+/// A visit to the sanatorium, a dose given, an injury.
+///
+/// A log, because these are events with times, and because "when did she last
+/// have paracetamol" is a question with a wrong answer if only the latest is
+/// kept.
+model SchoolHealthEvent {
+  id             String                @id @default(uuid())
+  companyId      String
+  healthRecordId String
+  studentId      String
+  kind           SchoolHealthEventKind
+  occurredAt     DateTime              @default(now())
+  summary        String
+  treatment      String?
+  /// Whether home was told. The question a school is asked afterwards.
+  guardianNotified Boolean             @default(false)
+  recordedById   String?
+  createdAt      DateTime              @default(now())
+
+  company Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  record  SchoolHealthRecord @relation(fields: [healthRecordId], references: [id], onDelete: Cascade)
+  student SchoolStudent      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, studentId, occurredAt])
+  @@index([companyId, occurredAt])
+}
+
+enum SchoolHealthEventKind {
+  /// Came to the san feeling unwell.
+  SANATORIUM_VISIT
+  /// A dose given from the medicine cupboard.
+  MEDICATION
+  /// An injury, however small — these are the ones a school is asked about.
+  INJURY
+  /// Sent home, or to hospital.
+  REFERRAL
+  /// A screening, a jab, a dental check.
+  SCREENING
 }
 
 enum SchoolApplicationStage {
