@@ -146,6 +146,8 @@ model Company {
   schoolGradingBands            SchoolGradingBand[]
   schoolAssessments             SchoolAssessment[]
   schoolAssessmentScores        SchoolAssessmentScore[]
+  schoolApplications            SchoolApplication[]
+  schoolApplicationEvents       SchoolApplicationEvent[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
@@ -5543,6 +5545,7 @@ model SchoolTerm {
   timetableSlots         SchoolTimetableSlot[]
   calendarEvents         SchoolCalendarEvent[]
   assessments            SchoolAssessment[]
+  applications           SchoolApplication[]
   publishWindows      SchoolPublishWindow[]
   feeStructures       SchoolFeeStructure[]
   feeInvoices         SchoolFeeInvoice[]
@@ -5570,6 +5573,7 @@ model SchoolClass {
   term           SchoolTerm?           @relation(fields: [termId], references: [id], onDelete: SetNull)
   streams        SchoolStream[]
   students       SchoolStudent[]
+  applications   SchoolApplication[]
   enrollments    SchoolEnrollment[]
   resultSheets   SchoolResultSheet[]
   classSubjects  SchoolClassSubject[]
@@ -5706,6 +5710,7 @@ model SchoolStudent {
   boardingMovementLogs   SchoolBoardingMovementLog[]
   resultLines            SchoolResultLine[]
   assessmentScores       SchoolAssessmentScore[]
+  application            SchoolApplication?
   attendanceSessionLines SchoolAttendanceSessionLine[]
   feeInvoices            SchoolFeeInvoice[]
   feeReceipts            SchoolFeeReceipt[]
@@ -6533,6 +6538,100 @@ enum SchoolAssessmentStatus {
   OPEN
   /// Marks are in and the sheet is closed. Reopening is a deliberate act.
   LOCKED
+}
+
+/// Somebody who wants a place, before they are a student.
+///
+/// Kept apart from `SchoolStudent` deliberately. An applicant is not a child on
+/// the roll: they have no class, no fees, no register and may never arrive, and
+/// the alternative — an `APPLICANT` row in the student table — is what makes
+/// every student count in the school wrong until somebody remembers the filter.
+/// `studentId` is written once, at enrolment, and is the join between the two.
+model SchoolApplication {
+  id             String                 @id @default(uuid())
+  companyId      String
+  applicationNo  String
+  firstName      String
+  lastName       String
+  dateOfBirth    DateTime?              @db.Date
+  gender         String?
+  /// Who is applying on the child's behalf, before any guardian record exists.
+  guardianName   String?
+  guardianPhone  String?
+  guardianEmail  String?
+  previousSchool String?
+  /// Where the enquiry came from — walk-in, referral, the website.
+  source         String?
+  appliedForClassId String?
+  intendedTermId    String?
+  stage          SchoolApplicationStage @default(ENQUIRY)
+  /// Entrance test or interview, as a percentage. Null until it is sat.
+  assessmentScore Decimal?              @db.Decimal(5, 2)
+  assessmentAt    DateTime?
+  offeredAt       DateTime?
+  /// An offer nobody answers has to expire, or a waiting list never moves.
+  offerExpiresAt  DateTime?
+  decidedById     String?
+  notes           String?
+  /// Set at enrolment, and the only link between an applicant and a student.
+  /// Unique: one child cannot be enrolled twice off two applications. Postgres
+  /// treats NULLs as distinct, so the applications still in the pipeline are
+  /// unaffected.
+  studentId       String?                @unique
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  company         Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  appliedForClass SchoolClass?   @relation(fields: [appliedForClassId], references: [id], onDelete: SetNull)
+  intendedTerm    SchoolTerm?    @relation(fields: [intendedTermId], references: [id], onDelete: SetNull)
+  student         SchoolStudent? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  events          SchoolApplicationEvent[]
+
+  @@unique([companyId, applicationNo])
+  @@index([companyId, stage])
+  @@index([companyId, appliedForClassId, stage])
+  @@index([companyId, lastName, firstName])
+}
+
+/// Every move an application makes, and who made it.
+///
+/// A pipeline without a trail answers "where is this one" and not "who turned
+/// her down in March", which is the question that actually gets asked.
+model SchoolApplicationEvent {
+  id            String                  @id @default(uuid())
+  companyId     String
+  applicationId String
+  fromStage     SchoolApplicationStage?
+  toStage       SchoolApplicationStage
+  actorUserId   String?
+  comment       String?
+  actedAt       DateTime                @default(now())
+
+  company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  application SchoolApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, applicationId, actedAt])
+}
+
+enum SchoolApplicationStage {
+  /// Somebody asked. Nothing has been filled in.
+  ENQUIRY
+  /// A form is in.
+  APPLIED
+  /// Sitting the entrance test, or waiting on an interview.
+  ASSESSMENT
+  /// No place now, but not a no.
+  WAITLISTED
+  /// A place has been offered.
+  OFFERED
+  /// The family said yes. Not yet on the roll.
+  ACCEPTED
+  /// On the roll. `studentId` is set.
+  ENROLLED
+  /// The school said no.
+  DECLINED
+  /// The family walked away.
+  WITHDRAWN
 }
 
 enum CarSalesLeadStatus {
