@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { CRM_CHANNEL_LABELS } from "@/lib/crm/sources";
 import { REPORT_RANGES, formatRate, type ReportRange } from "@/lib/crm/reports";
+import { MobileRow, MobileRows } from "@/components/crm/records/mobile-rows";
 
 type FunnelStage = {
   key: string;
@@ -290,7 +291,25 @@ export function CrmInsightsContent() {
 
             <TabsContent value="rep">
               {reps.data?.data.length ? (
-                <div className="scroll-rail overflow-x-auto">
+                <>
+                {/* Seven columns is 680px of table. On a phone it is a list:
+                    who, what they collected, and the rest underneath. */}
+                <MobileRows className="md:hidden">
+                  {reps.data.data.map((row) => (
+                    <MobileRow
+                      key={row.repId}
+                      title={row.name}
+                      subtitle={`${row.leads} leads · ${row.quotes} quotes · ${row.winRate}% won${
+                        row.avgResponseHours != null
+                          ? ` · ${row.avgResponseHours}h to respond`
+                          : ""
+                      }`}
+                      value={money(row.collectedAmount)}
+                    />
+                  ))}
+                </MobileRows>
+
+                <div className="scroll-rail hidden overflow-x-auto md:block">
                   <table className="w-full min-w-[680px] text-sm">
                     <thead>
                       <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
@@ -320,6 +339,7 @@ export function CrmInsightsContent() {
                     </tbody>
                   </table>
                 </div>
+                </>
               ) : (
                 <EmptyState title="No rep activity yet" />
               )}
@@ -361,7 +381,24 @@ function GroupTable({ rows, firstHeader }: { rows: GroupRow[]; firstHeader: stri
   if (!rows.length) return <EmptyState title={`Nothing to break down by ${firstHeader.toLowerCase()} yet`} />;
 
   return (
-    <div className="scroll-rail overflow-x-auto">
+    <>
+    {/* A 560px table on a 358px screen scrolls sideways, which is the old
+        answer to this and a poor one: you cannot compare a column you have to
+        drag into view, and the row labels leave as soon as you do. A phone
+        gets one row per group — won value on the right, the counts and the
+        rate underneath. */}
+    <MobileRows className="md:hidden">
+      {rows.map((row) => (
+        <MobileRow
+          key={row.key}
+          title={row.label}
+          subtitle={`${row.open} open · ${row.won} won · ${row.lost} lost · ${formatRate(row.winRate)}`}
+          value={money(row.wonValue)}
+        />
+      ))}
+    </MobileRows>
+
+    <div className="scroll-rail hidden overflow-x-auto md:block">
       <table className="w-full min-w-[560px] text-sm">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
@@ -389,5 +426,6 @@ function GroupTable({ rows, firstHeader }: { rows: GroupRow[]; firstHeader: stri
         </tbody>
       </table>
     </div>
+    </>
   );
 }

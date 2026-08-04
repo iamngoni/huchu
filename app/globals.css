@@ -187,11 +187,25 @@
    Type, colour and canvas all come from the package's `body` rule; this layer
    only adds what the app needs on top of it. */
 
-@layer app {
+/* A default border colour and focus ring, so an element that draws a border
+   without naming a colour gets the theme's rather than the browser's.
+
+   This has to live in `base`, not `app`. A universal selector in a layer that
+   comes *after* `corelith` outranks every design-system rule setting a border
+   colour — specificity never enters into it, later layer simply wins. That is
+   why the selected tab's underline rendered the same grey as the unselected
+   ones: `.utab.current { border-bottom-color: var(--brand) }` was losing to
+   `*`. Every other DS state drawn as a border colour was losing the same way.
+
+   In `base` the order is the one everybody expects: this loses to the design
+   system, and the design system loses to a call site's own `border-*` utility. */
+@layer base {
   * {
     @apply border-border outline-ring/50;
   }
+}
 
+@layer app {
   body {
     position: relative;
     background-image: var(--app-canvas-wash);
@@ -209,10 +223,105 @@
     isolation: isolate;
   }
 
-  /* Prevent iOS zoom on input focus */
+  /* Prevent iOS zoom on input focus.
+
+     `[contenteditable]` is a safety net only: a call site that sets its own
+     `text-sm` still wins, because utilities are a later layer than `app`. Any
+     composer that needs 16px on a phone has to say so itself. */
   @media (max-width: 640px) {
     html { font-size: 16px; }
-    input, select, textarea { font-size: 16px; }
+    input, select, textarea, [contenteditable="true"] { font-size: 16px; }
+  }
+
+  /* A record page is one column on anything smaller than a laptop.
+     `.detail-grid` ships from the design system as a hard `1fr 320px` with no
+     media query of its own — at phone width that crushes the content column to
+     a few pixels beside a full-width rail, and at tablet width it leaves ~380px
+     for a timeline or a table. iPad portrait (768/810/834) all land in that
+     band, so this collapses at `lg` rather than `md`. Precedent: the settings
+     shell, whose rail is 100px narrower, already collapses at 900px. */
+  @media (max-width: 1023.98px) {
+    .detail-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* --- Control geometry -------------------------------------------------
+     Everything that reads as a button is built like one: same height, same
+     gap, same radius. Three places where that had drifted.
+
+     1. `.btn` carries `gap: 8px`, but the design system's Button wraps every
+        child in a `.btn-label` span it never styles. An icon passed as a
+        child therefore lands *inside* that span, where the button's gap
+        cannot reach it — measured at exactly 0px against the words on
+        "New lead", "Filter" and "Fields". The DS's own answer is the
+        `startIcon`/`endIcon` props, which render as siblings of the label;
+        this makes the label behave the same way for the hundreds of call
+        sites that pass an icon as a child instead. `gap: inherit` rather
+        than a number, so a button that sets its own gap keeps it. */
+  .btn-label {
+    display: inline-flex;
+    align-items: center;
+    gap: inherit;
+    min-width: 0;
+  }
+
+  /*    A button stretched to full width is a row, not a centred label: a
+        sheet of stacked controls, a form field filling its column. The words
+        start at the left edge and a trailing caret goes to the *right* edge,
+        which is where the eye looks for it and where a thumb reaches. Only a
+        trailing `svg` is pushed over — a button whose last child is text
+        keeps its label beside the rest of the label. */
+  .btn:where(.w-full) {
+    justify-content: flex-start;
+  }
+  .btn:where(.w-full) > .btn-label {
+    flex: 1 1 auto;
+  }
+  .btn:where(.w-full) > .btn-label > svg:last-child {
+    margin-inline-start: auto;
+  }
+
+  /*    The app bar is one row of controls, so they are one height. Measured
+        at 390px it was four: a 30px sidebar toggle, a 30px search box drawing
+        its own padding, a 36px notification bell and a 30px page action. The
+        sidebar toggle ships from the design system and cannot be sized from
+        its call site, so the row states the height it wants and everything in
+        it obeys — including the toggle. */
+  header .btn,
+  header [data-sidebar="trigger"],
+  header [data-slot="sidebar-trigger"] {
+    height: var(--h-control-md);
+    min-height: var(--h-control-md);
+  }
+  header [data-sidebar="trigger"],
+  header [data-slot="sidebar-trigger"] {
+    width: var(--h-control-md);
+  }
+
+  /* 2. A segmented control is a row of buttons, so it stands as tall as one.
+        The DS sizes it off its own scale rather than the control-height
+        scale: `md` came out 34px and `sm` 28px beside 36px and 30px buttons,
+        which is what put a 24px Board/List toggle next to a 36px Filter
+        button in the same toolbar. Item height is the button height less the
+        track's own padding, so the *outer* edges line up — that is the part
+        anybody sees. Font sizes come up to the button's at the same size;
+        the DS's 12px `sm` is below this repo's floor anyway. */
+  .segmented {
+    padding: 3px;
+  }
+  .segmented .segmented-item {
+    height: calc(var(--h-control-md) - 6px);
+    font-size: 14px;
+    gap: 8px;
+  }
+  .segmented.segmented-sm {
+    padding: 2px;
+  }
+  .segmented.segmented-sm .segmented-item {
+    height: calc(var(--h-control-sm) - 4px);
+    font-size: 13px;
+    gap: 6px;
   }
 
   /* Date input color scheme */

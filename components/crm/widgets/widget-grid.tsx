@@ -4,7 +4,8 @@ import { useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -130,7 +131,7 @@ function WidgetFrame({
           <button
             type="button"
             aria-label={`Move ${definition?.label ?? "widget"}`}
-            className="flex size-7 cursor-grab items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-subtle)] active:cursor-grabbing"
+            className="flex size-7 cursor-grab touch-manipulation select-none items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-subtle)] active:cursor-grabbing pointer-coarse:size-10"
             {...attributes}
             {...listeners}
           >
@@ -167,17 +168,36 @@ export function WidgetGrid({
   editing,
   onChange,
   renderWidget,
+  noun = "widget",
+  adding: controlledAdding,
+  onAddingChange,
 }: {
   scope: OverviewScope;
   widgets: WidgetInstance[];
   editing: boolean;
   onChange: (next: WidgetInstance[]) => void;
   renderWidget: (instance: WidgetInstance) => ReactNode;
+  /** What one of these is called here — "widget" on an overview, "report" on reports. */
+  noun?: string;
+  /** Controlled when the page has its own "Add …" button in the app bar. */
+  adding?: boolean;
+  onAddingChange?: (open: boolean) => void;
 }) {
-  const [adding, setAdding] = useState(false);
+  const [uncontrolledAdding, setUncontrolledAdding] = useState(false);
+  const adding = controlledAdding ?? uncontrolledAdding;
+  const setAdding = (next: boolean) => {
+    setUncontrolledAdding(next);
+    onAddingChange?.(next);
+  };
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // MouseSensor and TouchSensor rather than PointerSensor. PointerSensor
+    // answers touch too, and its 6px threshold is crossed long before any
+    // long-press delay elapses — so with both registered, every attempt to
+    // swipe the board sideways started a drag instead. Splitting them lets a
+    // finger scroll immediately and drag only after a deliberate hold.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -228,11 +248,11 @@ export function WidgetGrid({
             <div className="col-span-12 lg:col-span-4">
               <button
                 type="button"
-                onClick={() => setAdding((previous) => !previous)}
+                onClick={() => setAdding(!adding)}
                 className="flex h-full min-h-32 w-full flex-col items-center justify-center gap-1 rounded-[var(--card-radius)] border border-dashed border-[var(--border)] text-sm text-[var(--text-muted)] hover:border-[var(--interactive-primary)] hover:text-[var(--text)]"
               >
                 <Plus className="size-5" />
-                Add a widget
+                Add a {noun}
               </button>
             </div>
           ) : null}

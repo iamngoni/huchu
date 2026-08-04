@@ -13,15 +13,15 @@ import { Building2, Globe, Mail, MapPin, Phone, UserRound } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
-import { CommentThread } from "@/components/crm/collaboration/comment-thread";
-import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
+import { customFieldAttributes } from "./custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { CompanyPeopleTab } from "./company-people-tab";
+import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
 import { RecordAttributes } from "./record-attributes";
 import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
@@ -105,6 +105,16 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
     path: `/api/v2/crm/companies/${companyId}`,
     invalidate: [["crm", "company", companyId], ["crm", "companies"]],
   });
+  const teamQuery = useQuery({
+    queryKey: ["crm", "team"],
+    queryFn: () => fetchJson<{ data: Array<{ id: string; name: string | null }> }>(
+      "/api/v2/crm/team",
+    ),
+  });
+  const ownerOptions = (teamQuery.data?.data ?? []).map((member) => ({
+    value: member.id,
+    label: member.name ?? "Unnamed",
+  }));
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "COMPANY"],
     queryFn: () => fetchCrmFieldDefinitions("COMPANY"),
@@ -205,13 +215,14 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
               id: "owner",
               label: "Owner",
               icon: UserRound,
-              display: (
-                <EntityLink
-                  href={company.assignedTo ? `/crm/reps/${company.assignedTo.id}` : null}
-                  className="text-sm"
-                >
-                  {company.assignedTo?.name ?? "Unassigned"}
-                </EntityLink>
+              placeholder: "Unassigned",
+              // A choice, not a label: who owns a record is the property that
+              // changes most and was the one you could not change from here.
+              ...edit.choice(
+                "assignedToId",
+                company.assignedTo?.id ?? null,
+                ownerOptions,
+                "Leave unassigned",
               ),
             },
             {
@@ -262,6 +273,12 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
               placeholder: "Not recorded",
               ...edit.text("taxNumber", company.taxNumber),
             },
+            ...customFieldAttributes({
+              definitions,
+              values: company.customFields,
+              onCommit: (key, value) =>
+                edit.save.mutate({ customFields: { [key]: value } }),
+            }),
           ]}
         />
       }
@@ -318,24 +335,11 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
             />
           ),
         },
-        {
-          value: "tasks",
-          label: "Tasks",
-          content: (
-            <RecordTasksTab record={{ clientId: companyId }} currentUserId={session?.user?.id} />
-          ),
-        },
-        {
-          value: "comments",
-          label: "Comments",
-          content: (
-            <CommentThread
-              entity="COMPANY"
-              recordId={companyId}
-              currentUserId={session?.user?.id}
-            />
-          ),
-        },
+        tasksTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
+        commentsTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
+        mentionsTab({ ref: { kind: "company", id: companyId } }),
+        filesTab({ ref: { kind: "company", id: companyId } }),
+        automationTab({ ref: { kind: "company", id: companyId } }),
         {
           value: "history",
           label: "History",

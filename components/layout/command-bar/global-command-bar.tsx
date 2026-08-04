@@ -470,7 +470,12 @@ export function GlobalCommandBar() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Search"
-        className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] px-2.5 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-subtle)] hover:text-[var(--text)]"
+        // `btn btn-secondary` rather than a hand-rolled box: this sits in the
+        // app bar between the notification bell and the page's own action,
+        // and drawing its own padding is how it ended up 30px tall against
+        // their 36. The height, radius and gap now come from the same place
+        // theirs do.
+        className="btn btn-secondary text-[var(--text-muted)] hover:text-[var(--text)]"
       >
         <Search className="size-4" aria-hidden="true" />
         <span className="hidden lg:inline">Search</span>

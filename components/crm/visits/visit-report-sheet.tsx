@@ -7,6 +7,7 @@ import { AttachmentCenter, Stack } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { CataloguePicker } from "@/components/crm/documents/catalogue-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -256,7 +257,7 @@ export function VisitReportSheet({
       ) : (
         <div className="space-y-4">
           <section className="space-y-2">
-            <h3 className="text-base font-semibold text-[var(--text-strong)] text-[var(--text-muted)]">
+            <h3 className="text-base font-semibold text-[var(--text-strong)]">
               On-site checklist
             </h3>
             <Stack as="ul" gap="xs">
@@ -296,7 +297,7 @@ export function VisitReportSheet({
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-base font-semibold text-[var(--text-strong)] text-[var(--text-muted)]">
+            <h3 className="text-base font-semibold text-[var(--text-strong)]">
               Measurements & specifications
             </h3>
             <p className="text-sm text-[var(--text-muted)]">
@@ -318,14 +319,29 @@ export function VisitReportSheet({
                       aria-label={`Item ${index + 1} category`}
                       maxLength={80}
                     />
-                    <Input
+                    {/* The same picker the quote builder uses. These
+                        descriptions become quotation lines verbatim, so this
+                        is where "aluminium sliding window" first gets typed
+                        three different ways at three remembered prices —
+                        which is exactly what the catalogue exists to stop.
+                        Free text still works: a visit finds things nobody
+                        has ever sold before. */}
+                    <CataloguePicker
                       value={item.description}
-                      onChange={(event) =>
-                        patchItem(index, { description: event.target.value })
+                      onChange={(value) => patchItem(index, { description: value })}
+                      aria-label={`Item ${index + 1} description`}
+                      onPick={(pick) =>
+                        patchItem(index, {
+                          description: pick.description,
+                          // Only fills a price nobody has typed. Somebody who
+                          // has already priced this line measured it on site
+                          // and knows something the list does not.
+                          ...(item.unitPrice.trim() || pick.unitPrice == null
+                            ? {}
+                            : { unitPrice: pick.unitPrice.toFixed(2) }),
+                        })
                       }
                       placeholder="What is it? e.g. Aluminium sliding window"
-                      aria-label={`Item ${index + 1} description`}
-                      maxLength={300}
                     />
                     <Button
                       type="button"

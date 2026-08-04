@@ -201,6 +201,7 @@ model Company {
   crmListMembers                CrmListMember[]
   crmTasks                      CrmTask[]
   crmComments                   CrmComment[]
+  crmRecordFiles                CrmRecordFile[]
   crmMentions                   CrmMention[]
   crmFollowers                  CrmFollower[]
   crmAutomations                CrmAutomation[]
@@ -996,6 +997,8 @@ model User {
   crmTasksCreated                   CrmTask[]                      @relation("CrmTaskCreatedBy")
   crmCommentsCreated                CrmComment[]                   @relation("CrmCommentCreatedBy")
   crmCommentsResolved               CrmComment[]                   @relation("CrmCommentResolvedBy")
+  crmRecordFilesUploaded            CrmRecordFile[]                @relation("CrmRecordFileUploadedBy")
+  crmRecordFilesAbout               CrmRecordFile[]                @relation("CrmRecordFileSubject")
   crmMentions                       CrmMention[]                   @relation("CrmMentionUser")
   crmFollowing                      CrmFollower[]                  @relation("CrmFollowerUser")
   crmAutomationsCreated             CrmAutomation[]                @relation("CrmAutomationCreatedBy")
@@ -6462,6 +6465,7 @@ model CrmClient {
   people            CrmPerson[]           @relation("CrmPersonPrimaryCompany")
   tasks             CrmTask[]
   comments          CrmComment[]
+  files             CrmRecordFile[]
   personLinks       CrmPersonCompany[]
   deals             CrmDeal[]
   sites             CrmSite[]
@@ -6541,6 +6545,7 @@ model CrmLead {
   convertedBy       User?                 @relation("CrmLeadConvertedBy", fields: [convertedById], references: [id])
   tasks             CrmTask[]
   comments          CrmComment[]
+  files             CrmRecordFile[]
 
   @@unique([companyId, leadNo])
   @@index([companyId, stage, updatedAt])
@@ -6706,6 +6711,18 @@ model CrmAppointment {
   siteConditions    String?
   reportNotes       String?
   reportCompletedAt DateTime?
+
+  /// Where the visit actually is, when it is not at a recorded site — an
+  /// address somebody typed, optionally pinned so a phone can navigate to it.
+  latitude  Float?
+  longitude Float?
+
+  /// A tokenised public brief (/v/<token>): what the job is, when, where and
+  /// who is coming. Handed to the customer, or to a subcontractor who has no
+  /// account. Null until somebody shares it.
+  briefToken     String?   @unique
+  briefSharedAt  DateTime?
+  briefExpiresAt DateTime?
 
   company    Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   lead       CrmLead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
@@ -7486,6 +7503,7 @@ model CrmPerson {
   leadsConverted CrmLead[]          @relation("CrmLeadConvertedPerson")
   tasks          CrmTask[]
   comments       CrmComment[]
+  files             CrmRecordFile[]
 
   @@unique([companyId, personNo])
   @@index([companyId, fullName])
@@ -7552,6 +7570,7 @@ model CrmSite {
   appointments   CrmAppointment[]
   tasks          CrmTask[]
   comments       CrmComment[]
+  files             CrmRecordFile[]
 
   workOrders     CrmWorkOrder[]
 
@@ -7619,6 +7638,7 @@ model CrmDeal {
   leadsConverted CrmLead[]         @relation("CrmLeadConvertedDeal")
   tasks             CrmTask[]
   comments          CrmComment[]
+  files             CrmRecordFile[]
 
   workOrders     CrmWorkOrder[]
 
@@ -7961,6 +7981,57 @@ model CrmComment {
   @@index([companyId, parentId])
 }
 
+/// A file somebody attached to a record.
+///
+/// Distinct from CrmLeadDocument, which is a billing document the system
+/// raised and numbered. This is the signed contract, the tax clearance, the
+/// photo of the damaged unit — things that arrive from outside and belong to
+/// a record rather than to an invoice.
+///
+/// The owner is a nullable column per kind rather than an entity+id pair, so
+/// the database can cascade a delete and enforce that the record exists. A
+/// string id pointing at nothing is how orphaned files outlive the customer
+/// who sent them.
+model CrmRecordFile {
+  id          String  @id @default(uuid())
+  companyId   String
+  /// What it is called to a reader — the original filename unless renamed.
+  name        String
+  url         String
+  /// Bytes, when the uploader reported it.
+  size        Int?
+  contentType String?
+  /// Why it is here. Optional; a filename is usually enough.
+  note        String?
+
+  leadId   String?
+  dealId   String?
+  clientId String?
+  personId String?
+  siteId   String?
+  /// A rep's own profile — a certificate, a licence, a signed policy.
+  userId   String?
+
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  uploadedBy User?      @relation("CrmRecordFileUploadedBy", fields: [uploadedById], references: [id])
+  lead       CrmLead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal       CrmDeal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  client     CrmClient? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  person     CrmPerson? @relation(fields: [personId], references: [id], onDelete: Cascade)
+  site       CrmSite?   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user       User?      @relation("CrmRecordFileSubject", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, leadId, createdAt])
+  @@index([companyId, dealId, createdAt])
+  @@index([companyId, clientId, createdAt])
+  @@index([companyId, personId, createdAt])
+  @@index([companyId, siteId, createdAt])
+  @@index([companyId, userId, createdAt])
+}
+
 model CrmMention {
   id        String   @id @default(uuid())
   companyId String
@@ -8037,6 +8108,13 @@ model CrmAutomationRun {
   status       CrmAutomationRunStatus @default(SUCCEEDED)
   /// Per-action outcomes, and the message when one failed.
   result       Json?
+  /// Wall-clock time the actions took. Measured rather than estimated, so
+  /// "this rule is slow" is a fact somebody can check rather than a feeling.
+  durationMs   Int?
+  /// How many actions this firing actually carried out. The unit of work a
+  /// rule spends — a rule that fires rarely but does eight things each time
+  /// costs more than one that fires often and sets a field.
+  actionCount  Int      @default(0)
   createdAt    DateTime @default(now())
 
   company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -8296,6 +8374,18 @@ model CrmWorkOrder {
   /// held as ids because a crew is assembled per job, not a standing team.
   assignedToId String?
   crewIds      String[]  @default([])
+
+  /// Client sign-off (/s/<token>). A job is not finished because the crew
+  /// says so; it is finished when the person paying agrees it is. Null until
+  /// somebody asks for the sign-off.
+  signOffToken     String?   @unique
+  signOffAskedAt   DateTime?
+  signOffAt        DateTime?
+  /// Typed by the client on their own phone — the name IS the signature.
+  signOffName      String?
+  /// 1–5, optional. A job can be signed off without being rated.
+  signOffRating    Int?
+  signOffNotes     String?
 
   addressLine String?
   accessNotes String?

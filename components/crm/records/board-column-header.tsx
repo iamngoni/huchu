@@ -76,7 +76,7 @@ export function BoardColumnHeader({
               aria-label={addLabel ?? `Add to ${name}`}
               // Visible on hover and on keyboard focus. A row of plus signs
               // across eight columns is eight things competing with the cards.
-              className="flex size-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] opacity-0 transition-opacity hover:bg-[var(--surface-muted)] hover:text-[var(--text)] focus-visible:opacity-100 group-hover/head:opacity-100"
+              className="flex size-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] opacity-0 transition-opacity hover:bg-[var(--surface-muted)] hover:text-[var(--text)] focus-visible:opacity-100 group-hover/head:opacity-100 pointer-coarse:opacity-100"
             >
               <Plus className="size-3.5" />
             </button>
@@ -88,7 +88,7 @@ export function BoardColumnHeader({
                 <IconButton
                   size="sm"
                   aria-label={`Options for ${name}`}
-                  className="opacity-0 focus-visible:opacity-100 group-hover/head:opacity-100 data-[state=open]:opacity-100"
+                  className="opacity-0 focus-visible:opacity-100 group-hover/head:opacity-100 data-[state=open]:opacity-100 pointer-coarse:opacity-100"
                 >
                   <DotsThree />
                 </IconButton>

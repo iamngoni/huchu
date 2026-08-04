@@ -24,6 +24,7 @@ import { useVisibleColumns, type ColumnOption } from "@/lib/ui/visible-columns";
 import { DealFormSheet } from "./deal-form-sheet";
 import { PipelineSwitcher } from "./pipeline-switcher";
 import { RecordListShell } from "./record-list-shell";
+import { RecordList } from "./record-list";
 
 const PAGE_SIZE = 50;
 
@@ -239,7 +240,7 @@ export function DealsContent({
         <ColumnPicker
           columns={layout === "BOARD" ? DEAL_CARD_FIELDS : DEAL_TABLE_COLUMNS}
           state={layout === "BOARD" ? boardFields : tableColumns}
-          label={layout === "BOARD" ? "Card fields" : "Columns"}
+          label={layout === "BOARD" ? "Fields" : "Columns"}
         />
       }
       filters={
@@ -250,7 +251,6 @@ export function DealsContent({
               setStatusFilter(value as typeof statusFilter);
               setPage(1);
             }}
-            size="sm"
             ariaLabel="Filter by status"
             options={[
               { value: "OPEN", label: "Open" },
@@ -271,7 +271,6 @@ export function DealsContent({
           <SegmentedControl
             value={layout}
             onValueChange={(value) => setLayout(value as typeof layout)}
-            size="sm"
             ariaLabel="Board or list"
             options={[
               { value: "BOARD", label: "Board" },
@@ -309,25 +308,26 @@ export function DealsContent({
           total,
           totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
         }}
-        mobileCardRenderer={({ row }) => (
-          <Link
-            href={`/crm/deals/${row.id}`}
-            className="flex flex-col gap-1.5 rounded-[var(--card-radius)] border border-[var(--border)] p-3"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="truncate font-medium">{row.title}</div>
-                <div className="truncate font-mono text-sm text-[var(--text-muted)]">
-                  {row.dealNo} · {row.client?.name ?? "No company"}
-                </div>
-              </div>
-              <StatusChip
-                status={STATUS_PRESENTATION[row.stage.status] ?? "pending"}
-                label={row.stage.name}
-              />
-            </div>
-            <span className="font-mono text-sm">{formatMoney(row.value, row.currency)}</span>
-          </Link>
+        // On a phone the table becomes the same list every other CRM surface
+        // uses: one row per deal, two lines inside it, rows separated by
+        // whitespace. The value moves to the right of the row rather than
+        // taking a third line of its own.
+        mobileListRenderer={({ rows: mobileRows }) => (
+          <RecordList
+            rows={mobileRows.map(({ row }) => ({
+              id: row.id,
+              href: `/crm/deals/${row.id}`,
+              title: row.title,
+              subtitle: `${row.dealNo} · ${row.client?.name ?? "No company"}`,
+              status: (
+                <StatusChip
+                  status={STATUS_PRESENTATION[row.stage.status] ?? "pending"}
+                  label={row.stage.name}
+                />
+              ),
+              facts: [{ value: formatMoney(row.value, row.currency), mono: true }],
+            }))}
+          />
         )}
         emptyState={
           dealsQuery.isLoading

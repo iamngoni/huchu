@@ -31,23 +31,32 @@ import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 import { DocumentList } from "@/components/crm/documents/document-list";
 import { formatMoney, invoiceOutstanding } from "@/components/crm/documents/document-types";
 import type { LeadDocument } from "@/components/crm/documents/document-types";
-import { CommentThread } from "@/components/crm/collaboration/comment-thread";
-import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityComposer } from "@/components/crm/lead-detail/activity-composer";
+import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
+import {
+  ActivityStrip,
+  CallList,
+  EmailPreview,
+  MeetingCard,
+  NextInteractionCard,
+  type NextInteraction,
+} from "./record-panels";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import { VisitsTab } from "@/components/crm/lead-detail/visits-tab";
 import type { LeadActivity, LeadAppointment, LeadFollowUp } from "@/components/crm/lead-detail/lead-types";
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
-import { isOverdue } from "@/components/crm/leads/stage-config";
 import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits/visit-report-sheet";
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
 
+import { customFieldAttributes } from "./custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
 import { DealContactsTab } from "./deal-contacts-tab";
 import { RecordAttributes } from "./record-attributes";
+import { RelationAttribute } from "./relation-attribute";
+import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
 import { DealStageBar } from "./deal-stage-bar";
 import { RailSection, RecordPageShell } from "./record-page-shell";
@@ -145,6 +154,10 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
     queryKey: ["crm", "deal", dealId],
     queryFn: () => fetchJson<DealDetail>(`/api/v2/crm/deals/${dealId}`),
   });
+  const edit = useAttributeEditor({
+    path: `/api/v2/crm/deals/${dealId}`,
+    invalidate: [["crm", "deal", dealId], ["crm", "deals"]],
+  });
   const teamQuery = useQuery({
     queryKey: ["crm", "team"],
     queryFn: () => fetchJson<{ data: LeadFilterOwner[] }>("/api/v2/crm/team"),
@@ -184,6 +197,45 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
   const openTasks = deal.followUps.filter((task) => task.status === "PENDING");
   const nextTask = openTasks[0];
   const nextVisit = deal.appointments.find((visit) => visit.status === "SCHEDULED");
+
+  // One "up next" rather than a task card and a visit card each showing their
+  // own soonest: the reader's question is what happens next, not what happens
+  // next of each kind.
+  const nextInteraction: NextInteraction | null = (() => {
+    const candidates: NextInteraction[] = [];
+    if (nextTask) candidates.push({ kind: "task", title: nextTask.title, at: nextTask.dueAt });
+    if (nextVisit) {
+      candidates.push({ kind: "visit", title: nextVisit.title, at: nextVisit.scheduledStart });
+    }
+    return (
+      candidates.sort(
+        (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),
+      )[0] ?? null
+    );
+  })();
+
+  const activityCounts = [
+    { label: "calls", count: deal.activities.filter((a) => a.type === "CALL").length },
+    { label: "emails", count: deal.activities.filter((a) => a.type === "EMAIL").length },
+    { label: "notes", count: deal.activities.filter((a) => a.type === "NOTE").length },
+    { label: "meetings", count: deal.activities.filter((a) => a.type === "MEETING").length },
+  ];
+
+  const recentCalls = deal.activities
+    .filter((activity) => activity.type === "CALL")
+    .slice(0, 3)
+    .map((activity) => ({
+      id: activity.id,
+      at: activity.occurredAt,
+      summary: activity.body ?? activity.subject,
+    }));
+
+  const lastEmail = (() => {
+    const found = deal.activities.find((activity) => activity.type === "EMAIL");
+    return found
+      ? { id: found.id, subject: found.subject, body: found.body, at: found.occurredAt }
+      : null;
+  })();
   const openInvoices = deal.documents.filter(
     (doc) => doc.type === "INVOICE" && doc.invoice && invoiceOutstanding(doc.invoice) > 0,
   );
@@ -278,10 +330,9 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 id: "value",
                 label: "Value",
                 icon: Payments,
-                value:
-                  deal.value !== null ? formatMoney(deal.value, deal.currency) : null,
                 placeholder: "Not sized",
                 mono: true,
+                ...edit.numeric("value", deal.value),
               },
               {
                 id: "stage",
@@ -301,26 +352,34 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 id: "owner",
                 label: "Owner",
                 icon: UserRound,
-                display: (
-                  <EntityLink
-                    href={deal.assignedTo ? `/crm/reps/${deal.assignedTo.id}` : null}
-                    className="text-sm"
-                  >
-                    {deal.assignedTo?.name ?? "Unassigned"}
-                  </EntityLink>
+                placeholder: "Unassigned",
+                // A choice, not a label: who owns a deal is the property that
+                // changes most and was the one you could not change from here.
+                ...edit.choice(
+                  "assignedToId",
+                  deal.assignedTo?.id ?? null,
+                  (teamQuery.data?.data ?? []).map((member) => ({
+                    value: member.id,
+                    label: member.name ?? "Unnamed",
+                  })),
+                  "Leave unassigned",
                 ),
               },
               {
                 id: "company",
                 label: "Company",
                 icon: Building2,
-                display: deal.client ? (
-                  <EntityLink href={`/crm/companies/${deal.client.id}`} className="text-sm">
-                    {deal.client.name}
-                  </EntityLink>
-                ) : undefined,
-                value: null,
-                placeholder: "No company",
+                display: (
+                  <RelationAttribute
+                    value={deal.client?.name ?? null}
+                    href={deal.client ? `/crm/companies/${deal.client.id}` : null}
+                    types={["COMPANY"]}
+                    placeholder="No company"
+                    searchPlaceholder="Search companies"
+                    onPick={(record) => edit.save.mutate({ clientId: record.id })}
+                    onClear={() => edit.save.mutate({ clientId: null })}
+                  />
+                ),
               },
               {
                 id: "close",
@@ -338,8 +397,9 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 id: "probability",
                 label: "Likelihood",
                 icon: TrendingUp,
-                value: `${deal.probability ?? 0}%`,
                 mono: true,
+                placeholder: "0",
+                ...edit.numeric("probability", deal.probability),
               },
               {
                 id: "forecast",
@@ -360,6 +420,12 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                     },
                   ]
                 : []),
+              ...customFieldAttributes({
+                definitions,
+                values: deal.customFields,
+                onCommit: (key, value) =>
+                  edit.save.mutate({ customFields: { [key]: value } }),
+              }),
             ]}
           />
         }
@@ -411,24 +477,17 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
               />
             ),
           },
-          {
-            value: "tasks",
-            label: "Tasks",
-            content: <RecordTasksTab record={{ dealId }} currentUserId={currentUserId} />,
-          },
+          tasksTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
           {
             value: "people",
             label: "People",
             count: deal.contacts.length,
             content: <DealContactsTab dealId={dealId} contacts={deal.contacts} />,
           },
-          {
-            value: "comments",
-            label: "Comments",
-            content: (
-              <CommentThread entity="DEAL" recordId={dealId} currentUserId={currentUserId} />
-            ),
-          },
+          commentsTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
+        mentionsTab({ ref: { kind: "deal", id: dealId } }),
+        filesTab({ ref: { kind: "deal", id: dealId } }),
+        automationTab({ ref: { kind: "deal", id: dealId } }),
           {
             value: "history",
             label: "History",
@@ -458,44 +517,43 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
               />
             </RailSection>
 
-            {nextTask ? (
-              <RailSection title="Next task">
-                <p className="text-sm">{nextTask.title}</p>
-                <p
-                  className={
-                    isOverdue(nextTask.dueAt)
-                      ? "text-sm font-medium text-[var(--status-error-text)]"
-                      : "text-sm text-[var(--text-muted)]"
-                  }
-                >
-                  {isOverdue(nextTask.dueAt) ? "Overdue · " : "Due "}
-                  <ClientDate value={nextTask.dueAt} />
-                </p>
-              </RailSection>
-            ) : (
-              <RailSection title="Next task">
-                <p className="text-sm text-[var(--text-muted)]">
-                  Nothing scheduled — this deal will go quiet.
-                </p>
-              </RailSection>
-            )}
+            <RailSection title="Up next">
+              <NextInteractionCard
+                interaction={nextInteraction}
+                emptyMessage="Nothing scheduled — this deal will go quiet."
+              />
+            </RailSection>
 
             {nextVisit ? (
               <RailSection title="Next visit">
-                <p className="text-sm">{nextVisit.title}</p>
-                <p className="text-sm text-[var(--text-muted)]">
-                  <ClientDate value={nextVisit.scheduledStart} />
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-2"
-                  onClick={() => setReportFor(nextVisit)}
-                >
-                  Write it up
-                </Button>
+                <MeetingCard
+                  meeting={{
+                    id: nextVisit.id,
+                    title: nextVisit.title,
+                    scheduledStart: nextVisit.scheduledStart,
+                    location: nextVisit.location,
+                  }}
+                  action={
+                    <Button size="sm" variant="outline" onClick={() => setReportFor(nextVisit)}>
+                      Write it up
+                    </Button>
+                  }
+                />
               </RailSection>
             ) : null}
+
+            <RailSection title="Contact so far">
+              <ActivityStrip counts={activityCounts} />
+              {recentCalls.length > 0 ? (
+                <div className="mt-3">
+                  <CallList calls={recentCalls} />
+                </div>
+              ) : null}
+            </RailSection>
+
+            <RailSection title="Last email">
+              <EmailPreview message={lastEmail} />
+            </RailSection>
 
             {deal.site ? (
               <RailSection title="Site">

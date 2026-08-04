@@ -85,7 +85,6 @@ export function TasksRegisterContent() {
             <SegmentedControl
               value={scope}
               onValueChange={(value) => setScope(value as typeof scope)}
-              size="sm"
               options={[
                 { value: "ALL", label: "Everyone" },
                 { value: "MINE", label: "Mine" },

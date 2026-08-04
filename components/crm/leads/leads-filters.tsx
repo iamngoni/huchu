@@ -349,7 +349,7 @@ export function LeadsFilters({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className={cn("h-9 gap-2", className)}>
+        <Button variant="outline" className={cn(className)}>
           <Funnel className="size-4 opacity-70" />
           Filter
           {activeCount > 0 ? (
@@ -360,7 +360,12 @@ export function LeadsFilters({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-[22rem] space-y-3 p-3">
+      {/* 22rem is 352px — wider than a 390px phone once the viewport's own
+          gutters are taken off, so the panel used to hang off the edge. */}
+      <PopoverContent
+        align="start"
+        className="w-[min(22rem,calc(100vw-2rem))] space-y-3 p-3"
+      >
         <Input
           value={searchDraft}
           onChange={(event) => setSearchDraft(event.target.value)}
@@ -476,7 +481,7 @@ export function LeadsSortButton({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className={cn("h-9 gap-2", className)}>
+        <Button variant="outline" className={cn(className)}>
           <SortAscending className="size-4 opacity-70" />
           Sort
           <span className="text-[var(--text-muted)]">{current?.label}</span>

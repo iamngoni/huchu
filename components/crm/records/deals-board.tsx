@@ -7,7 +7,8 @@ import {
   DragOverlay,
   defaultDropAnimationSideEffects,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCorners,
   useSensor,
   useSensors,
@@ -44,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { isOverdue } from "@/components/crm/leads/stage-config";
 
 import { BoardColumnHeader } from "./board-column-header";
+import { MobileBoard } from "./board-mobile";
 import { RecordMark } from "./record-mark";
 import { useBoardField } from "./board-fields";
 
@@ -155,7 +157,10 @@ function DealCard({ deal }: { deal: CrmDealBoardCard }) {
       }}
       className={cn(
         "rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-3",
-        "cursor-grab shadow-[var(--shadow-xs)] transition-shadow active:cursor-grabbing",
+        // `touch-manipulation` keeps the board scrollable under a finger until
+        // the long-press fires; `select-none` stops the hold raising a text
+        // selection callout over the card it is about to move.
+        "cursor-grab touch-manipulation select-none shadow-[var(--shadow-xs)] transition-shadow active:cursor-grabbing",
         "hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-sm)]",
         isDragging &&
           "border-dashed bg-[var(--surface-muted)] opacity-50 shadow-none [&_*]:invisible",
@@ -322,7 +327,13 @@ export function DealsBoard({
   });
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // MouseSensor and TouchSensor rather than PointerSensor. PointerSensor
+    // answers touch too, and its 6px threshold is crossed long before any
+    // long-press delay elapses — so with both registered, every attempt to
+    // swipe the board sideways started a drag instead. Splitting them lets a
+    // finger scroll immediately and drag only after a deliberate hold.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -358,9 +369,11 @@ export function DealsBoard({
 
   if (boardQuery.isLoading && !board) {
     return (
-      <div className="flex gap-3" aria-busy="true">
+      // A phone is about to get a list, so it waits for a list — not a strip
+      // of column skeletons, of which it can see one and a quarter.
+      <div className="space-y-2 lg:flex lg:space-y-0 lg:gap-3" aria-busy="true">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton key={index} className="h-96 w-72 shrink-0" />
+          <Skeleton key={index} className="h-16 w-full lg:h-96 lg:w-72 lg:shrink-0" />
         ))}
       </div>
     );
@@ -406,6 +419,29 @@ export function DealsBoard({
   };
 
   return (
+    <>
+    {/* A phone gets the stage picker and one list. Restaging lives on the deal
+        page's stage bar, so nothing is lost by not dragging here. */}
+    <MobileBoard
+      className="lg:hidden"
+      emptyTitle="No deals in this stage"
+      stages={board.columns.map((column) => ({
+        id: column.stage.id,
+        label: column.stage.name,
+        dot: stageColor(column.stage.colorToken).dot,
+        count: column.count,
+        meta: column.totalValue > 0 ? money(column.totalValue, currency) : undefined,
+        rows: column.deals.map((deal) => ({
+          id: deal.id,
+          href: `/crm/deals/${deal.id}`,
+          title: deal.title,
+          subtitle: `${deal.dealNo} · ${deal.client?.name ?? "No company"}`,
+          facts: [{ value: money(deal.value, deal.currency), mono: true }],
+        })),
+      }))}
+    />
+
+    <div className="hidden lg:block">
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -433,5 +469,7 @@ export function DealsBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </div>
+    </>
   );
 }

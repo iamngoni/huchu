@@ -120,7 +120,7 @@ export function AttributeHeader({
           const Icon = row.icon;
           return (
             <div key={row.id} className="flex items-center gap-3">
-              <dt className="flex w-40 shrink-0 items-center gap-1.5 text-sm text-[var(--text-muted)]">
+              <dt className="flex w-28 shrink-0 items-center gap-1.5 text-sm text-[var(--text-muted)] sm:w-40">
                 {Icon ? <Icon className="size-4" aria-hidden="true" /> : null}
                 {row.label}
               </dt>
@@ -142,7 +142,7 @@ export function AttributeHeader({
 
         {customEntries.map(([key, value]) => (
           <div key={key} className="group flex items-center gap-3">
-            <dt className="w-40 shrink-0 truncate text-sm text-[var(--text-muted)]">{key}</dt>
+            <dt className="w-28 shrink-0 truncate text-sm text-[var(--text-muted)] sm:w-40">{key}</dt>
             <dd className="flex min-w-0 flex-1 items-center gap-1">
               <Input
                 aria-label={key}
@@ -159,7 +159,7 @@ export function AttributeHeader({
                   variant="ghost"
                   size="sm"
                   aria-label={`Remove ${key}`}
-                  className="opacity-0 transition-opacity group-hover:opacity-100"
+                  className="opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100"
                   onClick={() => {
                     const next = { ...custom };
                     delete next[key];
@@ -180,7 +180,7 @@ export function AttributeHeader({
               aria-label="Property name"
               value={draftKey}
               placeholder="Property"
-              className="h-8 w-40 shrink-0"
+              className="h-8 w-28 shrink-0 sm:w-40"
               onChange={(event) => setDraftKey(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") commitCustom();

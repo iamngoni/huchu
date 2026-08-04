@@ -171,7 +171,7 @@ export function CrmFormsContent() {
                 </Badge>
               </div>
 
-              <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
                 <div>
                   <dt className="text-sm text-[var(--text-muted)]">Submissions</dt>
                   <dd className="font-mono">{form.submissionCount}</dd>

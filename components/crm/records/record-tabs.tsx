@@ -1,0 +1,207 @@
+"use client";
+
+import type { ReactNode } from "react";
+
+import { CommentThread } from "@/components/crm/collaboration/comment-thread";
+import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
+import { ActivityComposer, type ActivityTarget } from "@/components/crm/lead-detail/activity-composer";
+import { RecordStory, type StoryEvent } from "./record-story";
+import { MentionsTab } from "./mentions-tab";
+import { AutomationTab } from "./automation-tab";
+import { FilesTab } from "./files-tab";
+import type { FileOwnerKind } from "@/lib/crm/record-files";
+import type { CollabEntity } from "@/lib/crm/collaboration";
+import type { CrmTaskRecordRef } from "@/lib/crm/crm-v2";
+
+import type { RecordTab } from "./record-page-shell";
+
+/**
+ * The tabs every record has, written once.
+ *
+ * A record was implemented five times — lead, deal, company, person, site —
+ * each composing its own timeline, its own comments, its own tasks. So a fix
+ * to "the record page" landed on one of five and the report came back saying
+ * it was not there, correctly. Three rounds went that way.
+ *
+ * These build the tab from a `RecordRef`, so a change to what a timeline
+ * shows is a change to one function and appears on all five.
+ */
+
+export type RecordKind = "lead" | "deal" | "company" | "person" | "site";
+
+export type RecordRef = { kind: RecordKind; id: string };
+
+/** The collaboration layer's name for the same record. */
+const COLLAB: Record<RecordKind, CollabEntity> = {
+  lead: "LEAD",
+  deal: "DEAL",
+  company: "COMPANY",
+  person: "PERSON",
+  site: "SITE",
+};
+
+/** The task layer's name for the same record. */
+export function taskRef(ref: RecordRef): CrmTaskRecordRef {
+  switch (ref.kind) {
+    case "lead":
+      return { leadId: ref.id };
+    case "deal":
+      return { dealId: ref.id };
+    case "company":
+      return { clientId: ref.id };
+    case "person":
+      return { personId: ref.id };
+    case "site":
+      return { siteId: ref.id };
+  }
+}
+
+/**
+ * Which records somebody can write an activity against. A site is a place,
+ * not a correspondent — what happened there is logged on the visit or the
+ * deal, so its timeline reads without a composer rather than offering one
+ * that posts nowhere.
+ */
+function activityTarget(ref: RecordRef): ActivityTarget | null {
+  switch (ref.kind) {
+    case "lead":
+      return { kind: "lead", id: ref.id };
+    case "deal":
+      return { kind: "deal", id: ref.id };
+    case "person":
+      return { kind: "person", id: ref.id };
+    case "company":
+      return { kind: "company", id: ref.id };
+    case "site":
+      return null;
+  }
+}
+
+export function timelineTab({
+  ref,
+  events,
+  emptyMessage,
+}: {
+  ref: RecordRef;
+  events: StoryEvent[];
+  emptyMessage?: string;
+}): RecordTab {
+  const target = activityTarget(ref);
+  return {
+    value: "timeline",
+    label: "Timeline",
+    content: (
+      <div className="space-y-4">
+        {target ? <ActivityComposer target={target} /> : null}
+        <RecordStory events={events} emptyMessage={emptyMessage} />
+      </div>
+    ),
+  };
+}
+
+export function tasksTab({
+  ref,
+  currentUserId,
+}: {
+  ref: RecordRef;
+  currentUserId?: string;
+}): RecordTab {
+  return {
+    value: "tasks",
+    label: "Tasks",
+    content: <RecordTasksTab record={taskRef(ref)} currentUserId={currentUserId} />,
+  };
+}
+
+export function commentsTab({
+  ref,
+  currentUserId,
+}: {
+  ref: RecordRef;
+  currentUserId?: string;
+}): RecordTab {
+  return {
+    value: "comments",
+    label: "Comments",
+    content: (
+      <CommentThread
+        entity={COLLAB[ref.kind]}
+        recordId={ref.id}
+        currentUserId={currentUserId}
+      />
+    ),
+  };
+}
+
+/**
+ * Where this record has been written about elsewhere. Every kind gets it,
+ * because a reference to a site in a note on a deal is exactly the connection
+ * that was invisible before.
+ */
+export function mentionsTab({ ref }: { ref: RecordRef }): RecordTab {
+  return {
+    value: "mentions",
+    label: "Mentions",
+    content: <MentionsTab recordId={ref.id} />,
+  };
+}
+
+/** The automation layer's name for the same record. */
+const AUTOMATION_ENTITY: Record<RecordKind, "LEAD" | "DEAL" | "PERSON" | "COMPANY" | "SITE"> = {
+  lead: "LEAD",
+  deal: "DEAL",
+  company: "COMPANY",
+  person: "PERSON",
+  site: "SITE",
+};
+
+/**
+ * What the workflows have done here, and what could still fire.
+ *
+ * On every kind rather than only the two that triggers currently reach: a
+ * company page saying "nothing is watching this record" is a useful answer,
+ * and a tab that appears and disappears depending on the record type is a tab
+ * people stop looking for.
+ */
+export function automationTab({ ref }: { ref: RecordRef }): RecordTab {
+  return {
+    value: "automation",
+    label: "Workflows",
+    content: <AutomationTab entity={AUTOMATION_ENTITY[ref.kind]} recordId={ref.id} />,
+  };
+}
+
+/**
+ * Files that arrived from outside, on every kind.
+ *
+ * Separate from Documents, which is what the system raised and numbered. A
+ * signed contract and a quotation are both "a document" to a reader, but only
+ * one of them has a total and a status, and mixing them makes the register
+ * useless for either question.
+ */
+export function filesTab({ ref }: { ref: RecordRef }): RecordTab {
+  return {
+    value: "files",
+    label: "Files",
+    content: <FilesTab owner={FILE_OWNER[ref.kind]} ownerId={ref.id} />,
+  };
+}
+
+/** The file layer's name for the same record. */
+const FILE_OWNER: Record<RecordKind, FileOwnerKind> = {
+  lead: "lead",
+  deal: "deal",
+  company: "company",
+  person: "person",
+  site: "site",
+};
+
+/** A tab a single record type adds to the shared set. */
+export function extraTab(tab: {
+  value: string;
+  label: string;
+  count?: number;
+  content: ReactNode;
+}): RecordTab {
+  return tab;
+}

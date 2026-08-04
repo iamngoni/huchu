@@ -28,7 +28,13 @@ import {
   TEMPLATE_KIND_LABELS,
   type TemplateKind,
 } from "@/lib/crm/blocks";
+import {
+  starterBlocks,
+  starterTemplate,
+  startersForKind,
+} from "@/lib/crm/starter-templates";
 import { FileText, Plus } from "@/lib/icons";
+import { cn } from "@/lib/utils";
 
 /**
  * Every template in the company, in one place.
@@ -119,6 +125,7 @@ export function TemplateLibrary() {
   const [createOpen, setCreateOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [draftKind, setDraftKind] = useState<TemplateKind>("FORM");
+  const [draftStarter, setDraftStarter] = useState<string | null>("site-brief");
   const [errors, setErrors] = useState<string[]>([]);
 
   const blocks = useQuery({
@@ -141,6 +148,9 @@ export function TemplateLibrary() {
     },
   });
 
+  const starters = startersForKind(draftKind);
+  const starter = draftStarter ? starterTemplate(draftStarter) : undefined;
+
   const create = useMutation({
     mutationFn: () =>
       fetchJson<{ id: string }>("/api/v2/crm/templates", {
@@ -148,29 +158,20 @@ export function TemplateLibrary() {
         body: JSON.stringify({
           name: draftName.trim(),
           kind: draftKind,
-          attributes: { custom: {} },
-          // A new template starts with one heading rather than empty: an empty
-          // canvas is where people put the thing down and never come back.
-          blocks: [
-            { id: "title", type: "heading", text: draftName.trim(), level: 1 },
-            ...(draftKind === "FORM"
-              ? [
-                  {
-                    id: "name",
-                    type: "field" as const,
-                    key: "name",
-                    label: "Your name",
-                    fieldType: "text" as const,
-                    required: true,
-                  },
-                ]
-              : []),
-          ],
+          attributes: { custom: {}, emoji: starter?.emoji ?? null },
+          // Starting from a finished document rather than a blank one. An
+          // empty canvas is where people put the thing down and never come
+          // back — and nobody should have to remember what an invoice needs
+          // on it before they can write one.
+          blocks: starter
+            ? starterBlocks(starter, draftName)
+            : [{ id: "title", type: "heading", text: draftName.trim(), level: 1 }],
         }),
       }),
     onSuccess: (created) => {
       setCreateOpen(false);
       setDraftName("");
+      setDraftStarter(null);
       queryClient.invalidateQueries({ queryKey: ["crm-templates"] });
       router.push(`/templates/${created.id}`);
     },
@@ -379,7 +380,17 @@ export function TemplateLibrary() {
 
         <div className="space-y-1.5">
           <Label>What is it for</Label>
-          <Select value={draftKind} onValueChange={(value) => setDraftKind(value as TemplateKind)}>
+          <Select
+            value={draftKind}
+            onValueChange={(value) => {
+              const kind = value as TemplateKind;
+              setDraftKind(kind);
+              // Whatever was picked belongs to the old kind. Defaulting to the
+              // first starter of the new one beats silently keeping a choice
+              // that no longer exists.
+              setDraftStarter(startersForKind(kind)[0]?.id ?? null);
+            }}
+          >
             <SelectTrigger aria-label="Template kind">
               <SelectValue />
             </SelectTrigger>
@@ -394,6 +405,55 @@ export function TemplateLibrary() {
           <p className="text-sm text-[var(--text-muted)]">
             {TEMPLATE_KIND_DESCRIPTIONS[draftKind]}
           </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Start from</Label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {starters.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={draftStarter === option.id}
+                onClick={() => setDraftStarter(option.id)}
+                className={cn(
+                  "rounded-[var(--radius-md)] border p-2.5 text-left",
+                  draftStarter === option.id
+                    ? "border-[var(--interactive-primary)] bg-[var(--surface-hover)]"
+                    : "border-[var(--border)] hover:border-[var(--interactive-primary)]",
+                )}
+              >
+                <span className="block text-sm font-medium text-[var(--text-strong)]">
+                  <span aria-hidden="true" className="mr-1.5">
+                    {option.emoji}
+                  </span>
+                  {option.name}
+                </span>
+                <span className="mt-0.5 block text-sm text-[var(--text-muted)]">
+                  {option.description}
+                </span>
+              </button>
+            ))}
+
+            <button
+              type="button"
+              aria-pressed={draftStarter === null}
+              onClick={() => setDraftStarter(null)}
+              className={cn(
+                "rounded-[var(--radius-md)] border p-2.5 text-left",
+                draftStarter === null
+                  ? "border-[var(--interactive-primary)] bg-[var(--surface-hover)]"
+                  : "border-dashed border-[var(--border)] hover:border-[var(--interactive-primary)]",
+              )}
+            >
+              <span className="block text-sm font-medium text-[var(--text-strong)]">
+                Blank
+              </span>
+              <span className="mt-0.5 block text-sm text-[var(--text-muted)]">
+                Just a title. Build the rest yourself.
+              </span>
+            </button>
+          </div>
         </div>
       </RecordDialog>
     </div>

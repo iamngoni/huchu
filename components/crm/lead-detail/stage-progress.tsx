@@ -1,16 +1,39 @@
 "use client";
 
+import { useState } from "react";
 import type { CrmLeadStage } from "@prisma/client";
 
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ArrowRight, Check } from "@/lib/icons";
 import { CRM_LEAD_STAGES, CRM_STAGE_LABELS } from "@/lib/crm/pipeline";
 import { cn } from "@/lib/utils";
 
-// Won and Lost are outcomes, not steps along the way — the stepper shows the
-// path, and the two terminal stages sit apart from it.
+// Won and Lost are outcomes, not steps along the way — the track shows the
+// path, and the two terminal stages are reached from the menu rather than
+// sitting at the end of it pretending to be steps six and seven.
 const PATH_STAGES: CrmLeadStage[] = CRM_LEAD_STAGES.filter(
   (stage) => stage !== "WON" && stage !== "LOST",
 );
 
+/**
+ * Where this lead has got to, and the one move that comes next.
+ *
+ * This used to be eight equally-loud buttons that wrapped onto two lines with
+ * a divider stranded mid-flow. Eight controls of identical weight is eight
+ * decisions offered at once, and none of them answered the question a stage
+ * actually gets asked: how far along is this, and what happens next.
+ *
+ * So it is a track and a verb. The track is read, not pressed — filled to
+ * where the lead has got to. The next move is one button, because from any
+ * stage there is one obvious next stage. Everything else — jumping back,
+ * marking it won or lost — is behind the stage name, which you press, the way
+ * every other property on this page now works.
+ *
+ * Colour carries meaning rather than position: the track is brand-coloured
+ * while the lead is live, green once it is won, and drains to muted when it is
+ * lost. Nothing is coloured merely to show which button the cursor is on.
+ */
 export function StageProgress({
   stage,
   onChange,
@@ -20,66 +43,114 @@ export function StageProgress({
   onChange: (stage: CrmLeadStage) => void;
   disabled?: boolean;
 }) {
-  const isClosed = stage === "WON" || stage === "LOST";
+  const [open, setOpen] = useState(false);
+
+  const isWon = stage === "WON";
+  const isLost = stage === "LOST";
+  const isClosed = isWon || isLost;
   const currentIndex = PATH_STAGES.indexOf(stage);
+  const next = currentIndex >= 0 ? PATH_STAGES[currentIndex + 1] : undefined;
+
+  const fillClass = isWon
+    ? "bg-[var(--status-success-border)]"
+    : isLost
+      ? "bg-[var(--border-strong)]"
+      : "bg-[var(--action-primary-bg)]";
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {PATH_STAGES.map((entry, index) => {
-        const isCurrent = entry === stage;
-        const isPast = !isClosed && currentIndex > index;
-        return (
-          <button
-            key={entry}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(entry)}
-            aria-current={isCurrent ? "step" : undefined}
-            className={cn(
-              "rounded-[var(--button-radius)] px-2.5 py-1 text-sm font-medium transition-colors",
-              "disabled:cursor-not-allowed disabled:opacity-60",
-              isCurrent
-                ? "bg-[var(--action-primary-bg)] text-[var(--action-primary-text)]"
-                : isPast
-                  ? "bg-[var(--surface-subtle)] text-[var(--text)]"
-                  : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)]",
-            )}
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={disabled}
+              className={cn(
+                "-mx-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-base font-semibold hover:bg-[var(--surface-subtle)] disabled:cursor-not-allowed disabled:opacity-60",
+                isWon && "text-[var(--status-success-text)]",
+                isLost && "text-[var(--text-muted)]",
+                !isClosed && "text-[var(--text-strong)]",
+              )}
+            >
+              {CRM_STAGE_LABELS[stage]}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            collisionPadding={12}
+            className="w-[min(15rem,calc(100vw-2rem))] p-1"
           >
-            {CRM_STAGE_LABELS[entry]}
-          </button>
-        );
-      })}
+            {CRM_LEAD_STAGES.map((entry) => (
+              <button
+                key={entry}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  if (entry !== stage) onChange(entry);
+                }}
+                className={cn(
+                  "flex min-h-9 w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 text-left text-sm hover:bg-[var(--surface-hover)]",
+                  entry === stage && "font-medium",
+                )}
+              >
+                <span className="min-w-0 flex-1 truncate">{CRM_STAGE_LABELS[entry]}</span>
+                {entry === stage ? (
+                  <Check className="size-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                ) : null}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
 
-      <span className="mx-1 h-4 w-px bg-[var(--border)]" />
+        {/* One verb. From any stage on the path there is exactly one obvious
+            next stage, and offering it as a button is what turns a display
+            into something somebody can act on without thinking. */}
+        {next && !isClosed ? (
+          <Button
+            variant="secondary"
+            disabled={disabled}
+            onClick={() => onChange(next)}
+            endIcon={<ArrowRight className="size-4" aria-hidden="true" />}
+          >
+            Move to {CRM_STAGE_LABELS[next]}
+          </Button>
+        ) : null}
+      </div>
 
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange("WON")}
-        className={cn(
-          "rounded-[var(--button-radius)] px-2.5 py-1 text-sm font-medium transition-colors",
-          "disabled:cursor-not-allowed disabled:opacity-60",
-          stage === "WON"
-            ? "bg-[var(--status-success-bg)] text-[var(--status-success-text)]"
-            : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)]",
-        )}
+      {/* Read, not pressed: a 4px track that says how far along this is at a
+          glance. Segments rather than one bar so the number of steps is
+          legible without counting labels. */}
+      <div
+        className="flex gap-1"
+        role="img"
+        aria-label={
+          isClosed
+            ? `Stage: ${CRM_STAGE_LABELS[stage]}`
+            : `Stage ${currentIndex + 1} of ${PATH_STAGES.length}: ${CRM_STAGE_LABELS[stage]}`
+        }
       >
-        Won
-      </button>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange("LOST")}
-        className={cn(
-          "rounded-[var(--button-radius)] px-2.5 py-1 text-sm font-medium transition-colors",
-          "disabled:cursor-not-allowed disabled:opacity-60",
-          stage === "LOST"
-            ? "bg-[var(--status-error-bg)] text-[var(--status-error-text)]"
-            : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)]",
-        )}
-      >
-        Lost
-      </button>
+        {PATH_STAGES.map((entry, index) => (
+          <span
+            key={entry}
+            className={cn(
+              "h-1 flex-1 rounded-full",
+              isWon || (!isLost && index <= currentIndex)
+                ? fillClass
+                : isLost && index <= currentIndex
+                  ? fillClass
+                  : "bg-[var(--surface-sunken)]",
+            )}
+          />
+        ))}
+      </div>
+
+      <p className="text-sm text-[var(--text-muted)]">
+        {isWon
+          ? "Won"
+          : isLost
+            ? "Lost — reopen it from the stage menu"
+            : `Step ${currentIndex + 1} of ${PATH_STAGES.length}`}
+      </p>
     </div>
   );
 }

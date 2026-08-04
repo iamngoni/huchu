@@ -37,6 +37,7 @@ import {
   type BlockType,
   type TemplateKind,
 } from "@/lib/crm/blocks";
+import { starterBlocks, startersForKind } from "@/lib/crm/starter-templates";
 import { cn } from "@/lib/utils";
 
 import { VariablePicker } from "./variable-picker";
@@ -75,14 +76,14 @@ function BlockInsert({
     <div className="group/insert relative flex h-4 items-center justify-center">
       <span
         aria-hidden="true"
-        className="absolute inset-x-0 top-1/2 h-px bg-[var(--border-subtle)] opacity-0 transition-opacity group-hover/insert:opacity-100"
+        className="absolute inset-x-0 top-1/2 h-px bg-[var(--border-subtle)] opacity-0 transition-opacity group-hover/insert:opacity-100 pointer-coarse:opacity-100"
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
             aria-label={label}
-            className="relative z-10 flex size-5 items-center justify-center rounded-full border border-dashed border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] opacity-0 transition-opacity hover:border-[var(--brand)] hover:text-[var(--text)] focus-visible:opacity-100 group-hover/insert:opacity-100"
+            className="relative z-10 flex size-5 items-center justify-center rounded-full border border-dashed border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] opacity-0 transition-opacity hover:border-[var(--brand)] hover:text-[var(--text)] focus-visible:opacity-100 group-hover/insert:opacity-100 pointer-coarse:opacity-100"
           >
             <Plus className="size-3" aria-hidden="true" />
           </button>
@@ -124,7 +125,7 @@ function FieldEditor({
             onChange({ fieldType: value as (typeof FIELD_TYPES)[number] })
           }
         >
-          <SelectTrigger className="w-40" aria-label="Answer type">
+          <SelectTrigger className="w-full max-w-40" aria-label="Answer type">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -202,7 +203,7 @@ function BlockEditorRow({
 
   return (
     <div className="group relative rounded-[var(--radius-md)] px-2 py-2 transition-colors hover:bg-[var(--surface-subtle)]">
-      <div className="absolute right-1 top-1 flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+      <div className="absolute right-1 top-1 flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100">
         <Button
           type="button"
           variant="ghost"
@@ -253,7 +254,7 @@ function BlockEditorRow({
             value={String(block.level)}
             onValueChange={(value) => patch({ level: Number(value) })}
           >
-            <SelectTrigger className="w-24" aria-label="Heading level">
+            <SelectTrigger className="w-24 shrink-0" aria-label="Heading level">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -291,7 +292,7 @@ function BlockEditorRow({
 
       {block.type === "spacer" ? (
         <Select value={block.size} onValueChange={(value) => patch({ size: value })}>
-          <SelectTrigger className="w-32" aria-label="Space size">
+          <SelectTrigger className="w-full max-w-32" aria-label="Space size">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -305,7 +306,7 @@ function BlockEditorRow({
       {block.type === "image" ? (
         <div className="space-y-2">
           <Select value={block.source} onValueChange={(value) => patch({ source: value })}>
-            <SelectTrigger className="w-56" aria-label="Image source">
+            <SelectTrigger className="w-full max-w-56" aria-label="Image source">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -394,7 +395,7 @@ function BlockEditorRow({
             onChange={(event) => patch({ label: event.target.value })}
           />
           <Select value={block.party} onValueChange={(value) => patch({ party: value })}>
-            <SelectTrigger className="w-40" aria-label="Who signs">
+            <SelectTrigger className="w-full max-w-40 sm:w-40" aria-label="Who signs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -472,9 +473,35 @@ export function BlockEditor({
       ))}
 
       {blocks.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[var(--text-muted)]">
-          Empty. Use the + above to add the first block.
-        </p>
+        <div className="py-6 text-center">
+          <p className="text-sm text-[var(--text-muted)]">
+            Empty. Use the + above to add the first block.
+          </p>
+
+          {/* Or don't start from nothing. Somebody who reached a blank
+              template did not necessarily choose one — they may have picked
+              Blank in the dialog and then discovered what that means. */}
+          {startersForKind(kind).length > 0 ? (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-[var(--text-strong)]">Or start from</p>
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                {startersForKind(kind).map((starter) => (
+                  <button
+                    key={starter.id}
+                    type="button"
+                    onClick={() => onChange(starterBlocks(starter, ""))}
+                    className="rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-1.5 text-sm hover:border-[var(--interactive-primary)] hover:bg-[var(--surface-hover)]"
+                  >
+                    <span aria-hidden="true" className="mr-1.5">
+                      {starter.emoji}
+                    </span>
+                    {starter.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

@@ -11,6 +11,7 @@ import { z } from "zod";
 
 export const OVERVIEW_SCOPES = [
   "HOME",
+  "REPORTS",
   "RECORD_DEAL",
   "RECORD_LEAD",
   "RECORD_COMPANY",
@@ -59,6 +60,7 @@ export type WidgetDefinition = {
 };
 
 const HOME = ["HOME"] as const;
+const REPORTS = ["REPORTS"] as const;
 const RECORDS = [
   "RECORD_DEAL",
   "RECORD_LEAD",
@@ -247,6 +249,76 @@ export const WIDGET_CATALOGUE: WidgetDefinition[] = [
     defaultSpan: 6,
   },
 
+  // --- the reports page ----------------------------------------------
+  // Its own scope rather than more HOME widgets: the overview answers "what
+  // should I do today" from live counts, and a report answers "what has been
+  // happening" over a period somebody chose. Mixing them means one page where
+  // half the cards silently ignore the date range.
+  {
+    type: "report-headline",
+    label: "Headline figures",
+    description: "Win rate, forecast, typical cycle and leads, for the chosen period.",
+    kind: "metric",
+    scopes: REPORTS,
+    defaultSpan: 12,
+  },
+  {
+    type: "report-funnel",
+    label: "Stage funnel",
+    description: "How many survive each stage, what converts, and how long each stage takes.",
+    kind: "chart",
+    scopes: REPORTS,
+    defaultSpan: 8,
+  },
+  {
+    type: "report-source-share",
+    label: "Where the money came from",
+    description: "Won value split by source, as shares of one total.",
+    kind: "chart",
+    scopes: REPORTS,
+    defaultSpan: 4,
+  },
+  {
+    type: "report-trend",
+    label: "Won over time",
+    description: "Value won and value opened across the period, with the figures on hover.",
+    kind: "chart",
+    scopes: REPORTS,
+    defaultSpan: 8,
+  },
+  {
+    type: "report-by-owner",
+    label: "Won, lost and open by owner",
+    description: "Each rep's outcomes side by side.",
+    kind: "chart",
+    scopes: REPORTS,
+    defaultSpan: 4,
+  },
+  {
+    type: "report-owner-table",
+    label: "Owner performance",
+    description: "Win rate and value won, per rep.",
+    kind: "list",
+    scopes: REPORTS,
+    defaultSpan: 6,
+  },
+  {
+    type: "report-source-table",
+    label: "Source performance",
+    description: "Win rate and value won, per source.",
+    kind: "list",
+    scopes: REPORTS,
+    defaultSpan: 6,
+  },
+  {
+    type: "report-activity",
+    label: "Activity logged",
+    description: "Calls, emails and notes recorded across the period.",
+    kind: "chart",
+    scopes: REPORTS,
+    defaultSpan: 12,
+  },
+
   // --- what has been happening ---------------------------------------
   {
     type: "activity-summary",
@@ -293,6 +365,15 @@ export const DEFAULT_LAYOUTS: Record<OverviewScope, WidgetInstance[]> = {
     { id: "w-ageing", type: "ageing", span: 4 },
     { id: "w-tasks", type: "my-tasks", span: 6 },
     { id: "w-activity", type: "activity-summary", span: 6 },
+  ],
+  REPORTS: [
+    { id: "r-headline", type: "report-headline", span: 12 },
+    { id: "r-funnel", type: "report-funnel", span: 8 },
+    { id: "r-source-share", type: "report-source-share", span: 4 },
+    { id: "r-trend", type: "report-trend", span: 8 },
+    { id: "r-by-owner", type: "report-by-owner", span: 4 },
+    { id: "r-owner-table", type: "report-owner-table", span: 6 },
+    { id: "r-source-table", type: "report-source-table", span: 6 },
   ],
   RECORD_DEAL: [
     { id: "w-value", type: "record-value", span: 4 },

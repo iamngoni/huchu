@@ -125,7 +125,10 @@ export function RecordList({
           <Link
             href={row.href}
             className={cn(
-              "group/row flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] py-2.5 pr-3 hover:bg-[var(--surface-muted)]",
+              // `min-h-11` is the 44px touch target. `py-2.5` alone gives a
+              // one-line row about 40px tall, which is under every platform's
+              // minimum and reads as a near-miss rather than a miss.
+              "group/row flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] py-2.5 pr-3 hover:bg-[var(--surface-muted)]",
               selection ? "pl-2" : "pl-3",
             )}
           >
@@ -148,7 +151,23 @@ export function RecordList({
             </span>
 
             {/* Facts are supporting detail, so they are the first thing to go
-                when the row runs out of room. */}
+                when the row runs out of room — but not all of them. On a phone
+                the leading fact survives and its label does not: callers put
+                the number the row is about first (a balance, a pipeline, a
+                count), and a row that drops it entirely says less than the
+                card it replaced. Two and three go; three labelled columns
+                will not fit beside a title at 390px. */}
+            {row.facts?.length ? (
+              <span
+                className={cn(
+                  "flex-none text-right text-sm text-[var(--text-body)] sm:hidden",
+                  row.facts[0].mono ? "font-mono tabular-nums" : "",
+                )}
+              >
+                {row.facts[0].value}
+              </span>
+            ) : null}
+
             {row.facts?.length ? (
               <span className="hidden flex-none items-center gap-6 sm:flex">
                 {row.facts.map((fact, index) => (

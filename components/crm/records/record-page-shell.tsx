@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+
+import { useIsBelow } from "@/hooks/use-mobile";
 import Link from "next/link";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger, Stack } from "@corelithzw/react";
@@ -15,6 +17,9 @@ import { PageChrome } from "@/components/layout/page-chrome";
 import { IconButton } from "@/components/ui/icon-button";
 import { DotsThree, type LucideIcon } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
+
+/** The synthetic tab the rail becomes when there is no room beside the content. */
+const OVERVIEW_TAB = "overview";
 
 export type RecordTab = {
   value: string;
@@ -59,6 +64,8 @@ export function RecordPageShell({
   onTabChange,
   rail,
   attributes,
+  beforeTabs,
+  children,
 }: {
   backHref: string;
   backLabel: string;
@@ -77,13 +84,59 @@ export function RecordPageShell({
   onTabChange: (value: string) => void;
   rail?: ReactNode;
   /**
+   * A record-specific band between the properties and the tabs. A lead's
+   * stage stepper lives here: its stages are a fixed enum you click along,
+   * which is neither a property nor a tab.
+   */
+  beforeTabs?: ReactNode;
+  /** Sheets and dialogs the page owns — mounted outside the tab content so
+   *  they survive a tab change. */
+  children?: ReactNode;
+  /**
    * The record's properties, shown above the tabs. Notion-style, because a
    * property in a right rail is one a phone never shows and a reader looks at
    * last — which is how they go stale.
    */
   attributes?: ReactNode;
 }) {
-  const visibleTabs = tabs.filter((tab) => tab.content !== null && tab.content !== undefined);
+  // Below `lg` there is no room for a rail beside the content, and stacking it
+  // above the tabs pushed the record itself under the fold — you scrolled past
+  // a summary to reach the thing you opened. So the summary becomes a tab, and
+  // it is the one you land on: the same content, in a place with a name.
+  const compact = useIsBelow(1024);
+
+  const visibleTabs = useMemo(() => {
+    const real = tabs.filter((tab) => tab.content !== null && tab.content !== undefined);
+    if (!rail || !compact) return real;
+    return [{ value: OVERVIEW_TAB, label: "Overview", content: rail }, ...real];
+  }, [tabs, rail, compact]);
+
+  // Compact, the landing tab is Overview: it is what the rail used to show
+  // before anything else, and a record that opens on its timeline makes you
+  // hunt for the summary you came for. The parent still owns which *real* tab
+  // is showing, so "add a task" jumping to Tasks works from here too.
+  const [compactTab, setCompactTab] = useState<string | null>(null);
+  // Adjusting state during render rather than in an effect: this is the
+  // sanctioned way to follow a prop, and it lands before paint instead of
+  // showing the old tab for a frame.
+  const [lastActive, setLastActive] = useState(activeTab);
+  if (activeTab !== lastActive) {
+    setLastActive(activeTab);
+    setCompactTab(activeTab);
+  }
+
+  const preferred = compact && rail ? (compactTab ?? OVERVIEW_TAB) : activeTab;
+
+  // Widening the window takes the Overview tab away with the rail. Falling back
+  // to the first real tab beats rendering a pane that no trigger points at.
+  const currentTab = visibleTabs.some((tab) => tab.value === preferred)
+    ? preferred
+    : (visibleTabs[0]?.value ?? activeTab);
+
+  const handleTabChange = (value: string) => {
+    setCompactTab(value);
+    if (value !== OVERVIEW_TAB) onTabChange(value);
+  };
 
   const barActions = useMemo(
     () => (
@@ -137,9 +190,11 @@ export function RecordPageShell({
         <div className="border-y border-[var(--border-subtle)] py-3">{attributes}</div>
       ) : null}
 
+      {beforeTabs}
+
       <div className={rail ? "detail-grid" : "min-w-0"}>
         <div className="min-w-0 space-y-4">
-          <Tabs value={activeTab} onValueChange={onTabChange}>
+          <Tabs value={currentTab} onValueChange={handleTabChange}>
             <div className="scroll-rail max-w-full">
               <TabsList>
                 {visibleTabs.map((tab) => (
@@ -151,20 +206,37 @@ export function RecordPageShell({
               </TabsList>
             </div>
             {visibleTabs.map((tab) => (
-              <TabsContent key={tab.value} value={tab.value} className="pt-4">
+              <TabsContent
+                key={tab.value}
+                value={tab.value}
+                className={tab.value === OVERVIEW_TAB ? "space-y-7 pt-5" : "pt-4"}
+              >
                 {tab.content}
               </TabsContent>
             ))}
           </Tabs>
         </div>
 
-        {rail ? <aside className="space-y-3">{rail}</aside> : null}
+        {rail ? <aside className="hidden space-y-7 lg:block">{rail}</aside> : null}
       </div>
+
+      {children}
     </div>
   );
 }
 
-/** A titled block in the record page's right rail. */
+/**
+ * A titled block in the record page's rail.
+ *
+ * No frame. A record has seven or eight of these — the value, the score, what
+ * is next, the last email, what is owed — and a border around each turned the
+ * rail into a column of boxes that all shout equally, which on a phone is the
+ * first thing anybody sees. The heading already says where one section stops
+ * and the next starts; a box around it says the same thing twice, louder.
+ *
+ * Headings are small and quiet on purpose. They are signposts for the figures
+ * beneath them, and the figures are the content.
+ */
 export function RailSection({
   title,
   action,
@@ -175,9 +247,12 @@ export function RailSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
+    <section>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-[var(--text-strong)] text-[var(--text-muted)]">
+        {/* Uppercase and letter-spaced rather than merely small: at this size
+            a lowercase grey heading reads as another line of body text, which
+            is what left the rail looking like one undifferentiated column. */}
+        <h3 className="text-sm font-semibold uppercase tracking-[0.06em] text-[var(--text-subtle)]">
           {title}
         </h3>
         {action}

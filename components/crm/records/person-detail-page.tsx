@@ -11,14 +11,14 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
-import { CommentThread } from "@/components/crm/collaboration/comment-thread";
-import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
+import { customFieldAttributes } from "./custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "./record-mark";
+import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
 import { RecordAttributes } from "./record-attributes";
 import { useAttributeEditor } from "./use-attribute-editor";
 import { EntityLink } from "./entity-link";
@@ -119,6 +119,16 @@ export function PersonDetailPage({ personId }: { personId: string }) {
     queryKey: ["crm", "person", personId],
     queryFn: () => fetchJson<PersonDetail>(`/api/v2/crm/people/${personId}`),
   });
+  const teamQuery = useQuery({
+    queryKey: ["crm", "team"],
+    queryFn: () => fetchJson<{ data: Array<{ id: string; name: string | null }> }>(
+      "/api/v2/crm/team",
+    ),
+  });
+  const ownerOptions = (teamQuery.data?.data ?? []).map((member) => ({
+    value: member.id,
+    label: member.name ?? "Unnamed",
+  }));
   const fieldsQuery = useQuery({
     queryKey: ["crm", "field-definitions", "PERSON"],
     queryFn: () => fetchCrmFieldDefinitions("PERSON"),
@@ -246,13 +256,14 @@ export function PersonDetailPage({ personId }: { personId: string }) {
               id: "owner",
               label: "Owner",
               icon: UserRound,
-              display: (
-                <EntityLink
-                  href={person.assignedTo ? `/crm/reps/${person.assignedTo.id}` : null}
-                  className="text-sm"
-                >
-                  {person.assignedTo?.name ?? "Unassigned"}
-                </EntityLink>
+              placeholder: "Unassigned",
+              // A choice, not a label: who owns a record is the property that
+              // changes most and was the one you could not change from here.
+              ...edit.choice(
+                "assignedToId",
+                person.assignedTo?.id ?? null,
+                ownerOptions,
+                "Leave unassigned",
               ),
             },
             {
@@ -281,6 +292,12 @@ export function PersonDetailPage({ personId }: { personId: string }) {
               placeholder: "Not recorded",
               ...edit.text("city", person.city),
             },
+            ...customFieldAttributes({
+              definitions,
+              values: person.customFields,
+              onCommit: (key, value) =>
+                edit.save.mutate({ customFields: { [key]: value } }),
+            }),
           ]}
         />
       }
@@ -320,24 +337,11 @@ export function PersonDetailPage({ personId }: { personId: string }) {
             />
           ),
         },
-        {
-          value: "tasks",
-          label: "Tasks",
-          content: (
-            <RecordTasksTab record={{ personId }} currentUserId={session?.user?.id} />
-          ),
-        },
-        {
-          value: "comments",
-          label: "Comments",
-          content: (
-            <CommentThread
-              entity="PERSON"
-              recordId={personId}
-              currentUserId={session?.user?.id}
-            />
-          ),
-        },
+        tasksTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
+        commentsTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
+        mentionsTab({ ref: { kind: "person", id: personId } }),
+        filesTab({ ref: { kind: "person", id: personId } }),
+        automationTab({ ref: { kind: "person", id: personId } }),
         {
           value: "history",
           label: "History",

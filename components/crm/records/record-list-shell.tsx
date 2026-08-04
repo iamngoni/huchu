@@ -59,7 +59,6 @@ export function RecordListShell({
       createLabel && onCreate ? (
         <Button
           variant="primary"
-          size="sm"
           startIcon={<Plus className="h-4 w-4" />}
           onClick={onCreate}
         >
@@ -80,7 +79,7 @@ export function RecordListShell({
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder={searchPlaceholder}
-            className="h-9 w-full sm:w-64"
+            className="w-full sm:w-64"
             aria-label={searchPlaceholder}
           />
         }

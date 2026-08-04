@@ -123,7 +123,10 @@ export function LeadCard({ lead }: { lead: CrmBoardCard }) {
       }}
       className={cn(
         "rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-3",
-        "cursor-grab shadow-[var(--shadow-xs)] transition-shadow active:cursor-grabbing",
+        // `touch-manipulation` keeps the board scrollable under a finger until
+        // the long-press fires; `select-none` stops the hold raising a text
+        // selection callout over the card it is about to move.
+        "cursor-grab touch-manipulation select-none shadow-[var(--shadow-xs)] transition-shadow active:cursor-grabbing",
         "hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-sm)]",
         // The card left behind is a hole the size of the card, not a ghost of
         // it — the real thing is under the cursor in the drag overlay.

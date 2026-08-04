@@ -23,8 +23,31 @@ function getIconComponent(iconName: string) {
   return iconRegistry[iconName] ?? Phosphor.Question;
 }
 
+/**
+ * Marks that are strokes rather than shapes.
+ *
+ * A chevron is two strokes meeting at a point; an X is two strokes crossing;
+ * a plus is two strokes meeting at right angles. Phosphor's `fill` weight has
+ * nothing to fill in a glyph made only of lines, so it fills the *box* — a
+ * solid triangle where the chevron should be, a solid rounded square with the
+ * X or the + knocked out of it. That is what had been shipping in every
+ * dropdown trigger, every close button and every "New …" button in the
+ * product.
+ *
+ * Exact names rather than prefixes: `XCircle`, `PlusCircle` and `CheckCircle`
+ * are genuinely shapes — a circle carrying a mark — and are meant to be
+ * filled. Only the bare marks belong here. Everything else in the set keeps
+ * the fill weight, which is how the product is drawn.
+ */
+const STROKE_WEIGHT_PREFIX = /^Caret/;
+const STROKE_WEIGHT_EXACT = new Set(["X", "Plus", "Minus", "Check", "Checks", "Equals"]);
+
 function createPhosphorIcon(iconName: string, displayName: string): LucideIcon {
   const IconComponent = getIconComponent(iconName);
+  const defaultWeight: PhosphorIconProps["weight"] =
+    STROKE_WEIGHT_PREFIX.test(iconName) || STROKE_WEIGHT_EXACT.has(iconName)
+      ? "bold"
+      : "fill";
 
   const Icon = ({
     className,
@@ -52,7 +75,7 @@ function createPhosphorIcon(iconName: string, displayName: string): LucideIcon {
           color: "currentColor",
           ...style,
         }}
-        weight={weight ?? "fill"}
+        weight={weight ?? defaultWeight}
       />
     );
   };
@@ -61,6 +84,7 @@ function createPhosphorIcon(iconName: string, displayName: string): LucideIcon {
   return Icon;
 }
 
+export const Share = createPhosphorIcon("ShareNetwork", "Share");
 export const Smiley = createPhosphorIcon("Smiley", "Smiley");
 
 export const MedusaAcademicCapIcon = createPhosphorIcon(
@@ -151,6 +175,7 @@ export const ArrowDownward = createPhosphorIcon("ArrowDown", "ArrowDownward");
 export const ArrowUpward = createPhosphorIcon("ArrowUp", "ArrowUpward");
 export const BarChart3 = createPhosphorIcon("ChartBar", "BarChart3");
 export const Funnel = createPhosphorIcon("Funnel", "Funnel");
+export const SlidersHorizontal = createPhosphorIcon("Sliders", "SlidersHorizontal");
 export const AddressBook = createPhosphorIcon("AddressBook", "AddressBook");
 export const Megaphone = createPhosphorIcon("Megaphone", "Megaphone");
 export const CalendarCheck = createPhosphorIcon("CalendarCheck", "CalendarCheck");

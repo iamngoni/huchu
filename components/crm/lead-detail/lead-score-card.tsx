@@ -21,7 +21,7 @@ export function LeadScoreCard({ score }: { score: LeadScore }) {
   return (
     <div className="space-y-2">
       <div className="flex items-baseline gap-2">
-        <span className="font-mono text-2xl">{score.total}</span>
+        <span className="font-mono text-xl leading-none text-[var(--text-strong)]">{score.total}</span>
         <span className={cn("text-sm font-medium", BAND_TONE[score.band])}>
           {SCORE_BAND_LABELS[score.band]}
         </span>

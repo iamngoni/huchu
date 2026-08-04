@@ -18,6 +18,7 @@ import {
   Lock,
   Megaphone,
   Package,
+  X,
   type LucideIcon,
 } from "@/lib/icons";
 import { CRM_CHANNEL_LABELS, CRM_LEAD_CHANNELS } from "@/lib/crm/sources";
@@ -314,9 +315,11 @@ function CommissionsPanel() {
         <div className="space-y-2">
           <Label>Tiers (marginal rate from a cumulative revenue threshold)</Label>
           {tiers.map((tier, index) => (
-            <div key={index} className="grid grid-cols-12 gap-2">
+            // Two fields and a delete, sized by content rather than by
+            // twelfths: one twelfth of a 390px phone is a 22px delete button,
+            // which is half a touch target.
+            <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
               <Input
-                className="col-span-6"
                 type="number"
                 placeholder="From revenue"
                 value={tier.thresholdFrom}
@@ -327,7 +330,6 @@ function CommissionsPanel() {
                 }}
               />
               <Input
-                className="col-span-5"
                 type="number"
                 placeholder="Rate %"
                 value={tier.ratePercent}
@@ -338,12 +340,13 @@ function CommissionsPanel() {
                 }}
               />
               <Button
-                className="col-span-1"
+                className="size-9 px-0"
                 variant="ghost"
                 size="sm"
+                aria-label={`Remove tier ${index + 1}`}
                 onClick={() => setTiers(tiers.filter((_, i) => i !== index))}
               >
-                ✕
+                <X className="size-4" />
               </Button>
             </div>
           ))}

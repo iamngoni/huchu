@@ -4,7 +4,8 @@ import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronRight, type LucideIcon } from "@/lib/icons";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronDown, ChevronRight, type LucideIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,18 +23,113 @@ import { cn } from "@/lib/utils";
  * else either.
  */
 
+export type RecordAttributeOption = {
+  value: string;
+  label: string;
+  /** A dot or avatar shown beside the label in the list. */
+  leading?: ReactNode;
+};
+
 export type RecordAttribute = {
   id: string;
   label: string;
   icon?: LucideIcon;
-  /** For a value the page renders itself — a link, a chip, an avatar. */
+  /**
+   * For a value the page renders itself — a link, a chip, an avatar. A row
+   * that *only* has this is read-only; pair it with `options` or `onCommit`
+   * and it becomes the closed state of an editor instead.
+   */
   display?: ReactNode;
   /** For a plain value somebody can retype in place. */
   value?: string | null;
   onCommit?: (value: string) => void;
+  /**
+   * The row is a choice rather than free text: an owner, a status, a stage,
+   * anything whose value has to be one of a known set. `onCommit` receives the
+   * chosen option's `value`, or an empty string when it is cleared.
+   */
+  options?: RecordAttributeOption[];
+  /** What clearing means, when the row is allowed to be empty. */
+  clearLabel?: string;
   placeholder?: string;
   mono?: boolean;
 };
+
+/**
+ * A property whose value is one of a known set — an owner, a status, a stage.
+ *
+ * The whole value is the trigger, which is the Notion behaviour: you press
+ * what you are looking at, not a "Change" button parked beside it. A row that
+ * needs a separate verb to edit it is a row people stop editing.
+ */
+function ChoiceValue({ attribute }: { attribute: RecordAttribute }) {
+  const [open, setOpen] = useState(false);
+  const options = attribute.options ?? [];
+  const current = options.find((option) => option.value === (attribute.value ?? ""));
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "-mx-1.5 flex w-full min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-left text-sm hover:bg-[var(--surface-subtle)]",
+            !current && "text-[var(--text-muted)]",
+          )}
+        >
+          {attribute.display ?? (
+            <span className="min-w-0 truncate">
+              {current?.label ?? attribute.placeholder ?? "Empty"}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      {/* The trigger sits in the right-hand column of the property list, so a
+          fixed 240px panel aligned to its start runs off a 390px screen.
+          Bounded by the viewport, and told to keep clear of the edges. */}
+      <PopoverContent
+        align="start"
+        collisionPadding={12}
+        className="w-[min(15rem,calc(100vw-2rem))] p-1"
+      >
+        <div className="max-h-72 overflow-y-auto">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                attribute.onCommit?.(option.value);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex min-h-9 w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 text-left text-sm hover:bg-[var(--surface-hover)]",
+                option.value === attribute.value && "font-medium",
+              )}
+            >
+              {option.leading}
+              <span className="min-w-0 flex-1 truncate">{option.label}</span>
+              {option.value === attribute.value ? (
+                <Check className="size-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+              ) : null}
+            </button>
+          ))}
+          {attribute.clearLabel && attribute.value ? (
+            <button
+              type="button"
+              onClick={() => {
+                attribute.onCommit?.("");
+                setOpen(false);
+              }}
+              className="flex min-h-9 w-full items-center rounded-[var(--radius-sm)] px-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
+            >
+              {attribute.clearLabel}
+            </button>
+          ) : null}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function EditableValue({ attribute }: { attribute: RecordAttribute }) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -119,7 +215,15 @@ export function RecordAttributes({
                 <span className="truncate">{attribute.label}</span>
               </dt>
               <dd className="min-w-0 flex-1">
-                {attribute.display ?? <EditableValue attribute={attribute} />}
+                {/* Which editor a row gets is decided here, from the shape of
+                    the attribute: a known set of values is a choice, a commit
+                    handler is free text, and anything else is a value the page
+                    drew itself and nobody can edit in place. */}
+                {attribute.options && attribute.onCommit ? (
+                  <ChoiceValue attribute={attribute} />
+                ) : (
+                  (attribute.display ?? <EditableValue attribute={attribute} />)
+                )}
               </dd>
             </div>
           );

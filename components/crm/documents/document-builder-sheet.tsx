@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ import {
   type DocumentLineDraft,
 } from "./document-math";
 import { formatMoney } from "./document-types";
-import { CataloguePicker } from "./catalogue-picker";
+import { CataloguePicker, type VisitItemOption } from "./catalogue-picker";
 import { DocumentTemplatePicker } from "./document-template-picker";
 import { refreshAfterDocumentChange } from "@/lib/crm/refresh";
 
@@ -42,6 +42,23 @@ type LayoutOption = {
   isActive: boolean;
   isDefault: boolean;
 };
+
+/**
+ * One numeric box on a quote line, labelled on a phone and bare on a desk.
+ *
+ * `sm:contents` is what makes the row work at both widths without writing it
+ * twice: at `sm` and up the wrapper stops generating a box, and the input
+ * below it becomes a direct child of the line's seven-column grid again. The
+ * label is `sm:hidden` because the grid has its own heading row up there.
+ */
+function LineField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block sm:contents">
+      <span className="mb-1 block text-sm text-[var(--text-muted)] sm:hidden">{label}</span>
+      {children}
+    </label>
+  );
+}
 
 export function DocumentBuilderSheet({
   open,
@@ -86,6 +103,22 @@ export function DocumentBuilderSheet({
     queryFn: () =>
       fetchJson<LayoutOption[]>(`/api/document-templates?documentType=${docType}`),
   });
+  // What was measured on this record's visits, offered on every line rather
+  // than only as a one-shot prefill when a report is completed. basePath is
+  // `/api/v2/crm/leads/{id}` or `.../deals/{id}`; the record is read off it
+  // rather than threaded through four callers.
+  const recordMatch = /\/(leads|deals)\/([0-9a-f-]{36})/i.exec(basePath);
+  const visitItemsQuery = useQuery({
+    queryKey: ["crm", "visit-items", basePath],
+    enabled: open && Boolean(recordMatch),
+    queryFn: () =>
+      fetchJson<{ data: VisitItemOption[] }>(
+        `/api/v2/crm/visit-items?${recordMatch![1] === "leads" ? "leadId" : "dealId"}=${recordMatch![2]}`,
+      ),
+    staleTime: 60_000,
+  });
+  const visitItems = visitItemsQuery.data?.data ?? [];
+
   const layoutOptions = useMemo(
     () =>
       (layouts.data ?? [])
@@ -253,9 +286,16 @@ export function DocumentBuilderSheet({
             const net = round2(quantity * round2(listPrice * (1 - discount / 100)));
 
             return (
+              // On a phone the seven-column row becomes a card. The column
+              // headings above are `sm:grid`, so stacked the four numeric
+              // boxes were four identical unlabelled fields between the
+              // description and the total — the aria-labels are the only
+              // thing that ever said which was which, and nobody sees those.
+              // At `sm` and up the wrappers below go `display: contents` and
+              // the original grid is back, unchanged.
               <div
                 key={index}
-                className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem] sm:items-center"
+                className="grid gap-2 rounded-[var(--radius-md)] border border-[var(--border)] p-3 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_5rem_7rem_2rem] sm:items-center sm:rounded-none sm:border-0 sm:p-0"
               >
                 {/* Free text still works — a quote for something not in the
                     catalogue is a real thing, and a builder that refuses it
@@ -263,66 +303,91 @@ export function DocumentBuilderSheet({
                     sell, with its price and tax already right. */}
                 <CataloguePicker
                   value={line.description}
+                  visitItems={visitItems}
+                  aria-label={`Line ${index + 1} description`}
                   onChange={(value) => patchLine(index, { description: value })}
                   onPick={(pick) =>
                     patchLine(index, {
                       description: pick.description,
-                      unitPrice: pick.unitPrice.toFixed(2),
-                      taxRate: String(pick.taxRate),
+                      // A measured item may carry no price — somebody wrote
+                      // down a size and left the pricing for later. Filling
+                      // the box with "0.00" there would look like a decision.
+                      ...(pick.unitPrice != null
+                        ? { unitPrice: pick.unitPrice.toFixed(2) }
+                        : {}),
+                      ...(pick.taxRate != null ? { taxRate: String(pick.taxRate) } : {}),
+                      ...(pick.quantity != null ? { quantity: String(pick.quantity) } : {}),
                     })
                   }
                   placeholder="What are you charging for?"
                 />
-                <Input
-                  value={line.quantity}
-                  onChange={(event) => patchLine(index, { quantity: event.target.value })}
-                  inputMode="decimal"
-                  className="text-right font-mono"
-                  aria-label={`Line ${index + 1} quantity`}
-                />
-                <Input
-                  value={line.unitPrice}
-                  onChange={(event) => patchLine(index, { unitPrice: event.target.value })}
-                  inputMode="decimal"
-                  className="text-right font-mono"
-                  placeholder="0.00"
-                  aria-label={`Line ${index + 1} unit price`}
-                />
-                <Input
-                  value={line.discountPercent}
-                  onChange={(event) =>
-                    patchLine(index, { discountPercent: event.target.value })
-                  }
-                  inputMode="decimal"
-                  className="text-right font-mono"
-                  placeholder="0"
-                  aria-label={`Line ${index + 1} discount percent`}
-                />
-                <Input
-                  value={line.taxRate}
-                  onChange={(event) => patchLine(index, { taxRate: event.target.value })}
-                  inputMode="decimal"
-                  className="text-right font-mono"
-                  placeholder="0"
-                  aria-label={`Line ${index + 1} tax percent`}
-                />
-                <span className="px-1 text-right font-mono text-sm tabular-nums">
-                  {net.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 px-0"
-                  aria-label={`Remove line ${index + 1}`}
-                  disabled={lines.length === 1}
-                  onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {/* Two by two on a phone, and back in the row at `sm`. */}
+                <div className="grid grid-cols-2 gap-2 sm:contents">
+                  <LineField label="Qty">
+                    <Input
+                      value={line.quantity}
+                      onChange={(event) => patchLine(index, { quantity: event.target.value })}
+                      inputMode="decimal"
+                      className="text-right font-mono"
+                      aria-label={`Line ${index + 1} quantity`}
+                    />
+                  </LineField>
+                  <LineField label="Unit price">
+                    <Input
+                      value={line.unitPrice}
+                      onChange={(event) => patchLine(index, { unitPrice: event.target.value })}
+                      inputMode="decimal"
+                      className="text-right font-mono"
+                      placeholder="0.00"
+                      aria-label={`Line ${index + 1} unit price`}
+                    />
+                  </LineField>
+                  <LineField label="Disc %">
+                    <Input
+                      value={line.discountPercent}
+                      onChange={(event) =>
+                        patchLine(index, { discountPercent: event.target.value })
+                      }
+                      inputMode="decimal"
+                      className="text-right font-mono"
+                      placeholder="0"
+                      aria-label={`Line ${index + 1} discount percent`}
+                    />
+                  </LineField>
+                  <LineField label="Tax %">
+                    <Input
+                      value={line.taxRate}
+                      onChange={(event) => patchLine(index, { taxRate: event.target.value })}
+                      inputMode="decimal"
+                      className="text-right font-mono"
+                      placeholder="0"
+                      aria-label={`Line ${index + 1} tax percent`}
+                    />
+                  </LineField>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 sm:contents">
+                  <span className="px-1 text-right font-mono text-sm tabular-nums">
+                    <span className="mr-2 font-sans text-[var(--text-muted)] sm:hidden">
+                      Line total
+                    </span>
+                    {net.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-9 px-0"
+                    aria-label={`Remove line ${index + 1}`}
+                    disabled={lines.length === 1}
+                    onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             );
           })}

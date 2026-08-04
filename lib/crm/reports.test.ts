@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   biggestLeak,
   bucketByPeriod,
+  bucketSeries,
   buildFunnel,
   forecast,
   medianCycleDays,
+  medianDaysInStage,
   rangeToDates,
+  shareSlices,
   summarizeGroups,
   winRate,
 } from "./reports";
@@ -230,5 +233,142 @@ describe("rangeToDates", () => {
     const { from } = rangeToDates("12m", now);
     expect(from.getFullYear()).toBe(2025);
     expect(from.getMonth()).toBe(2);
+  });
+});
+
+describe("bucketSeries", () => {
+  const range = { from: new Date("2026-03-01T00:00:00Z"), to: new Date("2026-03-05T00:00:00Z") };
+
+  it("sums a value alongside the count", () => {
+    const buckets = bucketSeries(
+      [
+        { at: "2026-03-02T09:00:00Z", value: 1200 },
+        { at: "2026-03-02T17:00:00Z", value: 300 },
+      ],
+      range,
+    );
+    const day = buckets.find((bucket) => bucket.period === "2026-03-02");
+    expect(day).toEqual({ period: "2026-03-02", count: 2, value: 1500 });
+  });
+
+  it("treats a missing value as nothing rather than as a hole", () => {
+    const buckets = bucketSeries([{ at: "2026-03-03T09:00:00Z" }], range);
+    const day = buckets.find((bucket) => bucket.period === "2026-03-03");
+    expect(day).toEqual({ period: "2026-03-03", count: 1, value: 0 });
+  });
+});
+
+describe("medianDaysInStage", () => {
+  const now = new Date("2026-03-20T00:00:00Z");
+
+  it("measures each span from when the deal entered the stage", () => {
+    const result = medianDaysInStage(
+      [
+        {
+          id: "d1",
+          createdAt: "2026-03-01T00:00:00Z",
+          closedAt: "2026-03-11T00:00:00Z",
+          currentStageId: "won",
+        },
+      ],
+      [
+        { dealId: "d1", fromStageId: "new", toStageId: "quoted", at: "2026-03-03T00:00:00Z" },
+        { dealId: "d1", fromStageId: "quoted", toStageId: "won", at: "2026-03-10T00:00:00Z" },
+      ],
+      now,
+    );
+
+    expect(result.new).toBe(2);
+    expect(result.quoted).toBe(7);
+    expect(result.won).toBe(1);
+  });
+
+  it("counts a deal that has never moved as still sitting where it is", () => {
+    const result = medianDaysInStage(
+      [
+        {
+          id: "d1",
+          createdAt: "2026-03-15T00:00:00Z",
+          closedAt: null,
+          currentStageId: "new",
+        },
+      ],
+      [],
+      now,
+    );
+
+    expect(result.new).toBe(5);
+  });
+
+  it("keeps counting an open deal, because a deal parked for weeks is the point", () => {
+    const result = medianDaysInStage(
+      [{ id: "d1", createdAt: "2026-01-01T00:00:00Z", closedAt: null, currentStageId: "s1" }],
+      [{ dealId: "d1", fromStageId: "s1", toStageId: "s2", at: "2026-01-05T00:00:00Z" }],
+      now,
+    );
+
+    expect(result.s1).toBe(4);
+    expect(result.s2).toBeGreaterThan(70);
+  });
+
+  it("takes the median so one stalled deal does not redefine normal", () => {
+    const deals = [1, 2, 3].map((n) => ({
+      id: `d${n}`,
+      createdAt: "2026-03-01T00:00:00Z",
+      closedAt: null,
+      currentStageId: "s1",
+    }));
+    const changes = [
+      { dealId: "d1", fromStageId: "s1", toStageId: "s2", at: "2026-03-02T00:00:00Z" },
+      { dealId: "d2", fromStageId: "s1", toStageId: "s2", at: "2026-03-04T00:00:00Z" },
+      { dealId: "d3", fromStageId: "s1", toStageId: "s2", at: "2026-06-01T00:00:00Z" },
+    ];
+
+    expect(medianDaysInStage(deals, changes, now).s1).toBe(3);
+  });
+
+  it("ignores a change with no destination recorded", () => {
+    const result = medianDaysInStage(
+      [{ id: "d1", createdAt: "2026-03-10T00:00:00Z", closedAt: null, currentStageId: "s1" }],
+      [{ dealId: "d1", fromStageId: "s1", toStageId: null, at: "2026-03-12T00:00:00Z" }],
+      now,
+    );
+
+    expect(result.s1).toBe(10);
+  });
+});
+
+describe("shareSlices", () => {
+  it("folds everything past the limit into one slice so the shares still sum", () => {
+    const slices = shareSlices(
+      [
+        { key: "a", label: "A", value: 50 },
+        { key: "b", label: "B", value: 30 },
+        { key: "c", label: "C", value: 10 },
+        { key: "d", label: "D", value: 6 },
+        { key: "e", label: "E", value: 4 },
+      ],
+      3,
+    );
+
+    expect(slices).toHaveLength(4);
+    expect(slices[3].label).toBe("Other (2)");
+    expect(slices[3].value).toBe(10);
+    expect(slices.reduce((sum, slice) => sum + slice.share, 0)).toBeCloseTo(1);
+  });
+
+  it("drops a slice of nothing, which has no angle to draw", () => {
+    const slices = shareSlices([
+      { key: "a", label: "A", value: 10 },
+      { key: "b", label: "B", value: 0 },
+      { key: "c", label: "C", value: -5 },
+    ]);
+
+    expect(slices.map((slice) => slice.key)).toEqual(["a"]);
+    expect(slices[0].share).toBe(1);
+  });
+
+  it("returns nothing rather than a pie of zeros", () => {
+    expect(shareSlices([{ key: "a", label: "A", value: 0 }])).toEqual([]);
   });
 });

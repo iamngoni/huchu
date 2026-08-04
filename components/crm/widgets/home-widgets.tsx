@@ -235,7 +235,10 @@ export function renderHomeWidget(type: string, data: HomeData): React.ReactNode 
                       href={`/crm/deals?stageId=${stage.id}`}
                       className="flex items-center gap-3 text-sm hover:underline"
                     >
-                      <span className="w-32 shrink-0 truncate">{stage.name}</span>
+                      {/* The name, the bar and the money share one row. 32rem of
+                          name leaves the money nowhere to go at phone width,
+                          so the label gives up a quarter of itself there. */}
+                      <span className="w-24 shrink-0 truncate sm:w-32">{stage.name}</span>
                       <span
                         className={cn(
                           "h-2 rounded-full",

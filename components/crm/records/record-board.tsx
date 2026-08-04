@@ -7,7 +7,8 @@ import {
   DragOverlay,
   defaultDropAnimationSideEffects,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCorners,
   useDroppable,
   useSensor,
@@ -28,6 +29,8 @@ import { EmptyState, Skeleton } from "@corelithzw/react";
 import { cn } from "@/lib/utils";
 
 import { BoardColumnHeader } from "./board-column-header";
+import { MobileBoard } from "./board-mobile";
+import type { RecordListRow } from "./record-list";
 
 const DROP_ANIMATION: DropAnimation = {
   duration: 220,
@@ -47,6 +50,14 @@ export type RecordBoardCard = {
   href: string;
   /** The card's face. Composed by the caller so each entity keeps its own. */
   content: ReactNode;
+  /**
+   * The same record as a list row, for the phone board. A card face is two or
+   * three stacked lines because a column is 288px of vertical space; a list
+   * row is a title, one supporting line and a fact on the right. Callers that
+   * already build rows for their list view pass those, so the two views of the
+   * same records agree. Omitted, the card face is reused as-is.
+   */
+  row?: Omit<RecordListRow, "id" | "href">;
 };
 
 function BoardCard({ card }: { card: RecordBoardCard }) {
@@ -66,7 +77,10 @@ function BoardCard({ card }: { card: RecordBoardCard }) {
       }}
       className={cn(
         "rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-3",
-        "cursor-grab shadow-[var(--shadow-xs)] transition-shadow active:cursor-grabbing",
+        // `touch-manipulation` keeps the board scrollable under a finger until
+        // the long-press fires; `select-none` stops the hold raising a text
+        // selection callout over the card it is about to move.
+        "cursor-grab touch-manipulation select-none shadow-[var(--shadow-xs)] transition-shadow active:cursor-grabbing",
         "hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-sm)]",
         isDragging &&
           "border-dashed bg-[var(--surface-muted)] opacity-50 shadow-none [&_*]:invisible",
@@ -167,7 +181,13 @@ export function RecordBoard({
   const [dragging, setDragging] = useState<RecordBoardCard | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // MouseSensor and TouchSensor rather than PointerSensor. PointerSensor
+    // answers touch too, and its 6px threshold is crossed long before any
+    // long-press delay elapses — so with both registered, every attempt to
+    // swipe the board sideways started a drag instead. Splitting them lets a
+    // finger scroll immediately and drag only after a deliberate hold.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -185,9 +205,11 @@ export function RecordBoard({
 
   if (isLoading) {
     return (
-      <div className="flex gap-3" aria-busy="true">
+      // A phone is about to get a list, so it waits for a list — not a strip
+      // of column skeletons, of which it can see one and a quarter.
+      <div className="space-y-2 lg:flex lg:space-y-0 lg:gap-3" aria-busy="true">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton key={index} className="h-96 w-72 shrink-0" />
+          <Skeleton key={index} className="h-16 w-full lg:h-96 lg:w-72 lg:shrink-0" />
         ))}
       </div>
     );
@@ -216,6 +238,27 @@ export function RecordBoard({
   };
 
   return (
+    <>
+    <MobileBoard
+      className="lg:hidden"
+      emptyTitle={emptyLabel}
+      stages={columns.map((column) => ({
+        id: column.id,
+        label: column.name,
+        dot: column.color.dot,
+        count: (byColumn.get(column.id) ?? []).length,
+        rows: (byColumn.get(column.id) ?? []).map((card) => ({
+          id: card.id,
+          href: card.href,
+          ...(card.row ?? { title: card.content }),
+        })),
+      }))}
+    />
+
+    {/* The board itself is desktop-only. Rendered rather than unmounted so the
+        two views cannot drift apart in behaviour; the drag sensors below never
+        see a touch because nothing here is on screen at phone width. */}
+    <div className="hidden lg:block">
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -244,5 +287,7 @@ export function RecordBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </div>
+    </>
   );
 }

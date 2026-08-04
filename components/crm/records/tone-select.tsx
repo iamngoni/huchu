@@ -91,15 +91,19 @@ export function ToneSelect({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          size="sm"
-          className={cn("h-9 min-w-0 justify-between gap-2", className)}
+          // `shrink-0` because the toolbar would otherwise squeeze this below
+          // its own content. The height and the gap come from the button, not
+          // from here: this used to carry `size="sm" h-9`, which is asking for
+          // a 30px control and then forcing 36px back onto it — the habit that
+          // left three different heights in one row.
+          className={cn("shrink-0 justify-between whitespace-nowrap", className)}
           aria-label={label}
         >
           <span className="flex min-w-0 items-center gap-2">
             {/* A multi-select trigger says WHICH question it answers, and
                 shows the choice as dots. Spelling out every chosen stage
                 turns a 9-item pick into a sentence that wraps the button. */}
-            <span className="truncate">
+            <span className="whitespace-nowrap">
               {multiple ? (label ?? placeholder) : (chosen[0]?.label ?? placeholder)}
             </span>
             {multiple && chosen.length > 0 ? (

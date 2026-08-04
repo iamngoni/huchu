@@ -41,9 +41,11 @@ export function ColumnPicker({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        {/* h-9 gap-2, the same box as every other trigger in the view
-            toolbar — this was the one control in the row at its own height. */}
-        <Button type="button" variant="outline" size="sm" className="h-9 gap-2">
+        {/* No size and no height class: the design system's default control
+            height is what every other trigger in the toolbar is, and asking
+            for `sm` and then forcing 36px back on top is how the row ended up
+            with three different heights in it. */}
+        <Button type="button" variant="outline">
           <Eye className="size-4" aria-hidden="true" />
           {label}
           {/* The count alone. "2 hidden" spelt out makes the trigger a

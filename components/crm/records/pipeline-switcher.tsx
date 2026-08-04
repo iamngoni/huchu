@@ -56,7 +56,7 @@ export function PipelineSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" variant="outline" className="h-9 gap-2">
+        <Button variant="outline">
           {triggerLabel}
           <ChevronDown className="size-3 text-[var(--text-muted)]" />
         </Button>

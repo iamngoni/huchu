@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { CrmLeadStage } from "@prisma/client";
 
@@ -26,6 +25,7 @@ import type { ColumnOption } from "@/lib/ui/visible-columns";
 import { cn } from "@/lib/utils";
 
 import { RecordMark } from "@/components/crm/records/record-mark";
+import { RecordList } from "@/components/crm/records/record-list";
 
 import type { LeadFilterOwner } from "./leads-filters";
 import {
@@ -114,7 +114,6 @@ export function LeadsTable({
   /** Column ids the reader has switched off. */
   hiddenColumns?: string[];
 }) {
-  const router = useRouter();
 
   const columns = useMemo<ColumnDef<CrmLeadListRecord>[]>(
     () => [
@@ -299,31 +298,30 @@ export function LeadsTable({
           );
         },
       }}
-      mobileCardRenderer={({ row }) => (
-        <button
-          type="button"
-          onClick={() => router.push(`/crm/leads/${row.id}`)}
-          className="flex w-full flex-col gap-2 rounded-[var(--card-radius)] border border-[var(--border)] p-3 text-left"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="truncate font-medium">{row.title ?? row.leadNo}</div>
-              <div className="truncate font-mono text-sm text-[var(--text-muted)]">
-                {row.leadNo} · {row.client?.name ?? "No client"}
-              </div>
-            </div>
-            <StatusChip
-              status={CRM_STAGE_STATUS[row.stage]}
-              label={CRM_STAGE_LABELS[row.stage]}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-2 text-sm">
-            <span className="font-mono">{formatLeadValue(row.estimatedValue, row.currency)}</span>
-            <span className="text-[var(--text-muted)]">
-              {row.assignedTo?.name ?? "Unassigned"}
-            </span>
-          </div>
-        </button>
+      // On a phone the table becomes the same list every other CRM surface
+      // uses: one row per lead, two lines inside it, rows separated by
+      // whitespace. The owner joins the reference line rather than earning a
+      // third row of its own, and the value sits on the right.
+      mobileListRenderer={({ rows: mobileRows }) => (
+        <RecordList
+          rows={mobileRows.map(({ row }) => ({
+            id: row.id,
+            href: `/crm/leads/${row.id}`,
+            title: row.title ?? row.leadNo,
+            subtitle: `${row.leadNo} · ${row.client?.name ?? "No client"} · ${
+              row.assignedTo?.name ?? "Unassigned"
+            }`,
+            status: (
+              <StatusChip
+                status={CRM_STAGE_STATUS[row.stage]}
+                label={CRM_STAGE_LABELS[row.stage]}
+              />
+            ),
+            facts: [
+              { value: formatLeadValue(row.estimatedValue, row.currency), mono: true },
+            ],
+          }))}
+        />
       )}
       emptyState={
         isLoading ? "Loading leads…" : "No leads match these filters."
