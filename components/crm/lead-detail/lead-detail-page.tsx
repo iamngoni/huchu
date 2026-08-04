@@ -400,20 +400,28 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
       ]}
       rail={
         <>
-          <RailSection title="Deal">
-            <p className="font-mono text-2xl">
+          {/* The headline, and the only raised surface on the page. Removing
+              every frame made the summary calm and also uniform — nine
+              sections of identical weight, so nothing led. One tinted panel
+              carrying the two figures somebody opens a lead to see gives the
+              column a top, and everything below it can stay quiet. */}
+          <section className="rounded-[var(--card-radius)] bg-[var(--surface-muted)] px-4 py-3.5">
+            <p className="text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+              Worth
+            </p>
+            <p className="mt-1 font-mono text-3xl leading-none tracking-tight text-[var(--text-strong)]">
               {formatLeadValue(lead.estimatedValue, lead.currency)}
             </p>
-            <p className="text-sm text-[var(--text-muted)]">
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
               {lead.probability ?? 0}% likely · {CRM_STAGE_LABELS[lead.stage]}
             </p>
-          </RailSection>
 
-          {lead.scoreBreakdown ? (
-            <RailSection title="Score">
-              <LeadScoreCard score={lead.scoreBreakdown} />
-            </RailSection>
-          ) : null}
+            {lead.scoreBreakdown ? (
+              <div className="mt-3.5 border-t border-[var(--border)] pt-3">
+                <LeadScoreCard score={lead.scoreBreakdown} />
+              </div>
+            ) : null}
+          </section>
 
           <RailSection title="Up next">
             <NextInteractionCard

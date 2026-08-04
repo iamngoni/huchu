@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+
+import { useIsBelow } from "@/hooks/use-mobile";
 import Link from "next/link";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger, Stack } from "@corelithzw/react";
@@ -15,6 +17,9 @@ import { PageChrome } from "@/components/layout/page-chrome";
 import { IconButton } from "@/components/ui/icon-button";
 import { DotsThree, type LucideIcon } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
+
+/** The synthetic tab the rail becomes when there is no room beside the content. */
+const OVERVIEW_TAB = "overview";
 
 export type RecordTab = {
   value: string;
@@ -94,7 +99,44 @@ export function RecordPageShell({
    */
   attributes?: ReactNode;
 }) {
-  const visibleTabs = tabs.filter((tab) => tab.content !== null && tab.content !== undefined);
+  // Below `lg` there is no room for a rail beside the content, and stacking it
+  // above the tabs pushed the record itself under the fold — you scrolled past
+  // a summary to reach the thing you opened. So the summary becomes a tab, and
+  // it is the one you land on: the same content, in a place with a name.
+  const compact = useIsBelow(1024);
+
+  const visibleTabs = useMemo(() => {
+    const real = tabs.filter((tab) => tab.content !== null && tab.content !== undefined);
+    if (!rail || !compact) return real;
+    return [{ value: OVERVIEW_TAB, label: "Overview", content: rail }, ...real];
+  }, [tabs, rail, compact]);
+
+  // Compact, the landing tab is Overview: it is what the rail used to show
+  // before anything else, and a record that opens on its timeline makes you
+  // hunt for the summary you came for. The parent still owns which *real* tab
+  // is showing, so "add a task" jumping to Tasks works from here too.
+  const [compactTab, setCompactTab] = useState<string | null>(null);
+  // Adjusting state during render rather than in an effect: this is the
+  // sanctioned way to follow a prop, and it lands before paint instead of
+  // showing the old tab for a frame.
+  const [lastActive, setLastActive] = useState(activeTab);
+  if (activeTab !== lastActive) {
+    setLastActive(activeTab);
+    setCompactTab(activeTab);
+  }
+
+  const preferred = compact && rail ? (compactTab ?? OVERVIEW_TAB) : activeTab;
+
+  // Widening the window takes the Overview tab away with the rail. Falling back
+  // to the first real tab beats rendering a pane that no trigger points at.
+  const currentTab = visibleTabs.some((tab) => tab.value === preferred)
+    ? preferred
+    : (visibleTabs[0]?.value ?? activeTab);
+
+  const handleTabChange = (value: string) => {
+    setCompactTab(value);
+    if (value !== OVERVIEW_TAB) onTabChange(value);
+  };
 
   const barActions = useMemo(
     () => (
@@ -150,18 +192,9 @@ export function RecordPageShell({
 
       {beforeTabs}
 
-      {/* Stacked, the rail goes above the tabs rather than below them.
-          It carries what somebody opened the record to find — what is next,
-          which stage, what is owed, who to ring — and underneath a timeline
-          that runs to fifty entries, nobody would ever reach it. The two
-          asides are mutually exclusive at every width, so no control is
-          duplicated; `.detail-grid` collapses to one column at the same
-          breakpoint (see app/globals.css). */}
-      {rail ? <aside className="space-y-5 lg:hidden">{rail}</aside> : null}
-
       <div className={rail ? "detail-grid" : "min-w-0"}>
         <div className="min-w-0 space-y-4">
-          <Tabs value={activeTab} onValueChange={onTabChange}>
+          <Tabs value={currentTab} onValueChange={handleTabChange}>
             <div className="scroll-rail max-w-full">
               <TabsList>
                 {visibleTabs.map((tab) => (
@@ -173,14 +206,18 @@ export function RecordPageShell({
               </TabsList>
             </div>
             {visibleTabs.map((tab) => (
-              <TabsContent key={tab.value} value={tab.value} className="pt-4">
+              <TabsContent
+                key={tab.value}
+                value={tab.value}
+                className={tab.value === OVERVIEW_TAB ? "space-y-7 pt-5" : "pt-4"}
+              >
                 {tab.content}
               </TabsContent>
             ))}
           </Tabs>
         </div>
 
-        {rail ? <aside className="hidden space-y-5 lg:block">{rail}</aside> : null}
+        {rail ? <aside className="hidden space-y-7 lg:block">{rail}</aside> : null}
       </div>
 
       {children}
@@ -211,8 +248,11 @@ export function RailSection({
 }) {
   return (
     <section>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        {/* Uppercase and letter-spaced rather than merely small: at this size
+            a lowercase grey heading reads as another line of body text, which
+            is what left the rail looking like one undifferentiated column. */}
+        <h3 className="text-sm font-semibold uppercase tracking-[0.06em] text-[var(--text-subtle)]">
           {title}
         </h3>
         {action}
