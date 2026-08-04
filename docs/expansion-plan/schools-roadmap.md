@@ -39,8 +39,11 @@ Every story, no exceptions:
 6. No new hard-coded colours, sizes or fonts — design-system tokens only
 7. Every privileged action writes a `PlatformAuditEvent`; every query is scoped by `companyId`
 
-**Known debt against item 5.** Every story marked `done` so far meets items 1–4, 6 and 7 but has
-*not* been screenshot-verified. `e2e/visual-pass.spec.ts` exists and is skipped unless
+**Known debt against item 5.** Stories S-0.1 to S-0.9 and S-3.1 were marked `done` before the
+visual pass could run, and meet items 1–4, 6 and 7 only. The pass now runs (see the changelog for
+2026-08-04 `bb7f70b`) and its first real execution found three defects the other gates could not
+see: every schools list rendering empty, horizontal overflow on five of six surfaces, and a
+hydration failure on Academics. The overflow and hydration work is tracked by S-10.1 and S-10.2. `e2e/visual-pass.spec.ts` exists and is skipped unless
 `VISUAL_PASS=1`, because it needs a tenant hostname, a matching `PLATFORM_ROOT_DOMAIN` and a
 password user — `lib/admin-portal.ts` treats localhost as the *admin* host in dev, so without that
 setup every tenant page redirects to the admin sign-in. The first version of that spec reported six
