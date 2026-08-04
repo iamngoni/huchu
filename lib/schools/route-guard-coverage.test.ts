@@ -1,11 +1,11 @@
 /**
  * Every school API route is guarded.
  *
- * This is a coverage test rather than a behaviour test, and it exists because
- * of where the schools API sits: the middleware matcher in `proxy.ts` does not
- * cover `/api/v2/**`, so the `scope: "api"` entries in the route registry never
- * run for it. A route that forgets its own check has no second line of defence
- * — it is open to any signed-in user in the tenant, including a parent.
+ * This is a coverage test rather than a behaviour test. The route registry does
+ * run for `/api/v2/**` — `requireApiAuth` calls `canAccessRouteWithToken` — but
+ * it gates on the tenant's features, not on the caller. A route that forgets
+ * its own check is open to every signed-in user in a tenant that has the module
+ * switched on, which includes teachers, parents and students.
  *
  * A new route file therefore fails this test until it declares who may call it.
  */

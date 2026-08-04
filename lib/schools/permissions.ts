@@ -7,10 +7,14 @@ import { hasPersonaPermission, personaForRole } from "@/lib/platform/personas";
  * onto a persona, so `hasPersonaPermission` had no call sites and the grants
  * were decoration. This is the school's entry point into it.
  *
- * It matters more here than the middleware suggests: the matcher in `proxy.ts`
- * does not cover `/api/v2/**`, so the `scope: "api"` entries in the route
- * registry never run for the schools API. A check inside the route is the only
- * thing standing between a signed-in teacher and the fee ledger.
+ * The route registry is a separate axis and does not substitute for this. It
+ * answers "is this module switched on for this tenant" — `requireApiAuth` runs
+ * `canAccessRouteWithToken` for `/api/v2/**` (`lib/auth-core/access.ts`), so a
+ * company without `schools.fees` gets a 403 before the handler. What it never
+ * asks is which signed-in member of staff is calling. Feature-enabled plus
+ * signed-in is the whole of its answer, and that describes a teacher as
+ * accurately as it describes the bursar. The check below is what stands
+ * between the two and the fee ledger.
  */
 
 export const SCHOOL_RESOURCES = [

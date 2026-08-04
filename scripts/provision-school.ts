@@ -88,6 +88,9 @@ async function main() {
       `${accounting.createdPostingRules} posting rules`,
   );
   console.log(
+    `  entitlement     ADDON_SCHOOLS_SUITE, ${result.featuresEnabled} features on`,
+  );
+  console.log(
     "\nThe school can enrol, invoice and take a register. Everything above is a " +
       "default to edit, not a decision that has been made for them.",
   );

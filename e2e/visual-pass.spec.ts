@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 /**
@@ -23,15 +26,24 @@ import { test, expect } from "@playwright/test";
  *     PW_CHROMIUM=/opt/pw-browsers/chromium SHOT_DIR=/tmp/shots \
  *     npx playwright test e2e/visual-pass.spec.ts --workers=1
  *
- * The page-identity assertions below are the point. An earlier run of this
- * spec reported six passes while every screenshot was the admin sign-in page:
- * the overflow check is perfectly happy to measure a login form. A layout test
- * that cannot prove which page it is looking at proves nothing.
+ * Two things here are load-bearing, both learned by getting them wrong:
+ *
+ * The suite signs in ONCE and reuses the storage state. `authorize()` rate
+ * limits credentials to 10 attempts per 15 minutes per host+email+address, so
+ * a spec that logs in per test spends its budget on itself and the later tests
+ * silently screenshot the login page.
+ *
+ * Page identity is asserted POSITIVELY, on the heading the page is supposed to
+ * render. An earlier version asserted the absence of the admin magic-link form
+ * and reported six greens over six screenshots of the *tenant* password form —
+ * a different sign-in page, so the negative check never fired. Proving what a
+ * page is beats enumerating what it is not.
  */
 
-const EMAIL = "head@chisipite-demo.test";
-const PASSWORD = "VisualPass123!";
+const EMAIL = process.env.VISUAL_PASS_EMAIL ?? "head@chisipite-demo.test";
+const PASSWORD = process.env.VISUAL_PASS_PASSWORD ?? "VisualPass123!";
 const SHOTS = process.env.SHOT_DIR ?? "/tmp/shots";
+const AUTH_STATE = path.join(os.tmpdir(), "visual-pass-auth.json");
 
 // The pinned @playwright/test wants a newer Chromium build than the one
 // installed here, so point at the stable symlink rather than downloading.
@@ -40,9 +52,13 @@ test.use({
     ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}),
     args: ["--no-proxy-server"],
   },
+  storageState: AUTH_STATE,
 });
 
-test.skip(process.env.VISUAL_PASS !== "1", "Set VISUAL_PASS=1 with a provisioned tenant host — see the file header.");
+test.skip(
+  process.env.VISUAL_PASS !== "1",
+  "Set VISUAL_PASS=1 with a provisioned tenant host — see the file header.",
+);
 
 const VIEWPORTS = [
   { name: "phone", width: 390, height: 844, hasTouch: true },
@@ -50,10 +66,68 @@ const VIEWPORTS = [
 ];
 
 const PAGES = [
-  { name: "academics", path: "/schools/academics" },
-  { name: "guardians", path: "/schools/guardians" },
-  { name: "students", path: "/schools/students" },
+  { name: "academics", path: "/schools/academics", heading: "Academics Setup" },
+  { name: "guardians", path: "/schools/guardians", heading: "Guardians" },
+  { name: "students", path: "/schools/students", heading: "Students" },
 ];
+
+/**
+ * Sign in once for the whole file. Runs before any test's context is built, so
+ * the storage state referenced by `test.use` above exists by the time it is
+ * read.
+ */
+test.beforeAll(async ({ browser }) => {
+  fs.mkdirSync(SHOTS, { recursive: true });
+
+  // Playwright restarts the worker after a failing test, which re-runs this
+  // hook. Logging in each time spends the 10-per-15-minutes credentials budget
+  // on the harness, and the runs after it fail on a rate limit rather than on
+  // whatever they were meant to measure — the first real failure would hide
+  // every result behind it. Reuse a live session instead.
+  if (fs.existsSync(AUTH_STATE)) {
+    const probe = await browser.newContext({ storageState: AUTH_STATE });
+    const session = await probe.request.get("/api/auth/session");
+    const body = await session.json().catch(() => ({}));
+    await probe.close();
+    if (body?.user) return;
+  }
+
+  const context = await browser.newContext({ storageState: undefined });
+  const page = await context.newPage();
+
+  await page.goto("/login");
+  await page.fill('input[type="email"]', EMAIL);
+  await page.fill('input[type="password"]', PASSWORD);
+  const [response] = await Promise.all([
+    page.waitForResponse((r) => r.url().includes("/api/auth/callback/credentials"), {
+      timeout: 30_000,
+    }),
+    page.click('button[type="submit"]'),
+  ]);
+
+  // A 401 here is the whole run's outcome, so say why rather than letting six
+  // tests fail one at a time on a screenshot of the login form. The reason is
+  // recorded against `auth.login.failed` in PlatformAuditEvent.
+  expect(
+    response.status(),
+    `sign-in as ${EMAIL} was rejected (${response.status()}) — check PlatformAuditEvent ` +
+      "for the auth.login.failed reason; AUTH_RATE_LIMITED clears after 15 minutes",
+  ).toBeLessThan(400);
+
+  await expect
+    .poll(
+      async () => {
+        const session = await page.request.get("/api/auth/session");
+        const body = await session.json().catch(() => ({}));
+        return Boolean(body?.user);
+      },
+      { timeout: 30_000, intervals: [500] },
+    )
+    .toBe(true);
+
+  await context.storageState({ path: AUTH_STATE });
+  await context.close();
+});
 
 for (const viewport of VIEWPORTS) {
   test.describe(`${viewport.name} ${viewport.width}x${viewport.height}`, () => {
@@ -64,40 +138,30 @@ for (const viewport of VIEWPORTS) {
 
     for (const target of PAGES) {
       test(`${target.name} lays out without horizontal overflow`, async ({ page }) => {
-        await page.goto("/login");
-        await page.fill('input[type="email"]', EMAIL);
-        await page.fill('input[type="password"]', PASSWORD);
-        await page.click('button[type="submit"]');
-        // Wait for the credentials callback to succeed rather than for a
-        // session poll that may already have happened, then go straight to the
-        // surface under test — where the app lands after login depends on role
-        // and entitlements, and guessing that is not this test's job.
-        await page.waitForResponse(
-          (response) =>
-            response.url().includes("/api/auth/callback/credentials"),
-          { timeout: 30_000 },
-        );
-
-        // Poll the session endpoint rather than trusting a fixed pause. The
-        // login page routes client-side after sign-in, and a screenshot taken
-        // before the cookie lands is a screenshot of the login form.
-        await expect
-          .poll(
-            async () => {
-              const response = await page.request.get("/api/auth/session");
-              const body = await response.json().catch(() => ({}));
-              return Boolean(body?.user);
-            },
-            { timeout: 30_000, intervals: [500] },
-          )
-          .toBe(true);
-
         await page.goto(target.path);
         // Not networkidle: the dev server keeps an HMR socket open, so the
         // network never goes quiet. Wait for the data instead of for a timer —
         // a screenshot taken while a table still says "Loading…" tells you
         // nothing about how the loaded page looks.
         await page.waitForLoadState("domcontentloaded");
+
+        // Page identity, before anything is measured or photographed.
+        // `.first()` because the design system's header renders a heading per
+        // breakpoint variant and a card may repeat the word. One visible match
+        // is all this needs to prove: that we are on the page, not a login form.
+        await expect(
+          page.getByRole("heading", { name: target.heading, exact: true }).first(),
+          `never rendered the "${target.heading}" heading — landed on ${page.url()}`,
+        ).toBeVisible({ timeout: 30_000 });
+        expect(
+          new URL(page.url()).pathname,
+          `redirected away from ${target.path} — landed on ${page.url()}`,
+        ).toBe(target.path);
+        await expect(
+          page.locator('input[type="password"]'),
+          "a password field is on screen — this is a sign-in page, not the app",
+        ).toHaveCount(0);
+
         await expect
           .poll(async () => page.locator("text=/Loading/i").count(), {
             timeout: 30_000,
@@ -105,19 +169,6 @@ for (const viewport of VIEWPORTS) {
           })
           .toBe(0);
 
-        // Assert we are actually looking at the surface under test. Without
-        // this the overflow check happily passes on a login form: an earlier
-        // run of this spec reported six greens while every screenshot was the
-        // admin magic-link page, because localhost resolves to the admin
-        // portal host in dev.
-        expect(
-          new URL(page.url()).pathname,
-          `redirected away from ${target.path} — landed on ${page.url()}`,
-        ).toBe(target.path);
-        await expect(
-          page.locator("text=Send magic link"),
-          "landed on a sign-in page, not the app",
-        ).toHaveCount(0);
         await page.screenshot({
           path: `${SHOTS}/${viewport.name}-${target.name}.png`,
           fullPage: true,
@@ -140,6 +191,16 @@ for (const viewport of VIEWPORTS) {
           }
           return { ...worst, viewportWidth, bodyScroll: document.body.scrollWidth };
         });
+
+        // Row counts go in the log because "no overflow" over an empty table is
+        // not the same result as "no overflow" over a full one, and the
+        // screenshot alone does not distinguish an empty state from a fetch
+        // that silently returned nothing.
+        const rows = await page.locator("table tbody tr, [data-slot='mobile-list-row']").count();
+        console.log(
+          `RESULT ${viewport.name} ${target.name}: rows=${rows} ` +
+            `widest=${widest.right}px viewport=${widest.viewportWidth}px (${widest.selector})`,
+        );
 
         expect(
           widest.right,

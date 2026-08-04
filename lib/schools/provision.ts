@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { activateTerm } from "@/lib/schools/calendar";
+import { grantBundleToCompany } from "@/lib/platform/entitlements";
 
 /**
  * Opening a school.
@@ -21,6 +22,9 @@ import { activateTerm } from "@/lib/schools/calendar";
  * started editing, does no damage.
  */
 
+/** The paid bundle that carries every `schools.*` feature. */
+const SCHOOLS_BUNDLE_CODE = "ADDON_SCHOOLS_SUITE";
+
 export type SchoolLevel = "PRIMARY" | "SECONDARY" | "COMBINED";
 
 export type ProvisionSchoolOptions = {
@@ -40,6 +44,8 @@ export type ProvisionSchoolResult = {
   classesCreated: number;
   subjectsCreated: number;
   feeStructureCreated: boolean;
+  /** How many `schools.*` features the tenant is now entitled to and has on. */
+  featuresEnabled: number;
 };
 
 /**
@@ -198,7 +204,14 @@ export async function provisionSchool(
     select: { id: true },
   });
 
-  if (!alreadyActive) {
+  if (alreadyActive) {
+    // Report the term the school is actually in, not a blank. A re-run that
+    // leaves an existing choice alone was previously indistinguishable from a
+    // school with no term open — the same "current not set" line for the
+    // healthy case and the broken one.
+    const opened = terms.find((term) => term.id === alreadyActive.id);
+    if (opened) opened.isActive = true;
+  } else {
     const current = pickCurrentTerm(termRows, at);
     await activateTerm({ companyId, termId: current.id });
     const opened = terms.find((term) => term.id === current.id);
@@ -269,6 +282,16 @@ export async function provisionSchool(
       })
     : false;
 
+  // Data alone does not open a school. Every `schools.*` feature is billable,
+  // and `getCompanyFeatureMap` keeps a billable feature off unless the tenant is
+  // entitled to it, so without the addon the registrar's own pages answer
+  // `403 FEATURE_DISABLED` over a perfectly good calendar.
+  const entitlement = await grantBundleToCompany({
+    companyId,
+    bundleCode: SCHOOLS_BUNDLE_CODE,
+    reason: "School provisioned",
+  });
+
   return {
     academicYear: {
       id: academicYear.id,
@@ -279,6 +302,7 @@ export async function provisionSchool(
     classesCreated: newClasses.length,
     subjectsCreated: newSubjects.length,
     feeStructureCreated,
+    featuresEnabled: entitlement.featuresEnabled,
   };
 }
 
