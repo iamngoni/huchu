@@ -39,6 +39,15 @@ Every story, no exceptions:
 6. No new hard-coded colours, sizes or fonts — design-system tokens only
 7. Every privileged action writes a `PlatformAuditEvent`; every query is scoped by `companyId`
 
+**Known debt against item 5.** Every story marked `done` so far meets items 1–4, 6 and 7 but has
+*not* been screenshot-verified. `e2e/visual-pass.spec.ts` exists and is skipped unless
+`VISUAL_PASS=1`, because it needs a tenant hostname, a matching `PLATFORM_ROOT_DOMAIN` and a
+password user — `lib/admin-portal.ts` treats localhost as the *admin* host in dev, so without that
+setup every tenant page redirects to the admin sign-in. The first version of that spec reported six
+passes while every screenshot was that sign-in page, which is why it now asserts the pathname before
+measuring anything. The outstanding pass is tracked by S-10.1 and S-10.2; `done` on any story below
+should be read as "verified by tests and build", not "seen".
+
 ## Status legend
 
 | Mark | Meaning |
