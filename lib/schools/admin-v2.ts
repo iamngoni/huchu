@@ -12,6 +12,16 @@ function buildQuery(params: Record<string, QueryValue>) {
   return query ? `?${query}` : "";
 }
 
+/**
+ * NOTE: `successResponse` in `lib/api-utils.ts` does *not* wrap its payload —
+ * it returns the value as the body. Anything typed `ApiResponse<T>` here is
+ * therefore only correct when the route explicitly returns `{ success, data }`.
+ * The paginated fetchers below take the body as-is, because a route that calls
+ * `successResponse(paginationResponse(...))` sends `{ data, pagination }` and
+ * nothing more. Reading `.data` off that returns the array, and the components
+ * then read `.data` off an array and render nothing — which is what every
+ * schools list did before this was corrected.
+ */
 type ApiResponse<T> = {
   success: true;
   data: T;
@@ -189,10 +199,10 @@ export async function fetchSchoolsStudents(params: {
   isBoarding?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsStudentRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsStudentRecord>>(
     `/api/v2/schools/students${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchSchoolsGuardians(params: {
@@ -202,10 +212,10 @@ export async function fetchSchoolsGuardians(params: {
   studentId?: string;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsGuardianRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsGuardianRecord>>(
     `/api/v2/schools/guardians${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchSchoolsEnrollments(params: {
@@ -218,10 +228,10 @@ export async function fetchSchoolsEnrollments(params: {
   streamId?: string;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsEnrollmentRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsEnrollmentRecord>>(
     `/api/v2/schools/enrollments${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchSchoolsAttendanceRoster(params: {
@@ -247,10 +257,10 @@ export async function fetchTeacherProfiles(params: {
   isActive?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<TeacherProfileRecord>>>(
+  const response = await fetchJson<Paginated<TeacherProfileRecord>>(
     `/api/v2/schools/teachers/profiles${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchTeacherSubjects(params: {
@@ -260,10 +270,10 @@ export async function fetchTeacherSubjects(params: {
   isActive?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<TeacherSubjectRecord>>>(
+  const response = await fetchJson<Paginated<TeacherSubjectRecord>>(
     `/api/v2/schools/teachers/subjects${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchStudentProfile(studentId: string) {
@@ -295,10 +305,10 @@ export async function fetchTeacherAssignments(params: {
   isActive?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<TeacherAssignmentRecord>>>(
+  const response = await fetchJson<Paginated<TeacherAssignmentRecord>>(
     `/api/v2/schools/teachers/assignments${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchTeacherProfileUsers(params: {
@@ -319,10 +329,10 @@ export async function fetchSchoolsClasses(params: {
   search?: string;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsClassRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsClassRecord>>(
     `/api/v2/schools/classes${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchSchoolsSubjects(params: {
@@ -332,10 +342,10 @@ export async function fetchSchoolsSubjects(params: {
   isActive?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsSubjectRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsSubjectRecord>>(
     `/api/v2/schools/subjects${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export type HostelDetail = {
@@ -379,10 +389,10 @@ export type HostelDetail = {
 };
 
 export async function fetchHostelDetail(hostelId: string) {
-  const response = await fetchJson<ApiResponse<HostelDetail>>(
+  const response = await fetchJson<HostelDetail>(
     `/api/v2/schools/boarding/hostels/${hostelId}`,
   );
-  return response.data;
+  return response;
 }
 
 // ---------------------------------------------------------------------------
@@ -429,10 +439,10 @@ export async function fetchSchoolsAcademicYears(params: {
   search?: string;
   isActive?: boolean;
 } = {}) {
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsAcademicYearRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsAcademicYearRecord>>(
     `/api/v2/schools/academic-years${buildQuery(params)}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function createSchoolsAcademicYear(input: {
@@ -446,7 +456,7 @@ export async function createSchoolsAcademicYear(input: {
     "/api/v2/schools/academic-years",
     { method: "POST", body: JSON.stringify(input) },
   );
-  return response.data;
+  return response;
 }
 
 export async function updateSchoolsAcademicYear(
@@ -463,7 +473,7 @@ export async function updateSchoolsAcademicYear(
     `/api/v2/schools/academic-years/${id}`,
     { method: "PATCH", body: JSON.stringify(input) },
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchSchoolsTerms(params: {
@@ -473,10 +483,10 @@ export async function fetchSchoolsTerms(params: {
   academicYearId?: string;
   isActive?: boolean;
 } = {}) {
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsTermRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsTermRecord>>(
     `/api/v2/schools/terms${buildQuery(params)}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function createSchoolsTerm(input: {
@@ -491,7 +501,7 @@ export async function createSchoolsTerm(input: {
     "/api/v2/schools/terms",
     { method: "POST", body: JSON.stringify(input) },
   );
-  return response.data;
+  return response;
 }
 
 export async function updateSchoolsTerm(
@@ -508,7 +518,7 @@ export async function updateSchoolsTerm(
     `/api/v2/schools/terms/${id}`,
     { method: "PATCH", body: JSON.stringify(input) },
   );
-  return response.data;
+  return response;
 }
 
 // ---------------------------------------------------------------------------

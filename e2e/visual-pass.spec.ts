@@ -68,26 +68,52 @@ for (const viewport of VIEWPORTS) {
         await page.fill('input[type="email"]', EMAIL);
         await page.fill('input[type="password"]', PASSWORD);
         await page.click('button[type="submit"]');
-        // Where the app lands after login depends on role and entitlements, so
-        // wait for the session to exist and then go straight to the surface
-        // under test rather than guessing.
+        // Wait for the credentials callback to succeed rather than for a
+        // session poll that may already have happened, then go straight to the
+        // surface under test — where the app lands after login depends on role
+        // and entitlements, and guessing that is not this test's job.
         await page.waitForResponse(
           (response) =>
-            response.url().includes("/api/auth/session") && response.status() === 200,
+            response.url().includes("/api/auth/callback/credentials"),
           { timeout: 30_000 },
         );
 
+        // Poll the session endpoint rather than trusting a fixed pause. The
+        // login page routes client-side after sign-in, and a screenshot taken
+        // before the cookie lands is a screenshot of the login form.
+        await expect
+          .poll(
+            async () => {
+              const response = await page.request.get("/api/auth/session");
+              const body = await response.json().catch(() => ({}));
+              return Boolean(body?.user);
+            },
+            { timeout: 30_000, intervals: [500] },
+          )
+          .toBe(true);
+
         await page.goto(target.path);
-        await page.waitForLoadState("networkidle");
+        // Not networkidle: the dev server keeps an HMR socket open, so the
+        // network never goes quiet. Wait for the data instead of for a timer —
+        // a screenshot taken while a table still says "Loading…" tells you
+        // nothing about how the loaded page looks.
+        await page.waitForLoadState("domcontentloaded");
+        await expect
+          .poll(async () => page.locator("text=/Loading/i").count(), {
+            timeout: 30_000,
+            intervals: [500],
+          })
+          .toBe(0);
 
         // Assert we are actually looking at the surface under test. Without
         // this the overflow check happily passes on a login form: an earlier
         // run of this spec reported six greens while every screenshot was the
         // admin magic-link page, because localhost resolves to the admin
         // portal host in dev.
-        expect(new URL(page.url()).pathname, "redirected away from the page under test").toBe(
-          target.path,
-        );
+        expect(
+          new URL(page.url()).pathname,
+          `redirected away from ${target.path} — landed on ${page.url()}`,
+        ).toBe(target.path);
         await expect(
           page.locator("text=Send magic link"),
           "landed on a sign-in page, not the app",
@@ -97,16 +123,28 @@ for (const viewport of VIEWPORTS) {
           fullPage: true,
         });
 
-        const overflow = await page.evaluate(() => ({
-          scrollWidth: document.body.scrollWidth,
-          clientWidth: document.body.clientWidth,
-          url: window.location.pathname,
-        }));
+        // Body scrollWidth alone is too weak: a clipped inner container leaves
+        // the body itself the right width while the content it holds is cut
+        // off. Measure every element against the viewport and report the worst.
+        const widest = await page.evaluate(() => {
+          const viewportWidth = document.documentElement.clientWidth;
+          let worst = { selector: "", right: 0 };
+          for (const element of Array.from(document.querySelectorAll("*"))) {
+            const rect = element.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) continue;
+            if (rect.right > worst.right) {
+              const tag = element.tagName.toLowerCase();
+              const cls = (element.getAttribute("class") ?? "").slice(0, 60);
+              worst = { selector: `${tag}.${cls}`, right: Math.round(rect.right) };
+            }
+          }
+          return { ...worst, viewportWidth, bodyScroll: document.body.scrollWidth };
+        });
 
         expect(
-          overflow.scrollWidth,
-          `${target.path} scrolls sideways at ${viewport.width}px`,
-        ).toBeLessThanOrEqual(overflow.clientWidth + 1);
+          widest.right,
+          `${target.path} at ${viewport.width}px: "${widest.selector}" reaches ${widest.right}px, past the ${widest.viewportWidth}px viewport`,
+        ).toBeLessThanOrEqual(widest.viewportWidth + 1);
       });
     }
   });

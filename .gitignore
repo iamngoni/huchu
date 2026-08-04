@@ -53,3 +53,4 @@ next-env.d.ts
 # Local-only scratch: seeds and browser probes used while verifying a change.
 zz-*
 scripts/zz-*
+test-results/
