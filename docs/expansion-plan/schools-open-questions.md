@@ -83,3 +83,19 @@ yet, and the shell is worth building once against all of them.
 
 _The changelog for this work lives in the roadmap; this file is a wall, not a
 log._
+
+### 8. Provisioning creates students with a current class but no enrolment rows
+
+Found by the year roll-up, which reads `SchoolEnrollment` — the record of who
+was in which class in which term — and correctly found nobody in the demo
+tenant. Every seeded student has a `currentClassId` and no enrolment.
+
+Rather than have the roll-up silently do nothing, it falls back to each
+student's current year group and says so on screen. That is the honest
+behaviour, but the underlying gap is real: without enrolment rows the school has
+no history of who was where, so "which class was she in last year" has no
+answer.
+
+The fix is to have `provisionSchool` (and any bulk student import) write an
+enrolment alongside the student. Half a day, and it wants a backfill for
+existing tenants. **Worth doing before a real school goes live** — say the word.
