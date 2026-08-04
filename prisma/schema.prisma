@@ -138,6 +138,9 @@ model Company {
   schoolFeeReceiptAllocations   SchoolFeeReceiptAllocation[]
   schoolFeeWaivers              SchoolFeeWaiver[]
   schoolAttendanceSessions      SchoolAttendanceSession[]
+  schoolPeriods                 SchoolPeriod[]
+  schoolRooms                   SchoolRoom[]
+  schoolTimetableSlots          SchoolTimetableSlot[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
@@ -5530,7 +5533,9 @@ model SchoolTerm {
   enrollments         SchoolEnrollment[]
   boardingAllocations SchoolBoardingAllocation[]
   resultSheets        SchoolResultSheet[]
-  classSubjects       SchoolClassSubject[]
+  classSubjects          SchoolClassSubject[]
+  periods                SchoolPeriod[]
+  timetableSlots         SchoolTimetableSlot[]
   publishWindows      SchoolPublishWindow[]
   feeStructures       SchoolFeeStructure[]
   feeInvoices         SchoolFeeInvoice[]
@@ -5561,6 +5566,7 @@ model SchoolClass {
   enrollments    SchoolEnrollment[]
   resultSheets   SchoolResultSheet[]
   classSubjects  SchoolClassSubject[]
+  timetableSlots SchoolTimetableSlot[]
   publishWindows SchoolPublishWindow[]
   feeStructures  SchoolFeeStructure[]
 
@@ -5587,6 +5593,7 @@ model SchoolStream {
   enrollments    SchoolEnrollment[]
   resultSheets   SchoolResultSheet[]
   classSubjects  SchoolClassSubject[]
+  timetableSlots SchoolTimetableSlot[]
   publishWindows SchoolPublishWindow[]
 
   @@unique([companyId, classId, code])
@@ -5607,7 +5614,8 @@ model SchoolTeacherProfile {
 
   company     Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignments SchoolClassSubject[]
+  assignments    SchoolClassSubject[]
+  timetableSlots SchoolTimetableSlot[]
 
   @@unique([companyId, userId])
   @@unique([companyId, employeeCode])
@@ -5650,6 +5658,7 @@ model SchoolClassSubject {
   stream         SchoolStream?        @relation(fields: [streamId], references: [id], onDelete: SetNull)
   subject        SchoolSubject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   teacherProfile SchoolTeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  timetableSlots SchoolTimetableSlot[]
 
   @@unique([companyId, termId, classId, streamId, subjectId])
   @@index([companyId, teacherProfileId, isActive])
@@ -6224,6 +6233,121 @@ model SchoolAttendanceSessionLine {
   @@unique([sessionId, studentId])
   @@index([companyId, studentId])
   @@index([companyId, sessionId])
+}
+
+/// A bell-to-bell slot in the school day — period 1, break, period 2, assembly.
+///
+/// Times are minutes from midnight rather than `DateTime` or `@db.Time`. A
+/// period is a wall-clock fact about a school day ("period 3 starts at 10:20"),
+/// not an instant, and storing it as a timestamp invites a date and a timezone
+/// that mean nothing and shift under `TZ`. Integers sort, compare and validate
+/// without any of that. Ordering and range are enforced by CHECK constraints in
+/// migration 20260804160000_school_timetable.
+///
+/// `isTeaching = false` marks break, assembly and registration: they occupy the
+/// day and appear on a printed timetable, but nothing may be scheduled in them.
+model SchoolPeriod {
+  id          String   @id @default(uuid())
+  companyId   String
+  /// Null means "every term". A school that runs a different winter timetable
+  /// sets up a term-specific set instead.
+  termId      String?
+  code        String
+  name        String
+  /// Minutes from midnight, 0–1439.
+  startMinute Int
+  endMinute   Int
+  /// Display order within the day. Not derived from `startMinute` because a
+  /// school may want registration shown first though it overlaps nothing.
+  sequence    Int
+  isTeaching  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  term    SchoolTerm? @relation(fields: [termId], references: [id], onDelete: Cascade)
+  slots   SchoolTimetableSlot[]
+
+  @@unique([companyId, termId, code])
+  @@index([companyId, termId, sequence])
+}
+
+/// A teaching space. Rooms are optional on a slot — a school that does not
+/// track rooms simply never creates any, and the room-clash rule then has
+/// nothing to check.
+model SchoolRoom {
+  id        String   @id @default(uuid())
+  companyId String
+  code      String
+  name      String
+  capacity  Int?
+  /// Free text — "Laboratory", "Hall", "Computer room". An enum here would be a
+  /// guess at every school's estate.
+  kind      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  slots   SchoolTimetableSlot[]
+
+  @@unique([companyId, code])
+  @@index([companyId, isActive])
+}
+
+/// One lesson on the timetable: an existing class-subject assignment placed on a
+/// day, in a period, optionally in a room.
+///
+/// `classSubjectId` is the source of truth for who teaches what to whom —
+/// nothing about the lesson is restated here. `classId`, `streamId` and
+/// `teacherProfileId` are copies of that assignment's columns, and exist only
+/// so the three clash rules can be unique indexes rather than a read followed
+/// by a write that another transaction can interleave with:
+///
+///   - a class cannot be in two places at once
+///   - a teacher cannot be in two places at once
+///   - a room cannot hold two lessons at once
+///
+/// They are written from the assignment and never from the caller, and
+/// `syncSlotDenormalisation` in `lib/schools/timetable.ts` re-copies them when
+/// an assignment changes hands. A test asserts the two cannot drift.
+model SchoolTimetableSlot {
+  id               String   @id @default(uuid())
+  companyId        String
+  termId           String
+  classSubjectId   String
+  periodId         String
+  /// ISO-8601 day of week: 1 = Monday … 7 = Sunday. Range enforced by a CHECK.
+  dayOfWeek        Int
+  roomId           String?
+  /// Derived from `classSubject`. See the note above.
+  classId          String
+  streamId         String?
+  teacherProfileId String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company        Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  term           SchoolTerm           @relation(fields: [termId], references: [id], onDelete: Cascade)
+  classSubject   SchoolClassSubject   @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+  period         SchoolPeriod         @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  room           SchoolRoom?          @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  class          SchoolClass          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  stream         SchoolStream?        @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  teacherProfile SchoolTeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+
+  /// A teacher in two rooms at once. Expressible here because the column is
+  /// NOT NULL; the class and room rules are not, because Postgres treats two
+  /// NULLs as distinct and a class with no stream, or a lesson with no room,
+  /// would slip past a plain unique index. Those two are partial unique
+  /// indexes in migration 20260804160000_school_timetable — a `\dt` on the
+  /// database shows constraints this file does not.
+  @@unique([companyId, termId, dayOfWeek, periodId, teacherProfileId])
+  /// The same lesson scheduled twice in one slot.
+  @@unique([companyId, termId, dayOfWeek, periodId, classSubjectId])
+  @@index([companyId, termId, dayOfWeek, periodId])
+  @@index([companyId, termId, classId, streamId])
+  @@index([companyId, roomId])
 }
 
 enum CarSalesLeadStatus {
