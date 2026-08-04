@@ -19,8 +19,9 @@ import {
   type SchoolsSubjectRecord,
 } from "@/lib/schools/admin-v2";
 import { SchoolsCalendarContent } from "./schools-calendar-content";
+import { SchoolDaysContent } from "./school-days-content";
 
-type AcademicsView = "years" | "terms" | "classes" | "subjects";
+type AcademicsView = "years" | "terms" | "calendar" | "classes" | "subjects";
 
 /** Whether a subject is still taught. A filter, not part of the sort order. */
 type SubjectFilter = "all" | "core" | "optional" | "inactive";
@@ -168,6 +169,7 @@ export function SchoolsAcademicsContent() {
         items={[
           { id: "years", label: "Academic Years" },
           { id: "terms", label: "Terms" },
+          { id: "calendar", label: "Holidays & Events" },
           { id: "classes", label: "Classes", count: classes.length },
           { id: "subjects", label: "Subjects", count: subjects.length },
         ]}
@@ -177,6 +179,13 @@ export function SchoolsAcademicsContent() {
       >
         {activeView === "years" || activeView === "terms" ? (
           <SchoolsCalendarContent view={activeView} />
+        ) : null}
+
+        {activeView === "calendar" ? (
+          <div className="space-y-2">
+            <h2 className="text-section-title">Holidays and Events</h2>
+            <SchoolDaysContent />
+          </div>
         ) : null}
 
         <div className={activeView === "classes" ? "space-y-2" : "hidden"}>

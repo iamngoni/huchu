@@ -664,3 +664,65 @@ export async function fetchSchoolsTimetable(params: {
   );
   return response;
 }
+
+export type SchoolsCalendarEventRecord = {
+  id: string;
+  title: string;
+  kind:
+    | "HOLIDAY"
+    | "PUBLIC_HOLIDAY"
+    | "HALF_TERM"
+    | "EXAM"
+    | "EVENT"
+    | "STAFF_ONLY";
+  startDate: string;
+  endDate: string;
+  isTeachingDay: boolean;
+  notes: string | null;
+  termId: string | null;
+  term: { id: string; code: string; name: string } | null;
+};
+
+export type SchoolDayVerdictRecord = {
+  isSchoolDay: boolean;
+  reason: string;
+  termId: string | null;
+};
+
+/**
+ * The calendar, unpaginated — a caller draws a year, and a page of a year is a
+ * calendar with holes in it. Not `ApiResponse<T>`: `successResponse` does not
+ * wrap.
+ */
+export async function fetchSchoolsCalendar(params: {
+  from?: string;
+  to?: string;
+  on?: string;
+} = {}) {
+  const query = buildQuery(params);
+  return fetchJson<{
+    events: SchoolsCalendarEventRecord[];
+    schoolDay: SchoolDayVerdictRecord | null;
+  }>(`/api/v2/schools/calendar${query}`);
+}
+
+export async function createSchoolsCalendarEvent(input: {
+  title: string;
+  kind?: SchoolsCalendarEventRecord["kind"];
+  startDate: string;
+  endDate: string;
+  isTeachingDay?: boolean;
+  termId?: string | null;
+  notes?: string | null;
+}) {
+  return fetchJson<SchoolsCalendarEventRecord>("/api/v2/schools/calendar", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteSchoolsCalendarEvent(id: string) {
+  return fetchJson<{ id: string }>(`/api/v2/schools/calendar/${id}`, {
+    method: "DELETE",
+  });
+}

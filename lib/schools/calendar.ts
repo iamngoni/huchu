@@ -1,6 +1,12 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+export {
+  CALENDAR_KIND_LABELS,
+  defaultIsTeachingDay,
+  type SchoolCalendarEventKindValue,
+} from "./calendar-kinds";
+
 /**
  * Academic year and term resolution.
  *

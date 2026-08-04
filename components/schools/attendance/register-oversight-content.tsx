@@ -42,12 +42,27 @@ function today() {
  * submitted registers cannot show you the ones that are missing, which is the
  * only thing anyone opens it for.
  */
-export function RegisterOversightContent() {
-  const [date, setDate] = useState(today());
+export function RegisterOversightContent({
+  initialDate,
+}: {
+  /** From `?date=`, already validated as ISO by the page. Defaults to today. */
+  initialDate?: string;
+}) {
+  const [date, setDate] = useState(initialDate ?? today());
 
   const classesQuery = useQuery({
     queryKey: ["schools", "grades"],
     queryFn: () => fetchSchoolsClasses({ page: 1, limit: 200 }),
+  });
+
+  // Whether the school was even open. Without this a public holiday reads as
+  // every class failing to send a register, which is the wrong thing to chase.
+  const schoolDayQuery = useQuery({
+    queryKey: ["schools", "calendar", "school-day", date],
+    queryFn: () =>
+      fetchJson<{ schoolDay: { isSchoolDay: boolean; reason: string } | null }>(
+        `/api/v2/schools/calendar?on=${date}`,
+      ),
   });
 
   const sessionsQuery = useQuery({
@@ -77,6 +92,8 @@ export function RegisterOversightContent() {
   }, [sessions]);
 
   const missing = classes.filter((row) => !takenByClass.has(row.id));
+  const schoolDay = schoolDayQuery.data?.schoolDay ?? null;
+  const expectRegisters = schoolDay?.isSchoolDay !== false;
 
   if (sessionsQuery.error) {
     return (
@@ -103,12 +120,21 @@ export function RegisterOversightContent() {
         </div>
       </FilterBar>
 
-      <p className="text-sm text-muted-foreground">
-        {classes.length - missing.length} of {classes.length} year groups have a
-        register for {date}.
-      </p>
+      {schoolDay && !schoolDay.isSchoolDay ? (
+        <Alert>
+          <AlertTitle>Not a school day — {schoolDay.reason}</AlertTitle>
+          <AlertDescription>
+            No registers are expected. Anything below was taken anyway.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {classes.length - missing.length} of {classes.length} year groups have a
+          register for {date}.
+        </p>
+      )}
 
-      {missing.length > 0 ? (
+      {missing.length > 0 && schoolDay?.isSchoolDay !== false ? (
         <Alert>
           <AlertTitle>
             {missing.length} still to come in
@@ -136,11 +162,17 @@ export function RegisterOversightContent() {
                   <span className="mt-1 flex flex-wrap items-center gap-2">
                     <span>
                       {taken.length === 0
-                        ? "No register yet"
+                        ? expectRegisters
+                          ? "No register yet"
+                          : "School closed"
                         : `${taken.length} register${taken.length === 1 ? "" : "s"}`}
                     </span>
                     {taken.length === 0 ? (
-                      <Badge variant="destructive">Missing</Badge>
+                      expectRegisters ? (
+                        <Badge variant="destructive">Missing</Badge>
+                      ) : (
+                        <Badge variant="outline">Not expected</Badge>
+                      )
                     ) : taken.every((session) => session.status !== "DRAFT") ? (
                       <Badge variant="secondary">Submitted</Badge>
                     ) : (
