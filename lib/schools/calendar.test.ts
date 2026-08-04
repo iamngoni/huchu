@@ -18,8 +18,10 @@ import {
   findOverlappingAcademicYear,
   findOverlappingTerm,
   getCurrentTerm,
+  getSchoolDay,
   getTermForDate,
   isDateRangeValid,
+  listSchoolDays,
   rangesOverlap,
   requireCurrentTerm,
 } from "./calendar";
@@ -83,6 +85,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  await prisma.schoolCalendarEvent.deleteMany({ where: { companyId } });
   await prisma.schoolTerm.deleteMany({ where: { companyId } });
   await prisma.schoolAcademicYear.deleteMany({ where: { companyId } });
 });
@@ -364,5 +367,163 @@ describe("current term resolution", () => {
 
     const holiday = await getTermForDate(companyId, date("2026-04-20"));
     expect(holiday).toBeNull();
+  });
+});
+
+describe("school days — S-1.2", () => {
+  async function openTerm() {
+    const year = await makeYear({
+      code: "2026",
+      start: "2026-01-01",
+      end: "2026-12-31",
+      isActive: true,
+    });
+    // 2026-05-04 is a Monday; 2026-05-09 a Saturday, 2026-05-10 a Sunday.
+    return makeTerm({
+      academicYearId: year.id,
+      code: "T2",
+      start: "2026-05-04",
+      end: "2026-08-07",
+      isActive: true,
+    });
+  }
+
+  it("a weekday inside term is a school day", async () => {
+    await openTerm();
+    const verdict = await getSchoolDay(companyId, date("2026-05-05"));
+    expect(verdict.isSchoolDay).toBe(true);
+  });
+
+  it("a weekend inside term is not, and says so", async () => {
+    await openTerm();
+    const verdict = await getSchoolDay(companyId, date("2026-05-09"));
+    expect(verdict.isSchoolDay).toBe(false);
+    expect(verdict.reason).toBe("Weekend");
+  });
+
+  it("outside term time is not a school day", async () => {
+    await openTerm();
+    const verdict = await getSchoolDay(companyId, date("2026-04-20"));
+    expect(verdict.isSchoolDay).toBe(false);
+    expect(verdict.reason).toBe("Outside term time");
+    expect(verdict.termId).toBeNull();
+  });
+
+  it("a holiday closes the school and names itself", async () => {
+    const term = await openTerm();
+    await prisma.schoolCalendarEvent.create({
+      data: {
+        companyId,
+        termId: term.id,
+        title: "Workers Day",
+        kind: "PUBLIC_HOLIDAY",
+        startDate: date("2026-05-05"),
+        endDate: date("2026-05-05"),
+        isTeachingDay: false,
+      },
+    });
+
+    const verdict = await getSchoolDay(companyId, date("2026-05-05"));
+    expect(verdict.isSchoolDay).toBe(false);
+    // The reason a report shows, rather than "no register".
+    expect(verdict.reason).toBe("Workers Day");
+  });
+
+  it("a teaching event opens the school on a Saturday", async () => {
+    const term = await openTerm();
+    await prisma.schoolCalendarEvent.create({
+      data: {
+        companyId,
+        termId: term.id,
+        title: "Mock exams",
+        kind: "EXAM",
+        startDate: date("2026-05-09"),
+        endDate: date("2026-05-09"),
+        isTeachingDay: true,
+      },
+    });
+
+    const verdict = await getSchoolDay(companyId, date("2026-05-09"));
+    expect(verdict.isSchoolDay).toBe(true);
+    expect(verdict.reason).toBe("Mock exams");
+  });
+
+  it("a closure wins over a teaching event on the same day", async () => {
+    // Both on one day is a data conflict a school can create, and closed is
+    // the safe reading: nobody is marked absent for a day nobody attended.
+    const term = await openTerm();
+    await prisma.schoolCalendarEvent.createMany({
+      data: [
+        {
+          companyId,
+          termId: term.id,
+          title: "Sports day",
+          kind: "EVENT",
+          startDate: date("2026-05-06"),
+          endDate: date("2026-05-06"),
+          isTeachingDay: true,
+        },
+        {
+          companyId,
+          termId: term.id,
+          title: "Burst water main",
+          kind: "HOLIDAY",
+          startDate: date("2026-05-06"),
+          endDate: date("2026-05-06"),
+          isTeachingDay: false,
+        },
+      ],
+    });
+
+    const verdict = await getSchoolDay(companyId, date("2026-05-06"));
+    expect(verdict.isSchoolDay).toBe(false);
+    expect(verdict.reason).toBe("Burst water main");
+  });
+
+  it("a multi-day half term closes every day it spans", async () => {
+    const term = await openTerm();
+    await prisma.schoolCalendarEvent.create({
+      data: {
+        companyId,
+        termId: term.id,
+        title: "Half term",
+        kind: "HALF_TERM",
+        startDate: date("2026-06-01"),
+        endDate: date("2026-06-05"),
+        isTeachingDay: false,
+      },
+    });
+
+    for (const day of ["2026-06-01", "2026-06-03", "2026-06-05"]) {
+      const verdict = await getSchoolDay(companyId, date(day));
+      expect(verdict.isSchoolDay, day).toBe(false);
+    }
+    // The day after it ends is open again.
+    expect((await getSchoolDay(companyId, date("2026-06-08"))).isSchoolDay).toBe(true);
+  });
+
+  it("lists the school days in a week, skipping the weekend", async () => {
+    await openTerm();
+    const days = await listSchoolDays(
+      companyId,
+      date("2026-05-04"),
+      date("2026-05-10"),
+    );
+    expect(days).toHaveLength(5);
+  });
+
+  it("refuses a calendar event that ends before it starts — MIGRATION WITNESS", async () => {
+    const term = await openTerm();
+    await expect(
+      prisma.schoolCalendarEvent.create({
+        data: {
+          companyId,
+          termId: term.id,
+          title: "Backwards",
+          startDate: date("2026-06-10"),
+          endDate: date("2026-06-01"),
+        },
+      }),
+    ).rejects.toThrow();
   });
 });

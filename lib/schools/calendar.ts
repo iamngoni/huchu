@@ -233,3 +233,110 @@ export async function activateTerm(input: { companyId: string; termId: string })
     });
   });
 }
+
+// ---------------------------------------------------------------------------
+// School days (S-1.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether the school is open on a given day, and why not when it is not.
+ *
+ * Before this, "no register for Form 2 on Tuesday" and "Tuesday was a public
+ * holiday" were the same absence of a row, so no report could tell a missing
+ * register from a closed school — which is the whole point of asking.
+ *
+ * Three things have to agree for a day to be a school day: it falls inside a
+ * term, it is not a weekend, and no calendar event closes the school over it.
+ * The weekend rule is a default a school can override by putting a teaching
+ * event on the day, because Saturday school is normal here.
+ */
+export type SchoolDayVerdict = {
+  isSchoolDay: boolean;
+  /** Written for a person reading a report, not for a log. */
+  reason: string;
+  termId: string | null;
+};
+
+/** Midnight-to-midnight bounds for a calendar day, in UTC. */
+function dayBounds(date: Date) {
+  const start = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+  return { start, end };
+}
+
+export async function getSchoolDay(
+  companyId: string,
+  date: Date,
+  db: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<SchoolDayVerdict> {
+  const { start, end } = dayBounds(date);
+
+  const [term, events] = await Promise.all([
+    db.schoolTerm.findFirst({
+      where: { companyId, startDate: { lte: end }, endDate: { gte: start } },
+      select: { id: true, name: true },
+      orderBy: [{ isActive: "desc" }, { startDate: "desc" }],
+    }),
+    db.schoolCalendarEvent.findMany({
+      where: { companyId, startDate: { lte: end }, endDate: { gte: start } },
+      select: { title: true, isTeachingDay: true },
+    }),
+  ]);
+
+  // An explicit teaching event opens the school on a day it would otherwise be
+  // shut — a Saturday exam, a catch-up day in the holidays.
+  const opensSchool = events.find((event) => event.isTeachingDay);
+  const closesSchool = events.find((event) => !event.isTeachingDay);
+
+  if (closesSchool) {
+    return {
+      isSchoolDay: false,
+      reason: closesSchool.title,
+      termId: term?.id ?? null,
+    };
+  }
+
+  if (opensSchool) {
+    return { isSchoolDay: true, reason: opensSchool.title, termId: term?.id ?? null };
+  }
+
+  if (!term) {
+    return { isSchoolDay: false, reason: "Outside term time", termId: null };
+  }
+
+  const weekday = start.getUTCDay();
+  if (weekday === 0 || weekday === 6) {
+    return { isSchoolDay: false, reason: "Weekend", termId: term.id };
+  }
+
+  return { isSchoolDay: true, reason: term.name, termId: term.id };
+}
+
+/**
+ * Every school day in a range, so "registers not taken" is a set difference
+ * rather than a guess. Bounded to a year: a caller asking for a decade wants a
+ * report this is not, and building 3,650 dates in memory to answer it is how
+ * that becomes a production incident.
+ */
+export async function listSchoolDays(
+  companyId: string,
+  from: Date,
+  to: Date,
+  db: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<Date[]> {
+  const { start } = dayBounds(from);
+  const { start: last } = dayBounds(to);
+  const days: Date[] = [];
+
+  const maxDays = 366;
+  for (let index = 0; index <= maxDays; index += 1) {
+    const day = new Date(start.getTime() + index * 24 * 60 * 60 * 1000);
+    if (day > last) break;
+    const verdict = await getSchoolDay(companyId, day, db);
+    if (verdict.isSchoolDay) days.push(day);
+  }
+
+  return days;
+}

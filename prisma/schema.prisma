@@ -141,6 +141,7 @@ model Company {
   schoolPeriods                 SchoolPeriod[]
   schoolRooms                   SchoolRoom[]
   schoolTimetableSlots          SchoolTimetableSlot[]
+  schoolCalendarEvents          SchoolCalendarEvent[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
@@ -5536,6 +5537,7 @@ model SchoolTerm {
   classSubjects          SchoolClassSubject[]
   periods                SchoolPeriod[]
   timetableSlots         SchoolTimetableSlot[]
+  calendarEvents         SchoolCalendarEvent[]
   publishWindows      SchoolPublishWindow[]
   feeStructures       SchoolFeeStructure[]
   feeInvoices         SchoolFeeInvoice[]
@@ -6348,6 +6350,46 @@ model SchoolTimetableSlot {
   @@index([companyId, termId, dayOfWeek, periodId])
   @@index([companyId, termId, classId, streamId])
   @@index([companyId, roomId])
+}
+
+/// A day, or run of days, the school calendar says something about.
+///
+/// Two jobs. It records what is happening — half term, an exam week, sports
+/// day — and it answers whether the school is open, which is the thing the rest
+/// of the pack cannot currently work out. Without it "no register for Form 2"
+/// and "it was a public holiday" are the same absence of a row.
+///
+/// `isTeachingDay = false` is what closes the school. An exam week or a sports
+/// day is on the calendar and still a school day; a public holiday is not.
+model SchoolCalendarEvent {
+  id            String                  @id @default(uuid())
+  companyId     String
+  /// Null means it applies to the whole year rather than one term.
+  termId        String?
+  title         String
+  kind          SchoolCalendarEventKind @default(EVENT)
+  startDate     DateTime
+  endDate       DateTime
+  /// Whether the school is open. See the note above.
+  isTeachingDay Boolean                 @default(true)
+  notes         String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  company Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  term    SchoolTerm? @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, startDate, endDate])
+  @@index([companyId, isTeachingDay])
+}
+
+enum SchoolCalendarEventKind {
+  HOLIDAY
+  PUBLIC_HOLIDAY
+  HALF_TERM
+  EXAM
+  EVENT
+  STAFF_ONLY
 }
 
 enum CarSalesLeadStatus {
