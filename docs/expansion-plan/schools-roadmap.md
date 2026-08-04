@@ -16,6 +16,9 @@ schools pull request.
 - **Iterations ship in order.** Each one leaves a product that works end to end. A later iteration
   never leaves an earlier one broken to get started.
 - **New scope** joins the iteration it belongs to as the next free ID in that iteration's block.
+- **Changelog rows land one commit behind.** A commit cannot contain its own hash, so the row
+  describing a piece of work is written in the commit after it. Amending to insert the hash is not
+  an option — it changes the hash again.
 
 Sources this roadmap is derived from: `docs/expansion-plan/schools-production-readiness.md` (audit),
 `docs/design-system/portals/README.md` (portal build contract — every feature in the three
@@ -198,6 +201,6 @@ Newest first. One entry per commit that changes implementation status.
 
 | Date | Commit | Stories | Description |
 |---|---|---|---|
-| 2026-08-04 | `b69b562` | S-0.2 → `done` | Portal identity by account instead of by string. `userId` added to `SchoolStudent` and `SchoolGuardian` with a per-company unique index; `lib/schools/portal-identity.ts` is the one resolver every portal route now calls. Deleted: the student email-local-part→`studentNo` match, the guardian session-email→`email` match, and the fall-through that returned an arbitrary student when the session carried no email. Closed a live hole in the parent fees route, which looked the guardian up by whatever `guardianId` was passed and only compared it afterwards, so any parent could read another family's fees. Naming another subject is now a 403 rather than a silent empty account. One-shot backfill script applies the old rule once as data, skipping anything ambiguous. 17 tests, 3 of them migration witnesses. |
+| 2026-08-04 | `01860fd` | S-0.2 → `done` | Portal identity by account instead of by string. `userId` added to `SchoolStudent` and `SchoolGuardian` with a per-company unique index; `lib/schools/portal-identity.ts` is the one resolver every portal route now calls. Deleted: the student email-local-part→`studentNo` match, the guardian session-email→`email` match, and the fall-through that returned an arbitrary student when the session carried no email. Closed a live hole in the parent fees route, which looked the guardian up by whatever `guardianId` was passed and only compared it afterwards, so any parent could read another family's fees. Naming another subject is now a 403 rather than a silent empty account. One-shot backfill script applies the old rule once as data, skipping anything ambiguous. 17 tests, 3 of them migration witnesses. |
 | 2026-08-04 | `cfbb537` | S-0.1 → `done` | Academic year and term management. `lib/schools/calendar.ts` with `getCurrentTerm`/`requireCurrentTerm` replacing ad-hoc active-term lookups; partial unique indexes making a second active year or term unrepresentable, plus date-ordering check constraints; CRUD routes enforcing that a term falls inside its year, does not overlap a sibling, and cannot be deleted once referenced; a calendar view leading the Academics rail that becomes a `MobileList` below `md`. 14 tests, 5 of them migration witnesses. |
 | 2026-08-04 | `e831546` | — | Engineering principles added to the top of `AGENTS.md`. Schools production-readiness audit recorded in `docs/expansion-plan/schools-production-readiness.md`; stale delivery-status table in `schools.md` corrected. |
