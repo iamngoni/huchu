@@ -176,7 +176,6 @@ export function getPortalNavigation(role: PortalRole): PortalNavItem[] {
     ],
     STUDENT: [
       { href: "/portal/student", label: "Dashboard" },
-      { href: "/portal/student/timetable", label: "Timetable" },
       { href: "/portal/student/attendance", label: "Attendance" },
       { href: "/portal/student/results", label: "Results" },
       { href: "/portal/student/fees", label: "Fee Balance" },

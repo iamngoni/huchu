@@ -247,7 +247,6 @@ export const navSections: NavSection[] = [
       { href: "/schools/students", icon: Users, label: "Students" },
       { href: "/schools/admissions", icon: EventNote, label: "Admissions" },
       { href: "/schools/academics", icon: TableRows, label: "Academics" },
-      { href: "/schools/timetable", icon: Calendar, label: "Timetable" },
       { href: "/schools/attendance", icon: UserCheck, label: "Attendance" },
       { href: "/schools/boarding", icon: Home, label: "Boarding" },
       { href: "/schools/teachers", icon: ManageAccounts, label: "Teachers" },
@@ -258,9 +257,6 @@ export const navSections: NavSection[] = [
       { href: "/schools/notices", icon: EventNote, label: "Notices" },
       { href: "/schools/reports", icon: BarChart3, label: "School Reports" },
       { href: "/schools/documents", icon: FileText, label: "Documents" },
-      { href: "/schools/portal/parent", icon: Users, label: "Parent Portal" },
-      { href: "/schools/portal/student", icon: UserCheck, label: "Student Portal" },
-      { href: "/schools/portal/teacher", icon: ManageAccounts, label: "Teacher Portal" },
     ],
   },
   {

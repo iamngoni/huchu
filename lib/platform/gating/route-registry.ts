@@ -77,7 +77,6 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
 
   { scope: "page", prefix: "/schools/documents", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/academics", featureKey: "schools.core" },
-  { scope: "page", prefix: "/schools/timetable", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/assessments", featureKey: "schools.results" },
   { scope: "page", prefix: "/schools/finance", featureKey: "schools.fees" },
   { scope: "page", prefix: "/schools/notices", featureKey: "schools.core" },

@@ -64,9 +64,9 @@ by string match, no unguarded money.
 | S-0.4 | As a guardian, I only see finances or results if the school granted me that consent | `canReceiveFinancials` / `canReceiveAcademicResults` enforced in the API handlers, with a test per flag | `done` |
 | S-0.5 | As a school, my staff can only do what their role allows | `HOD` and `WARDEN` added to `UserRole`; role→persona resolution built; `requireSchoolPermission` replaces `isPrivilegedRole` across the 56 unguarded routes; a teacher cannot post a receipt. **The middleware matcher in `proxy.ts` does not cover `/api/v2/**`, so the ~220 `scope: "api"` entries in the route registry never run for it — route-level checks are the only defence there, and this story is what supplies them.** | `done` |
 | S-0.6 | As a bursar, a fee receipt reaches the general ledger when I post it | `createJournalEntryFromSource` inline (retail's pattern), idempotency keys kept, period locks respected; balanced journal entry asserted in a test | `done` |
-| S-0.7 | As a teacher, I am not shown a timetable the school never set | `deriveSlot` deleted from the page and the portal endpoint; route, nav entry and gating entry removed until S-1.1 | `todo` |
-| S-0.8 | As an engineer, dead code does not imply a feature exists | `lib/platform/entity-triggers.ts` deleted; teacher↔employee is S-1.7 | `todo` |
-| S-0.9 | As a staff user, I do not see portal links meant for parents and students | The three portal entries removed from the schools nav group | `todo` |
+| S-0.7 | As a teacher, I am not shown a timetable the school never set | `deriveSlot` deleted from the page and the portal endpoint; route, nav entry and gating entry removed until S-1.1 | `done` |
+| S-0.8 | As an engineer, dead code does not imply a feature exists | `lib/platform/entity-triggers.ts` deleted; teacher↔employee is S-1.7 | `done` |
+| S-0.9 | As a staff user, I do not see portal links meant for parents and students | The three portal entries removed from the schools nav group | `done` |
 
 ## Iteration 1 — The domain a school runs on
 
