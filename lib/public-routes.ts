@@ -21,6 +21,8 @@ export const PUBLIC_BASE_PATHS = [
   "/v",
   /** Client sign-off and feedback — /s/[token] */
   "/s",
+  /** Portal account claim for students and guardians — /c/[token] */
+  "/c",
 ] as const;
 
 export function isPublicPath(pathname: string): boolean {

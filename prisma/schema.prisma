@@ -138,6 +138,7 @@ model Company {
   schoolFeeReceiptAllocations   SchoolFeeReceiptAllocation[]
   schoolFeeWaivers              SchoolFeeWaiver[]
   schoolAttendanceSessions      SchoolAttendanceSession[]
+  schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
   carSalesLeads                 CarSalesLead[]
   carSalesVehicles              CarSalesVehicle[]
@@ -931,6 +932,7 @@ model User {
   schoolTeacherProfiles             SchoolTeacherProfile[]
   schoolStudentPortalAccount        SchoolStudent[]                @relation("SchoolStudentPortalUser")
   schoolGuardianPortalAccount       SchoolGuardian[]               @relation("SchoolGuardianPortalUser")
+  schoolPortalInvitesClaimed        SchoolPortalInvite[]           @relation("SchoolPortalInviteClaimedBy")
   schoolResultModerationActions     SchoolResultModerationAction[] @relation("SchoolResultModerationActionActor")
   schoolLeaveRequestsApproved       SchoolLeaveRequest[]           @relation("SchoolLeaveRequestApprovedBy")
   schoolLeaveRequestsCheckedOut     SchoolLeaveRequest[]           @relation("SchoolLeaveRequestCheckedOutBy")
@@ -5426,6 +5428,47 @@ enum SchoolFeeWaiverStatus {
   REVERSED
 }
 
+enum SchoolPortalInviteSubject {
+  STUDENT
+  GUARDIAN
+}
+
+/// An invitation for a student or guardian to claim their portal account.
+///
+/// The subject is a nullable foreign key per kind rather than a type+id string
+/// pair, so the database cascades a delete and refuses an invite pointing at a
+/// record that does not exist — a dangling invite is how an account outlives
+/// the child it belonged to. Exactly one of the two is set; `subject` says
+/// which, so a query does not have to guess.
+///
+/// Only the sha256 hash of the token is stored. The plaintext appears once, in
+/// the response to whoever issued it, and is never recoverable afterwards.
+model SchoolPortalInvite {
+  id            String                    @id @default(uuid())
+  companyId     String
+  subject       SchoolPortalInviteSubject
+  studentId     String?
+  guardianId    String?
+  tokenHash     String                    @unique
+  sentTo        String
+  expiresAt     DateTime
+  claimedAt     DateTime?
+  claimedUserId String?
+  revokedAt     DateTime?
+  createdById   String?
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  student     SchoolStudent?  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardian    SchoolGuardian? @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  claimedUser User?           @relation("SchoolPortalInviteClaimedBy", fields: [claimedUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, subject, claimedAt])
+  @@index([studentId])
+  @@index([guardianId])
+}
+
 enum SchoolAttendanceSessionStatus {
   DRAFT
   SUBMITTED
@@ -5647,6 +5690,7 @@ model SchoolStudent {
   feeInvoices            SchoolFeeInvoice[]
   feeReceipts            SchoolFeeReceipt[]
   feeWaivers             SchoolFeeWaiver[]
+  portalInvites          SchoolPortalInvite[]
 
   @@unique([companyId, studentNo])
   @@unique([companyId, admissionNo])
@@ -5674,7 +5718,8 @@ model SchoolGuardian {
 
   company      Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   user         User?                   @relation("SchoolGuardianPortalUser", fields: [userId], references: [id], onDelete: SetNull)
-  studentLinks SchoolStudentGuardian[]
+  studentLinks  SchoolStudentGuardian[]
+  portalInvites SchoolPortalInvite[]
 
   @@unique([companyId, guardianNo])
   @@unique([companyId, userId])

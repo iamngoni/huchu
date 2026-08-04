@@ -54,6 +54,8 @@ export type SchoolsGuardianRecord = {
   phone: string;
   email: string | null;
   nationalId: string | null;
+  /** Set once the guardian has claimed a portal invitation. */
+  userId: string | null;
   _count: { studentLinks: number };
 };
 
@@ -506,5 +508,38 @@ export async function updateSchoolsTerm(
     `/api/v2/schools/terms/${id}`,
     { method: "PATCH", body: JSON.stringify(input) },
   );
+  return response.data;
+}
+
+// ---------------------------------------------------------------------------
+// Portal invitations
+// ---------------------------------------------------------------------------
+
+export type PortalInviteSubject = "STUDENT" | "GUARDIAN";
+
+export type IssuedPortalInvite = {
+  subjectId: string;
+  subject: PortalInviteSubject;
+  sentTo: string;
+  /** Shown once. The server keeps only a hash. */
+  token: string;
+  expiresAt: string;
+};
+
+export type PortalInviteFailure = {
+  subjectId: string;
+  sentTo: string;
+  reason: string;
+};
+
+export async function issuePortalInvites(
+  invites: Array<{ subject: PortalInviteSubject; subjectId: string; sentTo: string }>,
+) {
+  const response = await fetchJson<
+    ApiResponse<{ issued: IssuedPortalInvite[]; failed: PortalInviteFailure[] }>
+  >("/api/v2/schools/portal-invites", {
+    method: "POST",
+    body: JSON.stringify({ invites }),
+  });
   return response.data;
 }
