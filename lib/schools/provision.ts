@@ -54,6 +54,12 @@ export type ProvisionSchoolResult = {
    * type. Counts are what this run *created*, so a re-run reports zeroes.
    */
   accounting: { accountsCreated: number; postingRulesCreated: number };
+  /**
+   * Enrolments written for pupils who were already in a class but had no row for
+   * the current term. See `ensureCurrentTermEnrolments` for why this belongs to
+   * provisioning rather than to admissions.
+   */
+  enrolmentsCreated: number;
 };
 
 /**
@@ -314,6 +320,17 @@ export async function provisionSchool(
   // there are none.
   const accounting = await ensureAccountingDefaults(companyId);
 
+  // A class on a pupil's record is not an enrolment. See the helper for what
+  // that costs; doing it here means every path that opens or re-opens a school
+  // closes the gap, including the template path that never calls the CLI.
+  // `terms` rather than `termRows`: the reported array is the one that knows
+  // which term is open, including the case where a re-run left the school's own
+  // choice alone.
+  const currentTerm = terms.find((term) => term.isActive) ?? terms[0];
+  const enrolmentsCreated = currentTerm
+    ? await ensureCurrentTermEnrolments({ companyId, termId: currentTerm.id })
+    : 0;
+
   return {
     academicYear: {
       id: academicYear.id,
@@ -329,7 +346,85 @@ export async function provisionSchool(
       accountsCreated: accounting.createdAccounts,
       postingRulesCreated: accounting.createdPostingRules,
     },
+    enrolmentsCreated,
   };
+}
+
+/**
+ * Enrol the pupils who are already in a class but have no row for this term.
+ *
+ * **A class on a pupil's record is not an enrolment.** `SchoolStudent.currentClassId`
+ * says where a child sits today; `SchoolEnrollment` says which class they were in
+ * for a given term, and it is the second that the rest of the module reads. The
+ * year roll-up walks enrolments to decide who is promoted (S-1.5), a result sheet
+ * is built per class per term from them (S-1.3), and a fee structure is billed
+ * against the enrolled class (S-2.4).
+ *
+ * So a tenant with 1,200 pupils and 5 enrolment rows — which is what the demo
+ * school was — has a register that works, a roll-up that finds nobody to promote
+ * and a term's results that cannot be assembled. Nothing errors; the screens are
+ * simply empty, which is the worst way for this to be wrong.
+ *
+ * Written here rather than in admissions because admissions covers the pupils who
+ * arrive *after* the school opens (`lib/schools/admissions.ts` creates the
+ * enrolment when an application is accepted, and the importer creates one per row
+ * — S-3.3). Neither covers the ones already on the books when the module is
+ * switched on, and that is exactly who a school has on day one.
+ *
+ * Idempotent, like the rest of provisioning: the unique key is
+ * `(companyId, studentId, termId)`, so a re-run inserts nothing and reports zero.
+ * Existing rows are left alone — a school that has moved a child into another
+ * class for this term has made a decision, and this is not the place to overrule
+ * it.
+ */
+export async function ensureCurrentTermEnrolments(input: {
+  companyId: string;
+  termId: string;
+}): Promise<number> {
+  const { companyId, termId } = input;
+
+  const enrolled = new Set(
+    (
+      await prisma.schoolEnrollment.findMany({
+        where: { companyId, termId },
+        select: { studentId: true },
+      })
+    ).map((row) => row.studentId),
+  );
+
+  const candidates = await prisma.schoolStudent.findMany({
+    where: {
+      companyId,
+      // A class is required: without one there is nothing to enrol them into,
+      // and inventing one would put a child in a room somebody has to find out
+      // about later.
+      currentClassId: { not: null },
+      // APPLICANT is not yet a pupil and WITHDRAWN is no longer one. GRADUATED
+      // and SUSPENDED both stay on the roll — a suspended child is still in the
+      // class they will come back to, and a graduate's last term is a fact.
+      status: { in: ["ACTIVE", "SUSPENDED"] },
+    },
+    select: { id: true, currentClassId: true, currentStreamId: true },
+  });
+
+  const missing = candidates.filter((student) => !enrolled.has(student.id));
+  if (missing.length === 0) return 0;
+
+  const created = await prisma.schoolEnrollment.createMany({
+    data: missing.map((student) => ({
+      companyId,
+      studentId: student.id,
+      termId,
+      classId: student.currentClassId as string,
+      streamId: student.currentStreamId,
+      status: "ACTIVE" as const,
+    })),
+    // Belt and braces against two operators running this at once. The unique key
+    // makes the second insert a no-op rather than a crashed provision run.
+    skipDuplicates: true,
+  });
+
+  return created.count;
 }
 
 /**

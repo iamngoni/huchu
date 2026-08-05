@@ -91,6 +91,9 @@ async function main() {
     `  entitlement     ADDON_SCHOOLS_SUITE, ${result.featuresEnabled} features on`,
   );
   console.log(
+    `  enrolments      ${result.enrolmentsCreated} written for ${current?.code ?? "the first term"}`,
+  );
+  console.log(
     "\nThe school can enrol, invoice and take a register. Everything above is a " +
       "default to edit, not a decision that has been made for them.",
   );

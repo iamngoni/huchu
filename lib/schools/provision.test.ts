@@ -138,6 +138,98 @@ describe("a freshly opened school can also take money", () => {
   });
 });
 
+describe("the pupils already on the books", () => {
+  /**
+   * The gap this closes: a school switching the module on has pupils in classes
+   * and no enrolments, because admissions only writes one for a child who arrives
+   * *after* opening. Everything term-shaped — the roll-up, a result sheet, a fee
+   * bill — reads enrolments, so those screens come up empty with nothing in the
+   * logs to say why.
+   */
+  async function pupilInAClass(status: "ACTIVE" | "APPLICANT" | "WITHDRAWN" = "ACTIVE") {
+    const klass = await prisma.schoolClass.findFirstOrThrow({
+      where: { companyId },
+      select: { id: true },
+    });
+    const stamp = `${Math.floor(process.hrtime()[1] / 1000)}-${status}`;
+    return prisma.schoolStudent.create({
+      data: {
+        companyId,
+        studentNo: `S-${stamp}`,
+        firstName: "Tendai",
+        lastName: `Moyo ${stamp}`,
+        status,
+        currentClassId: klass.id,
+      },
+      select: { id: true },
+    });
+  }
+
+  it("enrols a pupil who has a class but no row for this term", async () => {
+    await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+    const student = await pupilInAClass();
+
+    const again = await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+    expect(again.enrolmentsCreated).toBe(1);
+
+    const enrolment = await prisma.schoolEnrollment.findFirstOrThrow({
+      where: { companyId, studentId: student.id },
+      include: { term: { select: { code: true } } },
+    });
+    // The current term, not the first one: a school opening mid-year bills and
+    // reports against the term it is actually in.
+    expect(enrolment.term.code).toBe("T2");
+    expect(enrolment.status).toBe("ACTIVE");
+  });
+
+  it("writes nothing the second time", async () => {
+    await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+    await pupilInAClass();
+    await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+
+    const third = await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+    expect(third.enrolmentsCreated).toBe(0);
+    expect(await prisma.schoolEnrollment.count({ where: { companyId } })).toBe(1);
+  });
+
+  it("leaves an applicant and a leaver out of it", async () => {
+    await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+    await pupilInAClass("APPLICANT");
+    await pupilInAClass("WITHDRAWN");
+
+    const again = await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+    // An applicant is not yet a pupil and a leaver is no longer one. Enrolling
+    // either would put a child on a class list somebody then has to explain.
+    expect(again.enrolmentsCreated).toBe(0);
+  });
+
+  it("does not move a child the school has already placed elsewhere this term", async () => {
+    await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+    const student = await pupilInAClass();
+    const [term, other] = await Promise.all([
+      prisma.schoolTerm.findFirstOrThrow({ where: { companyId, isActive: true } }),
+      prisma.schoolClass.findFirstOrThrow({
+        where: { companyId },
+        orderBy: { code: "desc" },
+        select: { id: true },
+      }),
+    ]);
+    await prisma.schoolEnrollment.create({
+      data: { companyId, studentId: student.id, termId: term.id, classId: other.id },
+    });
+
+    const again = await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+    expect(again.enrolmentsCreated).toBe(0);
+
+    const enrolment = await prisma.schoolEnrollment.findFirstOrThrow({
+      where: { companyId, studentId: student.id },
+    });
+    // The school's decision stands. Provisioning fills gaps; it does not correct
+    // people.
+    expect(enrolment.classId).toBe(other.id);
+  });
+});
+
 describe("the ladder follows the school's level", () => {
   it("gives a primary school grades and no forms", async () => {
     await provisionSchool({ companyId, level: "PRIMARY", year: 2026 }, MID_TERM_TWO);
