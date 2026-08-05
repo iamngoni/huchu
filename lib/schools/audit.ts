@@ -48,6 +48,12 @@ export type SchoolAuditEventType =
   | "schools.fee.waiver.approved"
   | "schools.fee.waiver.applied"
   /**
+   * S-4.6 — copying a fee sheet to other year groups. One act that decides what
+   * every family in fifteen classes will be billed, so "who copied Form 1's fees
+   * across the school, and which classes were left alone" needs an answer.
+   */
+  | "schools.fee.structure.cloned"
+  /**
    * S-3.3 — a school switching systems. An import writes hundreds of students,
    * parents and balances in one act, so "who loaded these nine hundred pupils,
    * and when" needs an answer that is not "somebody, at some point". The commit

@@ -114,17 +114,28 @@ export function ClassFeesContent({
         />
       </FilterBar>
 
+      {/* Silent about money until the figures are in. Reading
+          "$0.00 outstanding across 0 students" a second before the real total
+          lands is worse than reading nothing: it is a number a bursar can act on
+          and it is wrong. `isPending` rather than `isLoading` — a refetch of a
+          list already on screen is not a reason to blank the total. */}
       <p className="text-sm text-muted-foreground">
-        <span className="tabular-nums">{formatSchoolMoney(outstanding)}</span> outstanding across{" "}
-        {owing} student
-        {owing === 1 ? "" : "s"}, from {invoices.length} invoice
-        {invoices.length === 1 ? "" : "s"}.
+        {invoicesQuery.isPending ? (
+          "Adding up what this year group owes…"
+        ) : (
+          <>
+            <span className="tabular-nums">{formatSchoolMoney(outstanding)}</span> outstanding
+            across {owing} student
+            {owing === 1 ? "" : "s"}, from {invoices.length} invoice
+            {invoices.length === 1 ? "" : "s"}.
+          </>
+        )}
       </p>
 
       <MobileList>
         {invoices.length === 0 ? (
           <MobileListEmpty>
-            {invoicesQuery.isLoading
+            {invoicesQuery.isPending
               ? "Loading invoices…"
               : "No invoices for this year group yet."}
           </MobileListEmpty>

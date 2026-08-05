@@ -47,6 +47,7 @@ import {
   type SchoolFeeWaiverRecord,
 } from "@/lib/schools/fees-v2";
 import { BulkGenerateInvoicesDialog } from "./bulk-generate-invoices-dialog";
+import { CopyStructureDialog } from "./copy-structure-dialog";
 
 type FeesView =
   | "structures"
@@ -134,6 +135,10 @@ export function SchoolsFeesContent() {
   const queryClient = useQueryClient();
 
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  // Which fee sheet the "Copy to…" dialog is about. Held as the record rather
+  // than the id so the dialog can name its lines and its total without a second
+  // fetch of a list it is already looking at.
+  const [copySource, setCopySource] = useState<SchoolFeeStructureRecord | null>(null);
   const [invoiceForm, setInvoiceForm] = useState(initialInvoiceForm);
 
   const [bulkGenerateDialogOpen, setBulkGenerateDialogOpen] = useState(false);
@@ -336,7 +341,10 @@ export function SchoolsFeesContent() {
   });
   const structuresQuery = useQuery({
     queryKey: ["schools", "fees", "structures"],
-    queryFn: () => fetchSchoolFeeStructures({ page: 1, limit: 200 }),
+    // `includeLines` is what makes the totals real. Without it the route has no
+    // lines to add up and every structure in this table read "$0.00 a term" — a
+    // fee sheet that appears to charge nothing, which is worse than no column.
+    queryFn: () => fetchSchoolFeeStructures({ page: 1, limit: 200, includeLines: true }),
   });
   const invoicesQuery = useQuery({
     queryKey: ["schools", "fees", "invoices"],
@@ -415,6 +423,19 @@ export function SchoolsFeesContent() {
         id: "currency",
         header: "Currency",
         cell: ({ row }) => <NumericCell align="left">{row.original.currency}</NumericCell>,
+      },
+      {
+        id: "copy",
+        header: "",
+        cell: ({ row }) => (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCopySource(row.original)}
+          >
+            Copy to…
+          </Button>
+        ),
       },
     ],
     [],
@@ -928,6 +949,10 @@ export function SchoolsFeesContent() {
 
         <div className={activeView === "structures" ? "space-y-2" : "hidden"}>
           <h2 className="text-section-title">Fee Structures</h2>
+          <p className="text-sm text-[var(--text-muted)]">
+            A school opens with one fee sheet on the first year group. Copy it up the
+            ladder rather than re-typing it — the copies arrive as drafts.
+          </p>
           <DataTable
             data={structures}
             columns={structuresColumns}
@@ -938,6 +963,14 @@ export function SchoolsFeesContent() {
           />
         </div>
       </VerticalDataViews>
+
+      <CopyStructureDialog
+        structure={copySource}
+        open={copySource !== null}
+        onOpenChange={(next) => {
+          if (!next) setCopySource(null);
+        }}
+      />
 
       {/* Create Invoice Dialog */}
       <Dialog open={invoiceDialogOpen} onOpenChange={handleInvoiceDialogOpenChange}>
