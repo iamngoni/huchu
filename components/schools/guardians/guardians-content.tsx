@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
+import { PersonAvatar } from "@/components/schools/common/person-avatar";
 import { PortalInviteDialog } from "@/components/schools/portal/portal-invite-dialog";
 import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { fetchSchoolsGuardians } from "@/lib/schools/admin-v2";
@@ -79,7 +80,17 @@ export function GuardiansContent() {
         // Surname first, matching the `lastName, firstName` sort the API
         // applies — otherwise an alphabetical list reads as an unsorted one.
         header: "Name",
-        cell: ({ row }) => `${row.original.lastName}, ${row.original.firstName}`,
+        cell: ({ row }) => (
+          <span className="flex items-center gap-3">
+            <PersonAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+            />
+            <span className="truncate">
+              {row.original.lastName}, {row.original.firstName}
+            </span>
+          </span>
+        ),
       },
       {
         id: "phone",

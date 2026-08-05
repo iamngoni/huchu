@@ -249,48 +249,48 @@ capability found later joins its own portal rather than the end of the list.
 |---|---|---|---|
 | S-6.20 | As a student, I sign in with a PIN | PIN entry to prototype parity | `todo` |
 | S-6.21 | As a student, I change my PIN, or recover it when I forget | Change and forgotten-PIN flows | `todo` |
-| S-6.22 | As a student, I see my timetable for today and for the week | Day and week views — depends on S-1.1 | `todo` |
-| S-6.23 | As a student, I open a class from my timetable | Class detail to prototype parity | `todo` |
-| S-6.24 | As a student, I see what work is set and filter it | Assignment list with filters — depends on S-1.9 | `todo` |
-| S-6.25 | As a student, I hand work in and see that it arrived | Hand-in flow with the handed-in state — depends on S-1.9 | `todo` |
-| S-6.26 | As a student, I see my marks for the term | Marks to prototype parity — depends on S-1.3 | `todo` |
+| S-6.22 | As a student, I see my timetable for today and for the week | Day and week views — depends on S-1.1 | `done` |
+| S-6.23 | As a student, I open a class from my timetable | Class detail to prototype parity | `done` |
+| S-6.24 | As a student, I see what work is set and filter it | Assignment list with filters — depends on S-1.9 | `done` |
+| S-6.25 | As a student, I hand work in and see that it arrived | Hand-in flow with the handed-in state — depends on S-1.9 | `done` |
+| S-6.26 | As a student, I see my marks for the term | Marks to prototype parity — depends on S-1.3 | `done` |
 | S-6.27 | As a student, I open my report card | Report card by term — depends on S-1.3 and S-5.2 | `todo` |
-| S-6.28 | As a student, I browse the library and borrow a book | Catalogue and borrow — depends on S-1.10 | `todo` |
-| S-6.29 | As a student, I return a book, including by scanning it | Return and scan-to-return — depends on S-1.10 | `todo` |
-| S-6.30 | As a student, I renew a loan or reserve a book that is out | Renew and reserve — depends on S-1.10 | `todo` |
+| S-6.28 | As a student, I browse the library and borrow a book | Catalogue and borrow — depends on S-1.10 | `done` |
+| S-6.29 | As a student, I return a book, including by scanning it | Return and scan-to-return — depends on S-1.10 | `done` |
+| S-6.30 | As a student, I renew a loan or reserve a book that is out | Renew and reserve — depends on S-1.10 | `done` |
 | S-6.31 | As a student, I see what I owe in fines and settle it | Fines and fine payment — depends on S-1.10 and S-7.3 | `todo` |
-| S-6.32 | As a student, I set a goal for a subject and watch it move | Goals to prototype parity — depends on S-1.13 | `todo` |
+| S-6.32 | As a student, I set a goal for a subject and watch it move | Goals to prototype parity — depends on S-1.13 | `done` |
 | S-6.33 | As a student, I choose how often I am notified | Notifications with cadence preference — depends on S-9.5 | `todo` |
-| S-6.34 | As a student, I edit my profile and pick a theme | Profile editing and theme | `todo` |
-| S-6.35 | As a student, I find help and say whether it helped | Help centre with helpfulness feedback | `todo` |
-| S-6.36 | As a student, the portal is its own app rather than the staff dashboard with a different menu | Mobile shell to prototype parity: app bar, bottom tabs (Home · Timetable · Marks · Profile), full-bleed screens. No dashboard chrome anywhere under `/portal/student` | `todo` |
+| S-6.34 | As a student, I edit my profile and pick a theme | Profile editing and theme | `done` |
+| S-6.35 | As a student, I find help and say whether it helped | Help centre with helpfulness feedback | `done` |
+| S-6.36 | As a student, the portal is its own app rather than the staff dashboard with a different menu | Mobile shell to prototype parity: app bar, bottom tabs (Home · Timetable · Marks · Profile), full-bleed screens. No dashboard chrome anywhere under `/portal/student` | `done` |
 
 ### Teacher — tablet and desktop
 
 | ID | Story | Acceptance signal | Status |
 |---|---|---|---|
-| S-6.40 | As a teacher, I open my day and see the lessons I am teaching | Today to prototype parity — depends on S-1.1 | `todo` |
-| S-6.41 | As a teacher, I take the register for a lesson, marking the whole class present in one action | Register with mark-all and per-student override | `todo` |
+| S-6.40 | As a teacher, I open my day and see the lessons I am teaching | Today to prototype parity — depends on S-1.1 | `done` |
+| S-6.41 | As a teacher, I take the register for a lesson, marking the whole class present in one action | Register with mark-all and per-student override | `done` |
 | S-6.42 | As a teacher, I look back at attendance I have taken | Attendance history to prototype parity | `todo` |
-| S-6.43 | As a teacher, I enter marks cell by cell and they save as I go | Gradebook entry and save — depends on S-1.3 | `todo` |
+| S-6.43 | As a teacher, I enter marks cell by cell and they save as I go | Gradebook entry and save — depends on S-1.3 | `done` |
 | S-6.44 | As a teacher, I add my own assessment column | Custom columns — depends on S-1.3 | `todo` |
-| S-6.45 | As a teacher, I work through the papers still to mark | Papers-to-mark queue with filters | `todo` |
+| S-6.45 | As a teacher, I work through the papers still to mark | Papers-to-mark queue with filters | `done` |
 | S-6.46 | As a teacher, I send marks to parents under the school's rules | Publish to parents, gated by publish window and the school's publishing rules | `todo` |
 | S-6.47 | As a teacher, I hold a conversation with a parent | Message threads — depends on S-7.1 | `todo` |
 | S-6.48 | As a teacher, I answer common questions in one tap | Quick replies — depends on S-7.1 | `todo` |
 | S-6.49 | As a teacher, I send one message to a whole class | Broadcast — depends on S-7.1 | `todo` |
-| S-6.50 | As a teacher, I see my week | Timetable week view — depends on S-1.1 | `todo` |
-| S-6.51 | As a teacher, I plan a lesson | Lesson plans — depends on S-1.11 | `todo` |
-| S-6.52 | As a teacher, I copy last week's lessons forward | Copy-from-last-week — depends on S-1.11 | `todo` |
+| S-6.50 | As a teacher, I see my week | Timetable week view — depends on S-1.1 | `done` |
+| S-6.51 | As a teacher, I plan a lesson | Lesson plans — depends on S-1.11 | `done` |
+| S-6.52 | As a teacher, I copy last week's lessons forward | Copy-from-last-week — depends on S-1.11 | `done` |
 | S-6.53 | As a teacher, I stand in for a colleague and see their lesson | Cover lessons — depends on S-1.11 | `todo` |
-| S-6.54 | As a teacher, I set homework and see it land with the class | Assignment authoring — depends on S-1.9 | `todo` |
-| S-6.55 | As a teacher, I keep teaching resources and upload new ones | Resource library with upload — depends on S-1.12 | `todo` |
-| S-6.56 | As a teacher, I book and manage parent meetings | Meetings to prototype parity — depends on S-1.14 | `todo` |
-| S-6.57 | As a teacher, I see how my classes are doing | Teacher reports to prototype parity | `todo` |
-| S-6.58 | As a teacher, I control notifications, publishing, appearance, security and privacy | The five settings panels to prototype parity | `todo` |
+| S-6.54 | As a teacher, I set homework and see it land with the class | Assignment authoring — depends on S-1.9 | `done` |
+| S-6.55 | As a teacher, I keep teaching resources and upload new ones | Resource library with upload — depends on S-1.12 | `done` |
+| S-6.56 | As a teacher, I book and manage parent meetings | Meetings to prototype parity — depends on S-1.14 | `done` |
+| S-6.57 | As a teacher, I see how my classes are doing | Teacher reports to prototype parity | `done` |
+| S-6.58 | As a teacher, I control notifications, publishing, appearance, security and privacy | The five settings panels to prototype parity | `done` |
 | S-6.59 | As a teacher on a shared staffroom device, I am signed out safely when I walk away | Shared-device sign-out and idle lock | `todo` |
-| S-6.60 | As a teacher, the portal is anchored to the class I am teaching, not to a module tree | Portal shell to prototype parity (SHL·07): own side rail with the class list above the navigation, own top bar, groups for daily work / more / account. The chosen class is held by the shell so the register, the mark sheet and the planner cannot disagree about whose lesson it is. No dashboard chrome anywhere under `/portal/teacher` | `wip` |
-| S-6.61 | As a teacher, I meet classroom work in one place instead of two | Lesson plans, teaching resources, homework and mark capture removed from the admin navigation and the schools route registry; the office keeps oversight — unmarked registers, moderation, publishing — and nothing else | `todo` |
+| S-6.60 | As a teacher, the portal is anchored to the class I am teaching, not to a module tree | Portal shell to prototype parity (SHL·07): own side rail with the class list above the navigation, own top bar, groups for daily work / more / account. The chosen class is held by the shell so the register, the mark sheet and the planner cannot disagree about whose lesson it is. No dashboard chrome anywhere under `/portal/teacher` | `done` |
+| S-6.61 | As a teacher, I meet classroom work in one place instead of two | Lesson plans, teaching resources, homework and mark capture removed from the admin navigation and the schools route registry; the office keeps oversight — unmarked registers, moderation, publishing — and nothing else | `done` |
 
 ## Iteration 7 — Messaging and payments
 
@@ -331,8 +331,8 @@ once it returns."
 | S-10.1 | As anyone on a phone, every school admin surface works at 390×844 | Screenshotted, fixed, re-shot; no horizontal body scroll; controls one height | `todo` |
 | S-10.2 | As anyone on a tablet, every school surface works at 768×1024 | Screenshotted, fixed, re-shot | `todo` |
 | S-10.3 | As anyone on a phone, every portal surface matches its prototype | All three portals screenshot-compared against `docs/design-system/portals/` | `todo` |
-| S-10.4 | As anyone reading a list of people, I can tell them apart at a glance | Students and staff carry an avatar wherever they are listed — registers, mark sheets, class lists, message threads, admin tables and record pages. Initials with a colour derived from the name until a photo exists | `todo` |
-| S-10.5 | As anyone browsing the library, I recognise a book by its cover | Catalogue is a grid of covers in the student portal and in the admin catalogue, not rows of text. Loans and fines stay a list, because a debt is not browsed | `todo` |
+| S-10.4 | As anyone reading a list of people, I can tell them apart at a glance | Students and staff carry an avatar wherever they are listed — registers, mark sheets, class lists, message threads, admin tables and record pages. Initials with a colour derived from the name until a photo exists. Portals, the class list and guardians done; the rest of the admin tables still bare | `wip` |
+| S-10.5 | As anyone browsing the library, I recognise a book by its cover | Catalogue is a grid of covers, not rows of text. Loans and fines stay a list, because a debt is not browsed. Student portal done; the librarian's own catalogue screen still a list | `wip` |
 
 ## Parked
 
@@ -349,6 +349,7 @@ Newest first. One entry per commit that changes implementation status.
 
 | Date | Commit | Stories | Description |
 |---|---|---|---|
+| 2026-08-05 | _pending_ | S-6.36, S-6.60, S-6.61 | Both portals get their own shell, and classroom work leaves the admin dashboard. The teacher portal is SHL·07 — the design system's `AppShell` and `NavRail`, with the class list held above the navigation so the register, the mark sheet and the planner cannot disagree about whose lesson it is; the student portal is `MobileShell` with four bottom tabs. Neither uses the dashboard chrome. Lesson plans, teaching resources and mark capture were deleted from the admin nav and the route registry: the office keeps oversight, not the doing. Four bugs in other people's code had to be cleared first, all of them shipped and all of them app-wide — the Schools Suite bundle enabled three portals without `portal.core`, which every one of them depends on; the `STUDENT` and `PARENT` entitlements granted `schools.portal.*` without `schools.core`, which those depend on, so **no pupil or parent could reach their portal on any tenant**; Node 18+ defines a global `navigator` with no `onLine`, so the offline layer read the *server* as offline and every authenticated page threw itself away on hydration; and the design system's `Toaster` renders nothing on the server and a viewport on the client, the same mismatch one layer down. |
 | 2026-08-04 | `347c4c4` | S-1.11, S-1.12 → `done` | **Both in one release because they are one habit:** a teacher writes a plan and attaches the worksheet she is going to use, and shipping half of that is shipping half a workflow. **A plan is for one Tuesday; a slot is every Tuesday.** So a lesson plan carries its own date and points at the timetable slot rather than being one — and cover follows the *plan*, because arranging cover against a slot would hand the class over permanently rather than for the morning somebody is ill. The plan-per-slot rule is a partial unique index: partial because `slotId` is nullable, and a teacher planning a topic before the timetable is built must be able to write two plans for one day without them colliding. **Cover is refused into a clash**, checked against the timetable — a cover arranged into one is not discovered until two classes are waiting — and refused for the teacher who normally takes the lesson. **Copy-forward is the feature that makes planning survivable.** Most of next week is last week's shape with different topics, and retyping the objectives is what stops teachers planning at all. It skips a lesson somebody has already planned rather than overwriting it, and reports what it skipped. It deliberately does *not* carry the reflection forward: that is what happened last week, and putting it on a lesson that has not been taught is worse than leaving it blank. **Resources hang off a subject, not a class** — a Form 2 worksheet is the same worksheet next September, and pinning it to a class means re-uploading it every year; the year group is a hint. A teacher's unshared drafts are visible to them and nobody else, which is what makes it safe to put a half-finished worksheet here rather than on a memory stick. A resource with neither a file nor a link is refused by a CHECK: a title with nothing behind it, and a shelf of those is worse than an empty one. **Link-only for now** — file upload belongs with the Iteration 5 documents work, and the form says so rather than offering a button that does nothing. 20 tests, 4 witnesses. One test fixture had to be corrected: the first cover-clash test tripped the class-clash index before the cover check could run, so it was passing on the wrong constraint. 4/4 screenshots. |
 | 2026-08-04 | `bebf2bf` | S-1.10 → `done` | **A title is not a copy.** Three copies of one book are one `SchoolBook` and three `SchoolBookCopy` rows, because a loan is of the physical copy — the one with the barcode — and a library that lends "the title" cannot say which of them is missing. Reservations go the other way, against the *title*: a reader wants the book, not a particular one, so a returned twin satisfies them. **The copy-out rule is a partial unique index**, not a check — the fourth time this shape has been the right answer, and for the same reason as the bed: two librarians share a desk and a scanner each, and a check in the handler cannot survive that. Partial because the same copy is lent again next week and last term's returns must not block it. **What the money does.** The fine is calculated *at return* and stored, not computed on read: a school that raises its rate in March should not silently re-price every fine it charged in February. Zero is stored as null, because a fine of nothing is not a fine and storing it would put a zero-value line on a child's fee account. The rate is capped, so a book forgotten over a long holiday does not come back owing more than it cost. An unpaid fine blocks a loan — the only lever a school library has, and a system that lends anyway is one where the fines are decoration. Being over the limit is a separate refusal with a different sentence, because the fix is different: bring one back, versus pay what you owe. A renewal is refused while somebody is waiting for the title, which is what stops a reservation list becoming meaningless. **The register opens on what is late**, and shows what each book would cost if it came back today — shown, not stored, because overdue-ness happens by the passage of time and not by anybody doing anything. 25 tests, 4 witnesses; one of the witnesses passed for the wrong reason on the first run (the dates CHECK fired before the index could) and now names the constraint it is watching. 4/4 screenshots. |
 | 2026-08-04 | `95bc1ec` | S-1.9 → `done` | **Homework is not an assessment, though the two look alike.** An assessment carries marks that roll into a term mark; homework is set, handed in and mostly never marked at all. Collapsing them would mean every piece of reading counted towards a report card, or every test needing a due date it does not have — so `SchoolAssignment` is its own model, with `maxScore` nullable and *null* being how a school says "not marked". **Four decisions worth stating.** Setting and publishing are separate acts, because a teacher drafts on a Sunday and does not want thirty children reading a half-written instruction; unpublishing work children have already handed in is refused with a count. Late work is *recorded as late*, not refused — a school still wants the work, and lateness is a fact about it. Lateness is decided once, when the work arrives, and stored: computing it on read would let a child who handed in on Friday edit their answer on Saturday and become on time, and would let a teacher extending a deadline erase what actually happened. And the board is built from the class roll outward — a list of submissions cannot show you the child who has handed in nothing, which is the only thing a teacher opens it for on a Tuesday evening. **A defect in every dialog I have written this session, found by looking:** the design system renders `DialogDescription` as `sr-only`, so "out of 20" on the mark sheet and "3 of 8 in · 1 late" on the homework board were invisible. Both moved into the body. 16 tests, 4 witnesses. 4/4 screenshots. Also added the missing route-registry entries for assignments, health, applications and the year roll-up — each was falling through to the `/api/v2/schools` catch-all and gating on `schools.core` rather than its own feature. |

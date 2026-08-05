@@ -243,7 +243,13 @@ export const navSections: NavSection[] = [
   // registrar, a bursar and a class teacher each live in. Grouped the way a
   // school is actually organised — the people, the teaching week, the money,
   // the paperwork — each group expanding to its own children, which is the
-  // pattern the CRM section above already sets.
+  // pattern the other module sections already set.
+  //
+  // Classroom work is deliberately absent. Lesson plans, teaching resources,
+  // homework and mark capture live in the teacher portal, because a teacher
+  // does them and an administrator does not. The office keeps oversight —
+  // who has not marked, moderation, publishing — which is a different question
+  // asked of the same tables.
   //
   // Every group shares `schools.core`, so a tenant without the module loses the
   // whole set rather than being left with six empty headings.
@@ -273,8 +279,6 @@ export const navSections: NavSection[] = [
       { href: "/schools/academics", icon: TableRows, label: "Academics setup", group: "teaching" },
       { href: "/schools/timetable", icon: Calendar, label: "Timetable", group: "teaching" },
       { href: "/schools/library", icon: Calendar, label: "Library", group: "teaching" },
-      { href: "/schools/lesson-plans", icon: Calendar, label: "Lesson plans", group: "teaching" },
-      { href: "/schools/resources", icon: Calendar, label: "Teaching resources", group: "teaching" },
       { href: "/schools/classes", icon: TableRows, label: "Classes", group: "teaching" },
       { href: "/schools/subjects", icon: TableRows, label: "Subjects", group: "teaching" },
 
@@ -282,7 +286,6 @@ export const navSections: NavSection[] = [
       { href: "/schools/boarding", icon: Home, label: "Boarding", group: "attendance" },
       { href: "/schools/boarding/welfare", icon: Home, label: "Health and welfare", group: "attendance" },
 
-      { href: "/schools/assessments", icon: FileCheck, label: "Assessments & marks", group: "assessment" },
       { href: "/schools/results/moderation", icon: FileCheck, label: "Moderation", group: "assessment" },
       { href: "/schools/results/publish", icon: FileCheck, label: "Results publishing", group: "assessment" },
 

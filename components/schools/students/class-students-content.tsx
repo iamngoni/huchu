@@ -9,6 +9,7 @@ import { MobileList, MobileListEmpty, MobileListSectionHeader } from "@corelithz
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
+import { PersonAvatar } from "@/components/schools/common/person-avatar";
 import { NumericCell } from "@/components/ui/numeric-cell";
 import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -110,19 +111,28 @@ export function ClassStudentsContent({
       {
         id: "student",
         header: "Student",
+        // A face, then the name. A list of eight hundred children is scanned
+        // rather than read, and the same child is the same colour wherever
+        // they appear.
         cell: ({ row }) => (
-          <div>
-            <div className="font-medium">
-              <Link
-                href={`/schools/students/${row.original.id}`}
-                className="hover:underline"
-              >
-                {row.original.lastName}, {row.original.firstName}
-              </Link>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {row.original.studentNo}
-              {row.original.admissionNo ? ` · Admission ${row.original.admissionNo}` : ""}
+          <div className="flex items-center gap-3">
+            <PersonAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+            />
+            <div className="min-w-0">
+              <div className="font-medium">
+                <Link
+                  href={`/schools/students/${row.original.id}`}
+                  className="hover:underline"
+                >
+                  {row.original.lastName}, {row.original.firstName}
+                </Link>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {row.original.studentNo}
+                {row.original.admissionNo ? ` · Admission ${row.original.admissionNo}` : ""}
+              </div>
             </div>
           </div>
         ),
@@ -216,6 +226,9 @@ export function ClassStudentsContent({
                       <MobileListSectionHeader>{group.label}</MobileListSectionHeader>
                     ) : null}
                     <MobileList.Row
+                      leading={
+                        <PersonAvatar firstName={row.firstName} lastName={row.lastName} />
+                      }
                       title={`${row.lastName}, ${row.firstName}`}
                       subtitle={[
                         row.studentNo,

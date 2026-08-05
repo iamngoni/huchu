@@ -82,11 +82,21 @@ const ROLE_PREFIX_ALLOWLIST: Record<string, readonly string[] | null> = {
     "schools.results",
     "schools.portal.teacher",
   ],
+  // `schools.core` is here because `schools.portal.parent` and
+  // `schools.portal.student` both *depend* on it — see
+  // `lib/platform/gating/feature-dependencies.ts`. Granting the portal key
+  // alone resolved to "requires schools.core" on every request, so every
+  // parent and every pupil, on every tenant, was bounced to /access-blocked
+  // by a portal they had been given. It grants nothing on its own: the
+  // schools pages are gated on `schools.students`, `schools.fees` and the
+  // rest, which are still absent from these two lists, and a portal user's
+  // records are resolved from their own linked account regardless.
   PARENT: [
     "core.auth.",
     "core.help.",
     "core.notifications.",
     "core.multitenancy.",
+    "schools.core",
     "schools.portal.parent",
     "portal.",
   ],
@@ -95,6 +105,7 @@ const ROLE_PREFIX_ALLOWLIST: Record<string, readonly string[] | null> = {
     "core.help.",
     "core.notifications.",
     "core.multitenancy.",
+    "schools.core",
     "schools.portal.student",
     "portal.",
   ],

@@ -44,6 +44,17 @@ test.skip(process.env.VISUAL_PASS !== "1", "See visual-pass.spec.ts for setup.")
 const SCREENS = [
   { slug: "today", path: "/portal/teacher", ready: "Today's lessons" },
   { slug: "attendance", path: "/portal/teacher/attendance", ready: "on the class list" },
+  { slug: "marks", path: "/portal/teacher/marks", ready: /out of|No assessments/ },
+  { slug: "marks-book", path: "/portal/teacher/marks-book", ready: /Term mark|Nothing has been marked/ },
+  { slug: "timetable", path: "/portal/teacher/timetable", ready: /week|Monday/i },
+  { slug: "lessons", path: "/portal/teacher/lessons", ready: /lesson/i },
+  { slug: "homework", path: "/portal/teacher/homework", ready: /homework|due/i },
+  { slug: "files", path: "/portal/teacher/files", ready: /file|resource/i },
+  { slug: "meetings", path: "/portal/teacher/meetings", ready: /slot|meeting/i },
+  { slug: "reports", path: "/portal/teacher/reports", ready: /attendance|class/i },
+  { slug: "profile", path: "/portal/teacher/profile", ready: /staff|subject|profile/i },
+  { slug: "settings", path: "/portal/teacher/settings", ready: /notification|publish|sign out/i },
+  { slug: "help", path: "/portal/teacher/help", ready: /register|mark|question/i },
 ];
 
 test.beforeAll(async ({ browser }) => {
@@ -86,34 +97,6 @@ test.beforeAll(async ({ browser }) => {
   await context.close();
 });
 
-/**
- * Compile the routes before measuring them.
- *
- * `next dev` builds a route on its first request, and the client bundle only
- * when a browser actually runs it. An earlier version warmed with
- * `request.get()`, which fetches the HTML and compiles none of the JavaScript
- * — so the first two tests in the run still screenshotted skeletons and the
- * last two passed, which reads as flakiness and is really a cold server. Warm
- * with a real navigation, and wait for the screen the tests wait for.
- */
-test.beforeAll(async ({ browser }) => {
-  // Compiling a screen takes longer than a test does, and there is one per
-  // screen. The default 60s hook budget is for asserting, not for building.
-  test.setTimeout(60_000 * SCREENS.length);
-  const context = await browser.newContext({ storageState: AUTH_STATE });
-  const page = await context.newPage();
-  for (const screen of SCREENS) {
-    // Compiling is the point; whether this render finishes is not. The tests
-    // do the waiting, and a hook that blocks on the same condition just moves
-    // the timeout somewhere it reports worse.
-    await page
-      .goto(screen.path, { waitUntil: "domcontentloaded", timeout: 45_000 })
-      .catch(() => undefined);
-  }
-  await context.close();
-});
-
-
 for (const viewport of [
   { name: "tablet", width: 1024, height: 768 },
   { name: "desktop", width: 1440, height: 900 },
@@ -123,7 +106,8 @@ for (const viewport of [
 
     for (const screen of SCREENS) {
       test(`${screen.slug}`, async ({ page }) => {
-        // Reload rather than wait harder.
+        // Reload rather than wait harder, and let the first attempt pay for
+        // `next dev` compiling the screen.
         //
         // The app-wide hydration mismatch recorded in schools-open-questions
         // makes React discard the tree and rebuild it, and often enough the
@@ -136,7 +120,7 @@ for (const viewport of [
           await expect(page.getByText(screen.ready).first()).toBeVisible({
             timeout: 20_000,
           });
-        }).toPass({ timeout: 90_000, intervals: [1_000] });
+        }).toPass({ timeout: 150_000, intervals: [2_000] });
         // The rail is part of every screenshot, so wait for it to stop being
         // a skeleton too.
         await expect(page.getByText("Loading your classes…")).toHaveCount(0, {

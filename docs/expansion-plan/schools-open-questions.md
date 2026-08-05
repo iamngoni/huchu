@@ -169,6 +169,26 @@ layout and hands it to the client provider as `initialData`, which is better
 anyway. **If you see a portal screen stuck loading, this is the first thing to
 suspect.** I have not found the root cause and it deserves one.
 
+
+### 13. A fourth shipped bug: no pupil or parent could reach their portal
+
+`schools.portal.student` and `schools.portal.parent` both depend on
+`schools.core` (`lib/platform/gating/feature-dependencies.ts`), and the
+`STUDENT` and `PARENT` entries in `lib/platform/user-entitlements.ts` granted
+the portal key without it. Every request resolved to "requires schools.core"
+and bounced to `/access-blocked` — on every tenant, for every pupil and every
+parent, since the entitlement list was written.
+
+The teacher was fine because `TEACHER` inherits the shared schools prefix.
+
+`schools.core` is added to both lists now. It grants nothing on its own: the
+admin pages are gated on `schools.students`, `schools.fees` and the rest, which
+are still absent from those two lists, and a portal user's records are resolved
+from their own linked account regardless of any feature key.
+
+**Worth checking whether any real tenant has parents or pupils who have been
+quietly locked out.**
+
 ---
 
 _The changelog for this work lives in the roadmap; this file is a wall, not a

@@ -1,0 +1,395 @@
+"use client";
+
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Alert,
+  Badge,
+  BottomSheet,
+  Button,
+  Callout,
+  Card,
+  EmptyState,
+  Input,
+  Progress,
+  StatusState,
+  TextArea,
+} from "@corelithzw/react";
+import { CheckCircle, Circle, Clock, TrendingUp } from "@/lib/icons";
+import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import { useStudentPortal } from "./student-portal-context";
+
+type Goal = {
+  id: string;
+  targetMark: number | null;
+  baselineMark: number | null;
+  plan: string | null;
+  teacherNote: string | null;
+  achievedAt: string | null;
+  subject: { id: string; code: string; name: string };
+  currentMark: number | null;
+  /** Null means "there is no mark yet", never "off track". */
+  onTrack: boolean | null;
+};
+
+type GoalsResponse = { termId: string; goals: Goal[] };
+
+type Subject = {
+  id: string;
+  code: string;
+  name: string;
+  teacherName: string | null;
+  currentMark: number | null;
+};
+
+type SubjectsResponse = { termId: string; termName: string; subjects: Subject[] };
+
+/** One subject on the screen: what it is, the goal on it, and today's mark. */
+type Row = {
+  subjectId: string;
+  subjectName: string;
+  teacherName: string | null;
+  goal: Goal | null;
+  currentMark: number | null;
+};
+
+/** What the pupil is filling in while the sheet is open. */
+type Draft = { subjectId: string; subjectName: string; target: string; plan: string };
+
+/**
+ * The state of one goal, drawn from the canonical five.
+ *
+ * "No mark yet" is deliberately *not* one of these. A missing mark says nothing
+ * about whether the goal is going well, so it belongs beside the number it is
+ * missing from rather than in the status badge — the API returns `onTrack: null`
+ * for exactly this case and reading that as "off track" would tell a child they
+ * are behind on a test nobody has marked.
+ */
+function statusOf(goal: Goal | null): {
+  label: "Not started" | "Running" | "Completed";
+  tone: "neutral" | "info" | "success";
+  Icon: typeof Circle;
+} {
+  if (!goal || goal.targetMark === null) {
+    return { label: "Not started", tone: "neutral", Icon: Circle };
+  }
+  if (goal.onTrack === true) {
+    return { label: "Completed", tone: "success", Icon: CheckCircle };
+  }
+  return { label: "Running", tone: "info", Icon: Clock };
+}
+
+/** A percentage, or the plain truth that there isn't one. */
+function markLabel(value: number | null) {
+  return value === null ? "No mark yet" : `${Math.round(value)}%`;
+}
+
+/**
+ * A pupil's goals: what they are aiming for in each subject, and how it is going.
+ *
+ * The demo draws this as a gamified progress board — a weekly study bar chart, a
+ * "you did it" cheer, a slider from 50 to 100. The bar chart is measuring
+ * something this product does not record, so it is not here; the rest is, with
+ * the celebration turned down to the design system's voice.
+ *
+ * The screen is built on three numbers per subject, because a target on its own
+ * says nothing: where the child started, what they are aiming for, and where
+ * they are now. The baseline is stamped by the API the first time a goal is set
+ * and never moves after that, which is what makes the middle number mean
+ * anything later in the term.
+ *
+ * Where there is no mark, the screen says so. `onTrack` comes back null when
+ * either the target or the mark is missing, and the one thing this screen must
+ * never do is round that down into "off track" — a child reading that would
+ * think they had failed a test that has not been marked.
+ *
+ * The teacher's note is shown and cannot be written: the API refuses
+ * `teacherNote` from a portal caller, because a target a child sets for
+ * themselves and a comment their teacher writes about it are different things.
+ */
+export function StudentGoalsScreen() {
+  const { student, term } = useStudentPortal();
+  const queryClient = useQueryClient();
+
+  /** Null means the sheet is shut. Opening it seeds the draft, in the handler. */
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
+
+  const goals = useQuery({
+    queryKey: ["schools", "portal", "student", "goals", term?.id],
+    queryFn: () => fetchJson<GoalsResponse>("/api/v2/schools/goals"),
+    enabled: Boolean(student),
+  });
+
+  const subjects = useQuery({
+    queryKey: ["schools", "portal", "student", "subjects", term?.id],
+    queryFn: () =>
+      fetchJson<SubjectsResponse>("/api/v2/schools/portal/student/me/subjects"),
+    enabled: Boolean(student),
+  });
+
+  const save = useMutation({
+    mutationFn: async (input: Draft & { baselineMark: number | null }) => {
+      const target = Number(input.target);
+      if (!Number.isFinite(target) || target < 0 || target > 100) {
+        throw new Error("A goal is a number between 0 and 100");
+      }
+      return fetchJson("/api/v2/schools/goals", {
+        method: "POST",
+        // No studentId. The server reads the pupil off the signed-in account,
+        // and sending one from a phone is how a portal leaks another child.
+        body: JSON.stringify({
+          subjectId: input.subjectId,
+          targetMark: target,
+          plan: input.plan.trim() === "" ? null : input.plan.trim(),
+          // Only meaningful on the first save; the API keeps the stamped
+          // baseline on every later one.
+          baselineMark: input.baselineMark,
+        }),
+      });
+    },
+    onSuccess: (_result, input) => {
+      setSaved(`Goal saved — ${input.target}% in ${input.subjectName}`);
+      setDraft(null);
+      void queryClient.invalidateQueries({
+        queryKey: ["schools", "portal", "student", "goals"],
+      });
+    },
+  });
+
+  if (!student) {
+    return (
+      <EmptyState
+        title="This account is not linked to a pupil"
+        body="Ask the school office to link your sign-in to your student record. Until they do, there are no goals to show you."
+      />
+    );
+  }
+
+  const goalBySubject = new Map(
+    (goals.data?.goals ?? []).map((goal) => [goal.subject.id, goal]),
+  );
+
+  const rows: Row[] = (subjects.data?.subjects ?? []).map((subject) => ({
+    subjectId: subject.id,
+    subjectName: subject.name,
+    teacherName: subject.teacherName,
+    goal: goalBySubject.get(subject.id) ?? null,
+    currentMark:
+      goalBySubject.get(subject.id)?.currentMark ?? subject.currentMark ?? null,
+  }));
+
+  // A goal set before the pupil changed class still belongs to them. Dropping it
+  // because the subject is no longer on their timetable would quietly delete
+  // work they did.
+  const listed = new Set(rows.map((row) => row.subjectId));
+  for (const goal of goals.data?.goals ?? []) {
+    if (listed.has(goal.subject.id)) continue;
+    rows.push({
+      subjectId: goal.subject.id,
+      subjectName: goal.subject.name,
+      teacherName: null,
+      goal,
+      currentMark: goal.currentMark,
+    });
+  }
+
+  const withGoals = rows.filter((row) => row.goal?.targetMark != null);
+  const met = withGoals.filter((row) => row.goal?.onTrack === true).length;
+  const loading = goals.isPending || subjects.isPending;
+  const error = goals.error ?? subjects.error;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {error ? (
+        <Alert tone="danger" title="Your goals would not load">
+          {getApiErrorMessage(error)}
+        </Alert>
+      ) : null}
+      {save.error ? (
+        <Alert tone="danger" title="That goal did not save">
+          {getApiErrorMessage(save.error)}
+        </Alert>
+      ) : null}
+      {saved ? (
+        <Alert tone="success" title={saved} onDismiss={() => setSaved(null)} />
+      ) : null}
+
+      <Card
+        title="What you are aiming for"
+        subtitle={
+          term
+            ? `${term.name} · ${withGoals.length} goal${withGoals.length === 1 ? "" : "s"} set, ${met} reached`
+            : "No term is running, so there is nothing to aim at yet"
+        }
+      >
+        <p className="t-body t-muted">
+          Pick a mark you want in a subject. The app keeps the mark you started
+          from, so later in the term you can see how far you have come rather
+          than only how far is left.
+        </p>
+      </Card>
+
+      {loading ? (
+        <StatusState
+          variant="loading"
+          title="Getting your goals…"
+          body="Reading your subjects and the marks you already have."
+        />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={<TrendingUp className="size-5" aria-hidden />}
+          title="No subjects yet"
+          body="Goals are set per subject, and your year group has none on the timetable for this term. Ask the office once your subjects are set up."
+        />
+      ) : (
+        rows.map((row) => {
+          const goal = row.goal;
+          const target = goal?.targetMark ?? null;
+          const baseline = goal?.baselineMark ?? null;
+          const status = statusOf(goal);
+          const toGo =
+            target !== null && row.currentMark !== null && row.currentMark < target
+              ? Math.round(target - row.currentMark)
+              : null;
+
+          return (
+            <Card
+              key={row.subjectId}
+              title={row.subjectName}
+              subtitle={row.teacherName ? `Taught by ${row.teacherName}` : undefined}
+              actions={
+                <Badge tone={status.tone}>
+                  <status.Icon className="size-3" aria-hidden /> {status.label}
+                </Badge>
+              }
+            >
+              <div className="flex flex-col gap-4">
+                <dl className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "Started at", value: markLabel(baseline) },
+                    { label: "Aiming for", value: target === null ? "Not set" : `${Math.round(target)}%` },
+                    { label: "Now", value: markLabel(row.currentMark) },
+                  ].map((cell) => (
+                    <div key={cell.label} className="flex flex-col gap-1">
+                      <dt className="t-caption t-subtle">{cell.label}</dt>
+                      <dd className="t-mono t-strong m-0 tabular-nums">{cell.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                {target !== null ? (
+                  <Progress
+                    value={Math.min(row.currentMark ?? 0, target)}
+                    max={target}
+                    tone={goal?.onTrack === true ? "success" : "brand"}
+                    label={`${row.subjectName}: ${markLabel(row.currentMark)} against a goal of ${Math.round(target)}%`}
+                  />
+                ) : null}
+
+                <p className="t-body-sm t-muted">
+                  {target === null
+                    ? "You have not set a goal in this subject yet."
+                    : row.currentMark === null
+                      ? "Nothing has been marked in this subject yet, so there is no score to measure against your goal."
+                      : goal?.onTrack === true
+                        ? "You are at or above your goal."
+                        : `${toGo}% to go.`}
+                </p>
+
+                {goal?.plan ? (
+                  <div className="flex flex-col gap-1">
+                    <span className="t-label-sm">How you will get there</span>
+                    <p className="t-body-sm">{goal.plan}</p>
+                  </div>
+                ) : null}
+
+                {goal?.teacherNote ? (
+                  <Callout tone="info" title="What your teacher said">
+                    {goal.teacherNote}
+                  </Callout>
+                ) : null}
+
+                <Button
+                  variant="secondary"
+                  block
+                  onClick={() =>
+                    setDraft({
+                      subjectId: row.subjectId,
+                      subjectName: row.subjectName,
+                      target: target === null ? "" : String(Math.round(target)),
+                      plan: goal?.plan ?? "",
+                    })
+                  }
+                >
+                  {target === null ? "Set a goal" : "Change my goal"}
+                </Button>
+              </div>
+            </Card>
+          );
+        })
+      )}
+
+      <BottomSheet
+        open={draft !== null}
+        onClose={() => setDraft(null)}
+        title={draft ? `Your goal in ${draft.subjectName}` : "Your goal"}
+        description="Pick the mark you want by the end of term. You can change it later."
+        footer={
+          <div className="flex gap-2">
+            <Button variant="ghost" block onClick={() => setDraft(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              block
+              loading={save.isPending}
+              disabled={!draft || draft.target.trim() === ""}
+              onClick={() => {
+                if (!draft) return;
+                const existing = goalBySubject.get(draft.subjectId) ?? null;
+                const row = rows.find((item) => item.subjectId === draft.subjectId);
+                save.mutate({
+                  ...draft,
+                  // The baseline is stamped once. Sending it again on a change
+                  // would be harmless — the API ignores it — but sending the
+                  // current mark on a *first* save is what makes the baseline
+                  // real instead of empty.
+                  baselineMark: existing ? null : (row?.currentMark ?? null),
+                });
+              }}
+            >
+              Save my goal
+            </Button>
+          </div>
+        }
+      >
+        {draft ? (
+          <div className="flex flex-col gap-4">
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={100}
+              size="lg"
+              label="The mark you want"
+              hint="A percentage between 0 and 100."
+              suffix="%"
+              value={draft.target}
+              onChange={(event) =>
+                setDraft({ ...draft, target: event.target.value })
+              }
+            />
+            <TextArea
+              rows={3}
+              label="How you will get there"
+              hint="Optional. One or two things you will do differently."
+              value={draft.plan}
+              onChange={(event) => setDraft({ ...draft, plan: event.target.value })}
+            />
+          </div>
+        ) : null}
+      </BottomSheet>
+    </div>
+  );
+}
