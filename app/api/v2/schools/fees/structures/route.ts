@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import { money, sumMoney } from "@/lib/schools/money";
 
 const querySchema = z.object({
   search: z.string().trim().min(1).optional(),
@@ -39,10 +40,6 @@ const createSchema = z.object({
   notes: z.string().trim().max(1000).nullable().optional(),
   lines: z.array(structureLineSchema).min(1),
 });
-
-function toMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -105,12 +102,12 @@ export async function GET(request: NextRequest) {
         "lines" in record && Array.isArray(record.lines) ? record.lines : [];
       return {
         ...record,
+        // Post S-2.1 Float→Decimal: `line.amount` is a `Prisma.Decimal`, and
+        // `successResponse` turns these back into numbers on the way out.
         totals: {
-          amount: toMoney(lines.reduce((sum, line) => sum + line.amount, 0)),
-          mandatoryAmount: toMoney(
-            lines
-              .filter((line) => line.isMandatory)
-              .reduce((sum, line) => sum + line.amount, 0),
+          amount: sumMoney(lines.map((line) => line.amount)),
+          mandatoryAmount: sumMoney(
+            lines.filter((line) => line.isMandatory).map((line) => line.amount),
           ),
         },
       };
@@ -172,7 +169,7 @@ export async function POST(request: NextRequest) {
             companyId,
             feeCode: line.feeCode.toUpperCase(),
             description: line.description,
-            amount: toMoney(line.amount),
+            amount: money(line.amount),
             isMandatory: line.isMandatory ?? true,
             sortOrder: line.sortOrder ?? index,
           })),

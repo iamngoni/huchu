@@ -4,6 +4,11 @@ import { errorResponse, successResponse, validateSession } from "@/lib/api-utils
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
+  exceeds,
+  resolveBaseCurrency,
+  toBaseAmount,
+} from "@/lib/schools/money";
+import {
   emitSchoolFeeAccountingEvent,
   refreshFeeInvoiceBalance,
 } from "../../../_helpers";
@@ -79,6 +84,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 totalAmount: true,
                 subTotal: true,
                 taxTotal: true,
+                currency: true,
+                exchangeRate: true,
               },
             })
           : await tx.schoolFeeInvoice.findFirst({
@@ -98,14 +105,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 totalAmount: true,
                 subTotal: true,
                 taxTotal: true,
+                currency: true,
+                exchangeRate: true,
               },
             });
 
       if (!invoice) {
         throw new Error("No eligible invoice found to apply waiver");
       }
-      if (waiver.amount - invoice.balanceAmount > 0.009) {
+      // Post S-2.1 Float→Decimal: exact, not `> 0.009`.
+      if (exceeds(waiver.amount, invoice.balanceAmount)) {
         throw new Error("Waiver amount exceeds invoice outstanding balance");
+      }
+      // S-2.2. A waiver may only discount a bill in the same currency; the
+      // waiver was created before the invoice was chosen in the derived path,
+      // so this is the first point at which the pair is known.
+      if (waiver.currency !== invoice.currency) {
+        throw new Error("Waiver currency does not match the invoice currency");
       }
 
       const updatedWaiver = await tx.schoolFeeWaiver.update({
@@ -113,6 +129,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         data: {
           invoiceId: invoice.id,
           status: "APPLIED",
+          // The invoice's rate is the one that governs, so the discount and
+          // the bill reach the ledger through the same conversion.
+          exchangeRate: invoice.exchangeRate,
+          baseAmount: toBaseAmount(waiver.amount, invoice.exchangeRate),
           approvedById: waiver.approvedById ?? session.user.id,
           approvedAt: waiver.approvedAt ?? new Date(),
           appliedById: session.user.id,
@@ -159,6 +179,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (!applied) return errorResponse("Fee waiver not found", 404);
 
+    const baseCurrency = await resolveBaseCurrency(companyId);
+
     await emitSchoolFeeAccountingEvent({
       companyId,
       actorId: session.user.id,
@@ -166,10 +188,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       sourceId: applied.id,
       sourceRef: applied.invoice?.invoiceNo ?? applied.id,
       entryDate: applied.appliedAt ?? new Date(),
-      amount: applied.amount,
-      netAmount: applied.amount,
+      amount: applied.baseAmount,
+      netAmount: applied.baseAmount,
       taxAmount: 0,
-      grossAmount: applied.amount,
+      grossAmount: applied.baseAmount,
+      currency: baseCurrency,
+      documentCurrency: applied.currency,
+      documentAmount: applied.amount,
+      exchangeRate: applied.exchangeRate,
       payload: {
         waiverType: applied.waiverType,
         studentId: applied.studentId,
@@ -190,6 +216,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       message === "Cannot apply a rejected or reversed waiver" ||
       message === "No eligible invoice found to apply waiver" ||
       message === "Waiver amount exceeds invoice outstanding balance" ||
+      message === "Waiver currency does not match the invoice currency" ||
       message === "Failed to refresh invoice after waiver application"
     ) {
       return errorResponse(message, 400);

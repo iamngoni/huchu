@@ -1,6 +1,7 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { activateTerm } from "@/lib/schools/calendar";
+import { money } from "@/lib/schools/money";
 import { grantBundleToCompany } from "@/lib/platform/entitlements";
 
 /**
@@ -338,13 +339,17 @@ async function ensureStarterFeeStructure(input: {
             companyId: input.companyId,
             feeCode: "TUITION",
             description: "Tuition",
-            amount: input.tuition,
+            // Post S-2.1 Float→Decimal: `amount` is Decimal(14,2). A plain
+            // number is still accepted on write; rounded here so the seeded
+            // figures are the ones a bursar sees rather than the ones the
+            // column chose for them.
+            amount: money(input.tuition),
           },
           {
             companyId: input.companyId,
             feeCode: "DEVLEVY",
             description: "Development levy",
-            amount: Math.round(input.tuition * 0.1),
+            amount: money(new Prisma.Decimal(input.tuition).times("0.1")),
           },
         ],
       },

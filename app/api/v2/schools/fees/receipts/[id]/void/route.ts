@@ -3,6 +3,7 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import { resolveBaseCurrency, toNumberOrZero } from "@/lib/schools/money";
 import {
   emitSchoolFeeAccountingEvent,
   refreshFeeInvoiceBalance,
@@ -71,6 +72,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (!result) return errorResponse("Fee receipt not found", 404);
 
+    // The reversal must undo exactly what the receipt posted, so it uses the
+    // rate stamped on the receipt rather than today's.
+    const baseCurrency = await resolveBaseCurrency(companyId);
+
     const accounting = await emitSchoolFeeAccountingEvent({
       actorRole: session.user.role,
       companyId,
@@ -79,10 +84,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       sourceId: result.id,
       sourceRef: result.receiptNo,
       entryDate: new Date(),
-      amount: result.amountReceived,
-      netAmount: result.amountReceived,
+      amount: result.baseAmount,
+      netAmount: result.baseAmount,
       taxAmount: 0,
-      grossAmount: result.amountReceived,
+      grossAmount: result.baseAmount,
+      currency: baseCurrency,
+      documentCurrency: result.currency,
+      documentAmount: result.amountReceived,
+      exchangeRate: result.exchangeRate,
       invertDirection: true,
       payload: {
         receiptNo: result.receiptNo,
@@ -90,7 +99,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         studentId: result.studentId,
         allocations: result.allocations.map((allocation) => ({
           invoiceId: allocation.invoiceId,
-          allocatedAmount: allocation.allocatedAmount,
+          // Post S-2.1 Float→Decimal: coerced explicitly, or JSON.stringify
+          // would store a Decimal as a string in the event payload.
+          allocatedAmount: toNumberOrZero(allocation.allocatedAmount),
         })),
       },
     }).catch((error) => {

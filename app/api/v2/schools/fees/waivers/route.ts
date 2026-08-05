@@ -10,6 +10,13 @@ import {
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import {
+  exceeds,
+  money,
+  resolveDocumentCurrency,
+  toBaseAmount,
+  UnknownExchangeRateError,
+} from "@/lib/schools/money";
 
 const querySchema = z.object({
   search: z.string().trim().min(1).optional(),
@@ -27,15 +34,13 @@ const createSchema = z.object({
   invoiceId: z.string().uuid().nullable().optional(),
   waiverType: z.enum(["SCHOLARSHIP", "DISCOUNT", "HARDSHIP", "OTHER"]),
   amount: z.number().finite().positive(),
+  /** S-2.2. Ignored when the waiver names an invoice — that invoice decides. */
+  currency: z.string().trim().min(3).max(10).optional(),
   reason: z.string().trim().max(500).nullable().optional(),
   status: z
     .enum(["DRAFT", "APPROVED", "APPLIED", "REJECTED", "REVERSED"])
     .optional(),
 });
-
-function toMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -134,7 +139,13 @@ export async function POST(request: NextRequest) {
       validated.invoiceId
         ? prisma.schoolFeeInvoice.findFirst({
             where: { id: validated.invoiceId, companyId, studentId: validated.studentId },
-            select: { id: true, termId: true, balanceAmount: true },
+            select: {
+              id: true,
+              termId: true,
+              balanceAmount: true,
+              currency: true,
+              exchangeRate: true,
+            },
           })
         : Promise.resolve(null),
     ]);
@@ -147,10 +158,31 @@ export async function POST(request: NextRequest) {
     if (invoice && invoice.termId !== validated.termId) {
       return errorResponse("Waiver term must match invoice term", 400);
     }
-    if (invoice && validated.amount - invoice.balanceAmount > 0.009) {
+    // Post S-2.1 Float→Decimal: an exact comparison, no epsilon fudge.
+    if (invoice && exceeds(validated.amount, invoice.balanceAmount)) {
       return errorResponse("Waiver amount exceeds invoice outstanding balance", 400);
     }
 
+    // S-2.2. A waiver against an invoice inherits that invoice's currency and
+    // the rate it was raised at, so the discount and the bill cannot drift
+    // apart when the rate moves.
+    let documentCurrency;
+    try {
+      documentCurrency = invoice
+        ? {
+            baseCurrency: null,
+            currency: invoice.currency,
+            exchangeRate: invoice.exchangeRate,
+          }
+        : await resolveDocumentCurrency({ companyId, currency: validated.currency });
+    } catch (error) {
+      if (error instanceof UnknownExchangeRateError) {
+        return errorResponse(error.message, 400);
+      }
+      throw error;
+    }
+
+    const amount = money(validated.amount);
     const status = validated.status ?? "DRAFT";
     const created = await prisma.schoolFeeWaiver.create({
       data: {
@@ -159,7 +191,10 @@ export async function POST(request: NextRequest) {
         termId: validated.termId,
         invoiceId: validated.invoiceId ?? null,
         waiverType: validated.waiverType,
-        amount: toMoney(validated.amount),
+        amount,
+        currency: documentCurrency.currency,
+        exchangeRate: documentCurrency.exchangeRate,
+        baseAmount: toBaseAmount(amount, documentCurrency.exchangeRate),
         reason: validated.reason ?? null,
         status,
         approvedById: status === "APPROVED" || status === "APPLIED" ? session.user.id : null,

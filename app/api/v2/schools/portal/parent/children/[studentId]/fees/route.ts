@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { clampAtZero, sumMoney } from "@/lib/schools/money";
 import {
   canViewAnyPortalSubject,
   consentDeniedMessage,
@@ -107,15 +108,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         student,
         invoices,
         receipts,
+        // Post S-2.1 Float→Decimal: `0 + Decimal` in JavaScript is string
+        // concatenation, so these four reductions would have put a silent
+        // string in front of a parent. They sum in Decimal now.
+        //
+        // The figures are stated in each invoice's own currency and a school
+        // billing in two would produce a total in neither — S-2.2 gives every
+        // invoice a `currency`, so the sums are grouped by it.
         summary: {
           invoices: invoices.length,
           receipts: receipts.length,
-          totalBilled: invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0),
-          totalPaid: invoices.reduce((sum, invoice) => sum + invoice.paidAmount, 0),
-          totalWaived: invoices.reduce((sum, invoice) => sum + invoice.waivedAmount, 0),
-          totalOutstanding: invoices.reduce(
-            (sum, invoice) => sum + Math.max(invoice.balanceAmount, 0),
-            0,
+          currencies: [...new Set(invoices.map((invoice) => invoice.currency))],
+          totalBilled: sumMoney(invoices.map((invoice) => invoice.totalAmount)),
+          totalPaid: sumMoney(invoices.map((invoice) => invoice.paidAmount)),
+          totalWaived: sumMoney(invoices.map((invoice) => invoice.waivedAmount)),
+          totalOutstanding: sumMoney(
+            invoices.map((invoice) => clampAtZero(invoice.balanceAmount)),
           ),
         },
       },

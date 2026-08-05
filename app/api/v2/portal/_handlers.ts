@@ -15,6 +15,7 @@ import {
   getTeacherProfile,
   isPrivilegedRole,
 } from "@/lib/schools/governance-v2";
+import { clampAtZero, sumMoney } from "@/lib/schools/money";
 import {
   resolvePortalGuardian,
   resolvePortalStudent,
@@ -344,9 +345,9 @@ export async function handleParentPortalGet(request: NextRequest) {
         activeBoardingAllocations: boardingAllocations.filter(
           (allocation) => allocation.status === "ACTIVE",
         ).length,
-        outstandingBalance: feeInvoices.reduce(
-          (sum, invoice) => sum + Math.max(invoice.balanceAmount, 0),
-          0,
+        // Post S-2.1 Float→Decimal: `0 + Decimal` concatenates strings.
+        outstandingBalance: sumMoney(
+          feeInvoices.map((invoice) => clampAtZero(invoice.balanceAmount)),
         ),
         unreadNotices: notices.filter((notice) => !notice.isRead).length,
         hasLinkedGuardian: true,
@@ -540,9 +541,9 @@ export async function handleStudentPortalGet(request: NextRequest) {
         activeBoardingAllocations: boardingAllocations.filter(
           (allocation) => allocation.status === "ACTIVE",
         ).length,
-        outstandingBalance: feeInvoices.reduce(
-          (sum, invoice) => sum + Math.max(invoice.balanceAmount, 0),
-          0,
+        // Post S-2.1 Float→Decimal: `0 + Decimal` concatenates strings.
+        outstandingBalance: sumMoney(
+          feeInvoices.map((invoice) => clampAtZero(invoice.balanceAmount)),
         ),
         unreadNotices: notices.filter((notice) => !notice.isRead).length,
       },

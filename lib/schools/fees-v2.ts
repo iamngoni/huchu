@@ -40,6 +40,8 @@ export type SchoolsFeesSummary = {
     issuedInvoices: number;
     overdueInvoices: number;
     receiptsPosted: number;
+    /** The currency the two money figures below are stated in (S-2.2). */
+    currency: string;
     waivedAmount: number;
     outstandingBalance: number;
   };
@@ -70,6 +72,9 @@ export type SchoolFeeInvoiceRecord = {
   status: "DRAFT" | "ISSUED" | "PART_PAID" | "PAID" | "VOIDED" | "WRITEOFF";
   issueDate: string;
   dueDate: string;
+  currency: string;
+  exchangeRate: number;
+  baseAmount: number;
   totalAmount: number;
   paidAmount: number;
   waivedAmount: number;
@@ -92,6 +97,9 @@ export type SchoolFeeReceiptRecord = {
   receiptDate: string;
   paymentMethod: "CASH" | "BANK_TRANSFER" | "CARD" | "MOBILE_MONEY";
   reference: string | null;
+  currency: string;
+  exchangeRate: number;
+  baseAmount: number;
   amountReceived: number;
   amountAllocated: number;
   amountUnallocated: number;
@@ -108,6 +116,9 @@ export type SchoolFeeReceiptRecord = {
 export type SchoolFeeWaiverRecord = {
   id: string;
   waiverType: "SCHOLARSHIP" | "DISCOUNT" | "HARDSHIP" | "OTHER";
+  currency: string;
+  exchangeRate: number;
+  baseAmount: number;
   amount: number;
   status: "DRAFT" | "APPROVED" | "APPLIED" | "REJECTED" | "REVERSED";
   reason: string | null;
@@ -173,6 +184,7 @@ export async function bulkGenerateInvoices(params: {
   dueDate: string;
   issueNow?: boolean;
   notes?: string;
+  /** S-2.4. Defaults to true server-side; pass false to be told about clashes. */
   skipExisting?: boolean;
 }) {
   return fetchJson<{

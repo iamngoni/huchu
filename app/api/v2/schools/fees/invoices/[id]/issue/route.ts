@@ -3,6 +3,11 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import {
+  isZeroOrLess,
+  resolveBaseCurrency,
+  toBaseAmount,
+} from "@/lib/schools/money";
 import { emitSchoolFeeAccountingEvent, refreshFeeInvoiceBalance } from "../../../_helpers";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -51,7 +56,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         invoiceId: existing.id,
       });
       if (!refreshed) throw new Error("Failed to refresh fee invoice totals");
-      if (refreshed.totalAmount <= 0) {
+      // Post S-2.1 Float→Decimal: `<= 0` on a Prisma.Decimal is a string
+      // comparison, which is quietly wrong rather than a type error.
+      if (isZeroOrLess(refreshed.totalAmount)) {
         throw new Error("Cannot issue an invoice with zero amount");
       }
 
@@ -59,7 +66,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         where: { id: existing.id },
         data: {
           issueDate,
-          status: refreshed.balanceAmount <= 0 ? "PAID" : "ISSUED",
+          status: isZeroOrLess(refreshed.balanceAmount) ? "PAID" : "ISSUED",
           issuedById: session.user.id,
           issuedAt: new Date(),
         },
@@ -72,6 +79,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!updated) return errorResponse("Fee invoice not found", 404);
 
     if (updated.status === "ISSUED") {
+      const baseCurrency = await resolveBaseCurrency(companyId);
       await emitSchoolFeeAccountingEvent({
         companyId,
         actorId: session.user.id,
@@ -79,11 +87,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         sourceId: updated.id,
         sourceRef: updated.invoiceNo,
         entryDate: updated.issueDate,
-        amount: updated.totalAmount,
-        netAmount: updated.subTotal,
-        taxAmount: updated.taxTotal,
-        grossAmount: updated.totalAmount,
-        currency: updated.feeStructure?.currency ?? "USD",
+        // S-2.2: the ledger takes the base-currency figures, derived from the
+        // rate stamped on the invoice when it was raised.
+        amount: updated.baseAmount,
+        netAmount: toBaseAmount(updated.subTotal, updated.exchangeRate),
+        taxAmount: toBaseAmount(updated.taxTotal, updated.exchangeRate),
+        grossAmount: updated.baseAmount,
+        currency: baseCurrency,
+        documentCurrency: updated.currency,
+        documentAmount: updated.totalAmount,
+        exchangeRate: updated.exchangeRate,
         payload: {
           invoiceNo: updated.invoiceNo,
           studentId: updated.studentId,

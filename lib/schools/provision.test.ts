@@ -85,6 +85,19 @@ describe("a freshly opened school", () => {
     });
     expect(structure?.lines.length).toBeGreaterThan(0);
     expect(structure?.lines.some((line) => line.feeCode === "TUITION")).toBe(true);
+
+    // Post S-2.1 Float→Decimal: the seeded prices are `Decimal(14,2)`. Asserted
+    // by value so a scale regression is caught here rather than on a real
+    // school's first invoice run.
+    const tuition = structure?.lines.find((line) => line.feeCode === "TUITION");
+    const levy = structure?.lines.find((line) => line.feeCode === "DEVLEVY");
+    expect(tuition).toBeDefined();
+    expect(levy).toBeDefined();
+    expect(Number(tuition!.amount)).toBeGreaterThan(0);
+    // The levy is a tenth of the tuition, exactly.
+    expect(levy!.amount.toFixed(2)).toBe(
+      tuition!.amount.dividedBy(10).toFixed(2),
+    );
   });
 });
 

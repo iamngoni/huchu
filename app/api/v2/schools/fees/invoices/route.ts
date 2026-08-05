@@ -12,7 +12,18 @@ import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
+  money,
+  multiplyMoney,
+  percent,
+  rate,
+  resolveDocumentCurrency,
+  taxOn,
+  toBaseAmount,
+  UnknownExchangeRateError,
+} from "@/lib/schools/money";
+import {
   emitSchoolFeeAccountingEvent,
+  isDuplicateLiveInvoice,
   refreshFeeInvoiceBalance,
 } from "../_helpers";
 
@@ -59,14 +70,16 @@ const createSchema = z.object({
   dueDate: dateInputSchema.optional(),
   description: z.string().trim().max(240).optional(),
   amount: z.number().finite().optional(),
+  /**
+   * S-2.2. Omitted means the school's own currency, so an existing tenant sees
+   * no change. A fee structure's currency wins over this, because the price
+   * sheet is what the family was quoted.
+   */
+  currency: z.string().trim().min(3).max(10).optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
   issueNow: z.boolean().optional(),
   lines: z.array(createLineSchema).optional(),
 });
-
-function toMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 
 function parseDate(input: string) {
   return new Date(input);
@@ -307,6 +320,22 @@ export async function POST(request: NextRequest) {
       return errorResponse("Duplicate fee codes in invoice lines are not allowed", 400);
     }
 
+    // S-2.2. A structure's own currency is what the family was quoted, so it
+    // beats anything the request asks for.
+    let documentCurrency;
+    try {
+      documentCurrency = await resolveDocumentCurrency({
+        companyId,
+        currency: feeStructure?.currency ?? validated.currency,
+        on: issueDate,
+      });
+    } catch (error) {
+      if (error instanceof UnknownExchangeRateError) {
+        return errorResponse(error.message, 400);
+      }
+      throw error;
+    }
+
     let invoiceNo: string;
     try {
       invoiceNo = validated.invoiceNo
@@ -332,26 +361,28 @@ export async function POST(request: NextRequest) {
           issueDate,
           dueDate,
           status: validated.issueNow ? "ISSUED" : "DRAFT",
+          currency: documentCurrency.currency,
+          exchangeRate: documentCurrency.exchangeRate,
           notes: validated.notes ?? null,
           createdById: session.user.id,
           issuedById: validated.issueNow ? session.user.id : null,
           issuedAt: validated.issueNow ? new Date() : null,
           lines: {
             create: sourceLines.map((line) => {
-              const quantity = toMoney(line.quantity);
-              const unitAmount = toMoney(line.unitAmount);
-              const net = toMoney(quantity * unitAmount);
-              const taxAmount = toMoney((net * line.taxRate) / 100);
-              const lineTotal = toMoney(net + taxAmount);
+              const quantity = rate(line.quantity);
+              const unitAmount = money(line.unitAmount);
+              const taxRate = percent(line.taxRate);
+              const net = multiplyMoney(quantity, unitAmount);
+              const taxAmount = taxOn(net, taxRate);
               return {
                 companyId,
                 feeCode: line.feeCode,
                 description: line.description,
                 quantity,
                 unitAmount,
-                taxRate: toMoney(line.taxRate),
+                taxRate,
                 taxAmount,
-                lineTotal,
+                lineTotal: net.plus(taxAmount),
               };
             }),
           },
@@ -393,11 +424,17 @@ export async function POST(request: NextRequest) {
         sourceId: created.id,
         sourceRef: created.invoiceNo,
         entryDate: created.issueDate,
-        amount: created.totalAmount,
-        netAmount: created.subTotal,
-        taxAmount: created.taxTotal,
-        grossAmount: created.totalAmount,
-        currency: created.feeStructure?.currency ?? "USD",
+        // S-2.2: the ledger is kept in the school's base currency, so the
+        // base-currency figures are what post. The billed amounts ride along in
+        // the payload.
+        amount: created.baseAmount,
+        netAmount: toBaseAmount(created.subTotal, created.exchangeRate),
+        taxAmount: toBaseAmount(created.taxTotal, created.exchangeRate),
+        grossAmount: created.baseAmount,
+        currency: documentCurrency.baseCurrency,
+        documentCurrency: created.currency,
+        documentAmount: created.totalAmount,
+        exchangeRate: created.exchangeRate,
         payload: {
           invoiceNo: created.invoiceNo,
           studentId: created.studentId,
@@ -418,6 +455,14 @@ export async function POST(request: NextRequest) {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      // S-2.4. The partial unique index reports itself by name, and a bursar
+      // needs to be told which of the two collisions they hit.
+      if (isDuplicateLiveInvoice(error)) {
+        return errorResponse(
+          "This student already has an invoice for this term and fee structure",
+          409,
+        );
+      }
       return errorResponse("Fee invoice number already exists", 409);
     }
     console.error("[API] POST /api/v2/schools/fees/invoices error:", error);

@@ -10,7 +10,17 @@ import { reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
+  money,
+  multiplyMoney,
+  percent,
+  rate,
+  resolveDocumentCurrency,
+  taxOn,
+  UnknownExchangeRateError,
+} from "@/lib/schools/money";
+import {
   emitSchoolFeeAccountingEvent,
+  isDuplicateLiveInvoice,
   refreshFeeInvoiceBalance,
 } from "../../_helpers";
 
@@ -29,12 +39,14 @@ const bulkGenerateSchema = z.object({
     .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
   issueNow: z.boolean().optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
-  skipExisting: z.boolean().optional(), // Skip students who already have invoice for term
+  /**
+   * S-2.4. Defaults to **true**: a bursar re-running a generation after a
+   * network wobble means "finish the job", not "raise everybody a second bill".
+   * The database refuses the duplicate either way; this decides whether the
+   * bursar is told about it as an error or as a count of what was left alone.
+   */
+  skipExisting: z.boolean().optional(),
 });
-
-function toMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 
 function parseDate(input: string) {
   return new Date(input);
@@ -117,13 +129,19 @@ export async function POST(request: NextRequest) {
       return errorResponse("No eligible students found matching criteria", 400);
     }
 
-    // If skipExisting, filter out students with existing invoices
+    // S-2.4. Skipping is the default. The scope of "already has one" matches
+    // the partial unique index exactly — same term, same fee structure, not
+    // voided — so a boarder who has been billed tuition is still eligible for
+    // the boarding run.
+    const skipExisting = validated.skipExisting ?? true;
     let eligibleStudents = students;
-    if (validated.skipExisting) {
+    if (skipExisting) {
       const existingInvoices = await prisma.schoolFeeInvoice.findMany({
         where: {
           companyId,
           termId: validated.termId,
+          feeStructureId: validated.feeStructureId,
+          status: { not: "VOIDED" },
           studentId: { in: students.map((s) => s.id) },
         },
         select: { studentId: true },
@@ -143,19 +161,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // S-2.2. Every invoice in a run carries the fee structure's currency, and
+    // one rate looked up once — a run that straddled two rates would bill two
+    // children in the same class differently.
+    let documentCurrency;
+    try {
+      documentCurrency = await resolveDocumentCurrency({
+        companyId,
+        currency: feeStructure.currency,
+        on: issueDate,
+      });
+    } catch (error) {
+      if (error instanceof UnknownExchangeRateError) {
+        return errorResponse(error.message, 400);
+      }
+      throw error;
+    }
+
     // Prepare line items from fee structure
-    const lineTemplate = feeStructure.lines.map((line) => ({
-      feeCode: line.feeCode,
-      description: line.description,
-      quantity: 1,
-      unitAmount: line.amount,
-      taxRate: 0,
-    }));
+    const lineTemplate = feeStructure.lines.map((line) => {
+      const quantity = rate(1);
+      const unitAmount = money(line.amount);
+      const taxRate = percent(0);
+      const net = multiplyMoney(quantity, unitAmount);
+      const taxAmount = taxOn(net, taxRate);
+      return {
+        feeCode: line.feeCode,
+        description: line.description,
+        quantity,
+        unitAmount,
+        taxRate,
+        taxAmount,
+        lineTotal: net.plus(taxAmount),
+      };
+    });
 
     // Generate invoices in batches
     const results = {
       created: 0,
-      skipped: 0,
+      skipped: students.length - eligibleStudents.length,
       errors: [] as Array<{ studentId: string; studentNo: string; error: string }>,
     };
 
@@ -183,38 +227,34 @@ export async function POST(request: NextRequest) {
                   issueDate,
                   dueDate,
                   status: validated.issueNow ? "ISSUED" : "DRAFT",
+                  currency: documentCurrency.currency,
+                  exchangeRate: documentCurrency.exchangeRate,
                   notes: validated.notes ?? null,
                   createdById: session.user.id,
                   issuedById: validated.issueNow ? session.user.id : null,
                   issuedAt: validated.issueNow ? new Date() : null,
                   lines: {
-                    create: lineTemplate.map((line) => {
-                      const quantity = toMoney(line.quantity);
-                      const unitAmount = toMoney(line.unitAmount);
-                      const net = toMoney(quantity * unitAmount);
-                      const taxAmount = toMoney((net * line.taxRate) / 100);
-                      const lineTotal = toMoney(net + taxAmount);
-                      return {
-                        companyId,
-                        feeCode: line.feeCode,
-                        description: line.description,
-                        quantity,
-                        unitAmount,
-                        taxRate: toMoney(line.taxRate),
-                        taxAmount,
-                        lineTotal,
-                      };
-                    }),
+                    create: lineTemplate.map((line) => ({
+                      companyId,
+                      feeCode: line.feeCode,
+                      description: line.description,
+                      quantity: line.quantity,
+                      unitAmount: line.unitAmount,
+                      taxRate: line.taxRate,
+                      taxAmount: line.taxAmount,
+                      lineTotal: line.lineTotal,
+                    })),
                   },
                 },
-                select: { id: true, invoiceNo: true, totalAmount: true },
+                select: { id: true, invoiceNo: true },
               });
 
-              // Refresh balance
-              await refreshFeeInvoiceBalance(tx, {
+              // Refresh balance — this is also what stamps `baseAmount`.
+              const refreshed = await refreshFeeInvoiceBalance(tx, {
                 companyId,
                 invoiceId: invoice.id,
               });
+              if (!refreshed) throw new Error("Failed to refresh invoice balances");
 
               // Emit accounting event if issued
               if (validated.issueNow) {
@@ -225,7 +265,13 @@ export async function POST(request: NextRequest) {
                   sourceId: invoice.id,
                   sourceRef: invoice.invoiceNo,
                   entryDate: issueDate,
-                  amount: invoice.totalAmount,
+                  amount: refreshed.baseAmount,
+                  netAmount: refreshed.baseAmount,
+                  grossAmount: refreshed.baseAmount,
+                  currency: documentCurrency.baseCurrency,
+                  documentCurrency: refreshed.currency,
+                  documentAmount: refreshed.totalAmount,
+                  exchangeRate: refreshed.exchangeRate,
                   payload: {
                     studentId: student.id,
                     studentNo: student.studentNo,
@@ -238,6 +284,13 @@ export async function POST(request: NextRequest) {
 
             results.created += 1;
           } catch (error) {
+            // S-2.4. The index is what actually closes the door — two bursars
+            // running the same generation at once both pass the pre-check
+            // above and one of them loses here. That is a skip, not a failure.
+            if (isDuplicateLiveInvoice(error)) {
+              results.skipped += 1;
+              return;
+            }
             console.error(
               `[Bulk Invoice] Failed for student ${student.studentNo}:`,
               error,

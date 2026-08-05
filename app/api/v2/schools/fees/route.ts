@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import { resolveBaseCurrency, toNumberOrZero } from "@/lib/schools/money";
+
+/**
+ * A single money figure across a school that bills in two currencies is only
+ * meaningful in one of them.
+ *
+ * Post S-2.2 the totals below are converted to the school's base currency by
+ * the database, using the rate stamped on each document rather than today's.
+ * `Prisma.aggregate` cannot express the division, so this is raw — the sum is
+ * `numeric` throughout, so nothing here is a float.
+ */
+async function sumInBaseCurrency(sql: Prisma.Sql): Promise<number> {
+  const rows = await prisma.$queryRaw<Array<{ total: Prisma.Decimal | null }>>(sql);
+  return toNumberOrZero(rows[0]?.total ?? 0);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,8 +29,17 @@ export async function GET(request: NextRequest) {
     if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
-    const [structures, activeStructures, invoices, issuedInvoices, overdueInvoices, receiptsPosted, waivedAmountAggregate, outstandingBalanceAggregate] =
-      await Promise.all([
+    const [
+      structures,
+      activeStructures,
+      invoices,
+      issuedInvoices,
+      overdueInvoices,
+      receiptsPosted,
+      waivedAmount,
+      outstandingBalance,
+      baseCurrency,
+    ] = await Promise.all([
         prisma.schoolFeeStructure.count({ where: { companyId } }),
         prisma.schoolFeeStructure.count({ where: { companyId, status: "ACTIVE" } }),
         prisma.schoolFeeInvoice.count({ where: { companyId } }),
@@ -30,17 +55,17 @@ export async function GET(request: NextRequest) {
           },
         }),
         prisma.schoolFeeReceipt.count({ where: { companyId, status: "POSTED" } }),
-        prisma.schoolFeeWaiver.aggregate({
-          where: { companyId, status: "APPLIED" },
-          _sum: { amount: true },
-        }),
-        prisma.schoolFeeInvoice.aggregate({
-          where: {
-            companyId,
-            status: { in: ["ISSUED", "PART_PAID"] },
-          },
-          _sum: { balanceAmount: true },
-        }),
+        sumInBaseCurrency(Prisma.sql`
+          SELECT COALESCE(SUM(ROUND("amount" / "exchangeRate", 2)), 0) AS total
+          FROM "SchoolFeeWaiver"
+          WHERE "companyId" = ${companyId} AND "status" = 'APPLIED'
+        `),
+        sumInBaseCurrency(Prisma.sql`
+          SELECT COALESCE(SUM(ROUND("balanceAmount" / "exchangeRate", 2)), 0) AS total
+          FROM "SchoolFeeInvoice"
+          WHERE "companyId" = ${companyId} AND "status" IN ('ISSUED', 'PART_PAID')
+        `),
+        resolveBaseCurrency(companyId),
       ]);
 
     return successResponse({
@@ -55,8 +80,10 @@ export async function GET(request: NextRequest) {
           issuedInvoices,
           overdueInvoices,
           receiptsPosted,
-          waivedAmount: waivedAmountAggregate._sum.amount ?? 0,
-          outstandingBalance: outstandingBalanceAggregate._sum.balanceAmount ?? 0,
+          /** The currency `waivedAmount` and `outstandingBalance` are stated in. */
+          currency: baseCurrency,
+          waivedAmount,
+          outstandingBalance,
         },
       },
     });

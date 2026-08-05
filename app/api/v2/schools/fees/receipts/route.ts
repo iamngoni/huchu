@@ -12,6 +12,15 @@ import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
+  exceeds,
+  money,
+  resolveDocumentCurrency,
+  sumMoney,
+  toBaseAmount,
+  toNumberOrZero,
+  UnknownExchangeRateError,
+} from "@/lib/schools/money";
+import {
   emitSchoolFeeAccountingEvent,
   refreshFeeInvoiceBalance,
   type SchoolFeePostingResult,
@@ -53,15 +62,13 @@ const createSchema = z.object({
   reference: z.string().trim().max(120).nullable().optional(),
   amountReceived: z.number().finite().positive().optional(),
   amount: z.number().finite().optional(),
+  /** S-2.2. Omitted means the school's own currency. */
+  currency: z.string().trim().min(3).max(10).optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
   postNow: z.boolean().optional(),
   allocations: z.array(allocationSchema).optional(),
   invoiceId: z.string().uuid().optional(),
 });
-
-function toMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 
 function normalizePaymentMethod(
   value: string,
@@ -208,7 +215,7 @@ export async function POST(request: NextRequest) {
     if (
       validated.amountReceived !== undefined &&
       validated.amount !== undefined &&
-      Math.abs(validated.amountReceived - validated.amount) > 0.009
+      !money(validated.amountReceived).equals(money(validated.amount))
     ) {
       return errorResponse("amount and amountReceived do not match", 400);
     }
@@ -265,9 +272,11 @@ export async function POST(request: NextRequest) {
             },
             select: {
               id: true,
+              invoiceNo: true,
               studentId: true,
               status: true,
               balanceAmount: true,
+              currency: true,
             },
           })
         : [];
@@ -295,10 +304,53 @@ export async function POST(request: NextRequest) {
     });
     if (!student) return errorResponse("Invalid student for this company", 400);
 
-    const receiptAllocationSum = toMoney(
-      allocations.reduce((sum, item) => sum + item.allocatedAmount, 0),
+    // S-2.2. A receipt takes the currency of what it is settling. Where the
+    // request names one and the invoices disagree, the invoices win — money
+    // cannot be allocated across a currency boundary without a conversion
+    // nobody has authorised.
+    const allocatedCurrencies = new Set(
+      allocations
+        .map((allocation) => invoiceMap.get(allocation.invoiceId)?.currency)
+        .filter((value): value is string => Boolean(value)),
     );
-    if (receiptAllocationSum - amountReceived > 0.009) {
+    if (allocatedCurrencies.size > 1) {
+      return errorResponse(
+        "Allocated invoices are in more than one currency; receipt one currency at a time",
+        400,
+      );
+    }
+    const requestedCurrency = validated.currency?.trim().toUpperCase();
+    const invoiceCurrency = [...allocatedCurrencies][0];
+    if (requestedCurrency && invoiceCurrency && requestedCurrency !== invoiceCurrency) {
+      return errorResponse(
+        `Receipt currency ${requestedCurrency} does not match the invoice currency ${invoiceCurrency}`,
+        400,
+      );
+    }
+
+    let documentCurrency;
+    try {
+      documentCurrency = await resolveDocumentCurrency({
+        companyId,
+        currency: invoiceCurrency ?? requestedCurrency,
+        on: receiptDate,
+      });
+    } catch (error) {
+      if (error instanceof UnknownExchangeRateError) {
+        return errorResponse(error.message, 400);
+      }
+      throw error;
+    }
+
+    // Post S-2.1 Float→Decimal: exact comparisons replace the `> 0.009`
+    // epsilon fudges. There is no float error left for them to absorb, and a
+    // tolerance that quietly accepts half a cent over is a tolerance that
+    // quietly accepts half a cent over.
+    const receiptAmount = money(amountReceived);
+    const receiptAllocationSum = sumMoney(
+      allocations.map((item) => item.allocatedAmount),
+    );
+    if (exceeds(receiptAllocationSum, receiptAmount)) {
       return errorResponse("Total allocation exceeds amount received", 400);
     }
 
@@ -312,7 +364,7 @@ export async function POST(request: NextRequest) {
         if (invoice.status === "VOIDED" || invoice.status === "WRITEOFF") {
           return errorResponse("Cannot allocate against voided or written-off invoice", 400);
         }
-        if (allocation.allocatedAmount - invoice.balanceAmount > 0.009) {
+        if (exceeds(allocation.allocatedAmount, invoice.balanceAmount)) {
           return errorResponse("Allocation exceeds invoice outstanding balance", 400);
         }
       }
@@ -341,9 +393,12 @@ export async function POST(request: NextRequest) {
           receiptDate,
           paymentMethod,
           reference: validated.reference ?? null,
-          amountReceived: toMoney(amountReceived),
+          amountReceived: receiptAmount,
           amountAllocated: receiptAllocationSum,
-          amountUnallocated: toMoney(amountReceived - receiptAllocationSum),
+          amountUnallocated: receiptAmount.minus(receiptAllocationSum),
+          currency: documentCurrency.currency,
+          exchangeRate: documentCurrency.exchangeRate,
+          baseAmount: toBaseAmount(receiptAmount, documentCurrency.exchangeRate),
           status: validated.postNow === false ? "DRAFT" : "POSTED",
           notes: validated.notes ?? null,
           createdById: session.user.id,
@@ -355,7 +410,7 @@ export async function POST(request: NextRequest) {
                   create: allocations.map((allocation) => ({
                     companyId,
                     invoiceId: allocation.invoiceId,
-                    allocatedAmount: toMoney(allocation.allocatedAmount),
+                    allocatedAmount: money(allocation.allocatedAmount),
                   })),
                 }
               : undefined,
@@ -414,17 +469,25 @@ export async function POST(request: NextRequest) {
         sourceId: created.id,
         sourceRef: created.receiptNo,
         entryDate: created.receiptDate,
-        amount: created.amountReceived,
-        netAmount: created.amountReceived,
+        // S-2.2: the ledger takes the base-currency figure.
+        amount: created.baseAmount,
+        netAmount: created.baseAmount,
         taxAmount: 0,
-        grossAmount: created.amountReceived,
+        grossAmount: created.baseAmount,
+        currency: documentCurrency.baseCurrency,
+        documentCurrency: created.currency,
+        documentAmount: created.amountReceived,
+        exchangeRate: created.exchangeRate,
         payload: {
           receiptNo: created.receiptNo,
           studentId: created.studentId,
           allocationCount: created.allocations.length,
           allocations: created.allocations.map((allocation) => ({
             invoiceId: allocation.invoiceId,
-            allocatedAmount: allocation.allocatedAmount,
+            // Post S-2.1 Float→Decimal: a `Prisma.Decimal` dropped into a
+            // `Record<string, unknown>` payload is not a type error, and
+            // `JSON.stringify` would silently store it as a string.
+            allocatedAmount: toNumberOrZero(allocation.allocatedAmount),
           })),
         },
       }).catch((error) => {

@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { emitSchoolFeeAccountingEvent } from "./_helpers";
 
@@ -81,6 +82,43 @@ describe("posting a fee receipt", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].sourceType).toBe("SALES_RECEIPT");
+  });
+
+  it("round-trips a Decimal amount at the cent", async () => {
+    // Post S-2.1 Float→Decimal: every caller now hands this helper a
+    // `Prisma.Decimal`, and the amount that reaches the integration event must
+    // be the cent the bursar counted, not a binary approximation of it.
+    const receiptId = `receipt-${stamp}-decimal`;
+    await emitSchoolFeeAccountingEvent({
+      companyId,
+      actorId,
+      eventType: "SCHOOL_FEE_RECEIPT_POSTED",
+      sourceId: receiptId,
+      sourceRef: `RCT-${receiptId.slice(0, 6)}`,
+      entryDate: new Date(),
+      amount: new Prisma.Decimal("1234.56"),
+      currency: "USD",
+      documentCurrency: "ZWG",
+      documentAmount: new Prisma.Decimal("33950.40"),
+      exchangeRate: new Prisma.Decimal("27.5"),
+    });
+
+    const event = await prisma.accountingIntegrationEvent.findFirstOrThrow({
+      where: { companyId, sourceId: `SCHOOL_FEE_RECEIPT:${receiptId}` },
+      select: { amount: true, currency: true, payloadJson: true },
+    });
+
+    expect(Number(event.amount)).toBeCloseTo(1234.56, 6);
+    expect(event.currency).toBe("USD");
+
+    // S-2.2: what the family was actually billed rides in the payload as a
+    // number. A `Prisma.Decimal` dropped in here is not a type error and
+    // `JSON.stringify` would have stored it as a string.
+    const envelope = JSON.parse(event.payloadJson ?? "{}") as Record<string, unknown>;
+    expect(envelope.documentCurrency).toBe("ZWG");
+    expect(typeof envelope.documentAmount).toBe("number");
+    expect(envelope.documentAmount).toBeCloseTo(33950.4, 6);
+    expect(envelope.exchangeRate).toBeCloseTo(27.5, 6);
   });
 
   it("does not create a second event when the same receipt is posted twice", async () => {
