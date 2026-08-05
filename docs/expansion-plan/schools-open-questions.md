@@ -351,3 +351,60 @@ fields at the same time.
 **Five more record types to go.** Guardian, teacher, class, subject and hostel
 still have hand-rolled pages (or none, for subject). They are now a tab array
 each, not a page each — the student page is the template.
+
+---
+
+### 18. The feature gate, not the data model, is what keeps schools out
+
+This bit twice in one afternoon and will bite again, so it is worth stating as a
+rule: **every `/api/v2/crm/**` route is gated on a `crm.*` feature, and no school
+tenant has one.** Making a school record a legal value in a shared enum changes
+the data model and changes nothing about who can reach it.
+
+- S-4.4 hit it on `/api/v2/crm/field-definitions` (`crm.settings`). Fixed with a
+  schools door onto the same engine — `/api/v2/schools/field-definitions`,
+  narrowed so a schools session can only ever touch school record types.
+- S-4.2 hit it on `/api/v2/crm/files` and `/api/v2/crm/comments` (`crm.core`).
+  Filing a document against a student returns `Feature disabled: crm.core`, even
+  though the storage now supports it perfectly well.
+
+**The next piece of work is module-neutral routes**, not more schools-shaped
+copies. `/api/v2/records/files`, `/api/v2/records/comments`, `/api/v2/records/tasks`
+gating on the module of the SUBJECT TYPE — `lib/records/registry.ts` already
+carries a `module` field on every type for exactly this. Two schools doors is a
+pattern; six is a mistake, and the record surface is supposed to belong to no
+single module.
+
+Until then the school record page has no tasks, comments or files tab. That is a
+gate away, not a schema away.
+
+### 19. Do not drop the legacy subject columns yet
+
+S-4.2 is deliberately additive. `CrmTask`, `CrmComment` and `CrmRecordFile` carry
+both the old nullable-foreign-key-per-kind columns and the new
+`(subjectType, subjectId)` pair, and `subjectWhere` matches either. Before you
+drop the old ones:
+
+1. Run `npx tsx scripts/backfill-record-subjects.ts` (dry run), then `--apply`.
+2. Deal with any rows it reports as naming no record at all. They are already
+   unreachable from every record page, and after the drop there is nothing left
+   to work out what they were about.
+3. Decide whether the narrowest-first precedence for a multi-subject row is what
+   you want — deal, lead, company, person, site, rep. Until the drop the other
+   columns are still there, so a different answer is still available.
+
+The drop also makes `subjectType`/`subjectId` non-nullable, which is worth doing
+in the same migration: a nullable subject is how a task ends up about nothing,
+and the old schema allowed exactly that.
+
+### 20. The test suite flakes under parallel load
+
+Three separate runs this session reported one or two failures that passed on
+re-run and in isolation: `lib/schools/provision.test.ts` once, two CRM files
+once, two unnamed files once. They all write to the shared dev database, so they
+contend with whatever else vitest is running.
+
+Nothing is wrong with the assertions. The risk is that this trains everyone to
+re-run a red suite until it is green, which is how a real failure gets waved
+through. It wants either a database per worker or a serialised project for the
+tests that touch Postgres.
