@@ -23,6 +23,10 @@ import {
 } from "@/lib/schools/money";
 import { writeSchoolAuditEvent } from "@/lib/schools/audit";
 import {
+  tryIssueSchoolFeeReceiptFiscalisation,
+  type SchoolFiscalOutcome,
+} from "@/lib/schools/fiscalisation";
+import {
   emitSchoolFeeAccountingEvent,
   FeeCreditError,
   isFeeCreditCheckViolation,
@@ -582,7 +586,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return successResponse({ ...created, accounting }, 201);
+    // S-2.7. The ZIMRA leg, and it runs last for a reason: the money is taken,
+    // the invoices are settled and the ledger has been told before FDMS is
+    // dialled. A school without the add-on gets `SKIPPED` without a query
+    // leaving the process; a school with it gets whatever the connector said,
+    // and a failure leaves a retryable `FiscalReceipt` row rather than losing
+    // the payment. `tryIssue…` cannot throw.
+    const fiscal: SchoolFiscalOutcome | null =
+      created.status === "POSTED"
+        ? await tryIssueSchoolFeeReceiptFiscalisation({
+            companyId,
+            receiptId: created.id,
+          })
+        : null;
+
+    return successResponse({ ...created, accounting, fiscal }, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse("Validation failed", 400, error.issues);

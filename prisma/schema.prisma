@@ -5079,6 +5079,16 @@ model FiscalReceipt {
   id                    String              @id @default(uuid())
   companyId             String
   invoiceId             String?
+  /// S-2.7 — the school fee receipt this fiscal receipt was issued for.
+  ///
+  /// A fiscal receipt names exactly one source document: an accounting sales
+  /// invoice or a school fee receipt, never both and never neither. The
+  /// `FiscalReceipt_one_source_check` constraint holds that; the unique below
+  /// holds "one fiscal receipt per school receipt". Both are nullable, and
+  /// Postgres treats NULLs as distinct, so each unique constrains only the rows
+  /// of its own kind — which is what a partial unique index would do and is why
+  /// one is not written out longhand here.
+  schoolReceiptId       String?
   receiptNumber         String?
   fiscalNumber          String?
   status                FiscalReceiptStatus @default(PENDING)
@@ -5096,10 +5106,12 @@ model FiscalReceipt {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
-  company Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  invoice SalesInvoice? @relation("SalesInvoiceFiscalReceipt", fields: [invoiceId], references: [id])
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoice       SalesInvoice?     @relation("SalesInvoiceFiscalReceipt", fields: [invoiceId], references: [id])
+  schoolReceipt SchoolFeeReceipt? @relation("SchoolFeeReceiptFiscalReceipt", fields: [schoolReceiptId], references: [id], onDelete: Cascade)
 
   @@unique([invoiceId])
+  @@unique([schoolReceiptId])
   @@index([companyId, status])
 }
 
@@ -6285,6 +6297,8 @@ model SchoolFeeReceipt {
   student     SchoolStudent                @relation(fields: [studentId], references: [id], onDelete: Cascade)
   allocations SchoolFeeReceiptAllocation[]
   refunds     SchoolFeeRefund[]
+  /// S-2.7 — at most one, and only on a tenant with the fiscalisation add-on.
+  fiscalReceipt FiscalReceipt?             @relation("SchoolFeeReceiptFiscalReceipt")
 
   @@unique([companyId, receiptNo])
   @@index([companyId, status])

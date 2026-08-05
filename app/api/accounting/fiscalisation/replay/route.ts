@@ -3,12 +3,34 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { issueFiscalReceipt } from "@/lib/accounting/fiscalisation";
+import {
+  issueSchoolFeeReceiptFiscalisation,
+  SCHOOL_FISCALISATION_FEATURE,
+} from "@/lib/schools/fiscalisation";
+import { hasFeature } from "@/lib/platform/features";
 import { hasRole } from "@/lib/roles";
 
 const schema = z.object({
   limit: z.number().int().min(1).max(200).optional(),
 });
 
+/**
+ * Drain the fiscal receipts that did not land.
+ *
+ * There is no worker and no cron: `issueFiscalDocument` writes its PENDING row
+ * before it dials FDMS, and this endpoint is what turns those rows back into
+ * attempts. S-2.7 widened it in two ways, both necessary or a school's receipts
+ * would queue forever:
+ *
+ *   * it no longer filters on `invoiceId: { not: null }`, which excluded every
+ *     school-sourced row by construction, and it re-issues each row through the
+ *     issuer that matches its source;
+ *   * it also sweeps posted school fee receipts that have **no** `FiscalReceipt`
+ *     row at all. Fiscalisation happens after the receipt's transaction commits,
+ *     so a process that dies in between leaves a receipt nothing would ever
+ *     retry. That gap is the price of never letting a fiscal failure roll back a
+ *     payment, and this is what closes it.
+ */
 export async function POST(request: NextRequest) {
   try {
     const sessionResult = await validateSession(request);
@@ -22,39 +44,91 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const validated = schema.parse(body);
     const limit = validated.limit ?? 50;
+    const companyId = session.user.companyId;
 
     const now = new Date();
     const candidates = await prisma.fiscalReceipt.findMany({
       where: {
-        companyId: session.user.companyId,
+        companyId,
         status: { in: ["FAILED", "PENDING"] },
-        invoiceId: { not: null },
         OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
       },
       orderBy: [{ updatedAt: "asc" }],
       take: limit,
-      select: { id: true, invoiceId: true },
+      select: { id: true, invoiceId: true, schoolReceiptId: true },
     });
+
+    // The never-attempted sweep, bounded by whatever the retry pass left of the
+    // limit so one call cannot be made unboundedly expensive.
+    const remaining = Math.max(limit - candidates.length, 0);
+    const schoolsFiscalise =
+      remaining > 0 && (await hasFeature(companyId, SCHOOL_FISCALISATION_FEATURE));
+    const unattempted =
+      schoolsFiscalise
+        ? await prisma.schoolFeeReceipt.findMany({
+            where: {
+              companyId,
+              status: "POSTED",
+              fiscalReceipt: { is: null },
+            },
+            orderBy: [{ createdAt: "asc" }],
+            take: remaining,
+            select: { id: true },
+          })
+        : [];
 
     let queued = 0;
     let failed = 0;
-    for (const receipt of candidates) {
+    let skipped = 0;
+
+    const attempt = async (run: () => Promise<{ status: string }>) => {
       try {
-        const result = await issueFiscalReceipt(session.user.companyId, receipt.invoiceId!, session.user.id);
-        if (result.status === "FAILED") {
-          failed += 1;
-        } else {
-          queued += 1;
-        }
+        const result = await run();
+        if (result.status === "FAILED") failed += 1;
+        else if (result.status === "SKIPPED") skipped += 1;
+        else queued += 1;
       } catch {
+        failed += 1;
+      }
+    };
+
+    for (const receipt of candidates) {
+      if (receipt.invoiceId) {
+        await attempt(() =>
+          issueFiscalReceipt(companyId, receipt.invoiceId!, session.user.id),
+        );
+      } else if (receipt.schoolReceiptId) {
+        await attempt(async () => {
+          const result = await issueSchoolFeeReceiptFiscalisation({
+            companyId,
+            receiptId: receipt.schoolReceiptId!,
+          });
+          return { status: result.fiscalStatus };
+        });
+      } else {
+        // Unreachable while `FiscalReceipt_one_source_check` holds; counted
+        // rather than ignored so a constraint that stops holding is visible.
         failed += 1;
       }
     }
 
+    for (const receipt of unattempted) {
+      await attempt(async () => {
+        const result = await issueSchoolFeeReceiptFiscalisation({
+          companyId,
+          receiptId: receipt.id,
+        });
+        return { status: result.fiscalStatus };
+      });
+    }
+
     return successResponse({
-      processed: candidates.length,
+      processed: candidates.length + unattempted.length,
       queued,
       failed,
+      // A school without the add-on: swept, correctly left alone, and not a
+      // failure. Reported so the count reconciles.
+      skipped,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -21,6 +21,8 @@ import {
 export type SchoolAuditEventType =
   | "schools.fee.receipt.recorded"
   | "schools.fee.receipt.voided"
+  /** S-2.7 — a bursar re-sent a receipt to ZIMRA by hand. */
+  | "schools.fee.receipt.fiscalised"
   | "schools.fee.credit.allocated"
   | "schools.fee.refund.requested"
   | "schools.fee.refund.paid"
