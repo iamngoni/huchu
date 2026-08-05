@@ -4,9 +4,9 @@ import { errorResponse, successResponse, validateSession } from "@/lib/api-utils
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
+  apportionBase,
   isZeroOrLess,
   resolveBaseCurrency,
-  toBaseAmount,
 } from "@/lib/schools/money";
 import { emitSchoolFeeAccountingEvent, refreshFeeInvoiceBalance } from "../../../_helpers";
 
@@ -80,6 +80,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (updated.status === "ISSUED") {
       const baseCurrency = await resolveBaseCurrency(companyId);
+      const issuedInBase = apportionBase({
+        amount: updated.totalAmount,
+        part: updated.taxTotal,
+        exchangeRate: updated.exchangeRate,
+      });
       await emitSchoolFeeAccountingEvent({
         companyId,
         actorId: session.user.id,
@@ -89,10 +94,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         entryDate: updated.issueDate,
         // S-2.2: the ledger takes the base-currency figures, derived from the
         // rate stamped on the invoice when it was raised.
-        amount: updated.baseAmount,
-        netAmount: toBaseAmount(updated.subTotal, updated.exchangeRate),
-        taxAmount: toBaseAmount(updated.taxTotal, updated.exchangeRate),
-        grossAmount: updated.baseAmount,
+        amount: issuedInBase.base,
+        // S-2.3: the tax is converted and the net is the remainder, so
+        // net + tax is the amount to the cent and the entry balances. Two
+        // separate conversions differ by one on a non-base currency, and the
+        // posting engine refuses an entry whose sides do not agree.
+        netAmount: issuedInBase.baseRest,
+        taxAmount: issuedInBase.basePart,
+        grossAmount: issuedInBase.base,
         currency: baseCurrency,
         documentCurrency: updated.currency,
         documentAmount: updated.totalAmount,

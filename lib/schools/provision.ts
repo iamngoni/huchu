@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { activateTerm } from "@/lib/schools/calendar";
 import { money } from "@/lib/schools/money";
 import { grantBundleToCompany } from "@/lib/platform/entitlements";
+import { ensureAccountingDefaults } from "@/lib/accounting/bootstrap";
 
 /**
  * Opening a school.
@@ -47,6 +48,12 @@ export type ProvisionSchoolResult = {
   feeStructureCreated: boolean;
   /** How many `schools.*` features the tenant is now entitled to and has on. */
   featuresEnabled: number;
+  /**
+   * S-2.3. The accounting foundation the bursar needs before the first receipt:
+   * the school chart of accounts and one posting rule per `SCHOOL_FEE_*` source
+   * type. Counts are what this run *created*, so a re-run reports zeroes.
+   */
+  accounting: { accountsCreated: number; postingRulesCreated: number };
 };
 
 /**
@@ -293,6 +300,20 @@ export async function provisionSchool(
     reason: "School provisioned",
   });
 
+  // S-2.3. A school with no posting rules cannot take money: the first receipt
+  // resolves no rule, comes back POSTING_RULE_MISSING — which is not a
+  // retryable code — and the bursar is told the payment failed to post with no
+  // way to fix it from any screen. Seeding here rather than only in
+  // `pnpm provision:school` closes the gap the template path had: it called
+  // `provisionSchool` and never seeded accounting at all, and the only thing
+  // hiding that was `ensureAccountingDefaults` running inside every posting
+  // attempt as a safety net.
+  //
+  // It must come after the bundle grant. The pack decides whether to seed the
+  // school chart from the tenant's enabled features, and until the grant lands
+  // there are none.
+  const accounting = await ensureAccountingDefaults(companyId);
+
   return {
     academicYear: {
       id: academicYear.id,
@@ -304,6 +325,10 @@ export async function provisionSchool(
     subjectsCreated: newSubjects.length,
     feeStructureCreated,
     featuresEnabled: entitlement.featuresEnabled,
+    accounting: {
+      accountsCreated: accounting.createdAccounts,
+      postingRulesCreated: accounting.createdPostingRules,
+    },
   };
 }
 

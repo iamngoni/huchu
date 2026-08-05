@@ -186,6 +186,38 @@ export function toBaseAmount(amount: MoneyLike, exchangeRate: MoneyLike) {
     .toDecimalPlaces(MONEY_SCALE, HALF_UP);
 }
 
+/**
+ * Convert a document total to the base currency and split it in two, exactly.
+ *
+ * S-2.3. A journal entry is refused if its debits and credits differ, and two
+ * *independent* conversions are all it takes to make them differ. 100 ZWG at
+ * 3.00 is 33.33; a 50/50 split converted separately is 16.67 and 16.67, which
+ * is 33.34. The invoice hit the same wall with net and tax, and the receipt
+ * would have hit it with the settled and unsettled halves.
+ *
+ * So only one side is ever converted. The other is the remainder, and the two
+ * add up to the total by construction:
+ *
+ *   base      the whole document, in base currency
+ *   basePart  `part` converted, never more than `base` and never below zero
+ *   baseRest  `base − basePart`
+ *
+ * Which side to convert is a judgement, and the caller makes it. An invoice
+ * converts its **tax**, because a VAT return is filed on that figure and the
+ * revenue line can absorb a cent. A receipt converts the **allocated** part,
+ * because that is what settles a named invoice.
+ */
+export function apportionBase(input: {
+  amount: MoneyLike;
+  part: MoneyLike;
+  exchangeRate: MoneyLike;
+}): { base: Prisma.Decimal; basePart: Prisma.Decimal; baseRest: Prisma.Decimal } {
+  const base = toBaseAmount(input.amount, input.exchangeRate);
+  const converted = toBaseAmount(input.part, input.exchangeRate);
+  const basePart = minMoney(clampAtZero(converted), clampAtZero(base));
+  return { base, basePart, baseRest: money(base.minus(basePart)) };
+}
+
 /** The currency a school's ledger is kept in. */
 export async function resolveBaseCurrency(companyId: string): Promise<string> {
   const settings = await prisma.accountingSettings.findUnique({

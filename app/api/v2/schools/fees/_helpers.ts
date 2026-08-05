@@ -67,9 +67,21 @@ export type SchoolFeeAccountingEventType =
   | "SCHOOL_FEE_INVOICE_ISSUED"
   | "SCHOOL_FEE_RECEIPT_POSTED"
   | "SCHOOL_FEE_RECEIPT_VOIDED"
+  | "SCHOOL_FEE_CREDIT_APPLIED"
   | "SCHOOL_FEE_REFUND_PAID"
   | "SCHOOL_FEE_WAIVER_APPLIED"
   | "SCHOOL_FEE_WRITEOFF_POSTED";
+
+/**
+ * S-2.3 — which account was holding the credit a refund is paying out.
+ *
+ * `RECEIPT` is a surplus on a receipt: money taken that no invoice claimed, and
+ * therefore sitting in Fees Received In Advance. `INVOICE` is an over-settled
+ * invoice — nearly always a bursary applied to a bill the family had already
+ * paid — which sits as a credit balance in School Fees Receivable. Refunding
+ * one is not the same journal entry as refunding the other.
+ */
+export type SchoolFeeCreditSource = "RECEIPT" | "INVOICE";
 
 type SchoolFeeAccountingEventInput = {
   companyId: string;
@@ -102,6 +114,22 @@ type SchoolFeeAccountingEventInput = {
   documentCurrency?: string;
   documentAmount?: MoneyLike;
   exchangeRate?: MoneyLike;
+  /**
+   * S-2.3 — how a receipt's money splits, **in base currency**.
+   *
+   * The part that settles a bill credits School Fees Receivable; the rest is
+   * the family's credit and belongs in Fees Received In Advance until an
+   * invoice claims it. Only this figure is passed: the surplus is derived as
+   * `amount − allocatedAmount`, so the two can never fail to add up and the
+   * entry can never come out unbalanced. Omitted means the whole receipt
+   * settled bills, which is the ordinary case.
+   *
+   * Use `apportionBase` to produce it — converting the allocated and
+   * unallocated halves separately loses a cent on a non-base currency.
+   */
+  allocatedAmount?: MoneyLike;
+  /** Required on `SCHOOL_FEE_REFUND_PAID`. Defaults to the receipt surplus. */
+  creditSource?: SchoolFeeCreditSource;
   payload?: Record<string, unknown>;
   invertDirection?: boolean;
   version?: number;
@@ -109,28 +137,38 @@ type SchoolFeeAccountingEventInput = {
   actorRole?: string | null;
 };
 
+/**
+ * S-2.3 — the seam is closed. Every school fee event posts under its own kind.
+ *
+ * These used to borrow retail's: an invoice was a `SALES_INVOICE`, a receipt
+ * and its void were both `SALES_RECEIPT`, and a bursary waiver shared
+ * `SALES_WRITE_OFF` with genuinely uncollectable fees. The consequences were
+ * visible in the trial balance — tuition credited to "Retail Sales Revenue",
+ * scholarships charged to "Bad Debt Expense" — and invisible in a drill-down,
+ * which never said the entry came from a school at all.
+ *
+ * The posting source ids did not change, so every journal entry already written
+ * keeps its idempotency key. What changes is the rule each one resolves
+ * against; `SCHOOLS_POSTING_RULES` seeds one per member.
+ */
 function toPostingSourceType(
   eventType: SchoolFeeAccountingEventType,
 ): AccountingSourceType {
   switch (eventType) {
     case "SCHOOL_FEE_INVOICE_ISSUED":
-      return "SALES_INVOICE";
+      return "SCHOOL_FEE_INVOICE";
     case "SCHOOL_FEE_RECEIPT_POSTED":
+      return "SCHOOL_FEE_RECEIPT";
     case "SCHOOL_FEE_RECEIPT_VOIDED":
-    // ⚠ SEAM — S-2.3. `AccountingSourceType` has no school members yet, so a
-    // refund borrows `SALES_RECEIPT` and inverts it. The *accounts* are right
-    // and that is why this is safe to ship: a fee receipt posts DR cash /
-    // CR receivables, and a refund of credit is exactly that entry backwards —
-    // cash out, the family's credit balance extinguished. What is borrowed is
-    // the classification, not the debits. When S-2.3 adds `SCHOOL_FEE_REFUND`,
-    // re-point this one case and seed its posting rule; nothing else changes,
-    // because the posting source id is already `SCHOOL_FEE_REFUND:{id}` and
-    // idempotency is keyed on that.
+      return "SCHOOL_FEE_RECEIPT_VOID";
+    case "SCHOOL_FEE_CREDIT_APPLIED":
+      return "SCHOOL_FEE_CREDIT_APPLIED";
     case "SCHOOL_FEE_REFUND_PAID":
-      return "SALES_RECEIPT";
+      return "SCHOOL_FEE_REFUND";
     case "SCHOOL_FEE_WAIVER_APPLIED":
+      return "SCHOOL_FEE_WAIVER";
     case "SCHOOL_FEE_WRITEOFF_POSTED":
-      return "SALES_WRITE_OFF";
+      return "SCHOOL_FEE_WRITE_OFF";
     default:
       return "MANUAL";
   }
@@ -155,6 +193,12 @@ function buildPostingSourceId(input: {
   if (input.eventType === "SCHOOL_FEE_REFUND_PAID") {
     return `SCHOOL_FEE_REFUND:${input.sourceId}`;
   }
+  if (input.eventType === "SCHOOL_FEE_CREDIT_APPLIED") {
+    // The caller makes this unique per application — a receipt's credit can be
+    // spent more than once, so the receipt id alone would collide and the
+    // second application would be swallowed as a duplicate of the first.
+    return `SCHOOL_FEE_CREDIT:${input.sourceId}`;
+  }
   return `SCHOOL_FEE_RECEIPT:${input.sourceId}`;
 }
 
@@ -171,6 +215,51 @@ const PENDING_POSTING_CODES = new Set([
   "PERIOD_OVERRIDE_FORBIDDEN",
   "PERIOD_OVERRIDE_REASON_REQUIRED",
 ]);
+
+/**
+ * S-2.3 — the figures the seeded rules read by `valuePath`, derived here so no
+ * call site can produce a set that does not add up.
+ *
+ * Three of the seven rules split one amount across two lines. Both halves come
+ * from a single number: one is given, the other is `amount − given`. That is
+ * what makes the entry balance whatever the caller passes — the alternative,
+ * two independently converted figures, is a cent apart on any non-base currency
+ * and the posting is refused.
+ *
+ * Every key is a plain `number`, because the payload is JSON-serialised into
+ * `AccountingIntegrationEvent.payloadJson` and a `Prisma.Decimal` dropped in
+ * here would be stored as a string — which `getPathValue` then ignores, taking
+ * the line's basis instead.
+ */
+function buildPostingSplit(
+  input: SchoolFeeAccountingEventInput,
+): Record<string, number> {
+  const amount = money(input.amount);
+
+  if (
+    input.eventType === "SCHOOL_FEE_RECEIPT_POSTED" ||
+    input.eventType === "SCHOOL_FEE_RECEIPT_VOIDED"
+  ) {
+    const allocated = minMoney(
+      clampAtZero(money(input.allocatedAmount ?? amount)),
+      clampAtZero(amount),
+    );
+    return {
+      allocatedBaseAmount: toNumberOrZero(allocated),
+      unallocatedBaseAmount: toNumberOrZero(clampAtZero(amount.minus(allocated))),
+    };
+  }
+
+  if (input.eventType === "SCHOOL_FEE_REFUND_PAID") {
+    const fromReceivable = input.creditSource === "INVOICE";
+    return {
+      refundFromAdvanceBaseAmount: fromReceivable ? 0 : toNumberOrZero(amount),
+      refundFromReceivableBaseAmount: fromReceivable ? toNumberOrZero(amount) : 0,
+    };
+  }
+
+  return {};
+}
 
 export type SchoolFeePostingResult = {
   accountingStatus: "POSTED" | "PENDING" | "FAILED";
@@ -233,6 +322,7 @@ export async function emitSchoolFeeAccountingEvent(
       documentCurrency: input.documentCurrency ?? input.currency ?? "USD",
       documentAmount: toNumberOrZero(money(input.documentAmount ?? input.amount)),
       exchangeRate: toNumberOrZero(input.exchangeRate ?? 1),
+      ...buildPostingSplit(input),
       ...input.payload,
     },
   });

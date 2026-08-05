@@ -14,6 +14,7 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTerm } from "./calendar";
 import { provisionSchool } from "./provision";
+import { SCHOOLS_REQUIRED_SOURCE_TYPES } from "@/lib/accounting/source-types";
 
 let companyId: string;
 
@@ -98,6 +99,42 @@ describe("a freshly opened school", () => {
     expect(levy!.amount.toFixed(2)).toBe(
       tuition!.amount.dividedBy(10).toFixed(2),
     );
+  });
+});
+
+describe("a freshly opened school can also take money", () => {
+  it("has the chart of accounts and a posting rule for every fee document", async () => {
+    // S-2.3. Without these the first receipt resolves no posting rule, returns
+    // POSTING_RULE_MISSING — which is not a retryable code — and the bursar is
+    // told the payment failed to post with no screen that can fix it. The
+    // template provisioning path never seeded accounting at all; only
+    // `pnpm provision:school` did.
+    const result = await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+
+    expect(result.accounting.accountsCreated).toBeGreaterThan(0);
+    expect(result.accounting.postingRulesCreated).toBeGreaterThan(0);
+
+    const schoolAccounts = await prisma.chartOfAccount.findMany({
+      where: { companyId, code: { in: ["1110", "2400", "4300", "5610"] } },
+      select: { code: true },
+    });
+    expect(schoolAccounts).toHaveLength(4);
+
+    const rules = await prisma.postingRule.findMany({
+      where: { companyId, sourceType: { in: SCHOOLS_REQUIRED_SOURCE_TYPES }, isActive: true },
+      select: { sourceType: true },
+    });
+    expect(new Set(rules.map((rule) => rule.sourceType)).size).toBe(
+      SCHOOLS_REQUIRED_SOURCE_TYPES.length,
+    );
+  });
+
+  it("creates no second set of accounts when it is run again", async () => {
+    await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+    const again = await provisionSchool({ companyId, year: 2026 }, MID_TERM_TWO);
+
+    expect(again.accounting.accountsCreated).toBe(0);
+    expect(again.accounting.postingRulesCreated).toBe(0);
   });
 });
 

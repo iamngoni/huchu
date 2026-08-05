@@ -2651,6 +2651,12 @@ export type AccountingSetupReadiness = {
   accountCounts: Record<string, number>;
   openPeriods: number;
   requiredRules: Array<{ sourceType: string; configured: boolean }>;
+  /**
+   * S-2.3. Coverage over `SCHOOLS_REQUIRED_SOURCE_TYPES`, and empty on a tenant
+   * that is not a school — so a screen that renders it should render nothing
+   * rather than an empty table.
+   */
+  schoolRules: Array<{ sourceType: string; configured: boolean }>;
   tenderMappings: Array<{ tenderType: string; configured: boolean }>;
   currencies: Array<{ code: string; configured: boolean; hasRecentRate: boolean }>;
   defaults: {

@@ -33,6 +33,13 @@ export const ACCOUNTING_SOURCE_TYPE_OPTIONS: Array<{ value: AccountingSourceType
   { value: "GOLD_SHIFT_EXPENSE", label: "Gold Shift Expense" },
   { value: "GOLD_PAYOUT", label: "Gold Worker Payout" },
   { value: "GOLD_INVENTORY_ADJUSTMENT", label: "Gold Inventory Adjustment" },
+  { value: "SCHOOL_FEE_INVOICE", label: "School Fee Invoice" },
+  { value: "SCHOOL_FEE_RECEIPT", label: "School Fee Receipt" },
+  { value: "SCHOOL_FEE_RECEIPT_VOID", label: "School Fee Receipt Void" },
+  { value: "SCHOOL_FEE_CREDIT_APPLIED", label: "School Fee Credit Applied" },
+  { value: "SCHOOL_FEE_WAIVER", label: "School Fee Waiver" },
+  { value: "SCHOOL_FEE_WRITE_OFF", label: "School Fee Write-off" },
+  { value: "SCHOOL_FEE_REFUND", label: "School Fee Refund" },
 ];
 
 export const RETAIL_REQUIRED_SOURCE_TYPES: AccountingSourceType[] = [
@@ -43,6 +50,28 @@ export const RETAIL_REQUIRED_SOURCE_TYPES: AccountingSourceType[] = [
   "RETAIL_GOODS_RECEIPT",
   "RETAIL_STOCK_ADJUSTMENT",
   "RETAIL_SHIFT_VARIANCE",
+];
+
+/**
+ * S-2.3 — the school's readiness contract, the same shape as retail's above.
+ *
+ * A school tenant cannot post fee money automatically until each of these has
+ * at least one active `PostingRule`. `getAccountingSetupReadiness` reports the
+ * coverage, and `getZimbabweRetailFoundationPack` seeds a rule for every one of
+ * them, so a freshly provisioned school starts ready rather than failing its
+ * first receipt with POSTING_RULE_MISSING.
+ *
+ * Ordered as the money moves: bill, take, undo, spend the surplus, forgive,
+ * give up, hand back.
+ */
+export const SCHOOLS_REQUIRED_SOURCE_TYPES: AccountingSourceType[] = [
+  "SCHOOL_FEE_INVOICE",
+  "SCHOOL_FEE_RECEIPT",
+  "SCHOOL_FEE_RECEIPT_VOID",
+  "SCHOOL_FEE_CREDIT_APPLIED",
+  "SCHOOL_FEE_WAIVER",
+  "SCHOOL_FEE_WRITE_OFF",
+  "SCHOOL_FEE_REFUND",
 ];
 
 export const RETAIL_TENDER_TYPES = ["CASH", "CARD", "MOBILE_MONEY", "TRANSFER", "VOUCHER"] as const;

@@ -81,7 +81,8 @@ describe("posting a fee receipt", () => {
     });
 
     expect(events).toHaveLength(1);
-    expect(events[0].sourceType).toBe("SALES_RECEIPT");
+    // S-2.3: its own kind, not a borrowed SALES_RECEIPT.
+    expect(events[0].sourceType).toBe("SCHOOL_FEE_RECEIPT");
   });
 
   it("round-trips a Decimal amount at the cent", async () => {
@@ -134,14 +135,16 @@ describe("posting a fee receipt", () => {
 });
 
 describe("source ids keep the event kinds apart", () => {
-  it("gives an invoice, receipt, void, waiver and write-off their own key", async () => {
+  it("gives every event kind its own key and its own source type", async () => {
     const id = `mixed-${stamp}`;
     const kinds = [
-      ["SCHOOL_FEE_INVOICE_ISSUED", `SCHOOL_FEE_INVOICE:${id}`, "SALES_INVOICE"],
-      ["SCHOOL_FEE_RECEIPT_POSTED", `SCHOOL_FEE_RECEIPT:${id}`, "SALES_RECEIPT"],
-      ["SCHOOL_FEE_RECEIPT_VOIDED", `SCHOOL_FEE_RECEIPT_VOID:${id}`, "SALES_RECEIPT"],
-      ["SCHOOL_FEE_WAIVER_APPLIED", `SCHOOL_FEE_WAIVER:${id}`, "SALES_WRITE_OFF"],
-      ["SCHOOL_FEE_WRITEOFF_POSTED", `SCHOOL_FEE_WRITEOFF:${id}`, "SALES_WRITE_OFF"],
+      ["SCHOOL_FEE_INVOICE_ISSUED", `SCHOOL_FEE_INVOICE:${id}`, "SCHOOL_FEE_INVOICE"],
+      ["SCHOOL_FEE_RECEIPT_POSTED", `SCHOOL_FEE_RECEIPT:${id}`, "SCHOOL_FEE_RECEIPT"],
+      ["SCHOOL_FEE_RECEIPT_VOIDED", `SCHOOL_FEE_RECEIPT_VOID:${id}`, "SCHOOL_FEE_RECEIPT_VOID"],
+      ["SCHOOL_FEE_CREDIT_APPLIED", `SCHOOL_FEE_CREDIT:${id}`, "SCHOOL_FEE_CREDIT_APPLIED"],
+      ["SCHOOL_FEE_REFUND_PAID", `SCHOOL_FEE_REFUND:${id}`, "SCHOOL_FEE_REFUND"],
+      ["SCHOOL_FEE_WAIVER_APPLIED", `SCHOOL_FEE_WAIVER:${id}`, "SCHOOL_FEE_WAIVER"],
+      ["SCHOOL_FEE_WRITEOFF_POSTED", `SCHOOL_FEE_WRITEOFF:${id}`, "SCHOOL_FEE_WRITE_OFF"],
     ] as const;
 
     for (const [eventType, , ] of kinds) {

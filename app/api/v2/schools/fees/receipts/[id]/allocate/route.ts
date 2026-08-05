@@ -5,9 +5,18 @@ import { errorResponse, successResponse, validateSession } from "@/lib/api-utils
 import { prisma } from "@/lib/prisma";
 import { writeSchoolAuditEvent } from "@/lib/schools/audit";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
-import { exceeds, money, sumMoney, toNumberOrZero } from "@/lib/schools/money";
+import {
+  clampAtZero,
+  exceeds,
+  money,
+  resolveBaseCurrency,
+  sumMoney,
+  toBaseAmount,
+  toNumberOrZero,
+} from "@/lib/schools/money";
 import {
   availableReceiptCredit,
+  emitSchoolFeeAccountingEvent,
   FeeCreditError,
   isFeeCreditCheckViolation,
   loadInvoicesForAllocation,
@@ -15,6 +24,7 @@ import {
   refreshFeeInvoiceBalance,
   refreshFeeReceiptSplit,
   spreadOverInvoices,
+  type SchoolFeePostingResult,
 } from "../../../_helpers";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -33,11 +43,15 @@ type RouteParams = { params: Promise<{ id: string }> };
  *   * name the invoices only, and let the credit settle them oldest first
  *     until it runs out.
  *
- * **This posts nothing to the ledger, deliberately.** The money reached the
- * bank when the receipt was posted, and that posting already moved it out of
- * cash and into the family's receivable. Allocating the credit to an invoice
- * moves it *within* receivables and changes no account balance. A journal entry
- * here would double-count the payment.
+ * **This posts, and until S-2.3 it deliberately did not.** The reasoning has
+ * changed because the receipt's own posting changed. A receipt used to credit
+ * the whole amount to receivables, surplus included, so applying that surplus
+ * to a bill moved money from receivables to receivables and a journal entry
+ * would have double-counted the payment. A receipt now credits only the settled
+ * part there and parks the rest in Fees Received In Advance — which is what it
+ * is, money the school owes back until a bill claims it. Spending that credit
+ * therefore does move between two accounts, and the entry is required:
+ * DR Fees Received In Advance, CR School Fees Receivable. No cash moves.
  */
 const allocationSchema = z.object({
   invoiceId: z.string().uuid(),
@@ -87,6 +101,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           studentId: true,
           status: true,
           currency: true,
+          exchangeRate: true,
+          amountAllocated: true,
           amountUnallocated: true,
           refundedAmount: true,
         },
@@ -209,7 +225,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         },
       });
 
-      return tx.schoolFeeReceipt.findUnique({
+      const settled = await tx.schoolFeeReceipt.findUnique({
         where: { id },
         include: {
           student: {
@@ -231,10 +247,73 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           },
         },
       });
+
+      return {
+        receipt: settled,
+        receiptNo: receipt.receiptNo,
+        studentId: receipt.studentId,
+        currency: receipt.currency,
+        exchangeRate: receipt.exchangeRate,
+        allocatedBefore: money(receipt.amountAllocated),
+        allocatedAfter: money(settled?.amountAllocated ?? receipt.amountAllocated),
+      };
     });
 
-    if (!result) return errorResponse("Fee receipt not found", 404);
-    return successResponse(result);
+    if (!result.receipt) return errorResponse("Fee receipt not found", 404);
+
+    // S-2.3. The entry is the *movement*, not the running total: base currency
+    // after, less base currency before. Converting the delta directly would
+    // round differently from the two figures the receipt itself posted, and the
+    // Fees Received In Advance balance would drift a cent per application.
+    const movedInBase = clampAtZero(
+      toBaseAmount(result.allocatedAfter, result.exchangeRate).minus(
+        toBaseAmount(result.allocatedBefore, result.exchangeRate),
+      ),
+    );
+
+    let accounting: SchoolFeePostingResult | null = null;
+    if (movedInBase.greaterThan(0)) {
+      const baseCurrency = await resolveBaseCurrency(companyId);
+      accounting = await emitSchoolFeeAccountingEvent({
+        actorRole: session.user.role,
+        companyId,
+        actorId: session.user.id,
+        eventType: "SCHOOL_FEE_CREDIT_APPLIED",
+        // A receipt's credit can be spent more than once, so the receipt id
+        // alone would make the second application look like a duplicate of the
+        // first and be silently skipped. The allocated total after this call is
+        // unique per application and stable if the same call is retried.
+        sourceId: `${result.receipt.id}:${result.allocatedAfter.toFixed(2)}`,
+        sourceRef: result.receiptNo,
+        entryDate: new Date(),
+        amount: movedInBase,
+        netAmount: movedInBase,
+        taxAmount: 0,
+        grossAmount: movedInBase,
+        currency: baseCurrency,
+        documentCurrency: result.currency,
+        documentAmount: result.allocatedAfter.minus(result.allocatedBefore),
+        exchangeRate: result.exchangeRate,
+        payload: {
+          receiptNo: result.receiptNo,
+          studentId: result.studentId,
+          allocations: result.receipt.allocations.map((allocation) => ({
+            invoiceId: allocation.invoiceId,
+            allocatedAmount: toNumberOrZero(allocation.allocatedAmount),
+          })),
+        },
+      }).catch((error) => {
+        console.error("[Accounting] School fee credit application posting failed:", error);
+        return {
+          accountingStatus: "FAILED" as const,
+          journalEntryId: null,
+          accountingError:
+            error instanceof Error ? error.message : "Accounting posting failed",
+        };
+      });
+    }
+
+    return successResponse({ ...result.receipt, accounting });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse("Validation failed", 400, error.issues);

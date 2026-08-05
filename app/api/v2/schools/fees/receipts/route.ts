@@ -12,6 +12,7 @@ import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
+  apportionBase,
   exceeds,
   money,
   resolveDocumentCurrency,
@@ -531,6 +532,15 @@ export async function POST(request: NextRequest) {
     // and nobody told until a reconciliation months later.
     let accounting: SchoolFeePostingResult | null = null;
     if (created.status === "POSTED") {
+      // S-2.3. What settled a bill and what did not are two different accounts:
+      // the settled part clears the family's receivable, the surplus is money
+      // the school owes back until an invoice claims it. Apportioned rather
+      // than converted twice, so the two halves add up to the cent.
+      const receivedInBase = apportionBase({
+        amount: created.amountReceived,
+        part: created.amountAllocated,
+        exchangeRate: created.exchangeRate,
+      });
       accounting = await emitSchoolFeeAccountingEvent({
         actorRole: session.user.role,
         companyId,
@@ -544,6 +554,7 @@ export async function POST(request: NextRequest) {
         netAmount: created.baseAmount,
         taxAmount: 0,
         grossAmount: created.baseAmount,
+        allocatedAmount: receivedInBase.basePart,
         currency: documentCurrency.baseCurrency,
         documentCurrency: created.currency,
         documentAmount: created.amountReceived,

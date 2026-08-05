@@ -4,7 +4,12 @@ import { errorResponse, successResponse, validateSession } from "@/lib/api-utils
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { writeSchoolAuditEvent } from "@/lib/schools/audit";
-import { money, resolveBaseCurrency, toNumberOrZero } from "@/lib/schools/money";
+import {
+  apportionBase,
+  money,
+  resolveBaseCurrency,
+  toNumberOrZero,
+} from "@/lib/schools/money";
 import {
   emitSchoolFeeAccountingEvent,
   refreshFeeInvoiceBalance,
@@ -100,6 +105,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // rate stamped on the receipt rather than today's.
     const baseCurrency = await resolveBaseCurrency(companyId);
 
+    // The split is read *now*, not as it stood when the receipt was written.
+    // Credit allocated since then has already moved from Fees Received In
+    // Advance into the receivable under its own entry, so reversing today's
+    // split is what returns every account to where it started.
+    const receivedInBase = apportionBase({
+      amount: result.amountReceived,
+      part: result.amountAllocated,
+      exchangeRate: result.exchangeRate,
+    });
+
     const accounting = await emitSchoolFeeAccountingEvent({
       actorRole: session.user.role,
       companyId,
@@ -112,6 +127,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       netAmount: result.baseAmount,
       taxAmount: 0,
       grossAmount: result.baseAmount,
+      allocatedAmount: receivedInBase.basePart,
       currency: baseCurrency,
       documentCurrency: result.currency,
       documentAmount: result.amountReceived,

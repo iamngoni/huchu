@@ -3747,6 +3747,17 @@ enum AccountingSourceType {
   GOLD_SHIFT_EXPENSE
   GOLD_PAYOUT
   GOLD_INVENTORY_ADJUSTMENT
+  // S-2.3. School money used to post as SALES_*, so tuition landed in "Retail
+  // Sales Revenue" and a bursary was indistinguishable from bad debt. These are
+  // the school's own kinds; `SCHOOLS_REQUIRED_SOURCE_TYPES` in
+  // `lib/accounting/source-types.ts` is the readiness contract over them.
+  SCHOOL_FEE_INVOICE
+  SCHOOL_FEE_RECEIPT
+  SCHOOL_FEE_RECEIPT_VOID
+  SCHOOL_FEE_CREDIT_APPLIED
+  SCHOOL_FEE_WAIVER
+  SCHOOL_FEE_WRITE_OFF
+  SCHOOL_FEE_REFUND
 }
 
 enum PostingRuleScopeType {

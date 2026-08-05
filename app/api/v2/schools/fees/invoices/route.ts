@@ -12,13 +12,13 @@ import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
+  apportionBase,
   money,
   multiplyMoney,
   percent,
   rate,
   resolveDocumentCurrency,
   taxOn,
-  toBaseAmount,
   UnknownExchangeRateError,
 } from "@/lib/schools/money";
 import {
@@ -417,6 +417,11 @@ export async function POST(request: NextRequest) {
     if (!created) return errorResponse("Failed to create fee invoice", 500);
 
     if (created.status === "ISSUED") {
+      const issuedInBase = apportionBase({
+        amount: created.totalAmount,
+        part: created.taxTotal,
+        exchangeRate: created.exchangeRate,
+      });
       await emitSchoolFeeAccountingEvent({
         companyId,
         actorId: session.user.id,
@@ -427,10 +432,11 @@ export async function POST(request: NextRequest) {
         // S-2.2: the ledger is kept in the school's base currency, so the
         // base-currency figures are what post. The billed amounts ride along in
         // the payload.
-        amount: created.baseAmount,
-        netAmount: toBaseAmount(created.subTotal, created.exchangeRate),
-        taxAmount: toBaseAmount(created.taxTotal, created.exchangeRate),
-        grossAmount: created.baseAmount,
+        amount: issuedInBase.base,
+        // S-2.3: convert the tax, derive the net. See the issue route.
+        netAmount: issuedInBase.baseRest,
+        taxAmount: issuedInBase.basePart,
+        grossAmount: issuedInBase.base,
         currency: documentCurrency.baseCurrency,
         documentCurrency: created.currency,
         documentAmount: created.totalAmount,

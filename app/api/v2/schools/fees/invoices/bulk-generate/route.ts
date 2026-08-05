@@ -10,6 +10,7 @@ import { reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
+  apportionBase,
   money,
   multiplyMoney,
   percent,
@@ -258,6 +259,11 @@ export async function POST(request: NextRequest) {
 
               // Emit accounting event if issued
               if (validated.issueNow) {
+                const issuedInBase = apportionBase({
+                  amount: refreshed.totalAmount,
+                  part: refreshed.taxTotal,
+                  exchangeRate: refreshed.exchangeRate,
+                });
                 await emitSchoolFeeAccountingEvent({
                   companyId,
                   actorId: session.user.id,
@@ -265,9 +271,12 @@ export async function POST(request: NextRequest) {
                   sourceId: invoice.id,
                   sourceRef: invoice.invoiceNo,
                   entryDate: issueDate,
-                  amount: refreshed.baseAmount,
-                  netAmount: refreshed.baseAmount,
-                  grossAmount: refreshed.baseAmount,
+                  // S-2.3: convert the tax, derive the net, so the entry
+                  // balances even on a fee sheet that charges VAT.
+                  amount: issuedInBase.base,
+                  netAmount: issuedInBase.baseRest,
+                  taxAmount: issuedInBase.basePart,
+                  grossAmount: issuedInBase.base,
                   currency: documentCurrency.baseCurrency,
                   documentCurrency: refreshed.currency,
                   documentAmount: refreshed.totalAmount,

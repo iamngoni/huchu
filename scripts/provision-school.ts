@@ -1,7 +1,6 @@
 import "dotenv/config";
 
 import { prisma } from "@/lib/prisma";
-import { ensureAccountingDefaults } from "@/lib/accounting/bootstrap";
 import { provisionSchool, type SchoolLevel } from "@/lib/schools/provision";
 
 /**
@@ -63,9 +62,10 @@ async function main() {
     tuitionPerTerm: tuitionArg ? Number(tuitionArg) : undefined,
   });
 
-  // The chart of accounts and posting rules, so a fee receipt has somewhere to
-  // land the moment one is taken.
-  const accounting = await ensureAccountingDefaults(companyId);
+  // S-2.3: `provisionSchool` seeds the chart of accounts and the school posting
+  // rules itself now, so every path that opens a school gets them — not just
+  // this one. What it reports is what it created.
+  const accounting = result.accounting;
 
   const current = result.terms.find((term) => term.isActive);
 
@@ -84,8 +84,8 @@ async function main() {
     `  fee structure   ${result.feeStructureCreated ? "created" : "already there"}`,
   );
   console.log(
-    `  accounting      ${accounting.createdAccounts} accounts, ` +
-      `${accounting.createdPostingRules} posting rules`,
+    `  accounting      ${accounting.accountsCreated} accounts, ` +
+      `${accounting.postingRulesCreated} posting rules`,
   );
   console.log(
     `  entitlement     ADDON_SCHOOLS_SUITE, ${result.featuresEnabled} features on`,

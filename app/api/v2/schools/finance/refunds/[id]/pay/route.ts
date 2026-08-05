@@ -134,8 +134,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       documentCurrency: result.currency,
       documentAmount: result.amount,
       exchangeRate: result.exchangeRate,
-      // Cash out, receivable up: the fee receipt's entry run backwards.
-      invertDirection: true,
+      // S-2.3. `SCHOOL_FEE_REFUND` is its own kind now, with a rule written in
+      // the direction a refund actually runs — CR bank, DR whichever account
+      // was holding the credit. It is no longer a receipt inverted, so nothing
+      // is inverted here. Which account that is depends on where the credit
+      // came from: a receipt surplus sits in Fees Received In Advance, an
+      // over-settled invoice sits as a credit balance in the receivable.
+      creditSource: result.receiptId ? "RECEIPT" : "INVOICE",
       payload: {
         refundNo: result.refundNo,
         studentId: result.studentId,

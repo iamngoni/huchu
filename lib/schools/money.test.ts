@@ -10,6 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { Prisma } from "@prisma/client";
 import {
+  apportionBase,
   clampAtZero,
   exceeds,
   isPositive,
@@ -153,5 +154,45 @@ describe("coercion at the read boundary", () => {
   it("hands back a number a JSON response can carry", () => {
     expect(toNumber(new Prisma.Decimal("1234.56"))).toBeCloseTo(1234.56, 6);
     expect(toNumberOrZero(new Prisma.Decimal("0.01"))).toBeCloseTo(0.01, 6);
+  });
+});
+
+describe("apportionBase", () => {
+  it("splits so the two halves always add up to the whole", () => {
+    // 100 ZWG at 3.00 is 33.33. Converting a 50/50 split separately gives
+    // 16.67 + 16.67 = 33.34, and the journal entry that produces is a cent
+    // heavier on one side than the other.
+    const split = apportionBase({ amount: "100", part: "50", exchangeRate: "3" });
+
+    expect(split.base.toFixed(2)).toBe("33.33");
+    expect(split.basePart.toFixed(2)).toBe("16.67");
+    expect(split.baseRest.toFixed(2)).toBe("16.66");
+    expect(split.basePart.plus(split.baseRest).equals(split.base)).toBe(true);
+  });
+
+  it("is exact for a document already in the base currency", () => {
+    const split = apportionBase({ amount: "1000", part: "150", exchangeRate: 1 });
+
+    expect(split.base.toFixed(2)).toBe("1000.00");
+    expect(split.basePart.toFixed(2)).toBe("150.00");
+    expect(split.baseRest.toFixed(2)).toBe("850.00");
+  });
+
+  it("never lets the part exceed the whole", () => {
+    const split = apportionBase({ amount: "100", part: "250", exchangeRate: 1 });
+
+    expect(split.basePart.toFixed(2)).toBe("100.00");
+    expect(split.baseRest.toFixed(2)).toBe("0.00");
+  });
+
+  it("treats a negative part as nothing", () => {
+    const split = apportionBase({ amount: "100", part: "-5", exchangeRate: 1 });
+
+    expect(split.basePart.toFixed(2)).toBe("0.00");
+    expect(split.baseRest.toFixed(2)).toBe("100.00");
+  });
+
+  it("refuses a rate that would make the split undefined", () => {
+    expect(() => apportionBase({ amount: "100", part: "50", exchangeRate: 0 })).toThrow(RangeError);
   });
 });

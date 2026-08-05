@@ -2,9 +2,14 @@ import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_TAX_CODES,
   getZimbabweRetailFoundationPack,
+  includeSchoolFlows,
   ZIMBABWE_RETAIL_FOUNDATION_PACK_CODE,
 } from "@/lib/accounting/defaults";
-import { RETAIL_REQUIRED_SOURCE_TYPES, RETAIL_TENDER_TYPES } from "@/lib/accounting/source-types";
+import {
+  RETAIL_REQUIRED_SOURCE_TYPES,
+  RETAIL_TENDER_TYPES,
+  SCHOOLS_REQUIRED_SOURCE_TYPES,
+} from "@/lib/accounting/source-types";
 
 type SeedRunMode = "DRY_RUN" | "APPLY";
 
@@ -25,6 +30,14 @@ export type AccountingSetupReadiness = {
   accountCounts: Record<string, number>;
   openPeriods: number;
   requiredRules: Array<{ sourceType: string; configured: boolean }>;
+  /**
+   * S-2.3. The same shape as `requiredRules`, over
+   * `SCHOOLS_REQUIRED_SOURCE_TYPES`, and **empty for a tenant that is not a
+   * school** — a retail workspace's readiness percentage must not fall because
+   * it has no school posting rules. The `schools-rules` check row appears and
+   * disappears with this array.
+   */
+  schoolRules: Array<{ sourceType: string; configured: boolean }>;
   tenderMappings: Array<{ tenderType: string; configured: boolean }>;
   currencies: Array<{ code: string; configured: boolean; hasRecentRate: boolean }>;
   defaults: {
@@ -143,6 +156,7 @@ async function failSeedExecution(id: string, error: string) {
 
 export async function getAccountingSetupReadiness(companyId: string): Promise<AccountingSetupReadiness> {
   const [
+    company,
     settings,
     accountCounts,
     openPeriods,
@@ -154,6 +168,18 @@ export async function getAccountingSetupReadiness(companyId: string): Promise<Ac
     pendingEvents,
     executions,
   ] = await Promise.all([
+    // S-2.3. Readiness has to know whether this tenant is a school before it
+    // can say whether missing school posting rules are a problem.
+    prisma.company.findUnique({
+      where: { id: companyId },
+      select: {
+        workspaceProfile: true,
+        featureFlags: {
+          where: { isEnabled: true },
+          select: { feature: { select: { key: true } } },
+        },
+      },
+    }),
     prisma.accountingSettings.findUnique({
       where: { companyId },
       select: {
@@ -173,7 +199,7 @@ export async function getAccountingSetupReadiness(companyId: string): Promise<Ac
     prisma.postingRule.findMany({
       where: {
         companyId,
-        sourceType: { in: RETAIL_REQUIRED_SOURCE_TYPES },
+        sourceType: { in: [...RETAIL_REQUIRED_SOURCE_TYPES, ...SCHOOLS_REQUIRED_SOURCE_TYPES] },
         isActive: true,
       },
       select: { sourceType: true },
@@ -230,6 +256,17 @@ export async function getAccountingSetupReadiness(companyId: string): Promise<Ac
     configured: configuredRuleSet.has(sourceType),
   }));
 
+  const isSchool = includeSchoolFlows({
+    workspaceProfile: company?.workspaceProfile,
+    enabledFeatures: (company?.featureFlags ?? []).map((flag) => flag.feature.key),
+  });
+  const schoolRules = isSchool
+    ? SCHOOLS_REQUIRED_SOURCE_TYPES.map((sourceType) => ({
+        sourceType,
+        configured: configuredRuleSet.has(sourceType),
+      }))
+    : [];
+
   const tenderMappingCoverage = RETAIL_TENDER_TYPES.map((tenderType) => ({
     tenderType,
     configured: configuredTenderSet.has(tenderType),
@@ -283,6 +320,16 @@ export async function getAccountingSetupReadiness(companyId: string): Promise<Ac
       ready: requiredRules.every((rule) => rule.configured),
       note: `${requiredRules.filter((rule) => rule.configured).length}/${requiredRules.length} required rules ready`,
     },
+    ...(schoolRules.length > 0
+      ? [
+          {
+            id: "schools-rules",
+            label: "School fee posting rules seeded",
+            ready: schoolRules.every((rule) => rule.configured),
+            note: `${schoolRules.filter((rule) => rule.configured).length}/${schoolRules.length} school fee rules ready`,
+          },
+        ]
+      : []),
     {
       id: "tenders",
       label: "Tender clearing mappings seeded",
@@ -316,6 +363,7 @@ export async function getAccountingSetupReadiness(companyId: string): Promise<Ac
     accountCounts: accountCountMap,
     openPeriods,
     requiredRules,
+    schoolRules,
     tenderMappings: tenderMappingCoverage,
     currencies: currencyCoverage,
     defaults: {
