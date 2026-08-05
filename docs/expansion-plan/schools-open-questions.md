@@ -189,6 +189,37 @@ from their own linked account regardless of any feature key.
 **Worth checking whether any real tenant has parents or pupils who have been
 quietly locked out.**
 
+
+### 14. Three things Iteration 2 left open for you
+
+**The printable documents screen hard-codes twenty colours.**
+`components/schools/documents/school-documents-content.tsx` uses `#e5e7eb`,
+`#f9fafb`, `#6b7280` and `#000` in inline styles. It predates this work
+(`d03b444`), and there is a real argument for it — a print target does not
+inherit the app's cascade, and a fee statement that comes out of a printer
+grey-on-grey is worse than one that ignores the token system. But nothing in
+the file says that, so it reads as an oversight rather than a decision.
+
+Either it wants a comment marking it a deliberate print exception, or the
+tokens want resolving to literals at build time. **Your call which.**
+
+**Six bursar actions were writing no audit event**, against DoD item 7:
+issuing an invoice, writing one off, bulk generation, creating an invoice,
+approving a waiver and applying one. All six change what a parent owes, and a
+school that cannot answer "who wrote off this $400" has no answer at all. This
+is being closed now rather than left, but it is worth knowing it was possible
+to ship six privileged money actions with no trail — the DoD says every
+privileged action, and nothing enforces it the way
+`route-guard-coverage.test.ts` enforces the guards. **A coverage test for audit
+events would stop this recurring.**
+
+**`prisma migrate deploy` still cannot build this database.** S-3.2 already
+tracks it, but Iteration 2 made it concrete: the dev database has no
+`_prisma_migrations` table at all, because it was built by `db push`. Every
+migration this project has written has been applied by hand with `psql`. They
+are all replayable in principle — but nobody has ever proved it, and the first
+person to find out will be whoever provisions the first real school.
+
 ---
 
 _The changelog for this work lives in the roadmap; this file is a wall, not a
