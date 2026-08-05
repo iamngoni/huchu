@@ -8,6 +8,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { normalizeProvidedId } from "@/lib/id-generator";
+import { buildCustomFieldValues, mergeCustomFields } from "@/lib/crm/custom-fields";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
@@ -24,6 +25,12 @@ const updateGuardianSchema = z
     email: z.string().trim().email().nullable().optional(),
     address: z.string().trim().min(1).max(500).nullable().optional(),
     nationalId: z.string().trim().min(1).max(80).nullable().optional(),
+    // S-4.3 — the record page's identity strip.
+    avatarUrl: z.string().trim().url().max(2000).nullable().optional(),
+    accent: z.string().trim().min(1).max(40).nullable().optional(),
+    // S-4.4 — the school's own fields. Partial: only the keys sent are touched.
+    customFields: z.record(z.string(), z.unknown()).optional(),
+    clearCustomFields: z.array(z.string()).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
@@ -114,7 +121,7 @@ export async function PATCH(
 
     const existing = await prisma.schoolGuardian.findFirst({
       where: { id, companyId },
-      select: { id: true },
+      select: { id: true, customFields: true },
     });
     if (!existing) {
       return errorResponse("Guardian not found", 404);
@@ -134,9 +141,33 @@ export async function PATCH(
       }
     }
 
+    // S-4.4 — validated and merged by the same code the CRM records use, so a
+    // school's SINGLE_SELECT rejects an unlisted option here exactly as it does
+    // there. Partial, so patching a phone number leaves the custom fields alone.
+    let nextCustomFields: Prisma.InputJsonValue | undefined;
+    if (validated.customFields !== undefined || validated.clearCustomFields !== undefined) {
+      const definitions = await prisma.crmFieldDefinition.findMany({
+        where: { companyId, entity: "GUARDIAN", archivedAt: null },
+      });
+      const built = buildCustomFieldValues(definitions, validated.customFields ?? {}, {
+        partial: true,
+      });
+      if (built.errors.length > 0) {
+        return errorResponse("Validation failed", 400, built.errors);
+      }
+      nextCustomFields = mergeCustomFields(
+        existing.customFields,
+        built.values,
+        validated.clearCustomFields ?? [],
+      ) as Prisma.InputJsonValue;
+    }
+
     const updated = await prisma.schoolGuardian.update({
       where: { id: existing.id },
       data: {
+        ...(nextCustomFields !== undefined ? { customFields: nextCustomFields } : {}),
+        ...(validated.avatarUrl !== undefined ? { avatarUrl: validated.avatarUrl } : {}),
+        ...(validated.accent !== undefined ? { accent: validated.accent } : {}),
         ...(normalizedGuardianNo !== undefined
           ? { guardianNo: normalizedGuardianNo }
           : {}),

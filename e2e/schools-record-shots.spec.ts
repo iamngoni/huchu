@@ -164,5 +164,41 @@ for (const viewport of [
         });
       }
     });
+
+    test("guardian record page", async ({ page }) => {
+      // A guardian with children, for the same reason as the student: a record
+      // page whose only relationship tab is empty proves the tab renders and
+      // nothing else.
+      const list = await page.request.get("/api/v2/schools/guardians?limit=25");
+      expect(list.status()).toBeLessThan(400);
+      const body = await list.json();
+      const candidates: { id: string; guardianNo: string }[] = body?.data ?? [];
+      expect(candidates.length, "the demo tenant has no guardians to open").toBeGreaterThan(0);
+
+      let guardian = candidates[0];
+      for (const candidate of candidates) {
+        const detail = await page.request.get(`/api/v2/schools/guardians/${candidate.id}`);
+        const record = await detail.json().catch(() => null);
+        if ((record?.studentLinks?.length ?? 0) > 0) {
+          guardian = candidate;
+          break;
+        }
+      }
+
+      await expect(async () => {
+        await page.goto(`/schools/guardians/${guardian.id}`);
+        // The guardian number, rendered as the identity strip's reference. Absent
+        // from the loading branch, which is two Skeletons with no text.
+        await expect(page.getByText(guardian.guardianNo).first()).toBeVisible({
+          timeout: 20_000,
+        });
+      }).toPass({ timeout: 120_000 });
+
+      await expect(page.getByRole("tab", { name: /Children/ })).toBeVisible();
+      await page.screenshot({
+        path: `${SHOTS}/record-guardian-${viewport.name}.png`,
+        fullPage: true,
+      });
+    });
   });
 }

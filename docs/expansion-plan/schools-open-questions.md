@@ -412,3 +412,49 @@ Nothing is wrong with the assertions. The risk is that this trains everyone to
 re-run a red suite until it is green, which is how a real failure gets waved
 through. It wants either a database per worker or a serialised project for the
 tests that touch Postgres.
+
+---
+
+### 21. Every authenticated page still throws its tree away on hydration
+
+Not a schools defect, not introduced by Iteration 4, and worth fixing before
+anyone measures performance.
+
+The sidebar's module switcher renders a **different module on the server than on
+the client**. React's mismatch report names both sides:
+
+```
+<span className="truncate">
++   School Operations
+-   {"Scrap & Recycling"}
+```
+
+— along with two different `<path d="…">` values, i.e. a different icon too. It
+is the `data-sidebar="menu-button"` inside the sidebar's dropdown trigger.
+
+Because the mismatch is in the shell rather than in a page, **every authenticated
+page is affected**. Confirmed on three: the new student record page, the new
+guardian record page, and `/schools/students`, which Iteration 4 never touched —
+all three report exactly one hydration failure, which is how I know it is
+inherited rather than mine. React responds by regenerating that whole tree on the
+client.
+
+Repro:
+
+```ts
+page.on("pageerror", (e) => { if (/Hydration failed/.test(e.message)) count += 1; });
+await page.goto("/schools/students");
+```
+
+This is the third bug of its exact class in this repo — caveat 12 records two
+already fixed, `navigator.onLine` reading the *server* as offline and the design
+system's `Toaster` rendering nothing on the server and a viewport on the client.
+The pattern is a shell component deriving state that only exists in the browser
+and rendering it directly instead of after mount. Whatever picks the active
+module is doing the same thing; it wants resolving on the server (from the
+hostname or the session, both of which are available there) or deferring to an
+effect.
+
+I have not fixed it: it is in the platform shell, it affects every module, and a
+change there wants to be its own piece of work with its own verification rather
+than a footnote to a schools iteration.
