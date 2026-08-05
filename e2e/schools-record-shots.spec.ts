@@ -200,5 +200,38 @@ for (const viewport of [
         fullPage: true,
       });
     });
+
+    test("teacher record page", async ({ page }) => {
+      const list = await page.request.get("/api/v2/schools/teachers/profiles?limit=25");
+      expect(list.status()).toBeLessThan(400);
+      const body = await list.json();
+      const candidates: { id: string; employeeCode: string }[] = body?.data ?? [];
+      expect(candidates.length, "the demo tenant has no teachers to open").toBeGreaterThan(0);
+
+      // Prefer one with something timetabled, so the Teaches tab has content.
+      let teacher = candidates[0];
+      for (const candidate of candidates) {
+        const detail = await page.request.get(`/api/v2/schools/teachers/${candidate.id}`);
+        const record = await detail.json().catch(() => null);
+        if ((record?.assignments?.length ?? 0) > 0) {
+          teacher = candidate;
+          break;
+        }
+      }
+
+      await expect(async () => {
+        await page.goto(`/schools/teachers/${teacher.id}`);
+        // The staff number, rendered as the identity strip's reference.
+        await expect(page.getByText(teacher.employeeCode).first()).toBeVisible({
+          timeout: 20_000,
+        });
+      }).toPass({ timeout: 120_000 });
+
+      await expect(page.getByRole("tab", { name: /Teaches/ })).toBeVisible();
+      await page.screenshot({
+        path: `${SHOTS}/record-teacher-${viewport.name}.png`,
+        fullPage: true,
+      });
+    });
   });
 }
