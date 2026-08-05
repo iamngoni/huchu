@@ -3,7 +3,8 @@ import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
-import { resolveBaseCurrency, toNumberOrZero } from "@/lib/schools/money";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
+import { money, resolveBaseCurrency, toNumberOrZero } from "@/lib/schools/money";
 import {
   emitSchoolFeeAccountingEvent,
   refreshFeeInvoiceBalance,
@@ -42,6 +43,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       if (receipt.status !== "POSTED") {
         throw new Error("Only posted receipts can be voided");
       }
+      // S-2.6. Voiding reverses the whole receipt in the ledger. If part of it
+      // has already gone back to the parent as a refund, that reversal would
+      // count the same money out twice — so the refund has to be dealt with
+      // first, one way or the other.
+      if (money(receipt.refundedAmount).greaterThan(0)) {
+        throw new Error("REFUND_ON_RECEIPT");
+      }
 
       const updated = await tx.schoolFeeReceipt.update({
         where: { id: receipt.id },
@@ -66,6 +74,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           invoiceId: allocation.invoiceId,
         });
       }
+
+      await writeSchoolAuditEvent(tx, {
+        companyId,
+        actorId: session.user.id,
+        eventType: "schools.fee.receipt.voided",
+        entityType: "SchoolFeeReceipt",
+        entityId: updated.id,
+        reason: validated.reason,
+        payload: {
+          receiptNo: updated.receiptNo,
+          studentId: updated.studentId,
+          currency: updated.currency,
+          amountReceived: toNumberOrZero(updated.amountReceived),
+          allocationCount: updated.allocations.length,
+        },
+      });
 
       return updated;
     });
@@ -122,6 +146,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const message = error instanceof Error ? error.message : "Failed to void fee receipt";
     if (message === "Only posted receipts can be voided") {
       return errorResponse(message, 400);
+    }
+    if (message === "REFUND_ON_RECEIPT") {
+      return errorResponse(
+        "Part of this receipt has been refunded; cancel or reverse the refund before voiding it",
+        409,
+      );
     }
     console.error("[API] POST /api/v2/schools/fees/receipts/[id]/void error:", error);
     return errorResponse("Failed to void fee receipt");

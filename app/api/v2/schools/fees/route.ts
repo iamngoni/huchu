@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
       receiptsPosted,
       waivedAmount,
       outstandingBalance,
+      creditOnAccount,
       baseCurrency,
     ] = await Promise.all([
         prisma.schoolFeeStructure.count({ where: { companyId } }),
@@ -65,6 +66,26 @@ export async function GET(request: NextRequest) {
           FROM "SchoolFeeInvoice"
           WHERE "companyId" = ${companyId} AND "status" IN ('ISSUED', 'PART_PAID')
         `),
+        // S-2.5. What the school is holding that is not its own: overpayments
+        // sitting on posted receipts, plus invoices settled beyond their total.
+        // Net of anything a requested refund is already holding, because that
+        // money is spoken for and showing it as spendable would be a lie the
+        // bursar acts on.
+        sumInBaseCurrency(Prisma.sql`
+          SELECT COALESCE((
+            SELECT SUM(ROUND(("amountUnallocated" - "refundedAmount") / "exchangeRate", 2))
+            FROM "SchoolFeeReceipt"
+            WHERE "companyId" = ${companyId}
+              AND "status" = 'POSTED'
+              AND "amountUnallocated" > "refundedAmount"
+          ), 0) + COALESCE((
+            SELECT SUM(ROUND(("creditAmount" - "refundedAmount") / "exchangeRate", 2))
+            FROM "SchoolFeeInvoice"
+            WHERE "companyId" = ${companyId}
+              AND "status" <> 'VOIDED'
+              AND "creditAmount" > "refundedAmount"
+          ), 0) AS total
+        `),
         resolveBaseCurrency(companyId),
       ]);
 
@@ -80,10 +101,11 @@ export async function GET(request: NextRequest) {
           issuedInvoices,
           overdueInvoices,
           receiptsPosted,
-          /** The currency `waivedAmount` and `outstandingBalance` are stated in. */
+          /** The currency the money figures below are stated in. */
           currency: baseCurrency,
           waivedAmount,
           outstandingBalance,
+          creditOnAccount,
         },
       },
     });

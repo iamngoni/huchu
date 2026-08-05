@@ -137,6 +137,7 @@ model Company {
   schoolFeeReceipts             SchoolFeeReceipt[]
   schoolFeeReceiptAllocations   SchoolFeeReceiptAllocation[]
   schoolFeeWaivers              SchoolFeeWaiver[]
+  schoolFeeRefunds              SchoolFeeRefund[]
   schoolAttendanceSessions      SchoolAttendanceSession[]
   schoolPeriods                 SchoolPeriod[]
   schoolRooms                   SchoolRoom[]
@@ -5458,6 +5459,16 @@ enum SchoolFeeWaiverStatus {
   REVERSED
 }
 
+/// S-2.6. Three states, because money leaving has exactly three fates: it is
+/// asked for, it is handed over, or the request is called off. A requested
+/// refund already holds its credit — see `SchoolFeeRefund.refundedAmount` on
+/// both sources — so `REQUESTED` is not a bookkeeping no-op.
+enum SchoolFeeRefundStatus {
+  REQUESTED
+  PAID
+  CANCELLED
+}
+
 enum SchoolPortalInviteSubject {
   STUDENT
   GUARDIAN
@@ -5761,6 +5772,7 @@ model SchoolStudent {
   feeInvoices            SchoolFeeInvoice[]
   feeReceipts            SchoolFeeReceipt[]
   feeWaivers             SchoolFeeWaiver[]
+  feeRefunds             SchoolFeeRefund[]
   portalInvites          SchoolPortalInvite[]
 
   @@unique([companyId, studentNo])
@@ -6139,6 +6151,20 @@ model SchoolFeeInvoice {
   waivedAmount   Decimal                @default(0) @db.Decimal(14, 2)
   writeOffAmount Decimal                @default(0) @db.Decimal(14, 2)
   balanceAmount  Decimal                @default(0) @db.Decimal(14, 2)
+  /// S-2.5 — what the family has settled *beyond* the bill.
+  ///
+  /// `balanceAmount` is clamped at zero, so before this column an invoice that
+  /// ended up over-settled — a full payment followed by a bursary, most often —
+  /// simply lost the difference. It is carried here instead, and it is one of
+  /// the two things a refund may be drawn against. `balanceAmount` and
+  /// `creditAmount` are never both positive; a CHECK constraint says so.
+  creditAmount   Decimal                @default(0) @db.Decimal(14, 2)
+  /// S-2.6 — the part of `creditAmount` already promised to a refund.
+  ///
+  /// Held from the moment a refund is requested, not from the moment it is
+  /// paid, so the same over-payment cannot be requested back twice. A CHECK
+  /// constraint holds it at or below `creditAmount`.
+  refundedAmount Decimal                @default(0) @db.Decimal(14, 2)
   /// The currency the family is billed in, copied from the fee structure at
   /// creation so a later edit to the structure cannot restate an issued bill.
   currency       String                 @default("USD")
@@ -6163,6 +6189,7 @@ model SchoolFeeInvoice {
   lines              SchoolFeeInvoiceLine[]
   receiptAllocations SchoolFeeReceiptAllocation[]
   waivers            SchoolFeeWaiver[]
+  refunds            SchoolFeeRefund[]
 
   /// S-2.4 lives in the database, not here. "One live invoice per student, per
   /// term, per fee structure" is a **partial** unique index — voided invoices
@@ -6214,7 +6241,18 @@ model SchoolFeeReceipt {
   reference         String?
   amountReceived    Decimal                @db.Decimal(14, 2)
   amountAllocated   Decimal                @default(0) @db.Decimal(14, 2)
+  /// S-2.5 — the credit this payment left on the family's account.
+  ///
+  /// A parent who hands over 500 against a 450 bill has 50, and this is where
+  /// it lives until it is allocated to the next invoice or refunded. A CHECK
+  /// constraint holds `amountAllocated + amountUnallocated = amountReceived`,
+  /// so the surplus cannot be quietly dropped by any code path.
   amountUnallocated Decimal                @default(0) @db.Decimal(14, 2)
+  /// S-2.6 — the part of `amountUnallocated` already promised to a refund.
+  /// Held at request, released on cancellation; CHECK-bounded by
+  /// `amountUnallocated`, which also stops credit being allocated away from
+  /// under a refund that is waiting to be paid.
+  refundedAmount    Decimal                @default(0) @db.Decimal(14, 2)
   /// The currency the money was actually handed over in. A receipt may only be
   /// allocated to invoices carrying the same currency.
   currency          String                 @default("USD")
@@ -6235,6 +6273,7 @@ model SchoolFeeReceipt {
   company     Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   student     SchoolStudent                @relation(fields: [studentId], references: [id], onDelete: Cascade)
   allocations SchoolFeeReceiptAllocation[]
+  refunds     SchoolFeeRefund[]
 
   @@unique([companyId, receiptNo])
   @@index([companyId, status])
@@ -6290,6 +6329,72 @@ model SchoolFeeWaiver {
 
   @@index([companyId, status])
   @@index([studentId, termId])
+}
+
+/// S-2.6 — money going back out of the school.
+///
+/// A refund is never free-standing: it is always drawn against a named piece of
+/// credit, so that "where did this money come from" has an answer on the row
+/// itself. There are exactly two sources, and a CHECK constraint requires
+/// precisely one of them:
+///
+///   * `receiptId` — a payment with an unallocated surplus
+///     (`SchoolFeeReceipt.amountUnallocated`), the parent who paid 500 on a 450
+///     bill;
+///   * `invoiceId` — an invoice settled beyond its total
+///     (`SchoolFeeInvoice.creditAmount`), usually a bursary applied after the
+///     bill was already paid in full.
+///
+/// The cap is held by the database rather than by this route: requesting a
+/// refund increments `refundedAmount` on the source, and that column carries a
+/// CHECK against the credit available on the same row. Two bursars refunding
+/// the same 50 at the same moment therefore produce one refund and one error,
+/// not two refunds.
+model SchoolFeeRefund {
+  id            String                 @id @default(uuid())
+  companyId     String
+  refundNo      String
+  studentId     String
+  /// Exactly one of `receiptId` / `invoiceId` is set — see the CHECK constraint
+  /// `SchoolFeeRefund_one_source_check` in the S-2.5/S-2.6 migration.
+  receiptId     String?
+  invoiceId     String?
+  refundDate    DateTime
+  method        SchoolFeePaymentMethod
+  reference     String?
+  reason        String
+  amount        Decimal                @db.Decimal(14, 2)
+  /// Always the source document's currency — a refund returns what was taken.
+  currency      String                 @default("USD")
+  /// Quote units per one base unit — see `SchoolFeeInvoice.exchangeRate`. Taken
+  /// from the source document, not from today, so the reversal undoes exactly
+  /// what the original posted.
+  exchangeRate  Decimal                @default(1) @db.Decimal(12, 4)
+  /// `amount` in the company's base currency; this is what reaches the ledger.
+  baseAmount    Decimal                @default(0) @db.Decimal(14, 2)
+  status        SchoolFeeRefundStatus  @default(REQUESTED)
+  notes         String?
+  requestedById String?
+  paidById      String?
+  paidAt        DateTime?
+  cancelledById String?
+  cancelledAt   DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  company Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  student SchoolStudent     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// NoAction, not SetNull: nulling a source would break the one-source CHECK,
+  /// and cascading would erase the record of money that left the building. See
+  /// the migration for the full reasoning.
+  receipt SchoolFeeReceipt? @relation(fields: [receiptId], references: [id], onDelete: NoAction)
+  invoice SchoolFeeInvoice? @relation(fields: [invoiceId], references: [id], onDelete: NoAction)
+
+  @@unique([companyId, refundNo])
+  @@index([companyId, status])
+  @@index([studentId, refundDate])
+  @@index([receiptId])
+  @@index([invoiceId])
 }
 
 model SchoolAttendanceSession {

@@ -1,76 +1,19 @@
-import { createHash, randomUUID } from "crypto"
-import { prisma } from "@/lib/prisma"
+import { writePlatformAuditEvent, type PlatformAuditArgs } from "./platform"
 
-export type GoldAuditArgs = {
-  companyId: string
-  actorId: string
-  eventType: string
-  entityType?: string
-  entityId?: string
-  payload?: Record<string, unknown>
-}
+export type GoldAuditArgs = PlatformAuditArgs
 
-function buildEventHash(args: {
-  companyId: string
-  actorId: string
-  eventType: string
-  entityType?: string
-  entityId?: string
-  payload?: Record<string, unknown>
-  prevEventHash: string | null
-  nonce: string
-  at: number
-}): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        companyId: args.companyId,
-        actor: args.actorId,
-        eventType: args.eventType,
-        entityType: args.entityType ?? null,
-        entityId: args.entityId ?? null,
-        payload: args.payload ?? null,
-        prevEventHash: args.prevEventHash,
-        nonce: args.nonce,
-        at: args.at,
-      }),
-    )
-    .digest("hex")
-}
-
+/**
+ * Gold's entry point into the hash-chained platform audit log.
+ *
+ * The mechanism now lives in `lib/audit/platform.ts`, because nothing about it
+ * was ever gold-specific and schools needs the same chain. This keeps the name
+ * Gold's call sites use, and keeps its one behavioural choice: a failed audit
+ * write is logged rather than thrown, because a gold import should not be
+ * rolled back by the log that describes it.
+ */
 export async function writeGoldAuditEvent(args: GoldAuditArgs): Promise<void> {
   try {
-    const prev = await prisma.platformAuditEvent.findFirst({
-      where: { companyId: args.companyId },
-      orderBy: { createdAt: "desc" },
-      select: { eventHash: true },
-    })
-    const prevEventHash = prev?.eventHash ?? null
-    const nonce = randomUUID()
-    const at = Date.now()
-    const eventHash = buildEventHash({
-      companyId: args.companyId,
-      actorId: args.actorId,
-      eventType: args.eventType,
-      entityType: args.entityType,
-      entityId: args.entityId,
-      payload: args.payload,
-      prevEventHash,
-      nonce,
-      at,
-    })
-    await prisma.platformAuditEvent.create({
-      data: {
-        companyId: args.companyId,
-        actor: args.actorId,
-        eventType: args.eventType,
-        entityType: args.entityType ?? null,
-        entityId: args.entityId ?? null,
-        payloadJson: args.payload ? JSON.stringify(args.payload) : null,
-        eventHash,
-        prevEventHash,
-      },
-    })
+    await writePlatformAuditEvent(args)
   } catch (error) {
     console.error("[audit] writeGoldAuditEvent failed", error)
   }

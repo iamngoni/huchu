@@ -20,9 +20,14 @@ import {
   toNumberOrZero,
   UnknownExchangeRateError,
 } from "@/lib/schools/money";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
 import {
   emitSchoolFeeAccountingEvent,
+  FeeCreditError,
+  isFeeCreditCheckViolation,
+  loadInvoicesForAllocation,
   refreshFeeInvoiceBalance,
+  spreadOverInvoices,
   type SchoolFeePostingResult,
 } from "../_helpers";
 
@@ -251,18 +256,31 @@ export async function POST(request: NextRequest) {
       return errorResponse("Invalid receipt date", 400);
     }
 
-    const allocations =
+    // S-2.5. The explicit-allocations flow names its own amounts; the derived
+    // flow ("here is a payment against this invoice") does not, and it is the
+    // one a parent overpays through. `settleFromAmount` marks the second, so
+    // that inside the transaction the amount can be spread over the invoice's
+    // real balance and the surplus carried, rather than the whole payment being
+    // refused for being fifty dollars too generous.
+    const explicitAllocations =
       validated.allocations && validated.allocations.length > 0
         ? validated.allocations
-        : validated.invoiceId
-          ? [{ invoiceId: validated.invoiceId, allocatedAmount: amountReceived }]
-          : [];
+        : null;
+    const settleFromAmount = !explicitAllocations && Boolean(validated.invoiceId);
+    const invoiceIds = explicitAllocations
+      ? explicitAllocations.map((allocation) => allocation.invoiceId)
+      : validated.invoiceId
+        ? [validated.invoiceId]
+        : [];
 
-    const invoiceIds = allocations.map((allocation) => allocation.invoiceId);
     if (invoiceIds.length > 0 && new Set(invoiceIds).size !== invoiceIds.length) {
       return errorResponse("Duplicate invoice allocations are not allowed", 400);
     }
 
+    // Read once here to derive the student and the currency, which the receipt
+    // must be stamped with before the transaction opens. Every figure the
+    // allocation decision rests on is read again under `FOR UPDATE` inside it —
+    // these rows are for identification, not for arithmetic.
     const invoices =
       invoiceIds.length > 0
         ? await prisma.schoolFeeInvoice.findMany({
@@ -283,7 +301,6 @@ export async function POST(request: NextRequest) {
     if (invoices.length !== invoiceIds.length) {
       return errorResponse("One or more allocated invoices are invalid", 400);
     }
-    const invoiceMap = new Map(invoices.map((invoice) => [invoice.id, invoice]));
 
     let studentId = validated.studentId;
     if (!studentId && invoices.length > 0) {
@@ -308,11 +325,7 @@ export async function POST(request: NextRequest) {
     // request names one and the invoices disagree, the invoices win — money
     // cannot be allocated across a currency boundary without a conversion
     // nobody has authorised.
-    const allocatedCurrencies = new Set(
-      allocations
-        .map((allocation) => invoiceMap.get(allocation.invoiceId)?.currency)
-        .filter((value): value is string => Boolean(value)),
-    );
+    const allocatedCurrencies = new Set(invoices.map((invoice) => invoice.currency));
     if (allocatedCurrencies.size > 1) {
       return errorResponse(
         "Allocated invoices are in more than one currency; receipt one currency at a time",
@@ -347,27 +360,14 @@ export async function POST(request: NextRequest) {
     // tolerance that quietly accepts half a cent over is a tolerance that
     // quietly accepts half a cent over.
     const receiptAmount = money(amountReceived);
-    const receiptAllocationSum = sumMoney(
-      allocations.map((item) => item.allocatedAmount),
-    );
-    if (exceeds(receiptAllocationSum, receiptAmount)) {
+    if (
+      explicitAllocations &&
+      exceeds(
+        sumMoney(explicitAllocations.map((item) => item.allocatedAmount)),
+        receiptAmount,
+      )
+    ) {
       return errorResponse("Total allocation exceeds amount received", 400);
-    }
-
-    if (allocations.length > 0) {
-      for (const allocation of allocations) {
-        const invoice = invoiceMap.get(allocation.invoiceId);
-        if (!invoice) return errorResponse("Allocated invoice is invalid", 400);
-        if (invoice.studentId !== studentId) {
-          return errorResponse("One or more allocated invoices are invalid", 400);
-        }
-        if (invoice.status === "VOIDED" || invoice.status === "WRITEOFF") {
-          return errorResponse("Cannot allocate against voided or written-off invoice", 400);
-        }
-        if (exceeds(allocation.allocatedAmount, invoice.balanceAmount)) {
-          return errorResponse("Allocation exceeds invoice outstanding balance", 400);
-        }
-      }
     }
 
     let receiptNo: string;
@@ -384,18 +384,70 @@ export async function POST(request: NextRequest) {
       return errorResponse(message, 400);
     }
 
+    const resolvedStudentId = studentId;
     const created = await prisma.$transaction(async (tx) => {
+      // S-2.5 — the allocation decision, taken against locked rows. Reading
+      // the balances outside the transaction and trusting them inside is how
+      // two bursars at two desks each allocate the same $450.
+      const locked = await loadInvoicesForAllocation(tx, {
+        companyId,
+        studentId: resolvedStudentId,
+        currency: documentCurrency.currency,
+        invoiceIds,
+      });
+
+      let allocations: Array<{ invoiceId: string; allocatedAmount: Prisma.Decimal }>;
+      if (settleFromAmount) {
+        // The payment settles what it can and the rest becomes credit.
+        const ordered = invoiceIds
+          .map((id) => locked.get(id))
+          .filter((invoice): invoice is NonNullable<typeof invoice> => Boolean(invoice));
+        allocations = spreadOverInvoices(receiptAmount, ordered).allocations;
+      } else {
+        allocations = (explicitAllocations ?? []).map((allocation) => ({
+          invoiceId: allocation.invoiceId,
+          allocatedAmount: money(allocation.allocatedAmount),
+        }));
+        for (const allocation of allocations) {
+          const invoice = locked.get(allocation.invoiceId);
+          if (!invoice) {
+            throw new FeeCreditError("One or more allocated invoices are invalid", 400);
+          }
+          // A named amount over the balance is a typo, not an overpayment: the
+          // bursar said which invoice and how much, and one of the two is
+          // wrong. An overpayment arrives as a receipt larger than the sum of
+          // its allocations, and that is carried, not refused.
+          if (exceeds(allocation.allocatedAmount, invoice.balanceAmount)) {
+            throw new FeeCreditError(
+              `Allocation exceeds the outstanding balance on invoice ${invoice.invoiceNo}`,
+              400,
+            );
+          }
+        }
+      }
+
+      const amountAllocated = sumMoney(
+        allocations.map((allocation) => allocation.allocatedAmount),
+      );
+      const amountUnallocated = receiptAmount.minus(amountAllocated);
+      if (amountUnallocated.isNegative()) {
+        throw new FeeCreditError("Total allocation exceeds amount received", 400);
+      }
+
       const receipt = await tx.schoolFeeReceipt.create({
         data: {
           companyId,
           receiptNo,
-          studentId,
+          studentId: resolvedStudentId,
           receiptDate,
           paymentMethod,
           reference: validated.reference ?? null,
           amountReceived: receiptAmount,
-          amountAllocated: receiptAllocationSum,
-          amountUnallocated: receiptAmount.minus(receiptAllocationSum),
+          amountAllocated,
+          // S-2.5. The surplus is carried here rather than dropped. The
+          // `SchoolFeeReceipt_split_adds_up_check` constraint means no future
+          // code path can drop it either.
+          amountUnallocated,
           currency: documentCurrency.currency,
           exchangeRate: documentCurrency.exchangeRate,
           baseAmount: toBaseAmount(receiptAmount, documentCurrency.exchangeRate),
@@ -410,7 +462,7 @@ export async function POST(request: NextRequest) {
                   create: allocations.map((allocation) => ({
                     companyId,
                     invoiceId: allocation.invoiceId,
-                    allocatedAmount: money(allocation.allocatedAmount),
+                    allocatedAmount: allocation.allocatedAmount,
                   })),
                 }
               : undefined,
@@ -425,6 +477,24 @@ export async function POST(request: NextRequest) {
           });
         }
       }
+
+      await writeSchoolAuditEvent(tx, {
+        companyId,
+        actorId: session.user.id,
+        eventType: "schools.fee.receipt.recorded",
+        entityType: "SchoolFeeReceipt",
+        entityId: receipt.id,
+        payload: {
+          receiptNo,
+          studentId: resolvedStudentId,
+          currency: documentCurrency.currency,
+          amountReceived: toNumberOrZero(receiptAmount),
+          amountAllocated: toNumberOrZero(amountAllocated),
+          amountUnallocated: toNumberOrZero(amountUnallocated),
+          paymentMethod,
+          status: receipt.status,
+        },
+      });
 
       return tx.schoolFeeReceipt.findUnique({
         where: { id: receipt.id },
@@ -505,6 +575,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse("Validation failed", 400, error.issues);
+    }
+    if (error instanceof FeeCreditError) {
+      return errorResponse(error.message, error.status);
+    }
+    if (isFeeCreditCheckViolation(error)) {
+      return errorResponse(
+        "That payment no longer matches the invoice balances; reload and try again",
+        409,
+      );
     }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

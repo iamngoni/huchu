@@ -8,6 +8,7 @@ import {
   clampAtZero,
   isZeroOrLess,
   isPositive,
+  minMoney,
   money,
   type MoneyLike,
   sumMoney,
@@ -66,6 +67,7 @@ export type SchoolFeeAccountingEventType =
   | "SCHOOL_FEE_INVOICE_ISSUED"
   | "SCHOOL_FEE_RECEIPT_POSTED"
   | "SCHOOL_FEE_RECEIPT_VOIDED"
+  | "SCHOOL_FEE_REFUND_PAID"
   | "SCHOOL_FEE_WAIVER_APPLIED"
   | "SCHOOL_FEE_WRITEOFF_POSTED";
 
@@ -115,6 +117,16 @@ function toPostingSourceType(
       return "SALES_INVOICE";
     case "SCHOOL_FEE_RECEIPT_POSTED":
     case "SCHOOL_FEE_RECEIPT_VOIDED":
+    // ⚠ SEAM — S-2.3. `AccountingSourceType` has no school members yet, so a
+    // refund borrows `SALES_RECEIPT` and inverts it. The *accounts* are right
+    // and that is why this is safe to ship: a fee receipt posts DR cash /
+    // CR receivables, and a refund of credit is exactly that entry backwards —
+    // cash out, the family's credit balance extinguished. What is borrowed is
+    // the classification, not the debits. When S-2.3 adds `SCHOOL_FEE_REFUND`,
+    // re-point this one case and seed its posting rule; nothing else changes,
+    // because the posting source id is already `SCHOOL_FEE_REFUND:{id}` and
+    // idempotency is keyed on that.
+    case "SCHOOL_FEE_REFUND_PAID":
       return "SALES_RECEIPT";
     case "SCHOOL_FEE_WAIVER_APPLIED":
     case "SCHOOL_FEE_WRITEOFF_POSTED":
@@ -139,6 +151,9 @@ function buildPostingSourceId(input: {
   }
   if (input.eventType === "SCHOOL_FEE_INVOICE_ISSUED") {
     return `SCHOOL_FEE_INVOICE:${input.sourceId}`;
+  }
+  if (input.eventType === "SCHOOL_FEE_REFUND_PAID") {
+    return `SCHOOL_FEE_REFUND:${input.sourceId}`;
   }
   return `SCHOOL_FEE_RECEIPT:${input.sourceId}`;
 }
@@ -313,6 +328,14 @@ export async function refreshFeeInvoiceBalance(
   const writeOffAmount =
     invoice.status === "WRITEOFF" ? clampAtZero(totalAmount.minus(settled)) : money(0);
   const balanceAmount = clampAtZero(totalAmount.minus(settled).minus(writeOffAmount));
+  // S-2.5. `balanceAmount` is clamped at zero, and before this line the clamp
+  // was where an over-settled invoice quietly lost the difference — most often
+  // a bursary applied to a bill the family had already paid in full. The two
+  // are mirror images of one another and never both positive, which is what the
+  // `SchoolFeeInvoice_credit_xor_balance_check` constraint asserts.
+  const creditAmount = clampAtZero(
+    settled.plus(writeOffAmount).minus(totalAmount),
+  );
   const nextStatus = recalculateFeeInvoiceStatus({
     currentStatus: invoice.status,
     totalAmount,
@@ -332,10 +355,248 @@ export async function refreshFeeInvoiceBalance(
       waivedAmount,
       writeOffAmount,
       balanceAmount,
+      creditAmount,
       // S-2.2. The base-currency equivalent is derived, never entered, so it
       // cannot disagree with the total it restates.
       baseAmount: toBaseAmount(totalAmount, invoice.exchangeRate),
       status: nextStatus as SchoolFeeInvoiceStatus,
     },
   });
+}
+
+/**
+ * A refusal a bursar can act on.
+ *
+ * The fee routes report failures through `errorResponse`, and a thrown `Error`
+ * inside a transaction would come back as an anonymous 500. This carries the
+ * status with it so the transaction can be aborted by throwing — which is the
+ * only way to abort one — without losing the sentence.
+ */
+export class FeeCreditError extends Error {
+  constructor(
+    message: string,
+    readonly status: number = 400,
+  ) {
+    super(message);
+    this.name = "FeeCreditError";
+  }
+}
+
+/**
+ * A CHECK constraint said no.
+ *
+ * The credit and refund caps are held by the database (see the S-2.5/S-2.6
+ * migration), so the last word on "is there enough" is a constraint violation
+ * rather than a branch. Prisma surfaces these as an unknown request error with
+ * the constraint name in the message, so that is what is matched. The service
+ * layer checks the same thing first and produces a better sentence; this is the
+ * backstop for the case the service layer cannot win — two bursars, one credit,
+ * the same instant.
+ */
+export function isFeeCreditCheckViolation(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  if (!message.includes("violates check constraint")) return false;
+  return (
+    message.includes("refunded_within") ||
+    message.includes("split_adds_up") ||
+    message.includes("credit_xor_balance") ||
+    message.includes("schoolfeereceiptallocation_positive")
+  );
+}
+
+/**
+ * Take the row locks before reading the balances the decision rests on.
+ *
+ * S-2.5's "validated inside the transaction" is not satisfied by moving the
+ * `findMany` inside the `$transaction` callback: Postgres's default READ
+ * COMMITTED isolation would still let two bursars each read a $450 balance and
+ * each allocate $450 against it. `FOR UPDATE` is what serialises them, and
+ * ordering by id is what stops two overlapping allocations deadlocking each
+ * other.
+ */
+export async function lockFeeInvoices(
+  tx: Prisma.TransactionClient,
+  input: { companyId: string; invoiceIds: string[] },
+): Promise<void> {
+  if (input.invoiceIds.length === 0) return;
+  await tx.$queryRaw`
+    SELECT "id" FROM "SchoolFeeInvoice"
+    WHERE "companyId" = ${input.companyId}
+      AND "id" IN (${Prisma.join(input.invoiceIds)})
+    ORDER BY "id"
+    FOR UPDATE
+  `;
+}
+
+/** As `lockFeeInvoices`, for the receipt whose credit is being spent. */
+export async function lockFeeReceipt(
+  tx: Prisma.TransactionClient,
+  input: { companyId: string; receiptId: string },
+): Promise<void> {
+  await tx.$queryRaw`
+    SELECT "id" FROM "SchoolFeeReceipt"
+    WHERE "companyId" = ${input.companyId} AND "id" = ${input.receiptId}
+    FOR UPDATE
+  `;
+}
+
+/**
+ * Restate a receipt's split from its allocation rows.
+ *
+ * `amountAllocated + amountUnallocated = amountReceived` is a CHECK constraint,
+ * so this is the only shape of write that can commit. The surplus is whatever
+ * is left — it is never clamped, and there is nowhere for it to go but the
+ * family's credit.
+ */
+export async function refreshFeeReceiptSplit(
+  tx: Prisma.TransactionClient,
+  input: { companyId: string; receiptId: string },
+) {
+  const { companyId, receiptId } = input;
+  const [receipt, allocations] = await Promise.all([
+    tx.schoolFeeReceipt.findFirst({
+      where: { id: receiptId, companyId },
+      select: { id: true, amountReceived: true, refundedAmount: true },
+    }),
+    tx.schoolFeeReceiptAllocation.findMany({
+      where: { companyId, receiptId },
+      select: { allocatedAmount: true },
+    }),
+  ]);
+  if (!receipt) return null;
+
+  const amountAllocated = sumMoney(
+    allocations.map((allocation) => allocation.allocatedAmount),
+  );
+  const amountUnallocated = money(receipt.amountReceived).minus(amountAllocated);
+  if (amountUnallocated.isNegative()) {
+    throw new FeeCreditError("Allocations exceed the amount received", 400);
+  }
+  if (money(receipt.refundedAmount).greaterThan(amountUnallocated)) {
+    throw new FeeCreditError(
+      "That credit is already promised to a refund; cancel the refund first",
+      409,
+    );
+  }
+
+  return tx.schoolFeeReceipt.update({
+    where: { id: receiptId },
+    data: { amountAllocated, amountUnallocated },
+  });
+}
+
+export type FeeAllocationInput = { invoiceId: string; allocatedAmount: MoneyLike };
+
+type LockedInvoice = {
+  id: string;
+  invoiceNo: string;
+  studentId: string;
+  status: string;
+  balanceAmount: Prisma.Decimal;
+  currency: string;
+};
+
+/**
+ * Read the invoices an allocation names, under lock, and refuse the ones that
+ * cannot legally take money.
+ *
+ * Returns them keyed by id so the caller does not read them twice.
+ */
+export async function loadInvoicesForAllocation(
+  tx: Prisma.TransactionClient,
+  input: {
+    companyId: string;
+    studentId: string;
+    currency: string;
+    invoiceIds: string[];
+  },
+): Promise<Map<string, LockedInvoice>> {
+  const invoiceIds = [...new Set(input.invoiceIds)];
+  if (invoiceIds.length !== input.invoiceIds.length) {
+    throw new FeeCreditError("Duplicate invoice allocations are not allowed", 400);
+  }
+  await lockFeeInvoices(tx, { companyId: input.companyId, invoiceIds });
+
+  const invoices = await tx.schoolFeeInvoice.findMany({
+    where: { companyId: input.companyId, id: { in: invoiceIds } },
+    select: {
+      id: true,
+      invoiceNo: true,
+      studentId: true,
+      status: true,
+      balanceAmount: true,
+      currency: true,
+    },
+  });
+  if (invoices.length !== invoiceIds.length) {
+    throw new FeeCreditError("One or more allocated invoices are invalid", 400);
+  }
+
+  for (const invoice of invoices) {
+    if (invoice.studentId !== input.studentId) {
+      throw new FeeCreditError("One or more allocated invoices are invalid", 400);
+    }
+    if (invoice.status === "VOIDED" || invoice.status === "WRITEOFF") {
+      throw new FeeCreditError(
+        `Invoice ${invoice.invoiceNo} is voided or written off and cannot take a payment`,
+        400,
+      );
+    }
+    if (invoice.currency !== input.currency) {
+      throw new FeeCreditError(
+        `Invoice ${invoice.invoiceNo} is in ${invoice.currency}; money cannot be allocated across a currency boundary`,
+        400,
+      );
+    }
+  }
+
+  return new Map(invoices.map((invoice) => [invoice.id, invoice]));
+}
+
+/**
+ * Spread an amount over invoices oldest-first, stopping when it runs out.
+ *
+ * This is what makes an overpayment a credit rather than a refusal: given $500
+ * and a $450 bill it produces one $450 allocation and hands back $50, where the
+ * previous single-invoice path simply returned "allocation exceeds invoice
+ * outstanding balance" and the parent's money could not be taken at all.
+ */
+export function spreadOverInvoices(
+  amount: MoneyLike,
+  invoices: Array<{ id: string; balanceAmount: MoneyLike }>,
+): { allocations: Array<{ invoiceId: string; allocatedAmount: Prisma.Decimal }>; surplus: Prisma.Decimal } {
+  let remaining = money(amount);
+  const allocations: Array<{ invoiceId: string; allocatedAmount: Prisma.Decimal }> = [];
+  for (const invoice of invoices) {
+    if (!remaining.greaterThan(0)) break;
+    const take = minMoney(remaining, clampAtZero(invoice.balanceAmount));
+    if (!take.greaterThan(0)) continue;
+    allocations.push({ invoiceId: invoice.id, allocatedAmount: take });
+    remaining = remaining.minus(take);
+  }
+  return { allocations, surplus: remaining };
+}
+
+/**
+ * The credit a receipt can still spend: its surplus, less anything a refund is
+ * already holding.
+ */
+export function availableReceiptCredit(receipt: {
+  amountUnallocated: MoneyLike;
+  refundedAmount: MoneyLike;
+}): Prisma.Decimal {
+  return clampAtZero(
+    money(receipt.amountUnallocated).minus(money(receipt.refundedAmount)),
+  );
+}
+
+/** The same, for an invoice settled beyond its total. */
+export function availableInvoiceCredit(invoice: {
+  creditAmount: MoneyLike;
+  refundedAmount: MoneyLike;
+}): Prisma.Decimal {
+  return clampAtZero(
+    money(invoice.creditAmount).minus(money(invoice.refundedAmount)),
+  );
 }

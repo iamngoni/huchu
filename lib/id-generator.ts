@@ -19,6 +19,7 @@ export type ReservableIdEntity =
   | "SCHOOL_GUARDIAN"
   | "SCHOOL_FEE_INVOICE"
   | "SCHOOL_FEE_RECEIPT"
+  | "SCHOOL_FEE_REFUND"
   | "CAR_SALES_LEAD"
   | "CAR_SALES_VEHICLE"
   | "CAR_SALES_DEAL"
@@ -79,6 +80,8 @@ export const ID_ENTITY_CONFIG: Record<ReservableIdEntity, EntityConfig> = {
   SCHOOL_GUARDIAN: { prefix: "GDN", requiresSiteId: false },
   SCHOOL_FEE_INVOICE: { prefix: "SFI", requiresSiteId: false },
   SCHOOL_FEE_RECEIPT: { prefix: "SFR", requiresSiteId: false },
+  // SFR is taken by the receipt, so a refund reads SFRF.
+  SCHOOL_FEE_REFUND: { prefix: "SFRF", requiresSiteId: false },
   CAR_SALES_LEAD: { prefix: "LEAD", requiresSiteId: false },
   CAR_SALES_VEHICLE: { prefix: "CAR", requiresSiteId: false },
   CAR_SALES_DEAL: { prefix: "DEAL", requiresSiteId: false },
@@ -285,6 +288,13 @@ async function findEntityMaxExistingCode(
         select: { receiptNo: true },
       });
       return extractMaxFromCodes(records.map((record) => record.receiptNo), prefix);
+    }
+    case "SCHOOL_FEE_REFUND": {
+      const records = await db.schoolFeeRefund.findMany({
+        where: { companyId },
+        select: { refundNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.refundNo), prefix);
     }
     case "CAR_SALES_LEAD": {
       const records = await db.carSalesLead.findMany({

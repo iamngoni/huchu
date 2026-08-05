@@ -124,6 +124,13 @@ export function maxMoney(a: MoneyLike, b: MoneyLike): Prisma.Decimal {
   return left.greaterThan(right) ? left : right;
 }
 
+/** The smaller of two money values. */
+export function minMoney(a: MoneyLike, b: MoneyLike): Prisma.Decimal {
+  const left = money(a);
+  const right = money(b);
+  return left.lessThan(right) ? left : right;
+}
+
 /** Never below zero. */
 export function clampAtZero(value: MoneyLike): Prisma.Decimal {
   const amount = money(value);
