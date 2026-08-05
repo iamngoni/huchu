@@ -308,3 +308,46 @@ run; rollback is all-or-nothing per job.
 
 _The changelog for this work lives in the roadmap; this file is a wall, not a
 log._
+
+---
+
+### 17. What Iteration 4 found, and what it deliberately did not do
+
+**The demo tenant had no enrolments at all.** Every pupil in `chisipite-demo`
+had `currentClassId` set and zero `SchoolEnrollment` rows — the exact hole
+`provisionSchool` leaves, seen on live data rather than in a test. It was fixed
+by running the S-3.3 importer over the existing roll, which reported five
+students updated and wrote the five missing enrolments. **`provisionSchool`
+itself is still wrong** and will do it again to the next school provisioned that
+way; it wants the same two lines the importer's student handler has.
+
+**Four record tabs are missing on purpose.** Tasks, comments, files and
+mentions identify their subject with a nullable foreign key per kind
+(`CrmTask.leadId`/`dealId`/`clientId`/`personId`/`siteId`, and six on
+`CrmRecordFile`). A school record cannot be a subject until S-4.2 re-keys them
+onto `(subjectType, subjectId)`. **Do not add `studentId` to those tables as a
+shortcut** — six school types across three tables is eighteen nullable foreign
+keys, and `isValidParent` becomes an eleven-way field comparison. `CrmFollower`
+and `CrmListMember` already use the generic `(entity, recordId)` pair, so the
+codebase contains both idioms with a written rationale for each; the re-key is
+making the three stragglers match the two that got it right.
+
+**`CrmFieldEntity` is the next thing to land, and it is one line.** It is a
+Prisma enum with PERSON/COMPANY/LEAD/DEAL/SITE/WORK_ORDER, and it gates custom
+fields, lists, followers and the merge dialog. Adding the six school types
+unblocks S-4.4 and part of S-4.2 at once. The student record page already asks
+for `entity=STUDENT` definitions and tolerates the empty answer, so nothing
+needs editing there when it lands.
+
+**Date properties are read-only in a record page, everywhere.** Not a schools
+decision — `RecordAttributes` has exactly two widgets, a text box and a popover
+select, so `DATE`, `DATETIME`, `CHECKBOX` and the select types fall to formatted
+read-only text. A box that accepts "next tuesday" into a date column is worse
+than no editor, so this is right for now, but "date of birth" being
+uneditable on a pupil's own page is the kind of gap a registrar notices. A date
+picker in a property row is its own piece of work and would serve custom `DATE`
+fields at the same time.
+
+**Five more record types to go.** Guardian, teacher, class, subject and hostel
+still have hand-rolled pages (or none, for subject). They are now a tab array
+each, not a page each — the student page is the template.
