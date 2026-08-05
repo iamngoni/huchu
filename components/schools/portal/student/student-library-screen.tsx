@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Badge, Button, Card, EmptyState, Skeleton } from "@corelithzw/react";
 import { Input } from "@/components/ui/input";
+import { BookCover } from "@/components/schools/library/book-cover";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { useStudentPortal } from "./student-portal-context";
 
@@ -54,34 +55,6 @@ function shortDate(value: string | null) {
     month: "long",
     year: "numeric",
   });
-}
-
-/**
- * A cover for a book that has no cover.
- *
- * `SchoolBook` carries no image, so the grid draws the spine instead: the
- * title set large, the author under it, and a hue derived from the title so
- * the same book is the same colour every time a pupil opens the shelf. That is
- * what a cover does — it makes a book recognisable before it is read — and a
- * row of identical grey rectangles would not.
- */
-function Spine({ book }: { book: Book }) {
-  const hue = [...book.title].reduce((total, char) => total + char.charCodeAt(0), 0) % 360;
-  return (
-    <div
-      className="flex aspect-[3/4] flex-col justify-between rounded-[var(--radius-md)] p-3"
-      style={{
-        background: `linear-gradient(160deg, hsl(${hue} 62% 42%), hsl(${(hue + 28) % 360} 58% 30%))`,
-      }}
-    >
-      <span className="line-clamp-4 text-[length:var(--type-body-sm)] font-semibold leading-tight text-[color:var(--text-inverse)]">
-        {book.title}
-      </span>
-      <span className="truncate text-[length:var(--type-caption)] text-[color:var(--text-inverse)] opacity-80">
-        {book.author ?? "Unknown author"}
-      </span>
-    </div>
-  );
 }
 
 /**
@@ -245,7 +218,7 @@ export function StudentLibraryScreen() {
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {data?.books.map((book) => (
               <li key={book.id} className="flex flex-col gap-2">
-                <Spine book={book} />
+                <BookCover title={book.title} author={book.author} />
                 <div className="min-w-0">
                   <p className="truncate text-[length:var(--type-caption)] text-[color:var(--text-muted)]">
                     {book.available > 0

@@ -331,8 +331,8 @@ once it returns."
 | S-10.1 | As anyone on a phone, every school admin surface works at 390×844 | Screenshotted, fixed, re-shot; no horizontal body scroll; controls one height | `todo` |
 | S-10.2 | As anyone on a tablet, every school surface works at 768×1024 | Screenshotted, fixed, re-shot | `todo` |
 | S-10.3 | As anyone on a phone, every portal surface matches its prototype | All three portals screenshot-compared against `docs/design-system/portals/` | `todo` |
-| S-10.4 | As anyone reading a list of people, I can tell them apart at a glance | Students and staff carry an avatar wherever they are listed — registers, mark sheets, class lists, message threads, admin tables and record pages. Initials with a colour derived from the name until a photo exists. Portals, the class list and guardians done; the rest of the admin tables still bare | `wip` |
-| S-10.5 | As anyone browsing the library, I recognise a book by its cover | Catalogue is a grid of covers, not rows of text. Loans and fines stay a list, because a debt is not browsed. Student portal done; the librarian's own catalogue screen still a list | `wip` |
+| S-10.4 | As anyone reading a list of people, I can tell them apart at a glance | Students and staff carry an avatar wherever they are listed — registers, mark sheets, class lists, message threads, admin tables and record pages. Initials with a colour derived from the name until a photo exists. Portals, the class list, guardians and the teacher directory done; the admissions board, welfare and the Iteration 4 record pages still bare | `wip` |
+| S-10.5 | As anyone browsing the library, I recognise a book by its cover | Catalogue is a grid of covers, not rows of text, on both the pupil's shelf and the issue desk, from one shared `BookCover`. Loans and fines stay a list, because a debt is not browsed | `done` |
 
 ## Parked
 

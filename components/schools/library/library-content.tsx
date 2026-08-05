@@ -13,6 +13,7 @@ import { VerticalDataViews } from "@/components/ui/vertical-data-views";
 import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchSchoolsStudents } from "@/lib/schools/admin-v2";
+import { BookCover } from "./book-cover";
 
 type Copy = {
   id: string;
@@ -69,6 +70,8 @@ export function LibraryContent() {
   const [search, setSearch] = useState("");
   const [overdueOnly, setOverdueOnly] = useState(true);
   const [lendingCopy, setLendingCopy] = useState<string | null>(null);
+  /** Which cover has been opened. The desk works one book at a time. */
+  const [openBook, setOpenBook] = useState<string | null>(null);
   const [reader, setReader] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -174,20 +177,63 @@ export function LibraryContent() {
               {onShelf === 1 ? "y" : "ies"} on the shelf
             </p>
 
-            <MobileList>
-              {books.length === 0 ? (
-                <MobileListEmpty>
-                  {libraryQuery.isLoading
-                    ? "Loading the catalogue…"
-                    : "Nothing catalogued yet."}
-                </MobileListEmpty>
-              ) : (
-                books.map((book) => (
-                  <div key={book.id}>
-                    <MobileListSectionHeader>
-                      {book.title}
-                      {book.author ? ` · ${book.author}` : ""}
-                    </MobileListSectionHeader>
+            {books.length === 0 ? (
+              <MobileListEmpty>
+                {libraryQuery.isLoading
+                  ? "Loading the catalogue…"
+                  : "Nothing catalogued yet."}
+              </MobileListEmpty>
+            ) : (
+              <>
+                {/* A shelf, not a spreadsheet. A librarian looking for a title
+                    recognises its cover first, so the catalogue is a grid and
+                    the copies of one book open underneath it — the desk works
+                    a book at a time. */}
+                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                  {books.map((book) => {
+                    const total = book.copies.length;
+                    const out = book.copies.filter((copy) => copy.loans.length > 0).length;
+                    const isOpen = openBook === book.id;
+                    return (
+                      <li key={book.id}>
+                        <button
+                          type="button"
+                          aria-expanded={isOpen}
+                          onClick={() => {
+                            setOpenBook(isOpen ? null : book.id);
+                            setLendingCopy(null);
+                          }}
+                          className={[
+                            "flex w-full flex-col gap-2 rounded-[var(--radius-md)] border p-2 text-left",
+                            isOpen
+                              ? "border-[color:var(--brand)] bg-[color:var(--brand-soft)]"
+                              : "border-transparent hover:bg-[color:var(--surface-muted)]",
+                          ].join(" ")}
+                        >
+                          <BookCover title={book.title} author={book.author} size="sm" />
+                          <span className="block truncate text-[length:var(--type-caption)] font-medium text-[color:var(--text-strong)]">
+                            {book.title}
+                          </span>
+                          <span className="block truncate font-[family-name:var(--font-mono)] text-[length:var(--type-caption)] tabular-nums text-[color:var(--text-muted)]">
+                            {total - out} of {total} in
+                            {book.shelfMark ? ` \u00b7 ${book.shelfMark}` : ""}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {openBook ? (
+                  <MobileList>
+                    {books
+                      .filter((book) => book.id === openBook)
+                      .map((book) => (
+                        <div key={book.id}>
+                          <MobileListSectionHeader>
+                            {book.title}
+                            {book.author ? ` \u00b7 ${book.author}` : ""}
+                          </MobileListSectionHeader>
                     {book.copies.map((copy) => {
                       const loan = copy.loans[0] ?? null;
                       return (
@@ -275,10 +321,12 @@ export function LibraryContent() {
                         />
                       );
                     })}
-                  </div>
-                ))
-              )}
-            </MobileList>
+                        </div>
+                      ))}
+                  </MobileList>
+                ) : null}
+              </>
+            )}
           </div>
         ) : null}
 

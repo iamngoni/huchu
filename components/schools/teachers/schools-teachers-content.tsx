@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
+import { PersonAvatar } from "@/components/schools/common/person-avatar";
 import {
   Dialog,
   DialogContent,
@@ -234,11 +235,16 @@ export function SchoolsTeachersContent() {
       {
         id: "teacher",
         header: "Teacher",
+        // Staff get a face for the same reason pupils do: a directory is
+        // scanned, not read.
         cell: ({ row }) => (
-          <div>
-            <div className="font-medium">{row.original.user.name}</div>
-            <div className="text-xs text-muted-foreground">
-              {row.original.employeeCode} / {row.original.user.email}
+          <div className="flex items-center gap-3">
+            <PersonAvatar name={row.original.user.name} />
+            <div className="min-w-0">
+              <div className="font-medium">{row.original.user.name}</div>
+              <div className="text-xs text-muted-foreground">
+                {row.original.employeeCode} / {row.original.user.email}
+              </div>
             </div>
           </div>
         ),
