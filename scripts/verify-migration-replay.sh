@@ -14,25 +14,40 @@
 # prisma/schema.prisma in BOTH directions. The second check is the one that
 # matters: a deploy that succeeds into the wrong schema has fixed nothing.
 #
-#   ./scripts/verify-migration-replay.sh
+#   PGUSER=huchu PGPASSWORD=… ./scripts/verify-migration-replay.sh
+#
+# Connection details are read from the standard libpq environment variables, so
+# if psql already reaches your database this script does too.
 #
 # Needs a Postgres role that may CREATE DATABASE. If yours may not — the dev
 # role here cannot — set SCRATCH_ADMIN to a superuser wrapper:
 #
-#   SCRATCH_ADMIN='su postgres -c' ./scripts/verify-migration-replay.sh
+#   SCRATCH_ADMIN='su postgres -c' PGUSER=huchu PGPASSWORD=… \
+#     ./scripts/verify-migration-replay.sh
 #
 set -euo pipefail
 
 DB_NAME="${SCRATCH_DB:-huchu_migration_replay_$$}"
+
+# Connection details come from the standard libpq variables — PGHOST, PGPORT,
+# PGUSER, PGPASSWORD — or from .pgpass, so this script carries no credentials
+# of its own. Only the database name is ours; everything else is wherever your
+# psql already points.
 HOST="${PGHOST:-localhost}"
 PORT="${PGPORT:-5432}"
-USER="${PGUSER:-huchu}"
-PASSWORD="${PGPASSWORD:-huchu}"
-SCRATCH_URL="postgresql://${USER}:${PASSWORD}@${HOST}:${PORT}/${DB_NAME}"
+USER="${PGUSER:-$(id -un)}"
+if [ -n "${PGPASSWORD:-}" ]; then
+  SCRATCH_URL="postgresql://${USER}:${PGPASSWORD}@${HOST}:${PORT}/${DB_NAME}"
+else
+  SCRATCH_URL="postgresql://${USER}@${HOST}:${PORT}/${DB_NAME}"
+fi
 
 admin() {
   if [ -n "${SCRATCH_ADMIN:-}" ]; then
-    $SCRATCH_ADMIN "$1"
+    # The admin wrapper is a different role by definition, so it must not
+    # inherit the connection identity the replay itself uses — `su postgres`
+    # carrying PGUSER=huchu fails peer authentication.
+    $SCRATCH_ADMIN "env -u PGUSER -u PGPASSWORD $1"
   else
     eval "$1"
   fi
