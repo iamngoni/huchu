@@ -18,6 +18,7 @@ import {
   type SubjectNote,
 } from "@/components/records/subject-tabs";
 import { useAttributeEditor } from "@/components/records/use-attribute-editor";
+import { PrintDocumentButton } from "@/components/schools/common/print-document-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
@@ -242,6 +243,22 @@ export function ClassRecordPage({ classId }: { classId: string }) {
       backLabel={config.labelPlural}
       title={record.name}
       reference={record.code}
+      primaryAction={
+        // The two things a school prints most. The register is deliberately blank
+        // — it is what a teacher takes to a lesson when the line is down.
+        <span className="flex items-center gap-2">
+          <PrintDocumentButton
+            sourceKey="schools.class-list"
+            filters={{ classId }}
+            label="Class list"
+          />
+          <PrintDocumentButton
+            sourceKey="schools.attendance-register"
+            filters={{ classId }}
+            label="Blank register"
+          />
+        </span>
+      }
       subtitle={
         [
           record.term?.name,

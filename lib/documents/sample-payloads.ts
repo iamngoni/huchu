@@ -137,6 +137,118 @@ function dashboardSample(): UniversalDocumentPayload {
   };
 }
 
+/**
+ * Iteration 5 — the school's paper, for the template editor's preview.
+ *
+ * Zimbabwean names, three terms, a levy and a boarding fee, because a preview
+ * showing "Acme Retail (Pvt) Ltd" is one a bursar cannot judge their own
+ * letterhead against.
+ */
+function feeInvoiceSample(): UniversalDocumentPayload {
+  return {
+    title: "Fee invoice",
+    subtitle: "SFI-0042",
+    badge: { label: "issued", tone: "warning" },
+    meta: [
+      { label: "Invoice No.", value: "SFI-0042" },
+      { label: "Pupil", value: "Tendai Moyo" },
+      { label: "Student number", value: "S1002" },
+      { label: "Class", value: "Form 2 Blue" },
+      { label: "Term", value: "Term 2" },
+      { label: "Issued", value: "2026-05-08" },
+      { label: "Due", value: "2026-06-05" },
+    ],
+    parties: [
+      {
+        title: "Bill to",
+        lines: ["Rudo Moyo", "mother of Tendai Moyo", "14 Chiremba Rd, Harare", "0772 000 111"],
+      },
+    ],
+    totals: [
+      { label: "Subtotal", value: "USD 450.00" },
+      { label: "Total", value: "USD 450.00" },
+      { label: "Paid", value: "USD 180.00" },
+      { label: "Balance due", value: "USD 270.00", emphasis: true },
+    ],
+    record: {
+      sections: [],
+      lineColumns: [
+        { key: "feeCode", label: "Code" },
+        { key: "description", label: "Description" },
+        { key: "quantity", label: "Qty" },
+        { key: "unitAmount", label: "Unit" },
+        { key: "amount", label: "Amount" },
+      ],
+      lines: [
+        { feeCode: "TUITION", description: "Tuition", quantity: "1.00", unitAmount: "400.00", amount: "400.00" },
+        { feeCode: "DEV", description: "Development levy", quantity: "1.00", unitAmount: "50.00", amount: "50.00" },
+      ],
+    },
+    notes: ["Fees are payable by the end of the second week of term."],
+  };
+}
+
+function reportCardSample(): UniversalDocumentPayload {
+  return {
+    title: "Report card",
+    subtitle: "Tendai Moyo — Term 2",
+    meta: [
+      { label: "Pupil", value: "Tendai Moyo" },
+      { label: "Student number", value: "S1002" },
+      { label: "Class", value: "Form 2 Blue" },
+      { label: "Term", value: "Term 2" },
+      { label: "Subjects", value: "4" },
+      { label: "Average", value: "63.5" },
+    ],
+    record: {
+      sections: [],
+      lineColumns: [
+        { key: "subject", label: "Subject" },
+        { key: "score", label: "Mark" },
+        { key: "grade", label: "Grade" },
+        { key: "outcome", label: "Outcome" },
+        { key: "remarks", label: "Remarks" },
+      ],
+      lines: [
+        { subject: "Mathematics", score: "72.0", grade: "B", outcome: "Pass", remarks: "Strong on algebra." },
+        { subject: "English Language", score: "64.0", grade: "C", outcome: "Pass", remarks: "" },
+        { subject: "Combined Science", score: "58.0", grade: "C", outcome: "Pass", remarks: "" },
+        { subject: "Shona", score: "60.0", grade: "C", outcome: "Pass", remarks: "" },
+      ],
+    },
+    notes: ["Published marks only."],
+  };
+}
+
+function classListSample(): UniversalDocumentPayload {
+  return {
+    title: "Form 2 Blue class list",
+    subtitle: "Term 2",
+    meta: [
+      { label: "Class", value: "Form 2 Blue" },
+      { label: "On the roll", value: "3" },
+      { label: "Printed", value: "2026-05-08" },
+    ],
+    list: {
+      columns: [
+        { key: "no", label: "#" },
+        { key: "studentNo", label: "Student no." },
+        { key: "name", label: "Name" },
+        { key: "stream", label: "Stream" },
+        { key: "gender", label: "Sex" },
+        { key: "boarding", label: "Boarding" },
+        { key: "guardian", label: "Guardian" },
+        { key: "phone", label: "Phone" },
+      ],
+      rows: [
+        { no: "1", studentNo: "S1001", name: "Chirwa, Rudo", stream: "Blue", gender: "F", boarding: "Day", guardian: "Grace Chirwa", phone: "0772 000 112" },
+        { no: "2", studentNo: "S1002", name: "Moyo, Tendai", stream: "Blue", gender: "M", boarding: "Boarder", guardian: "Rudo Moyo", phone: "0772 000 111" },
+        { no: "3", studentNo: "S1003", name: "Nyoni, Farai", stream: "Blue", gender: "M", boarding: "Day", guardian: "Joseph Nyoni", phone: "0772 000 113" },
+      ],
+    },
+  };
+}
+
 export function getSamplePayload(sourceKey: string): UniversalDocumentPayload {
   switch (sourceKey) {
     case "accounting.sales.invoice":
@@ -156,6 +268,125 @@ export function getSamplePayload(sourceKey: string): UniversalDocumentPayload {
       };
     case "dashboard.executive-summary":
       return dashboardSample();
+    case "schools.fee.invoice":
+      return feeInvoiceSample();
+    case "schools.fee.receipt":
+      return {
+        ...feeInvoiceSample(),
+        title: "Fee receipt",
+        subtitle: "SFR-0018",
+        badge: { label: "Payment received", tone: "positive" },
+        meta: [
+          { label: "Receipt No.", value: "SFR-0018" },
+          { label: "Pupil", value: "Tendai Moyo" },
+          { label: "Student number", value: "S1002" },
+          { label: "Received", value: "2026-05-20" },
+          { label: "Method", value: "mobile money" },
+          { label: "Reference", value: "EC-77120" },
+        ],
+        totals: [{ label: "Amount received", value: "USD 180.00", emphasis: true }],
+        record: {
+          sections: [],
+          lineColumns: [
+            { key: "invoice", label: "Invoice" },
+            { key: "term", label: "Term" },
+            { key: "amount", label: "Amount" },
+          ],
+          lines: [{ invoice: "SFI-0042", term: "Term 2", amount: "180.00" }],
+        },
+        notes: [],
+      };
+    case "schools.fee.statement":
+      return {
+        ...feeInvoiceSample(),
+        title: "Fee statement",
+        subtitle: "Tendai Moyo",
+        badge: undefined,
+        parties: [],
+        totals: [{ label: "Balance outstanding", value: "USD 270.00", emphasis: true }],
+        record: {
+          sections: [],
+          lineColumns: [
+            { key: "date", label: "Date" },
+            { key: "reference", label: "Reference" },
+            { key: "detail", label: "Detail" },
+            { key: "charge", label: "Charged" },
+            { key: "payment", label: "Paid" },
+          ],
+          lines: [
+            { date: "2026-05-08", reference: "SFI-0042", detail: "Term 2 fees", charge: "450.00", payment: "" },
+            { date: "2026-05-20", reference: "SFR-0018", detail: "Payment — mobile money", charge: "", payment: "180.00" },
+          ],
+        },
+        notes: [],
+      };
+    case "schools.report-card":
+      return reportCardSample();
+    case "schools.admission-letter":
+      return {
+        title: "Offer of a place",
+        subtitle: "Anesu Banda",
+        badge: { label: "accepted", tone: "positive" },
+        meta: [
+          { label: "Application No.", value: "SAP-0031" },
+          { label: "Pupil", value: "Anesu Banda" },
+          { label: "Class", value: "Form 1" },
+          { label: "Starting", value: "Term 3" },
+          { label: "Decision date", value: "2026-05-02" },
+        ],
+        parties: [{ title: "To", lines: ["Grace Banda", "0772 000 114", "grace.banda@example.co.zw"] }],
+        record: { sections: [] },
+        notes: ["We are pleased to offer Anesu Banda a place in Form 1 from Term 3."],
+      };
+    case "schools.transfer-letter":
+      return {
+        title: "Transfer letter",
+        subtitle: "Kudzai Ncube",
+        meta: [
+          { label: "Pupil", value: "Kudzai Ncube" },
+          { label: "Student number", value: "S1006" },
+          { label: "Date of birth", value: "2011-03-14" },
+          { label: "Admitted", value: "2023-01-10" },
+          { label: "Last class", value: "Form 3" },
+          { label: "Last term", value: "Term 2" },
+          { label: "Status", value: "withdrawn" },
+        ],
+        record: { sections: [] },
+        totals: [{ label: "Fees outstanding", value: "USD 0.00" }],
+        notes: [
+          "This letter confirms that Kudzai Ncube was a pupil at this school.",
+          "There is no outstanding fee balance on this pupil's account.",
+        ],
+      };
+    case "schools.class-list":
+      return classListSample();
+    case "schools.attendance-register":
+      return {
+        title: "Form 2 Blue attendance register",
+        subtitle: "Term 2",
+        meta: [
+          { label: "Class", value: "Form 2 Blue" },
+          { label: "Pupils", value: "3" },
+          { label: "Week beginning", value: "2026-05-11" },
+        ],
+        list: {
+          columns: [
+            { key: "no", label: "#" },
+            { key: "studentNo", label: "Student no." },
+            { key: "name", label: "Name" },
+            { key: "mon", label: "Mon" },
+            { key: "tue", label: "Tue" },
+            { key: "wed", label: "Wed" },
+            { key: "thu", label: "Thu" },
+            { key: "fri", label: "Fri" },
+          ],
+          rows: [
+            { no: "1", studentNo: "S1001", name: "Chirwa, Rudo", mon: "", tue: "", wed: "", thu: "", fri: "" },
+            { no: "2", studentNo: "S1002", name: "Moyo, Tendai", mon: "", tue: "", wed: "", thu: "", fri: "" },
+            { no: "3", studentNo: "S1003", name: "Nyoni, Farai", mon: "", tue: "", wed: "", thu: "", fri: "" },
+          ],
+        },
+      };
     default:
       return reportSample();
   }

@@ -48,6 +48,7 @@ import {
 } from "@/lib/schools/fees-v2";
 import { BulkGenerateInvoicesDialog } from "./bulk-generate-invoices-dialog";
 import { CopyStructureDialog } from "./copy-structure-dialog";
+import { PrintDocumentButton } from "@/components/schools/common/print-document-button";
 
 type FeesView =
   | "structures"
@@ -489,6 +490,17 @@ export function SchoolsFeesContent() {
         header: "Due Date",
         cell: ({ row }) => <NumericCell>{formatSchoolDate(row.original.dueDate)}</NumericCell>,
       },
+      {
+        id: "print",
+        header: "",
+        cell: ({ row }) => (
+          <PrintDocumentButton
+            sourceKey="schools.fee.invoice"
+            recordId={row.original.id}
+            label="Print"
+          />
+        ),
+      },
     ],
     [],
   );
@@ -540,6 +552,17 @@ export function SchoolsFeesContent() {
         id: "receiptDate",
         header: "Receipt Date",
         cell: ({ row }) => <NumericCell>{formatSchoolDate(row.original.receiptDate)}</NumericCell>,
+      },
+      {
+        id: "print",
+        header: "",
+        cell: ({ row }) => (
+          <PrintDocumentButton
+            sourceKey="schools.fee.receipt"
+            recordId={row.original.id}
+            label="Print"
+          />
+        ),
       },
     ],
     [],

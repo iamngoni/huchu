@@ -208,10 +208,10 @@ and then points the school's six record types at it. No school-specific copy of 
 
 | ID | Story | Acceptance signal | Status |
 |---|---|---|---|
-| S-5.1 | As a bursar, I print a branded invoice, receipt and statement | Registered in `lib/documents/source-registry.ts` with sample payloads, bound to editable templates | `todo` |
-| S-5.2 | As a class teacher, I publish report cards | Report card as a registered document source; `SchoolPublishWindow` gates rendering | `todo` |
-| S-5.3 | As a registrar, I issue admission and transfer letters, class lists and registers | The remaining school templates registered | `todo` |
-| S-5.4 | As a head, report exports are real files | `exportReportToPDF` / `exportReportToCSV` placeholders in `lib/schools/reports.ts` deleted in favour of `lib/documents/` | `todo` |
+| S-5.1 | As a bursar, I print a branded invoice, receipt and statement | `schools.fee.invoice`, `schools.fee.receipt` and `schools.fee.statement` resolve through the shared pipeline, each bound to an editable template with a Zimbabwean sample payload. The bill is addressed to the **guardian**, not the child; the receipt says which invoices the money was put against; the statement is a dated sequence of charges and payments. Every amount is `Decimal` to the string — no money passes through a JS number | `done` |
+| S-5.2 | As a class teacher, I publish report cards | `schools.report-card`, gated on **both** an open `SchoolPublishWindow` and a PUBLISHED result sheet — a sheet can be published before the window opens, and a window can be open over a sheet still with the head of department, so both have to say yes. Each subject's outcome is judged against **its own** pass mark (S-1.3), so the same 45 is a fail in Mathematics and a pass in Shona | `done` |
+| S-5.3 | As a registrar, I issue admission and transfer letters, class lists and registers | `schools.admission-letter`, `schools.transfer-letter`, `schools.class-list` and `schools.attendance-register`. The transfer letter **states any outstanding balance** rather than hiding it; the register is deliberately blank, because a school prints one to take a register on paper when the line is down | `done` |
+| S-5.4 | As a head, report exports are real files | Both placeholders deleted. The CSV joined values with no quoting — one comma in a hostel's name moved every column after it — and the PDF was `Buffer.from(JSON.stringify(data))` under an `application/pdf` header, so Export produced a file no reader would open. Now through `lib/documents/`, with the columns **declared** rather than derived from the first row's keys, so no `studentId` reaches a page a board reads | `done` |
 
 ## Iteration 6 — Portals
 

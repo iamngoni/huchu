@@ -8,6 +8,11 @@ import {
   renderDocumentSync,
 } from "@/lib/documents/service";
 import { hasFeature } from "@/lib/platform/features";
+import {
+  isSchoolDocumentSourceKey,
+  SCHOOL_DOCUMENT_ACCESS,
+} from "@/lib/documents/schools-sources";
+import { canSchoolRoleDo } from "@/lib/schools/permissions";
 import type { DocumentRenderRequest } from "@/lib/documents/service";
 
 export const runtime = "nodejs";
@@ -32,6 +37,11 @@ function resolveFeatureKeys(sourceKey: string): string[] {
   if (sourceKey === "accounting.sales.quotation") return ["accounting.ar", "crm.documents"];
   if (sourceKey === "accounting.sales.receipt") return ["accounting.ar", "crm.documents"];
   if (sourceKey === "accounting.sales.credit-note") return ["accounting.ar"];
+  // Iteration 5 — the school's paper. One feature each, and a role check as well;
+  // see below.
+  if (isSchoolDocumentSourceKey(sourceKey)) {
+    return [SCHOOL_DOCUMENT_ACCESS[sourceKey].feature];
+  }
   return [];
 }
 
@@ -67,6 +77,19 @@ export async function POST(request: NextRequest) {
         return errorResponse("Feature disabled for this export source", 403, {
           featureKeys,
         });
+      }
+    }
+
+    // A school document is a pupil's data — a class list is every child's
+    // guardian and phone number on one page — so the tenant having bought the
+    // module is not the bar. `view` because rendering reads; nothing here writes.
+    if (isSchoolDocumentSourceKey(typedInput.sourceKey)) {
+      const { resource } = SCHOOL_DOCUMENT_ACCESS[typedInput.sourceKey];
+      if (!canSchoolRoleDo(session.user.role, resource, "view")) {
+        return errorResponse(
+          `Your role cannot view ${resource.replace("schools.", "")}`,
+          403,
+        );
       }
     }
 

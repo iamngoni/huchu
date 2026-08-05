@@ -2,6 +2,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import type { ExportTargetType, UniversalDocumentPayload } from "@/lib/documents/types";
 import { parseScrapTicketPhotosJson } from "@/lib/scrap-metal/attachments";
+import {
+  isSchoolDocumentSourceKey,
+  resolveSchoolDocument,
+} from "@/lib/documents/schools-sources";
 
 const sourceInputSchema = z.object({
   target: z.enum(["LIST", "RECORD", "DASHBOARD"]),
@@ -750,6 +754,18 @@ export async function resolveSourcePayload(
       payload: input.payload,
       rowsForCsv: input.payload.list?.rows,
     };
+  }
+
+  // Iteration 5 — the school's own documents. Kept in their own file because
+  // there are eight of them and this one is long enough; dispatched here so a
+  // school document is rendered by the same pipeline, the same template and the
+  // same letterhead as everything else the product prints.
+  if (isSchoolDocumentSourceKey(input.sourceKey)) {
+    return resolveSchoolDocument(companyId, {
+      sourceKey: input.sourceKey,
+      recordId: input.recordId,
+      filters: input.filters,
+    });
   }
 
   switch (input.sourceKey) {

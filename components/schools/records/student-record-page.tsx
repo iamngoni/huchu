@@ -15,6 +15,7 @@ import {
   type RecordTab,
 } from "@/components/records/record-page-shell";
 import { useAttributeEditor } from "@/components/records/use-attribute-editor";
+import { PrintDocumentButton } from "@/components/schools/common/print-document-button";
 import {
   SubjectFiles,
   SubjectNotes,
@@ -367,12 +368,39 @@ export function StudentRecordPage({ studentId }: { studentId: string }) {
       : []),
   ];
 
+  // The term the card would be for: the pupil's most recent enrolment. Not "the
+  // school's current term" — a pupil who left in Term 1 has a Term 1 card and no
+  // Term 2 marks, and asking for the current term would refuse with a message
+  // about publishing rather than about the child.
+  const latestTermId = (student.enrollments ?? [])[0]?.term?.id ?? null;
+
   return (
     <RecordPageShell
       backHref={config.indexHref}
       backLabel={config.labelPlural}
       title={name}
       reference={student.studentNo}
+      primaryAction={
+        // Iteration 5 — the two documents an office is asked for at the counter.
+        // The report card needs the term, and refuses unless the school's publish
+        // window is open, which is what makes it safe to put here rather than
+        // behind the results screens.
+        <span className="flex items-center gap-2">
+          <PrintDocumentButton
+            sourceKey="schools.fee.statement"
+            recordId={studentId}
+            label="Statement"
+          />
+          {latestTermId ? (
+            <PrintDocumentButton
+              sourceKey="schools.report-card"
+              recordId={studentId}
+              filters={{ termId: latestTermId }}
+              label="Report card"
+            />
+          ) : null}
+        </span>
+      }
       status={{
         label: STATUS_OPTIONS.find((option) => option.value === student.status)?.label ??
           student.status,

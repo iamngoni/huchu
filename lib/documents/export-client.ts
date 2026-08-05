@@ -13,7 +13,19 @@ type AsyncRenderResponse = {
 type RenderRequest = {
   sourceKey: string;
   format: DocumentExportFormat;
-  payload: UniversalDocumentPayload;
+  /**
+   * The document's content, when the caller has it.
+   *
+   * Optional since Iteration 5: a school's invoice, receipt, statement or report
+   * card is resolved on the server from `recordId`, because the rules about what
+   * may be printed live there — a report card is gated on the publish window, and
+   * a client that assembled its own payload would be a way around that gate.
+   */
+  payload?: UniversalDocumentPayload;
+  /** RECORD for one document, LIST for a table. Defaults to LIST. */
+  target?: "LIST" | "RECORD" | "DASHBOARD";
+  /** The record to render, for server-resolved sources. */
+  recordId?: string;
   filters?: Record<string, string>;
   templateId?: string;
   templateVersionId?: string;
@@ -121,9 +133,10 @@ export async function runDocumentExport(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      target: "LIST",
+      target: request.target ?? "LIST",
       sourceKey: request.sourceKey,
       format: request.format,
+      recordId: request.recordId,
       filters: request.filters,
       payload: request.payload,
       templateId: request.templateId,
@@ -142,7 +155,9 @@ export async function runDocumentExport(
   if (!contentType.includes("application/json")) {
     onStatus?.("downloading");
     const blob = await response.blob();
-    const defaultName = request.payload.fileName || "export";
+    // A server-resolved document names itself in Content-Disposition, so the
+    // fallback only matters for a caller that supplied its own payload.
+    const defaultName = request.payload?.fileName || request.sourceKey.split(".").pop() || "export";
     const suffix = request.format === "csv" ? ".csv" : ".pdf";
     const fileName = parseFileNameFromContentDisposition(
       response.headers.get("Content-Disposition"),
