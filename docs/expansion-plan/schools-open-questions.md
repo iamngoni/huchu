@@ -220,6 +220,53 @@ migration this project has written has been applied by hand with `psql`. They
 are all replayable in principle — but nobody has ever proved it, and the first
 person to find out will be whoever provisions the first real school.
 
+_Closed by S-3.2. It was worse than this paragraph guessed: the history was
+missing forty tables, and two Gold-module migrations had been quietly
+disagreeing with the schema since May. See entry 15._
+
+---
+
+### 15. What replaying the migration history turned up
+
+Three things worth your attention, all found by S-3.2 and none of them
+schools defects.
+
+**Forty tables were never migrated.** The whole CRM and product-catalogue
+schema was built with `prisma db push` and no migration was ever written. Seven
+later migrations alter those tables, so the history stopped dead at
+2026-07-28 on any database that had not been built by `db push`. The catch-up
+reconstructs the schema as it stood that day — current form minus everything
+the later seven add — so those seven were left untouched and still do exactly
+what they say.
+
+**Two migrations had drifted from the schema they claim to write.**
+`add_correction_models` gave `id` a database default and `createdAt` a wider
+type than `prisma/schema.prisma` declares. More interesting:
+`add_company_id_to_buyer_receipt` deliberately created
+`BuyerReceipt_companyId_receiptNumber_key` as a *partial* index — `WHERE
+"companyId" IS NOT NULL`, with a comment explaining why — but Prisma has no way
+to express an index predicate, so the schema declares a plain `@@unique` and a
+`db push` database has always had the full index. The two have behaved
+identically in practice, because Postgres treats NULLs in a unique index as
+distinct, which is exactly what the predicate was there to arrange. Converged
+on the full index, since that is what the schema means and what every existing
+database already has. **If you have a Postgres partial index you actually need,
+it cannot live in `schema.prisma` and this will happen again** — it wants a
+comment on the migration saying so, and a line in the replay script's expected
+drift.
+
+**The dev database is now baselined.** 56 migrations resolved as applied,
+`prisma migrate status` clean. Applying migrations by hand with `psql` should
+stop; `prisma migrate deploy` works now, and
+`scripts/verify-migration-replay.sh` will tell you the moment it stops working
+again. **Run it whenever you add a migration** — the reason this got forty
+tables deep is that nothing ever checked.
+
+_One unrelated observation while running the suite: `lib/schools/provision.test.ts`
+failed once and passed on a re-run and in isolation. It provisions against the
+shared dev database, so it contends with whatever else is running. Not
+investigated._
+
 ---
 
 _The changelog for this work lives in the roadmap; this file is a wall, not a
