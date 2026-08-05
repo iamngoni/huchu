@@ -5625,6 +5625,14 @@ model SchoolClass {
   capacity       Int?
   academicYearId String?
   termId         String?
+  /// S-4.3 — the record page's identity strip.
+  ///
+  /// A thing may carry a picture, and failing that an emoji — a form room as 🔵,
+  /// a subject as 📐 — which reads faster in a list than a repeated generic
+  /// icon. `accent` pins its colour; null takes it from the name.
+  avatarUrl      String?
+  emoji          String?
+  accent         String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -5688,6 +5696,17 @@ model SchoolTeacherProfile {
   isClassTeacher Boolean  @default(false)
   isHod          Boolean  @default(false)
   isActive       Boolean  @default(true)
+  /// S-4.3 — the record page's identity strip.
+  ///
+  /// A photograph when there is one; otherwise the initials `PersonAvatar`
+  /// derives from the name. `accent` pins the name-derived colour so the same
+  /// person is the same colour on the register, the mark sheet and the record
+  /// page; null means it keeps taking its colour from the name.
+  ///
+  /// Deliberately no `emoji` column, unlike the CRM record types: a child or a
+  /// parent is a person, and offering to stand one in as 🙂 is not a feature.
+  avatarUrl       String?
+  accent          String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -5713,6 +5732,14 @@ model SchoolSubject {
   isCore    Boolean  @default(true)
   passMark  Float    @default(50)
   isActive  Boolean  @default(true)
+  /// S-4.3 — the record page's identity strip.
+  ///
+  /// A thing may carry a picture, and failing that an emoji — a form room as 🔵,
+  /// a subject as 📐 — which reads faster in a list than a repeated generic
+  /// icon. `accent` pins its colour; null takes it from the name.
+  avatarUrl      String?
+  emoji          String?
+  accent         String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -5772,6 +5799,17 @@ model SchoolStudent {
   currentStreamId String?
   isBoarding      Boolean             @default(false)
   admissionDate   DateTime?
+  /// S-4.3 — the record page's identity strip.
+  ///
+  /// A photograph when there is one; otherwise the initials `PersonAvatar`
+  /// derives from the name. `accent` pins the name-derived colour so the same
+  /// person is the same colour on the register, the mark sheet and the record
+  /// page; null means it keeps taking its colour from the name.
+  ///
+  /// Deliberately no `emoji` column, unlike the CRM record types: a child or a
+  /// parent is a person, and offering to stand one in as 🙂 is not a feature.
+  avatarUrl       String?
+  accent          String?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
@@ -5823,6 +5861,17 @@ model SchoolGuardian {
   email      String?
   address    String?
   nationalId String?
+  /// S-4.3 — the record page's identity strip.
+  ///
+  /// A photograph when there is one; otherwise the initials `PersonAvatar`
+  /// derives from the name. `accent` pins the name-derived colour so the same
+  /// person is the same colour on the register, the mark sheet and the record
+  /// page; null means it keeps taking its colour from the name.
+  ///
+  /// Deliberately no `emoji` column, unlike the CRM record types: a child or a
+  /// parent is a person, and offering to stand one in as 🙂 is not a feature.
+  avatarUrl       String?
+  accent          String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -5890,6 +5939,14 @@ model SchoolHostel {
   genderPolicy String   @default("MIXED")
   capacity     Int?
   isActive     Boolean  @default(true)
+  /// S-4.3 — the record page's identity strip.
+  ///
+  /// A thing may carry a picture, and failing that an emoji — a form room as 🔵,
+  /// a subject as 📐 — which reads faster in a list than a repeated generic
+  /// icon. `accent` pins its colour; null takes it from the name.
+  avatarUrl      String?
+  emoji          String?
+  accent         String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

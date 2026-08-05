@@ -24,7 +24,7 @@ import type { LeadSort } from "@/lib/crm/views";
 import type { ColumnOption } from "@/lib/ui/visible-columns";
 import { cn } from "@/lib/utils";
 
-import { RecordMark } from "@/components/crm/records/record-mark";
+import { RecordMark } from "@/components/records/record-mark";
 import { RecordList } from "@/components/crm/records/record-list";
 
 import type { LeadFilterOwner } from "./leads-filters";

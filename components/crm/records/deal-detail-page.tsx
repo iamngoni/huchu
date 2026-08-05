@@ -50,16 +50,16 @@ import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 import { RaiseJobSheet } from "@/components/crm/work-orders/raise-job-sheet";
 
-import { customFieldAttributes } from "./custom-field-attributes";
+import { customFieldAttributes } from "@/components/records/custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
-import { RecordMark } from "./record-mark";
+import { RecordMark } from "@/components/records/record-mark";
 import { DealContactsTab } from "./deal-contacts-tab";
-import { RecordAttributes } from "./record-attributes";
+import { RecordAttributes } from "@/components/records/record-attributes";
 import { RelationAttribute } from "./relation-attribute";
-import { useAttributeEditor } from "./use-attribute-editor";
-import { EntityLink } from "./entity-link";
+import { useAttributeEditor } from "@/components/records/use-attribute-editor";
+import { EntityLink } from "@/components/records/entity-link";
 import { DealStageBar } from "./deal-stage-bar";
-import { RailSection, RecordPageShell } from "./record-page-shell";
+import { RailSection, RecordPageShell } from "@/components/records/record-page-shell";
 import { RecordHistoryTab } from "./record-history-tab";
 import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 

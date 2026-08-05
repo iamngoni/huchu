@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { X } from "@/lib/icons";
 
-import { EntityLink } from "./entity-link";
+import { EntityLink } from "@/components/records/entity-link";
 import { RecordPicker, type PickableType, type PickedRecord } from "./record-picker";
 
 /**

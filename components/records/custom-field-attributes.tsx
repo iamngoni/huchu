@@ -22,9 +22,19 @@ import type { RecordAttribute } from "./record-attributes";
  * no editor.
  */
 
-/** Types a text box can safely round-trip. */
-const TEXT_EDITABLE = new Set(["TEXT", "TEXTAREA", "URL", "EMAIL", "PHONE"]);
-const NUMBER_EDITABLE = new Set(["NUMBER", "CURRENCY", "PERCENT"]);
+/**
+ * Types a text box can safely round-trip.
+ *
+ * These are `CrmFieldType` values — checked against `CRM_FIELD_TYPES` by the
+ * test beside this file, because they were not. This set previously named
+ * "TEXT" and "TEXTAREA", which the enum has never had: the values are
+ * SHORT_TEXT and LONG_TEXT. Both therefore fell through to the read-only
+ * branch, so the two commonest custom-field types were the two nobody could
+ * edit from a property row, while URL, EMAIL and PHONE worked. Nothing failed —
+ * a Set lookup on a string that is not in it is just `false`.
+ */
+export const TEXT_EDITABLE = new Set(["SHORT_TEXT", "LONG_TEXT", "URL", "EMAIL", "PHONE"]);
+export const NUMBER_EDITABLE = new Set(["NUMBER", "CURRENCY", "PERCENT"]);
 
 export function customFieldAttributes({
   definitions,

@@ -31,6 +31,11 @@ const updateStudentSchema = z
     currentStreamId: z.string().uuid().nullable().optional(),
     isBoarding: z.boolean().optional(),
     admissionDate: nullableDateInputSchema,
+    // S-4.3 — the record page's identity strip. A URL rather than an upload:
+    // the file side belongs with the documents work, and a column that can hold
+    // a link is useful the moment a school already hosts its photographs.
+    avatarUrl: z.string().trim().url().max(2000).nullable().optional(),
+    accent: z.string().trim().min(1).max(40).nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",

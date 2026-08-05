@@ -4,12 +4,16 @@ import { createElement } from "react";
 
 import { Avatar, Emoji, IconTile } from "@corelithzw/react";
 import {
+  MedusaBookOpenIcon,
   Building2,
   Checklist,
+  Home,
   FileText,
   Funnel,
+  ManageAccounts,
   MapPin,
   Package,
+  TableRows,
   Receipt,
   UserRound,
   Users,
@@ -45,7 +49,16 @@ export type RecordKind =
   | "document"
   | "work-order"
   | "product"
-  | "receipt";
+  | "receipt"
+  // Schools (S-4.3). A student, a guardian and a teacher are people and take
+  // the avatar branch; a class, a subject and a hostel are things and take the
+  // tile.
+  | "student"
+  | "guardian"
+  | "teacher"
+  | "class"
+  | "subject"
+  | "hostel";
 
 const KIND_ICON: Record<RecordKind, LucideIcon> = {
   person: Users,
@@ -59,6 +72,12 @@ const KIND_ICON: Record<RecordKind, LucideIcon> = {
   "work-order": Wrench,
   product: Package,
   receipt: Receipt,
+  student: Users,
+  guardian: Users,
+  teacher: ManageAccounts,
+  class: TableRows,
+  subject: MedusaBookOpenIcon,
+  hostel: Home,
 };
 
 /**
@@ -78,6 +97,12 @@ export const KIND_EMOJI: Record<RecordKind, string> = {
   "work-order": "🔧",
   product: "📦",
   receipt: "🧾",
+  student: "🎒",
+  guardian: "👪",
+  teacher: "🧑‍🏫",
+  class: "🪧",
+  subject: "📐",
+  hostel: "🏠",
 };
 
 const AVATAR_SIZE = { sm: "sm", md: "sm", lg: "md" } as const;
@@ -110,7 +135,15 @@ export function RecordMark({
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
-  const isPerson = kind === "person" || kind === "rep";
+  // A student, a guardian and a teacher are read the same way a CRM person is:
+  // the reader is looking for a *who*, and a column of identical glyphs answers
+  // nothing. Initials differ row to row.
+  const isPerson =
+    kind === "person" ||
+    kind === "rep" ||
+    kind === "student" ||
+    kind === "guardian" ||
+    kind === "teacher";
 
   const hue = recordAccent(accent, name);
 

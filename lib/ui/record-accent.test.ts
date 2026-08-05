@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { accentFor } from "@corelithzw/react";
 
-import { isAccent } from "@/lib/crm/accents";
+import { isAccent } from "@/lib/ui/accents";
 import { recordAccent } from "./record-accent";
 
 describe("recordAccent", () => {

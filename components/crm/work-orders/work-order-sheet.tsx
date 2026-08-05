@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Textarea } from "@/components/ui/textarea";
 import { RecordDialog } from "@/components/crm/records/record-dialog";
-import { EntityLink } from "@/components/crm/records/entity-link";
+import { EntityLink } from "@/components/records/entity-link";
 import { useToast } from "@/components/ui/use-toast";
 import { WORK_ORDER_STATUS } from "@/lib/crm/tones";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";

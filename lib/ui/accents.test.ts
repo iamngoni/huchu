@@ -1,7 +1,7 @@
 import { ACCENT_HUES } from "@corelithzw/react";
 import { describe, it, expect } from "vitest";
 
-import { ACCENTS, ACCENT_LABELS, isAccent } from "./accents";
+import { ACCENTS, ACCENT_LABELS, isAccent } from "@/lib/ui/accents";
 
 describe("ACCENTS", () => {
   it("is exactly the design system's palette", () => {

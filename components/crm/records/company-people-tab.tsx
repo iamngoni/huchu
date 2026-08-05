@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { Plus, X } from "@/lib/icons";
 
-import { EntityLink } from "./entity-link";
+import { EntityLink } from "@/components/records/entity-link";
 import { RecordPicker, type PickedRecord } from "./record-picker";
 
 export type CompanyPerson = {

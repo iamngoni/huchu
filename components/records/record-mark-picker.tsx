@@ -4,7 +4,7 @@ import { Emoji, EmojiPicker, IconTile } from "@corelithzw/react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ACCENTS, ACCENT_LABELS } from "@/lib/crm/accents";
+import { ACCENTS, ACCENT_LABELS } from "@/lib/ui/accents";
 import { recordAccent } from "@/lib/ui/record-accent";
 import { Check } from "@/lib/icons";
 import { cn } from "@/lib/utils";

@@ -7,7 +7,7 @@ import { ClientDate } from "@/components/ui/client-date";
 import { RichTextRenderer } from "@/components/crm/collaboration/rich-text-renderer";
 import { fetchJson } from "@/lib/api-client";
 
-import { EntityLink } from "./entity-link";
+import { EntityLink } from "@/components/records/entity-link";
 
 type Mention = {
   id: string;

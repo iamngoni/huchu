@@ -9,7 +9,7 @@ import { useDebounced } from "@/hooks/use-debounced";
 
 import { SiteFormSheet } from "./site-form-sheet";
 import { RecordList, RecordListPager, type RecordListRow } from "./record-list";
-import { RecordMark } from "./record-mark";
+import { RecordMark } from "@/components/records/record-mark";
 import { RecordListShell } from "./record-list-shell";
 
 const PAGE_SIZE = 50;

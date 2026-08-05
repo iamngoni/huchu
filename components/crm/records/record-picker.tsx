@@ -9,7 +9,7 @@ import { fetchJson } from "@/lib/api-client";
 import { Search, X } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
-import { RecordMark, type RecordKind } from "./record-mark";
+import { RecordMark, type RecordKind } from "@/components/records/record-mark";
 
 /**
  * "What is this about?"
