@@ -3,7 +3,8 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { fileOwnerSchema, ownerWhere, recordFileSchema } from "@/lib/crm/record-files";
+import { fileOwnerSchema, recordFileSchema } from "@/lib/crm/record-files";
+import { subjectData, subjectFromFileOwner, subjectWhere } from "@/lib/records/subject";
 
 /**
  * Files on a record.
@@ -34,10 +35,15 @@ export async function GET(request: NextRequest) {
     });
     if (!parsed.success) return errorResponse("Which record?", 400);
 
+    const subject = subjectFromFileOwner(parsed.data.owner, parsed.data.ownerId);
+    if (!subject) return errorResponse("Which record?", 400);
+
     const files = await prisma.crmRecordFile.findMany({
       where: {
         companyId: session.user.companyId,
-        ...ownerWhere({ kind: parsed.data.owner, id: parsed.data.ownerId }),
+        // S-4.2 — matches a file filed under either scheme, so this keeps
+        // working before the backfill has run and after the columns go.
+        ...subjectWhere("file", subject),
       },
       select: {
         id: true,
@@ -68,6 +74,9 @@ export async function POST(request: NextRequest) {
 
     const body = recordFileSchema.parse(await request.json());
 
+    const writeSubject = subjectFromFileOwner(body.owner, body.ownerId);
+    if (!writeSubject) return errorResponse("Which record?", 400);
+
     const created = await prisma.crmRecordFile.create({
       data: {
         companyId: session.user.companyId,
@@ -77,7 +86,9 @@ export async function POST(request: NextRequest) {
         contentType: body.contentType ?? null,
         note: body.note ?? null,
         uploadedById: session.user.id,
-        ...ownerWhere({ kind: body.owner, id: body.ownerId }),
+        // Dual-write: the pair always, and the legacy column too when this kind
+        // has one, so a rollback of this change loses nothing.
+        ...subjectData("file", writeSubject),
       },
       select: {
         id: true,

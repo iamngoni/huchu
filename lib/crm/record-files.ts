@@ -9,13 +9,33 @@ import { z } from "zod";
  * Those arrived by email and stayed there, which is to say they were held by
  * whoever happened to receive them.
  *
- * The owner is one nullable column per kind rather than an `entity` string
- * and an id, so the database enforces that the record exists and cascades a
- * delete. It costs a wider table and buys the guarantee that no file survives
- * the record it describes.
+ * The owner WAS one nullable column per kind, so the database enforced that the
+ * record existed and cascaded a delete. That bought a real guarantee and cost a
+ * wider table — and it meant only a kind with a column could own a file, which
+ * is why S-4.2 moved the storage to a `(subjectType, subjectId)` pair in
+ * `lib/records/subject.ts`. The columns are still written and still read until
+ * they are dropped.
+ *
+ * `ownerColumn` and `ownerWhere` remain because they still describe the legacy
+ * side truthfully and are still tested. New code should reach for `subjectData`
+ * and `subjectWhere` instead, which handle both schemes.
  */
 
-export const FILE_OWNERS = ["lead", "deal", "company", "person", "site", "rep"] as const;
+export const FILE_OWNERS = [
+  "lead",
+  "deal",
+  "company",
+  "person",
+  "site",
+  "rep",
+  // S-4.2 — school records can own a file now that the subject is not a column.
+  "student",
+  "guardian",
+  "teacher",
+  "class",
+  "subject",
+  "hostel",
+] as const;
 export type FileOwnerKind = (typeof FILE_OWNERS)[number];
 
 export type FileOwner = { kind: FileOwnerKind; id: string };
@@ -45,7 +65,7 @@ export type RecordFileInput = z.infer<typeof recordFileSchema>;
  * being squeezed into `personId` and quietly colliding with a customer contact
  * of the same name.
  */
-export function ownerColumn(owner: FileOwnerKind): string {
+export function ownerColumn(owner: FileOwnerKind): string | null {
   switch (owner) {
     case "lead":
       return "leadId";
@@ -59,10 +79,19 @@ export function ownerColumn(owner: FileOwnerKind): string {
       return "siteId";
     case "rep":
       return "userId";
+    default:
+      // A school record never had a column and never will — its subject lives
+      // only in the pair. Null rather than a throw, because a caller asking
+      // "which legacy column?" about a student has a legitimate answer: none.
+      return null;
   }
 }
 
-/** The `where`/`data` fragment for one owner. Always exactly one column set. */
+/**
+ * The legacy `where`/`data` fragment for one owner, or `{}` when the owner never
+ * had a column. Prefer `subjectWhere`/`subjectData` in new code.
+ */
 export function ownerWhere(owner: FileOwner): Record<string, string> {
-  return { [ownerColumn(owner.kind)]: owner.id };
+  const column = ownerColumn(owner.kind);
+  return column ? { [column]: owner.id } : {};
 }

@@ -9204,6 +9204,10 @@ enum CrmFieldEntity {
   CLASS
   SUBJECT
   HOSTEL
+  /// A member of staff, i.e. a `User`. Files hang off a rep's profile page and
+  /// had their own `CrmRecordFile.userId` column before S-4.2; a rep is a
+  /// record with a page, so it is a subject type like any other.
+  REP
 }
 
 enum CrmFieldType {
@@ -9400,11 +9404,27 @@ model CrmTask {
   site         CrmSite?   @relation(fields: [siteId], references: [id], onDelete: SetNull)
   recurredFrom CrmTask?   @relation("CrmTaskRecurrence", fields: [recurredFromId], references: [id], onDelete: SetNull)
   recurrences  CrmTask[]  @relation("CrmTaskRecurrence")
+  /// S-4.2 — what this row is about, as a type and an id.
+  ///
+  /// Replaces the nullable-foreign-key-per-kind columns above, which could name
+  /// only the five CRM record types that had a column. A student could not be
+  /// the subject of anything, and adding one column per school type would have
+  /// meant eighteen of them across three tables.
+  ///
+  /// Nullable while both schemes are live: rows written before the backfill have
+  /// only the old columns, and rows about a school record have only these. Reads
+  /// go through `subjectWhere` in `lib/records/subject.ts`, which matches either.
+  /// The old columns come out in a migration of your choosing — this side of the
+  /// change adds and backfills, and drops nothing.
+  subjectType CrmFieldEntity?
+  subjectId   String?
+
 
   @@index([companyId, assignedToId, status, dueAt])
   @@index([companyId, status, dueAt])
   @@index([companyId, dealId])
   @@index([companyId, leadId])
+  @@index([companyId, subjectType, subjectId])
 }
 
 /// Internal collaboration, deliberately separate from the customer-facing
@@ -9441,10 +9461,26 @@ model CrmComment {
   client     CrmClient?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   person     CrmPerson?   @relation(fields: [personId], references: [id], onDelete: Cascade)
   site       CrmSite?     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  /// S-4.2 — what this row is about, as a type and an id.
+  ///
+  /// Replaces the nullable-foreign-key-per-kind columns above, which could name
+  /// only the five CRM record types that had a column. A student could not be
+  /// the subject of anything, and adding one column per school type would have
+  /// meant eighteen of them across three tables.
+  ///
+  /// Nullable while both schemes are live: rows written before the backfill have
+  /// only the old columns, and rows about a school record have only these. Reads
+  /// go through `subjectWhere` in `lib/records/subject.ts`, which matches either.
+  /// The old columns come out in a migration of your choosing — this side of the
+  /// change adds and backfills, and drops nothing.
+  subjectType CrmFieldEntity?
+  subjectId   String?
+
 
   @@index([companyId, dealId, createdAt])
   @@index([companyId, leadId, createdAt])
   @@index([companyId, parentId])
+  @@index([companyId, subjectType, subjectId])
 }
 
 /// A file somebody attached to a record.
@@ -9489,6 +9525,21 @@ model CrmRecordFile {
   person     CrmPerson? @relation(fields: [personId], references: [id], onDelete: Cascade)
   site       CrmSite?   @relation(fields: [siteId], references: [id], onDelete: Cascade)
   user       User?      @relation("CrmRecordFileSubject", fields: [userId], references: [id], onDelete: Cascade)
+  /// S-4.2 — what this row is about, as a type and an id.
+  ///
+  /// Replaces the nullable-foreign-key-per-kind columns above, which could name
+  /// only the five CRM record types that had a column. A student could not be
+  /// the subject of anything, and adding one column per school type would have
+  /// meant eighteen of them across three tables.
+  ///
+  /// Nullable while both schemes are live: rows written before the backfill have
+  /// only the old columns, and rows about a school record have only these. Reads
+  /// go through `subjectWhere` in `lib/records/subject.ts`, which matches either.
+  /// The old columns come out in a migration of your choosing — this side of the
+  /// change adds and backfills, and drops nothing.
+  subjectType CrmFieldEntity?
+  subjectId   String?
+
 
   @@index([companyId, leadId, createdAt])
   @@index([companyId, dealId, createdAt])
@@ -9496,6 +9547,7 @@ model CrmRecordFile {
   @@index([companyId, personId, createdAt])
   @@index([companyId, siteId, createdAt])
   @@index([companyId, userId, createdAt])
+  @@index([companyId, subjectType, subjectId])
 }
 
 model CrmMention {

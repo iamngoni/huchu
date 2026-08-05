@@ -32,12 +32,17 @@ export type FieldOption = { value: string; label: string; colorToken?: string };
 /**
  * Every record type a custom field can be defined on.
  *
- * Mirrors the `CrmFieldEntity` Prisma enum and is asserted against it by the
- * test beside this file. It had drifted: the enum gained the six school types in
- * S-4.4 and this list did not, so `fieldDefinitionInputSchema` refused
- * `entity: "STUDENT"` with a message listing only the CRM six — the data model
- * was ready and the door was shut. The same shape of bug as `TEXT_EDITABLE`
- * naming field types the enum has never had.
+ * A SUBSET of the `CrmFieldEntity` enum, asserted as one by the test beside this
+ * file. The enum is the product's record-type discriminator and is deliberately
+ * wider: S-4.2 added `REP` to it so a file can belong to a member of staff, and
+ * a rep is a `User` whose fields belong to the platform rather than to a tenant.
+ * So `REP` is in the enum and not here, and that is not drift.
+ *
+ * What WAS drift, and what the test exists to catch: the enum gained the six
+ * school types in S-4.4 and this list did not, so `fieldDefinitionInputSchema`
+ * refused `entity: "STUDENT"` with a message naming only the CRM five plus work
+ * orders — the data model was ready and the door was shut. The same shape of bug
+ * as `TEXT_EDITABLE` naming field types the enum has never had.
  */
 export const CRM_FIELD_ENTITIES = [
   "PERSON",
@@ -111,6 +116,10 @@ export const CRM_FIELD_ENTITY_LABELS: Record<CrmFieldEntity, string> = {
   CLASS: "Class",
   SUBJECT: "Subject",
   HOSTEL: "Hostel",
+  // Not a custom-field target — a rep is a `User`, whose fields belong to the
+  // platform rather than to a tenant. Present because this map is exhaustive
+  // over the enum, and S-4.2 added REP to it so a file can belong to a rep.
+  REP: "Staff",
 };
 
 /** Types whose value is a reference to another record, stored as that record's id. */

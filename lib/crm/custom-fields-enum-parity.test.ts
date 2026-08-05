@@ -40,6 +40,7 @@ const PRISMA_FIELD_ENTITIES = [
   "CLASS",
   "SUBJECT",
   "HOSTEL",
+  "REP",
 ] as const;
 
 const PRISMA_FIELD_TYPES = [
@@ -64,8 +65,19 @@ const PRISMA_FIELD_TYPES = [
 ] as const;
 
 describe("custom field enum parity", () => {
-  it("CRM_FIELD_ENTITIES covers every CrmFieldEntity value", () => {
-    expect([...CRM_FIELD_ENTITIES].sort()).toEqual([...PRISMA_FIELD_ENTITIES].sort());
+  it("CRM_FIELD_ENTITIES is a subset of CrmFieldEntity", () => {
+    const known = new Set<string>(PRISMA_FIELD_ENTITIES);
+    const unknown = CRM_FIELD_ENTITIES.filter((entity) => !known.has(entity));
+    expect(unknown).toEqual([]);
+  });
+
+  it("excludes exactly the enum members that are not custom-field targets", () => {
+    // REP is a `User`. Its fields belong to the platform, not to a tenant, so it
+    // is in the discriminator and not in the list of things a tenant may add a
+    // field to. Anything else missing here is drift, not design.
+    const covered = new Set<string>(CRM_FIELD_ENTITIES);
+    const missing = PRISMA_FIELD_ENTITIES.filter((entity) => !covered.has(entity));
+    expect(missing).toEqual(["REP"]);
   });
 
   it("CRM_FIELD_TYPES covers every CrmFieldType value", () => {

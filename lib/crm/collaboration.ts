@@ -8,8 +8,30 @@
 import type { CrmFieldEntity, Prisma } from "@prisma/client";
 import { z } from "zod";
 
-/** The five record types people actually discuss. Work orders join in Phase 7. */
-export const COLLAB_ENTITIES = ["LEAD", "DEAL", "COMPANY", "PERSON", "SITE"] as const;
+import { recordType } from "@/lib/records/registry";
+
+/**
+ * The record types people discuss.
+ *
+ * Was five, because a comment's subject was one of five nullable columns and
+ * nothing else could be named. S-4.2 moved the storage to a
+ * `(subjectType, subjectId)` pair, so the limit is gone and the six school types
+ * join. Work orders still do not, because nothing renders a work-order record
+ * page yet.
+ */
+export const COLLAB_ENTITIES = [
+  "LEAD",
+  "DEAL",
+  "COMPANY",
+  "PERSON",
+  "SITE",
+  "STUDENT",
+  "GUARDIAN",
+  "TEACHER",
+  "CLASS",
+  "SUBJECT",
+  "HOSTEL",
+] as const;
 export type CollabEntity = (typeof COLLAB_ENTITIES)[number];
 
 export const collabRecordSchema = z.object({
@@ -41,6 +63,10 @@ export function commentRecordColumns(record: CollabRecord): {
       return { personId: record.recordId };
     case "SITE":
       return { siteId: record.recordId };
+    default:
+      // A school record never had a column. Its subject lives only in the pair,
+      // which `subjectData` writes; there is nothing legacy to add here.
+      return {};
   }
 }
 
@@ -56,28 +82,35 @@ export function commentRecordWhere(record: CollabRecord): Prisma.CrmCommentWhere
   };
 }
 
-/** Where a record lives in the UI, for notification deep links. */
+/**
+ * Where a record lives in the UI, for notification deep links.
+ *
+ * Delegated to the record-type registry rather than kept as a second switch over
+ * the same eleven types. A route that moves should move in one place, and this
+ * function existing separately is how a notification ends up linking somewhere
+ * that used to be a page.
+ */
 export function collabRecordPath(record: CollabRecord): string {
-  switch (record.entity) {
-    case "LEAD":
-      return `/crm/leads/${record.recordId}`;
-    case "DEAL":
-      return `/crm/deals/${record.recordId}`;
-    case "COMPANY":
-      return `/crm/companies/${record.recordId}`;
-    case "PERSON":
-      return `/crm/people/${record.recordId}`;
-    case "SITE":
-      return `/crm/sites/${record.recordId}`;
-  }
+  return recordType(record.entity).href(record.recordId);
 }
 
+/**
+ * Kept as a map rather than derived, because these are the words a NOTIFICATION
+ * uses — "commented on a lead" — and the registry's labels are the words a page
+ * heading uses. They agree today and are allowed to diverge.
+ */
 export const COLLAB_ENTITY_LABELS: Record<CollabEntity, string> = {
   LEAD: "Lead",
   DEAL: "Deal",
   COMPANY: "Company",
   PERSON: "Person",
   SITE: "Site",
+  STUDENT: "Student",
+  GUARDIAN: "Guardian",
+  TEACHER: "Teacher",
+  CLASS: "Class",
+  SUBJECT: "Subject",
+  HOSTEL: "Hostel",
 };
 
 /** `CollabEntity` is a subset of the field-definition entity enum. */
