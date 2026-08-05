@@ -81,6 +81,10 @@ const BY_KEY: Record<string, LucideIcon> = {
   receipts: Receipt,
   "sales-receipts": ReceiptLong,
   "credit-notes": FileText,
+  // Money the business is holding on somebody else's behalf — a school fee
+  // overpayment, most often. A wallet rather than a document, because a credit
+  // is a balance, not a piece of paper.
+  credits: Wallet,
   "debit-notes": FileText,
   payments: Payments,
   "purchase-payments": Payments,
