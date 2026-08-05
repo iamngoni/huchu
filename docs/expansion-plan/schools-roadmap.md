@@ -224,25 +224,26 @@ capability found later joins its own portal rather than the end of the list.
 
 | ID | Story | Acceptance signal | Status |
 |---|---|---|---|
+| S-6.0 | As a parent, the portal is its own app rather than the staff dashboard with a different menu | `MobileShell` with four bottom tabs (Home · Fees · Notices · Profile), the child switcher in the app bar, and the household resolved on the server in the shell's layout so nothing flashes another family's empty state. The old `/portal/parent` page — a `VerticalDataViews` ledger — is deleted | `done` |
 | S-6.1 | As a parent, I sign in with a code sent to me rather than a password I will forget | OTP entry to prototype parity, including resend and the wrong-code state | `todo` |
-| S-6.2 | As a parent with more than one child, I switch between them anywhere in the portal | Child switcher and quick-pick, with the choice persisting across screens | `todo` |
-| S-6.3 | As a parent, my home screen tells me what changed for this child since I last looked | Home to prototype parity: attendance, marks, balance, unread notices | `todo` |
-| S-6.4 | As a parent, I see my child's attendance and can open any single day | Attendance summary plus day detail — depends on S-1.2 for what counts as a school day | `todo` |
-| S-6.5 | As a parent, I read my child's published marks | Marks to prototype parity, gated by publish window and `canReceiveAcademicResults` | `todo` |
-| S-6.6 | As a parent, I see what I owe, broken down by what it is for | Invoice lines — tuition, boarding levy, sports, books, aftercare — not one total | `todo` |
-| S-6.7 | As a parent, I download a receipt for a payment I made | Receipt as a rendered document — depends on S-5.1 | `todo` |
-| S-6.8 | As a parent, I open a statement for the term | Statement to prototype parity, downloadable | `todo` |
+| S-6.2 | As a parent with more than one child, I switch between them anywhere in the portal | Chips in the app bar, held by the shell and persisted in `localStorage`, so Fees shows the child Home was showing. Shown only when there is a choice. Profile lists every child with what each owes. **Every child endpoint re-checks the link server-side** — a not-your-child answer is identical to a no-such-child answer | `done` |
+| S-6.3 | As a parent, my home screen tells me what changed for this child since I last looked | Four cards in the order a parent asks: owed, attendance, marks, notices — each a link to the screen that expands it. A figure the school has withheld from this parent is **absent**, not zero | `done` |
+| S-6.4 | As a parent, I see my child's attendance and can open any single day | Term summary above the days themselves. A day whose register is still DRAFT is labelled **not yet submitted** — telling a parent their child was absent off an unfinished register is how an argument starts over a tick somebody was about to correct | `done` |
+| S-6.5 | As a parent, I read my child's published marks | Gated on the sheet being PUBLISHED and on `canReceiveAcademicResults`. Pass or not is judged against **each subject's own** pass mark, so 45 is a fail in Mathematics and a pass in Shona. The empty state says the school has not released them yet — a parent who sees "no marks" concludes the school lost them | `done` |
+| S-6.6 | As a parent, I see what I owe, broken down by what it is for | Invoice **lines**, expandable per bill: "Tuition 380 · Sports 25 · Books 45" is checkable where "Fees $450" is not. Amounts cross the wire as strings and are never re-summed on the client | `done` |
+| S-6.7 | As a parent, I download a receipt for a payment I made | Every payment on the fees screen carries a receipt button, rendering S-5.1's document server-side from the receipt id | `done` |
+| S-6.8 | As a parent, I open a statement for the term | Downloadable from the fees screen — S-5.1's statement: every charge and payment in date order with the closing balance | `done` |
 | S-6.9 | As a parent, I pay fees from my phone | EcoCash, OneMoney, bank transfer and card, recorded against the invoice and reconciled into the receipt flow — depends on S-7.3 | `todo` |
 | S-6.10 | As a parent, I pay part of a bill now and the rest later | Split payment to prototype parity | `todo` |
 | S-6.11 | As a parent, I look back at what I have paid, by child and by method | Payment history with both filters | `todo` |
-| S-6.12 | As a parent, I read school notices | Notices to prototype parity, with read state | `todo` |
+| S-6.12 | As a parent, I read school notices | Through the existing notification recipients, which already carry per-recipient read state, so unread is a real count rather than a badge that always shows. Opening one marks it read; "mark all read" exists because clearing a week one at a time is what makes people ignore the dot | `done` |
 | S-6.13 | As a parent, I reply to a notice and see other replies | Threaded replies — depends on S-7.1 | `todo` |
 | S-6.14 | As a parent, I message my child's teacher and attach a file | Threads with attachments — depends on S-7.1 and `lib/uploads/` | `todo` |
 | S-6.15 | As a parent, I see school events, say whether we are coming, and add one to my calendar | Events, RSVP and calendar export — depends on S-1.2 | `todo` |
 | S-6.16 | As a parent, I change my language | Language picker to prototype parity | `todo` |
 | S-6.17 | As a parent, I turn on extra security and keep spare codes | Two-factor enrolment with recovery codes | `todo` |
 | S-6.18 | As a parent, I can see where I am signed in and end a session | Session list and end-session | `todo` |
-| S-6.19 | As a parent, I can find an answer without ringing the office | Help and FAQ to prototype parity | `todo` |
+| S-6.19 | As a parent, I can find an answer without ringing the office | The six questions a school office actually fields, answered in what the parent can do rather than in how the system works — "the school releases marks once they are checked", not "publish window" | `done` |
 
 ### Student — mobile and tablet
 

@@ -51,6 +51,20 @@ const GUARD_MARKERS = [
    * is what decides. A route naming this is still deciding by role.
    */
   "canSchoolRoleDo",
+  /**
+   * S-6.x — the parent portal's child routes. Each one answers three questions
+   * before it returns anything (who is asking, is this their child, may they be
+   * told this) and they all do it through one helper, because three inline copies
+   * is how the fees route honours `canReceiveFinancials` and the attendance route
+   * forgets.
+   */
+  "scopeToChild",
+  /**
+   * A parent's notices are scoped to their own `NotificationRecipient` rows, which
+   * is the tightest scope there is — there is no id to check, because a query
+   * filtered on `userId` cannot reach anybody else's post.
+   */
+  "notificationRecipient",
   "canViewAnyPortalSubject",
   "resolvePortalStudent",
   "resolvePortalGuardian",
