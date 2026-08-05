@@ -168,6 +168,9 @@ model Company {
   schoolTransportBoardings      SchoolTransportBoarding[]
   schoolPortalInvites           SchoolPortalInvite[]
   schoolAttendanceSessionLines  SchoolAttendanceSessionLine[]
+  schoolImportJobs              SchoolImportJob[]
+  schoolImportRows              SchoolImportRow[]
+  schoolImportArtifacts         SchoolImportArtifact[]
   carSalesLeads                 CarSalesLead[]
   carSalesVehicles              CarSalesVehicle[]
   carSalesDeals                 CarSalesDeal[]
@@ -963,6 +966,7 @@ model User {
   schoolStudentPortalAccount        SchoolStudent[]                @relation("SchoolStudentPortalUser")
   schoolGuardianPortalAccount       SchoolGuardian[]               @relation("SchoolGuardianPortalUser")
   schoolPortalInvitesClaimed        SchoolPortalInvite[]           @relation("SchoolPortalInviteClaimedBy")
+  schoolImportsUploaded             SchoolImportJob[]              @relation("SchoolImportUploader")
   schoolResultModerationActions     SchoolResultModerationAction[] @relation("SchoolResultModerationActionActor")
   schoolLeaveRequestsApproved       SchoolLeaveRequest[]           @relation("SchoolLeaveRequestApprovedBy")
   schoolLeaveRequestsCheckedOut     SchoolLeaveRequest[]           @relation("SchoolLeaveRequestCheckedOutBy")
@@ -7386,6 +7390,149 @@ enum SchoolApplicationStage {
   DECLINED
   /// The family walked away.
   WITHDRAWN
+}
+
+/// S-3.3 — importing a school that is switching systems.
+///
+/// A school arriving from another system hands over spreadsheets: the roll, the
+/// parents, the classes, what each year group is charged, and what every family
+/// already owes. Typing that in is how a migration becomes a term-long project,
+/// and it is the reason the add-on exists.
+///
+/// The rows are STAGED rather than parsed-and-applied in one pass. A registrar
+/// with nine hundred rows and eleven bad ones needs to fix the eleven and keep
+/// the rest, possibly tomorrow, possibly after ringing a parent to ask which of
+/// two phone numbers is current. An importer that re-reads the file on commit
+/// cannot offer that.
+model SchoolImportJob {
+  id         String                @id @default(uuid())
+  companyId  String
+  entityType SchoolImportEntity
+  status     SchoolImportJobStatus @default(MAPPING)
+  fileName   String
+  /// The header row as uploaded, so the mapping step can show real column names
+  /// even after the file itself is gone.
+  headers    Json
+  /// field key -> column header. Editable until the job is committed.
+  mapping    Json                  @default("{}")
+  /// What to do with a row that matches an existing record.
+  onDuplicate String               @default("SKIP")
+  rowsTotal   Int                  @default(0)
+  rowsCreated Int                  @default(0)
+  rowsUpdated Int                  @default(0)
+  rowsSkipped Int                  @default(0)
+  rowsFailed  Int                  @default(0)
+  notes       String?
+  uploadedById String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  committedAt DateTime?
+  rolledBackAt DateTime?
+
+  company    Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  uploadedBy User?             @relation("SchoolImportUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  rows       SchoolImportRow[]
+
+  @@index([companyId, status])
+  @@index([companyId, entityType, createdAt])
+}
+
+model SchoolImportRow {
+  id        String                @id @default(uuid())
+  companyId String
+  jobId     String
+  /// 1-based row number in the file, counting the header as row 1 — so the
+  /// number here is the number the registrar sees in their spreadsheet.
+  lineNo    Int
+  status    SchoolImportRowStatus @default(PENDING)
+  /// The cells as they arrived, keyed by column header. Kept so a re-mapping
+  /// does not need the original file.
+  rawJson   Json
+  /// The cells after the mapping was applied, keyed by field. Re-derived
+  /// whenever the mapping changes.
+  valuesJson Json                 @default("{}")
+  /// Issues found while planning, as [{ field, message }].
+  issuesJson Json                 @default("[]")
+  /// The existing record this row matched, when it did.
+  matchId    String?
+  matchLabel String?
+
+  /// Why this row was flagged when it was READ. Sticky: it survives a reset,
+  /// because it is a fact about the file and resetting the row does not change
+  /// the file. Gold learned this the hard way — clearing both error fields on
+  /// reset loses the reason a row was suspect in the first place.
+  parserWarning String?
+  /// Why this row failed when it was WRITTEN. Transient: cleared on reset,
+  /// because the next attempt may well succeed and a stale reason reads as a
+  /// current one.
+  errorMessage  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job       SchoolImportJob        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  artifacts SchoolImportArtifact[]
+
+  @@unique([jobId, lineNo])
+  @@index([companyId, jobId, status])
+}
+
+/// What a committed row actually created, so it can be taken back out.
+///
+/// Gold records provenance as three nullable foreign-key columns on its row
+/// table, which is why its rollback is a function that names nine tables by
+/// hand and grows a tenth branch every time the importer learns to write
+/// something new. Recording (type, id) generically instead makes rollback a
+/// loop, and makes "what did this import do?" a query rather than an
+/// archaeology exercise.
+model SchoolImportArtifact {
+  id           String   @id @default(uuid())
+  companyId    String
+  rowId        String
+  artifactType String
+  artifactId   String
+  /// Position within the row's own writes. Rollback walks these in reverse so
+  /// a guardian link goes before the guardian, and the invoice line before the
+  /// invoice.
+  sequence     Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  row     SchoolImportRow @relation(fields: [rowId], references: [id], onDelete: Cascade)
+
+  @@index([rowId, sequence])
+  @@index([companyId, artifactType, artifactId])
+}
+
+enum SchoolImportEntity {
+  CLASS
+  STUDENT
+  GUARDIAN
+  FEE_STRUCTURE
+  OPENING_BALANCE
+}
+
+enum SchoolImportJobStatus {
+  /// Uploaded and parsed; the mapping is still being settled.
+  MAPPING
+  /// A dry run has been taken. Nothing has been written.
+  PREVIEW
+  COMMITTED
+  /// Committed, and every artifact has since been removed.
+  ROLLED_BACK
+}
+
+enum SchoolImportRowStatus {
+  PENDING
+  CREATED
+  UPDATED
+  /// Deliberately not written — a duplicate, or a row the registrar excluded.
+  SKIPPED
+  /// Written, but with something worth a second look.
+  ANOMALY
+  /// Refused. `errorMessage` says why.
+  FAILED
 }
 
 enum CarSalesLeadStatus {

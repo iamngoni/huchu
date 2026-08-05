@@ -46,7 +46,15 @@ export type SchoolAuditEventType =
    * hidden in the created row's payload.
    */
   | "schools.fee.waiver.approved"
-  | "schools.fee.waiver.applied";
+  | "schools.fee.waiver.applied"
+  /**
+   * S-3.3 — a school switching systems. An import writes hundreds of students,
+   * parents and balances in one act, so "who loaded these nine hundred pupils,
+   * and when" needs an answer that is not "somebody, at some point". The commit
+   * row names the counts; the rollback row names what was taken back out.
+   */
+  | "schools.import.committed"
+  | "schools.import.rolled-back";
 
 export type SchoolAuditArgs = {
   companyId: string;
