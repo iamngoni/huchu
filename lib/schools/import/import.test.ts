@@ -73,7 +73,15 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.company.delete({ where: { id: companyId } }).catch(() => {});
+  // `User` is a restrict-delete parent, so deleting the company alone fails and
+  // — swallowed by a bare catch — leaves an orphan tenant behind on every run.
+  // Unwound by hand, and the company delete is NOT caught: a cleanup that
+  // silently does nothing is how a dev database fills up with test schools.
+  await prisma.schoolImportArtifact.deleteMany({ where: { companyId } });
+  await prisma.schoolImportRow.deleteMany({ where: { companyId } });
+  await prisma.schoolImportJob.deleteMany({ where: { companyId } });
+  await prisma.user.deleteMany({ where: { companyId } });
+  await prisma.company.delete({ where: { id: companyId } });
 });
 
 beforeEach(async () => {
