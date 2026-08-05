@@ -23,6 +23,13 @@ const SCHOOLS_API = join(process.cwd(), "app/api/v2/schools");
  */
 const GUARD_MARKERS = [
   "schoolPermissionDenial",
+  /**
+   * S-3.3. An import is not one permission: loading the roll is registrar work
+   * and loading what every family owes is the bursar's, so the import routes
+   * compose two `schoolPermissionDenial` calls behind one helper rather than
+   * repeating the pair in six files.
+   */
+  "importPermissionDenial",
   "canViewAnyPortalSubject",
   "resolvePortalStudent",
   "resolvePortalGuardian",

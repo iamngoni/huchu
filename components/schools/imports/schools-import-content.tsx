@@ -1,0 +1,600 @@
+"use client";
+
+import { useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StepProgress } from "@/components/ui/step-progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import { formatSchoolDate } from "@/lib/schools/format";
+
+type ImportField = {
+  key: string;
+  label: string;
+  required?: boolean;
+  aliases?: string[];
+};
+
+type EntitySummary = {
+  key: string;
+  label: string;
+  order: number;
+  dependsOn: string[];
+  naturalKey: string;
+  fields: ImportField[];
+};
+
+type JobSummary = {
+  id: string;
+  entityType: string;
+  status: string;
+  fileName: string;
+  rowsTotal: number;
+  rowsCreated: number;
+  rowsUpdated: number;
+  rowsSkipped: number;
+  rowsFailed: number;
+  createdAt: string;
+  committedAt: string | null;
+  rolledBackAt: string | null;
+  uploadedBy: { id: string; name: string | null; email: string } | null;
+};
+
+type StagedJob = {
+  id: string;
+  entityType: string;
+  status: string;
+  fileName: string;
+  headers: string[];
+  mapping: Record<string, string>;
+  rowsTotal: number;
+  fields: ImportField[];
+};
+
+type RowIssue = { field: string; message: string };
+
+type DryRun = {
+  jobId: string;
+  entityType: string;
+  totals: { create: number; update: number; skip: number };
+  rejected: { lineNo: number; issues: RowIssue[]; values: Record<string, string> }[];
+  unmappedHeaders: string[];
+  blockers: string[];
+};
+
+type CommitResult = {
+  jobId: string;
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  anomalies: number;
+};
+
+const STEPS = [
+  { id: "choose", label: "Choose and upload" },
+  { id: "map", label: "Check the columns" },
+  { id: "check", label: "Check the data" },
+  { id: "done", label: "Import" },
+];
+
+/** The column a message is about, in the words the registrar's file uses. */
+function fieldLabel(fields: ImportField[], key: string): string {
+  if (key === "_row") return "The row";
+  return fields.find((field) => field.key === key)?.label ?? key;
+}
+
+export function SchoolsImportContent() {
+  const queryClient = useQueryClient();
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const [entityType, setEntityType] = useState<string>("STUDENT");
+  const [job, setJob] = useState<StagedJob | null>(null);
+  const [dryRun, setDryRun] = useState<DryRun | null>(null);
+  const [committed, setCommitted] = useState<CommitResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const listQuery = useQuery({
+    queryKey: ["schools", "imports"],
+    queryFn: () =>
+      fetchJson<{ data: JobSummary[]; entities: EntitySummary[] }>("/api/v2/schools/imports"),
+  });
+
+  const entities = useMemo(() => listQuery.data?.entities ?? [], [listQuery.data]);
+  const entity = entities.find((candidate) => candidate.key === entityType) ?? null;
+
+  const stepIndex = committed ? 3 : dryRun ? 2 : job ? 1 : 0;
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const csvText = await file.text();
+      return fetchJson<StagedJob>("/api/v2/schools/imports", {
+        method: "POST",
+        body: JSON.stringify({ entityType, fileName: file.name, csvText }),
+      });
+    },
+    onSuccess: (staged) => {
+      setJob(staged);
+      setDryRun(null);
+      setCommitted(null);
+      setError(null);
+    },
+    onError: (cause) => setError(getApiErrorMessage(cause, "That file could not be read")),
+  });
+
+  const mappingMutation = useMutation({
+    mutationFn: (mapping: Record<string, string>) =>
+      fetchJson<{ mapping: Record<string, string> }>(`/api/v2/schools/imports/${job!.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ mapping }),
+      }),
+    onSuccess: (updated) => {
+      setJob((current) => (current ? { ...current, mapping: updated.mapping } : current));
+      setDryRun(null);
+    },
+    onError: (cause) => setError(getApiErrorMessage(cause, "That column could not be changed")),
+  });
+
+  const dryRunMutation = useMutation({
+    mutationFn: () =>
+      fetchJson<DryRun>(`/api/v2/schools/imports/${job!.id}/dry-run`, { method: "POST" }),
+    onSuccess: (result) => {
+      setDryRun(result);
+      setError(null);
+    },
+    onError: (cause) => setError(getApiErrorMessage(cause, "That import could not be checked")),
+  });
+
+  const commitMutation = useMutation({
+    mutationFn: (acceptWarnings: boolean) =>
+      fetchJson<CommitResult>(`/api/v2/schools/imports/${job!.id}/commit`, {
+        method: "POST",
+        body: JSON.stringify({ acceptWarnings }),
+      }),
+    onSuccess: (result) => {
+      setCommitted(result);
+      setError(null);
+      void queryClient.invalidateQueries({ queryKey: ["schools", "imports"] });
+    },
+    onError: (cause) => setError(getApiErrorMessage(cause, "That import could not be completed")),
+  });
+
+  const rollbackMutation = useMutation({
+    mutationFn: (jobId: string) =>
+      fetchJson<{ total: number }>(`/api/v2/schools/imports/${jobId}/rollback`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      setJob(null);
+      setDryRun(null);
+      setCommitted(null);
+      void queryClient.invalidateQueries({ queryKey: ["schools", "imports"] });
+    },
+    onError: (cause) => setError(getApiErrorMessage(cause, "That import could not be undone")),
+  });
+
+  function reset() {
+    setJob(null);
+    setDryRun(null);
+    setCommitted(null);
+    setError(null);
+    if (fileInput.current) fileInput.current.value = "";
+  }
+
+  if (listQuery.isPending) {
+    return (
+      <div className="space-y-4" data-testid="schools-import-loading">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (listQuery.isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>The import screen could not be loaded</AlertTitle>
+        <AlertDescription>{getApiErrorMessage(listQuery.error)}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  const history = listQuery.data?.data ?? [];
+
+  return (
+    <div className="space-y-6" data-testid="schools-import">
+      <StepProgress
+        steps={STEPS}
+        currentStepIndex={stepIndex}
+        ariaLabel="Importing school records"
+      />
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>That did not work</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {/* ── Step 1: what, and from which file ─────────────────────────── */}
+      {!job ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>What are you importing?</CardTitle>
+            <CardDescription>
+              Load them in this order — a pupil cannot be put in a class that is not here yet,
+              and a balance cannot be brought forward for a family the system has not met.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 sm:max-w-sm">
+              <div className="space-y-2">
+                <Label htmlFor="import-entity">Records</Label>
+                <Select value={entityType} onValueChange={setEntityType}>
+                  <SelectTrigger id="import-entity">
+                    <SelectValue placeholder="Choose what to import" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {entities.map((candidate) => (
+                      <SelectItem key={candidate.key} value={candidate.key}>
+                        {candidate.order}. {candidate.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {entity ? (
+              <div className="space-y-3 rounded-[var(--card-radius)] border border-[var(--border-subtle)] p-4">
+                <p className="text-sm text-[var(--text-strong)]">
+                  Your file needs a header row with these columns.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {entity.fields.map((field) => (
+                    <Badge key={field.key} variant={field.required ? "default" : "outline"}>
+                      {field.label}
+                      {field.required ? " *" : ""}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-sm text-[var(--text-muted)]">
+                  Re-running this import will recognise records it has already loaded by{" "}
+                  <span className="text-[var(--text-strong)]">{entity.naturalKey.toLowerCase()}</span>,
+                  so nothing is duplicated.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <Label htmlFor="import-file">The file, as CSV</Label>
+              <input
+                ref={fileInput}
+                id="import-file"
+                type="file"
+                accept=".csv,text/csv"
+                className="block w-full text-sm text-[var(--text-muted)] file:mr-4 file:rounded-[var(--radius-sm)] file:border-0 file:bg-[var(--surface-muted)] file:px-4 file:py-2 file:text-sm file:text-[var(--text-strong)]"
+                onChange={(changed) => {
+                  const file = changed.target.files?.[0];
+                  if (file) uploadMutation.mutate(file);
+                }}
+              />
+              {uploadMutation.isPending ? (
+                <p className="text-sm text-[var(--text-muted)]">Reading that file…</p>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* ── Step 2: is each column what we think it is ────────────────── */}
+      {job && !committed ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Check the columns</CardTitle>
+            <CardDescription>
+              {job.fileName} — {job.rowsTotal} rows. We have guessed which column is which.
+              A wrong guess waved through is worse than no guess, so please look.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {job.fields.map((field) => (
+                <div key={field.key} className="space-y-1.5">
+                  <Label htmlFor={`map-${field.key}`}>
+                    {field.label}
+                    {field.required ? " *" : ""}
+                  </Label>
+                  <Select
+                    value={job.mapping[field.key] ?? "__none__"}
+                    onValueChange={(header) => {
+                      const next = { ...job.mapping };
+                      if (header === "__none__") delete next[field.key];
+                      else next[field.key] = header;
+                      setJob({ ...job, mapping: next });
+                      mappingMutation.mutate(next);
+                    }}
+                  >
+                    <SelectTrigger id={`map-${field.key}`}>
+                      <SelectValue placeholder="Not in this file" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Not in this file</SelectItem>
+                      {job.headers.map((header) => (
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() => dryRunMutation.mutate()}
+                disabled={dryRunMutation.isPending}
+              >
+                {dryRunMutation.isPending ? "Checking…" : "Check the data"}
+              </Button>
+              <Button variant="outline" onClick={reset}>
+                Start again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* ── Step 3: THE REPORT. The reason this screen exists. ────────── */}
+      {dryRun && !committed ? (
+        <Card data-testid="import-dry-run">
+          <CardHeader>
+            <CardTitle>What this would do</CardTitle>
+            <CardDescription>Nothing has been written yet.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Summary label="To be created" value={dryRun.totals.create} tone="strong" />
+              <Summary label="Already here" value={dryRun.totals.update} tone="muted" />
+              <Summary
+                label="Cannot be imported"
+                value={dryRun.rejected.length}
+                tone={dryRun.rejected.length > 0 ? "bad" : "muted"}
+              />
+            </div>
+
+            {dryRun.blockers.length > 0 ? (
+              <Alert variant="destructive">
+                <AlertTitle>A required column is not mapped</AlertTitle>
+                <AlertDescription>{dryRun.blockers.join(". ")}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {dryRun.unmappedHeaders.length > 0 ? (
+              <Alert>
+                <AlertTitle>Columns nothing will read</AlertTitle>
+                <AlertDescription>
+                  {dryRun.unmappedHeaders.join(", ")}. Nothing in these will be imported.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {dryRun.rejected.length > 0 ? (
+              <div className="space-y-3" data-testid="import-rejected-rows">
+                <div>
+                  <h3 className="text-base font-medium text-[var(--text-strong)]">
+                    {dryRun.rejected.length} rows need fixing
+                  </h3>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    The row numbers are the ones in your spreadsheet. Fix them there and
+                    upload it again, or import the rest without them.
+                  </p>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-20">Row</TableHead>
+                        <TableHead className="w-40">Column</TableHead>
+                        <TableHead>What is wrong</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dryRun.rejected.flatMap((row) =>
+                        row.issues.map((issue, index) => (
+                          <TableRow key={`${row.lineNo}-${issue.field}-${index}`}>
+                            <TableCell className="font-medium text-[var(--text-strong)]">
+                              {index === 0 ? row.lineNo : ""}
+                            </TableCell>
+                            <TableCell className="text-[var(--text-muted)]">
+                              {fieldLabel(job?.fields ?? [], issue.field)}
+                            </TableCell>
+                            <TableCell>{issue.message}</TableCell>
+                          </TableRow>
+                        )),
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ) : (
+              <Alert>
+                <AlertTitle>Every row can be imported</AlertTitle>
+                <AlertDescription>Nothing in this file needs fixing first.</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() => commitMutation.mutate(dryRun.rejected.length > 0)}
+                disabled={commitMutation.isPending || dryRun.blockers.length > 0}
+              >
+                {commitMutation.isPending
+                  ? "Importing…"
+                  : dryRun.rejected.length > 0
+                    ? `Import the other ${dryRun.totals.create + dryRun.totals.update}`
+                    : `Import ${dryRun.totals.create + dryRun.totals.update} records`}
+              </Button>
+              <Button variant="outline" onClick={reset}>
+                Start again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* ── Step 4: what happened, and how to take it back ────────────── */}
+      {committed && job ? (
+        <Card data-testid="import-committed">
+          <CardHeader>
+            <CardTitle>Imported</CardTitle>
+            <CardDescription>{job.fileName}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-4">
+              <Summary label="Created" value={committed.created} tone="strong" />
+              <Summary label="Updated" value={committed.updated} tone="muted" />
+              <Summary label="Left out" value={committed.skipped} tone="muted" />
+              <Summary
+                label="Failed"
+                value={committed.failed}
+                tone={committed.failed > 0 ? "bad" : "muted"}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={reset}>Import something else</Button>
+              <Button
+                variant="outline"
+                onClick={() => rollbackMutation.mutate(job.id)}
+                disabled={rollbackMutation.isPending}
+              >
+                {rollbackMutation.isPending ? "Undoing…" : "Undo this import"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* ── History ───────────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Earlier imports</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {history.length === 0 ? (
+            <Empty>
+              <EmptyTitle>Nothing has been imported yet</EmptyTitle>
+              <EmptyDescription>
+                Every import is listed here with what it did, so it can be undone later.
+              </EmptyDescription>
+            </Empty>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>File</TableHead>
+                    <TableHead>Records</TableHead>
+                    <TableHead>When</TableHead>
+                    <TableHead>Result</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="font-medium text-[var(--text-strong)]">
+                        {record.fileName}
+                      </TableCell>
+                      <TableCell className="text-[var(--text-muted)]">
+                        {record.entityType.replace(/_/g, " ").toLowerCase()}
+                      </TableCell>
+                      <TableCell className="text-[var(--text-muted)]">
+                        {formatSchoolDate(record.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        {record.status === "ROLLED_BACK" ? (
+                          <Badge variant="outline">Undone</Badge>
+                        ) : record.status === "COMMITTED" ? (
+                          <span className="text-sm">
+                            {record.rowsCreated} created
+                            {record.rowsFailed > 0 ? `, ${record.rowsFailed} failed` : ""}
+                          </span>
+                        ) : (
+                          <Badge variant="secondary">Not imported</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {record.status === "COMMITTED" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => rollbackMutation.mutate(record.id)}
+                            disabled={rollbackMutation.isPending}
+                          >
+                            Undo
+                          </Button>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Summary({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "strong" | "muted" | "bad";
+}) {
+  const colour =
+    tone === "bad"
+      ? "text-[var(--danger)]"
+      : tone === "strong"
+        ? "text-[var(--text-strong)]"
+        : "text-[var(--text-muted)]";
+  return (
+    <div className="rounded-[var(--card-radius)] border border-[var(--border-subtle)] p-4">
+      <p className="text-sm text-[var(--text-muted)]">{label}</p>
+      <p className={`text-2xl font-semibold ${colour}`}>{value}</p>
+    </div>
+  );
+}

@@ -269,5 +269,42 @@ investigated._
 
 ---
 
+### 16. What the importer decided, and what it left open
+
+**A student number is required.** S-3.3 matches a re-run on it, and a school
+with no student numbers cannot be matched reliably by anything else — name and
+date of birth collide in every family with twins. A file without them is
+refused rather than given generated numbers that would duplicate on the second
+run.
+
+**An opening balance is an invoice, with a null `feeStructureId`.** Deliberate:
+that keeps it outside S-2.4's one-live-invoice partial index, so a
+brought-forward balance cannot block the term's first real bill. It carries a
+line coded `OPENING_BALANCE`, which is how a re-run recognises one that is
+already there. **A cross-currency opening balance is brought over at a rate of
+1 and flagged**, not converted — the figure is what the school states it is,
+and restating it at today's rate would change what a family owes. If schools
+turn out to arrive with mixed-currency arrears often, this wants a rate column
+in the file rather than a guess.
+
+**Rollback stops rather than cascades.** If somebody has since put a mark, a
+receipt or a bed against an imported pupil, the delete fails and the whole
+rollback rolls back. That is the right default — at that point the import is no
+longer the only thing that wrote there — but it means a rollback gets harder the
+longer it is left, and nothing warns about that yet.
+
+**The commit is synchronous, capped at 5000 rows and 5 MB.** Gold's is too. A
+school larger than that has to split the file by year group, which is also how
+they would check it. If a 20,000-pupil group turns up, this needs a queue, and
+that is a bigger change than raising the cap.
+
+**Not built: an undo for a *partial* commit.** A row that fails is recorded as
+FAILED and the rest go in, which is the right behaviour — one malformed student
+must not strand the other 1,999. Re-running the same job retries only the failed
+rows. But there is no way to undo just the rows that succeeded in one particular
+run; rollback is all-or-nothing per job.
+
+---
+
 _The changelog for this work lives in the roadmap; this file is a wall, not a
 log._

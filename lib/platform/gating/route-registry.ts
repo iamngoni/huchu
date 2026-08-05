@@ -85,6 +85,7 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/schools/reports", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/admissions", featureKey: "schools.admissions" },
   { scope: "page", prefix: "/schools/students", featureKey: "schools.students" },
+  { scope: "page", prefix: "/schools/imports", featureKey: "schools.students" },
   { scope: "page", prefix: "/schools/classes", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/subjects", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/attendance", featureKey: "schools.attendance" },
@@ -351,6 +352,11 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/schools/portal/teacher", featureKey: "schools.portal.teacher" },
   { scope: "api", prefix: "/api/schools", featureKey: "schools.core" },
   { scope: "api", prefix: "/api/v2/schools/admissions", featureKey: "schools.admissions" },
+  // S-3.3 — importing a school that is switching systems. Gated on
+  // `schools.students` because that is the smallest thing an import always
+  // writes; the fee and opening-balance entity types additionally need
+  // `schools.fees`, which `importPermissionDenial` enforces per request.
+  { scope: "api", prefix: "/api/v2/schools/imports", featureKey: "schools.students" },
   { scope: "api", prefix: "/api/v2/schools/students", featureKey: "schools.students" },
   { scope: "api", prefix: "/api/v2/schools/guardians", featureKey: "schools.students" },
   { scope: "api", prefix: "/api/v2/schools/enrollments", featureKey: "schools.admissions" },
