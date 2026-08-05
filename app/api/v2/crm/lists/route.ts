@@ -3,10 +3,10 @@ import { z } from "zod";
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { VIEW_ENTITY_KEYS, type ViewEntity } from "@/lib/crm/views-registry";
+import { VIEW_ENTITY_KEYS } from "@/lib/crm/views-registry";
 
 const createListSchema = z.object({
-  entity: z.enum(VIEW_ENTITY_KEYS as [ViewEntity, ...ViewEntity[]]),
+  entity: z.enum(VIEW_ENTITY_KEYS),
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(500).nullable().optional(),
   isShared: z.boolean().optional(),

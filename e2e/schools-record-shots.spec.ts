@@ -100,6 +100,21 @@ for (const viewport of [
       // with. If this is missing, the shell rendered without its attributes.
       await expect(page.getByText("Student number").first()).toBeVisible();
 
+      // S-4.4 — the school's own fields sit in the same list as the built-in
+      // ones. They are past the "N more properties" fold, which is the whole
+      // reason that control exists, so it has to be opened first.
+      const more = page.getByRole("button", { name: /more propert/ });
+      if (await more.count()) {
+        await more.first().click();
+        await expect(page.getByText(/Transport · Bus route|Bus route/).first()).toBeVisible({
+          timeout: 10_000,
+        });
+        await page.screenshot({
+          path: `${SHOTS}/record-student-custom-fields-${viewport.name}.png`,
+          fullPage: true,
+        });
+      }
+
       await page.screenshot({
         path: `${SHOTS}/record-student-${viewport.name}.png`,
         fullPage: true,

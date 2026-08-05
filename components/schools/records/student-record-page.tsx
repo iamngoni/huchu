@@ -16,6 +16,7 @@ import {
 } from "@/components/records/record-page-shell";
 import { useAttributeEditor } from "@/components/records/use-attribute-editor";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import type { CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
 import { recordType } from "@/lib/records/registry";
 import { formatSchoolDate, formatSchoolMoney } from "@/lib/schools/format";
 import { normalizeUiStatus } from "@/lib/ui/status-map";
@@ -104,6 +105,7 @@ type StudentRecord = {
   status: string;
   isBoarding: boolean;
   admissionDate: string | null;
+  customFields: Record<string, unknown> | null;
   avatarUrl: string | null;
   accent: string | null;
   currentClass: { id: string; code: string; name: string } | null;
@@ -184,16 +186,15 @@ export function StudentRecordPage({ studentId }: { studentId: string }) {
     ];
   }, [student, edit]);
 
-  // S-4.4's read side. The definitions endpoint is keyed by `CrmFieldEntity`,
-  // which has no STUDENT member yet, so this is empty until that enum is
-  // extended — deliberately wired now so the page does not need touching then.
+  // S-4.4 — the school's own fields. Read from the schools door onto the shared
+  // engine; `/api/v2/crm/field-definitions` is gated on `crm.settings`, which no
+  // school has.
   const customFields = useQuery({
     queryKey: ["records", "field-definitions", "STUDENT"],
     queryFn: () =>
-      fetchJson<{ data: [] }>("/api/v2/crm/field-definitions?entity=STUDENT").catch(() => ({
-        data: [] as [],
-      })),
-    retry: false,
+      fetchJson<{ data: CrmFieldDefinitionRecord[] }>(
+        "/api/v2/schools/field-definitions?entity=STUDENT",
+      ),
   });
 
   if (query.isPending) {
@@ -354,7 +355,7 @@ export function StudentRecordPage({ studentId }: { studentId: string }) {
             ...attributes,
             ...customFieldAttributes({
               definitions: customFields.data?.data ?? [],
-              values: null,
+              values: student.customFields,
               onCommit: (key, value) => edit.save.mutate({ customFields: { [key]: value } }),
             }),
           ]}

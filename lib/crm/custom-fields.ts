@@ -29,6 +29,16 @@ export type FieldDefinition = {
 
 export type FieldOption = { value: string; label: string; colorToken?: string };
 
+/**
+ * Every record type a custom field can be defined on.
+ *
+ * Mirrors the `CrmFieldEntity` Prisma enum and is asserted against it by the
+ * test beside this file. It had drifted: the enum gained the six school types in
+ * S-4.4 and this list did not, so `fieldDefinitionInputSchema` refused
+ * `entity: "STUDENT"` with a message listing only the CRM six — the data model
+ * was ready and the door was shut. The same shape of bug as `TEXT_EDITABLE`
+ * naming field types the enum has never had.
+ */
 export const CRM_FIELD_ENTITIES = [
   "PERSON",
   "COMPANY",
@@ -36,7 +46,13 @@ export const CRM_FIELD_ENTITIES = [
   "DEAL",
   "SITE",
   "WORK_ORDER",
-] as const;
+  "STUDENT",
+  "GUARDIAN",
+  "TEACHER",
+  "CLASS",
+  "SUBJECT",
+  "HOSTEL",
+] as const satisfies readonly CrmFieldEntity[];
 
 export const CRM_FIELD_TYPES = [
   "SHORT_TEXT",
@@ -87,6 +103,14 @@ export const CRM_FIELD_ENTITY_LABELS: Record<CrmFieldEntity, string> = {
   DEAL: "Deals",
   SITE: "Sites",
   WORK_ORDER: "Work orders",
+  // S-4.4 — school record types. This map is the record-type discriminator's
+  // labels, so it is the one place the six of them genuinely belong.
+  STUDENT: "Student",
+  GUARDIAN: "Guardian",
+  TEACHER: "Teacher",
+  CLASS: "Class",
+  SUBJECT: "Subject",
+  HOSTEL: "Hostel",
 };
 
 /** Types whose value is a reference to another record, stored as that record's id. */

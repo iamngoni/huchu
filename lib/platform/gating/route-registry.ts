@@ -357,6 +357,10 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   // writes; the fee and opening-balance entity types additionally need
   // `schools.fees`, which `importPermissionDenial` enforces per request.
   { scope: "api", prefix: "/api/v2/schools/imports", featureKey: "schools.students" },
+  // S-4.4 — a school's own fields on a pupil or a parent. The same engine as
+  // /api/v2/crm/field-definitions, behind a gate a school can actually pass:
+  // that route is registered against `crm.settings`, which no school has.
+  { scope: "api", prefix: "/api/v2/schools/field-definitions", featureKey: "schools.students" },
   { scope: "api", prefix: "/api/v2/schools/students", featureKey: "schools.students" },
   { scope: "api", prefix: "/api/v2/schools/guardians", featureKey: "schools.students" },
   { scope: "api", prefix: "/api/v2/schools/enrollments", featureKey: "schools.admissions" },

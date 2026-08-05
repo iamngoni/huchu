@@ -7,7 +7,28 @@
  */
 import type { CrmFieldEntity } from "@prisma/client";
 
-export type ViewEntity = CrmFieldEntity;
+/**
+ * The record types a CRM saved view or list can point at.
+ *
+ * Declared here rather than aliased to the whole `CrmFieldEntity` enum. That
+ * enum is the product-wide record-type discriminator and gained the six school
+ * types in S-4.4, which have no CRM board, no CRM calendar and no `/crm/...`
+ * list route — aliasing would have made every one of them a legal value for
+ * `POST /api/v2/crm/saved-views`, pointing at a page that does not exist.
+ *
+ * The `satisfies` keeps this a subset: a value removed from the enum stops
+ * compiling here rather than failing at runtime against a Postgres cast.
+ */
+export const VIEW_ENTITY_KEYS = [
+  "LEAD",
+  "DEAL",
+  "PERSON",
+  "COMPANY",
+  "SITE",
+  "WORK_ORDER",
+] as const satisfies readonly CrmFieldEntity[];
+
+export type ViewEntity = (typeof VIEW_ENTITY_KEYS)[number];
 
 export type ViewCapability = {
   label: string;
@@ -112,7 +133,6 @@ export const VIEW_ENTITIES: Record<ViewEntity, ViewCapability> = {
   },
 };
 
-export const VIEW_ENTITY_KEYS = Object.keys(VIEW_ENTITIES) as ViewEntity[];
 
 /**
  * View types this record type can meaningfully render.

@@ -5810,6 +5810,14 @@ model SchoolStudent {
   /// parent is a person, and offering to stand one in as 🙂 is not a feature.
   avatarUrl       String?
   accent          String?
+  /// S-4.4 — the school's own fields on this record, keyed by
+  /// `CrmFieldDefinition.key`.
+  ///
+  /// A JSON column rather than an entity-attribute-value table, matching what
+  /// the CRM records already do: the definitions carry the types and the
+  /// validation, `lib/crm/custom-fields.ts` owns both, and a school asking for
+  /// "bus route" gets one column write rather than a join.
+  customFields    Json?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
@@ -5872,6 +5880,14 @@ model SchoolGuardian {
   /// parent is a person, and offering to stand one in as 🙂 is not a feature.
   avatarUrl       String?
   accent          String?
+  /// S-4.4 — the school's own fields on this record, keyed by
+  /// `CrmFieldDefinition.key`.
+  ///
+  /// A JSON column rather than an entity-attribute-value table, matching what
+  /// the CRM records already do: the definitions carry the types and the
+  /// validation, `lib/crm/custom-fields.ts` owns both, and a school asking for
+  /// "bus route" gets one column write rather than a join.
+  customFields    Json?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -9167,6 +9183,14 @@ model CrmPipelineStage {
 // reads a single row fetch and avoids an EAV join on every list query.
 // ---------------------------------------------------------------------------
 
+/// Which kind of record a custom field, a list membership or a follow is about.
+///
+/// The `Crm` prefix is now a misnomer and is kept only because renaming a
+/// Postgres enum that four features key off is a migration with no user-visible
+/// payoff. It is the product's record-type discriminator: `CrmFieldDefinition`,
+/// `CrmList`/`CrmListMember`, `CrmFollower` and the merge dialog all read it,
+/// and S-4.4 needs school records in it so a school can add its own fields to a
+/// pupil. See `lib/records/registry.ts` for the type list this mirrors.
 enum CrmFieldEntity {
   PERSON
   COMPANY
@@ -9174,6 +9198,12 @@ enum CrmFieldEntity {
   DEAL
   SITE
   WORK_ORDER
+  STUDENT
+  GUARDIAN
+  TEACHER
+  CLASS
+  SUBJECT
+  HOSTEL
 }
 
 enum CrmFieldType {

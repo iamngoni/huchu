@@ -8,6 +8,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { normalizeProvidedId } from "@/lib/id-generator";
+import { buildCustomFieldValues, mergeCustomFields } from "@/lib/crm/custom-fields";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
@@ -36,6 +37,11 @@ const updateStudentSchema = z
     // a link is useful the moment a school already hosts its photographs.
     avatarUrl: z.string().trim().url().max(2000).nullable().optional(),
     accent: z.string().trim().min(1).max(40).nullable().optional(),
+    // S-4.4 — the school's own fields. A PARTIAL patch: only the keys sent are
+    // touched, so two people editing different properties of the same pupil do
+    // not overwrite each other's work.
+    customFields: z.record(z.string(), z.unknown()).optional(),
+    clearCustomFields: z.array(z.string()).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
@@ -174,6 +180,7 @@ export async function PATCH(
         id: true,
         currentClassId: true,
         currentStreamId: true,
+        customFields: true,
       },
     });
     if (!existing) {
@@ -225,9 +232,32 @@ export async function PATCH(
       }
     }
 
+    // S-4.4 — validated and merged by the same code the CRM records use, so a
+    // school's SINGLE_SELECT rejects an unlisted option here exactly as it does
+    // there. `partial: true` means an absent key is untouched rather than
+    // cleared, and the merge is against what is already stored.
+    let nextCustomFields: Prisma.InputJsonValue | undefined;
+    if (validated.customFields !== undefined || validated.clearCustomFields !== undefined) {
+      const definitions = await prisma.crmFieldDefinition.findMany({
+        where: { companyId, entity: "STUDENT", archivedAt: null },
+      });
+      const built = buildCustomFieldValues(definitions, validated.customFields ?? {}, {
+        partial: true,
+      });
+      if (built.errors.length > 0) {
+        return errorResponse("Validation failed", 400, built.errors);
+      }
+      nextCustomFields = mergeCustomFields(
+        existing.customFields,
+        built.values,
+        validated.clearCustomFields ?? [],
+      ) as Prisma.InputJsonValue;
+    }
+
     const updated = await prisma.schoolStudent.update({
       where: { id: existing.id },
       data: {
+        ...(nextCustomFields !== undefined ? { customFields: nextCustomFields } : {}),
         ...(normalizedStudentNo !== undefined ? { studentNo: normalizedStudentNo } : {}),
         ...(validated.admissionNo !== undefined
           ? {

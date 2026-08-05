@@ -69,6 +69,16 @@ const SCHOOL_FULL_ACTIONS: string[] = [
   "approve-leave",
   "check-in",
   "check-out",
+  /**
+   * S-4.4 — changing what the system asks about every record of a type: adding
+   * a custom field to a pupil or a parent, and later the rest of the school's
+   * own configuration.
+   *
+   * Only on this list, so it stays with the administrator. A registrar creates
+   * students all day and should not be able to change what a student *is* — the
+   * fields outlive whoever added them and every record carries them.
+   */
+  "configure",
 ];
 
 const PERMISSIONS_BY_PERSONA: Record<PersonaCode, PersonaPermission[]> = {

@@ -8,7 +8,7 @@ import { leadSortSchema } from "@/lib/crm/views";
 import { allowedViewTypes, VIEW_ENTITY_KEYS, type ViewEntity } from "@/lib/crm/views-registry";
 
 const createViewSchema = z.object({
-  entity: z.enum(VIEW_ENTITY_KEYS as [ViewEntity, ...ViewEntity[]]).optional(),
+  entity: z.enum(VIEW_ENTITY_KEYS).optional(),
   name: z.string().trim().min(1).max(80),
   viewType: z.enum(["TABLE", "BOARD", "CALENDAR"]).optional(),
   // Filters vary by record type, so they are validated by the endpoint that
