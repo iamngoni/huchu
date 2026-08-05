@@ -356,6 +356,16 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   // `schools.students` because that is the smallest thing an import always
   // writes; the fee and opening-balance entity types additionally need
   // `schools.fees`, which `importPermissionDenial` enforces per request.
+  // S-4.2 — `/api/v2/records/**` is DELIBERATELY ABSENT from this registry.
+  //
+  // Those routes serve subjects from more than one module, and an entry here can
+  // name only one feature — which is the exact trap they exist to escape:
+  // /api/v2/crm/files is gated on `crm.core` and so refused every school before
+  // its handler ran, however well the storage supported a student. An
+  // unregistered path is allowed through by `canAccessRouteWithToken`, and
+  // `app/api/v2/records/_guard.ts` then checks the feature AND the role per
+  // subject type. Do not "fix" this by adding a prefix entry; that would put one
+  // module's gate back in front of every module's records.
   { scope: "api", prefix: "/api/v2/schools/imports", featureKey: "schools.students" },
   // S-4.4 — a school's own fields on a pupil or a parent. The same engine as
   // /api/v2/crm/field-definitions, behind a gate a school can actually pass:

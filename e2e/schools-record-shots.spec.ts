@@ -131,6 +131,30 @@ for (const viewport of [
         fullPage: true,
       });
 
+      // S-4.2 — Notes and Files, reached through the module-neutral routes. Before
+      // the re-key a student could not be the subject of either, so an empty tab
+      // here would mean the routes are refusing the school again.
+      const notes = page.getByRole("tab", { name: /Notes/ });
+      if (await notes.count()) {
+        await notes.first().click();
+        await expect(page.getByRole("button", { name: /Add note/ })).toBeVisible({
+          timeout: 10_000,
+        });
+        await page.screenshot({
+          path: `${SHOTS}/record-student-notes-${viewport.name}.png`,
+          fullPage: true,
+        });
+      }
+
+      const filesTab = page.getByRole("tab", { name: /Files/ });
+      if (await filesTab.count()) {
+        await filesTab.first().click();
+        await page.screenshot({
+          path: `${SHOTS}/record-student-files-${viewport.name}.png`,
+          fullPage: true,
+        });
+      }
+
       const enrolments = page.getByRole("tab", { name: /Enrolments/ });
       if (await enrolments.count()) {
         await enrolments.click();

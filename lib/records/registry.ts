@@ -33,6 +33,13 @@ export const RECORD_TYPES = [
   "LEAD",
   "DEAL",
   "SITE",
+  /**
+   * A member of staff — a `User`, not a CRM record: the profile page is somebody
+   * who works here rather than somebody we sell to. It has a record page
+   * (`/crm/reps/[id]`) and files hang off it, which is why S-4.2 gave it a
+   * subject type. It is not a custom-field target; see `CRM_FIELD_ENTITIES`.
+   */
+  "REP",
   // Schools (S-4.3)
   "STUDENT",
   "GUARDIAN",
@@ -131,6 +138,18 @@ const CONFIGS: RecordTypeConfig[] = [
     href: (id) => `/crm/sites/${id}`,
     apiPath: (id) => `/api/v2/crm/sites/${id}`,
     queryKey: (id) => ["crm", "site", id],
+  },
+  {
+    type: "REP",
+    label: "Staff member",
+    labelPlural: "Staff",
+    module: "crm",
+    kind: "rep",
+    isPerson: true,
+    indexHref: "/crm/reps",
+    href: (id) => `/crm/reps/${id}`,
+    apiPath: (id) => `/api/v2/crm/reps/${id}`,
+    queryKey: (id) => ["crm", "rep", id],
   },
   {
     type: "STUDENT",

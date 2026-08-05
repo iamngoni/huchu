@@ -15,6 +15,12 @@ import {
   type RecordTab,
 } from "@/components/records/record-page-shell";
 import { useAttributeEditor } from "@/components/records/use-attribute-editor";
+import {
+  SubjectFiles,
+  SubjectNotes,
+  type SubjectFile,
+  type SubjectNote,
+} from "@/components/records/subject-tabs";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import type { CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
 import { recordType } from "@/lib/records/registry";
@@ -36,11 +42,12 @@ import { normalizeUiStatus } from "@/lib/ui/status-map";
  * genuinely about students — which queries to run and which relationships are
  * worth a tab.
  *
- * Four tabs are deliberately absent: tasks, comments, files and mentions. Those
- * hang off `CrmTask`/`CrmComment`/`CrmRecordFile`, which identify their subject
- * with a nullable foreign key per kind, so a student cannot be one until
- * S-4.2 re-keys them onto `(subjectType, subjectId)`. Adding a `studentId`
- * column to those three tables would be the shortcut that makes S-4.2 harder.
+ * Notes and Files arrive via S-4.2, which re-keyed `CrmComment` and
+ * `CrmRecordFile` onto `(subjectType, subjectId)` and put module-neutral routes
+ * in front of them — `/api/v2/records/**`, gated per subject type rather than on
+ * `crm.core` by URL prefix. Tasks and mentions are still absent: tasks want an
+ * assignee-and-due-date UI that is its own piece of work, and a mention cannot be
+ * created until the rich-text composer learns school record kinds (S-4.5).
  */
 
 /* The profile endpoint's response is assembled from a deep Prisma include and
@@ -197,6 +204,22 @@ export function StudentRecordPage({ studentId }: { studentId: string }) {
       ),
   });
 
+  // S-4.2 — the shared record surface, reached through the module-neutral routes.
+  const notes = useQuery({
+    queryKey: ["records", "comments", "STUDENT", studentId],
+    queryFn: () =>
+      fetchJson<{ data: SubjectNote[] }>(
+        `/api/v2/records/comments?subjectType=STUDENT&subjectId=${studentId}`,
+      ),
+  });
+  const files = useQuery({
+    queryKey: ["records", "files", "STUDENT", studentId],
+    queryFn: () =>
+      fetchJson<{ data: SubjectFile[] }>(
+        `/api/v2/records/files?subjectType=STUDENT&subjectId=${studentId}`,
+      ),
+  });
+
   if (query.isPending) {
     return (
       <div className="space-y-4" data-testid="student-record-loading">
@@ -302,6 +325,26 @@ export function StudentRecordPage({ studentId }: { studentId: string }) {
           } satisfies RecordTab,
         ]
       : []),
+    {
+      value: "notes",
+      label: "Notes",
+      count: notes.data?.data?.length ?? 0,
+      content: (
+        <SubjectNotes
+          subject={{ type: "STUDENT", id: studentId }}
+          notes={notes.data?.data ?? []}
+          isPending={notes.isPending}
+        />
+      ),
+    },
+    {
+      value: "files",
+      label: "Files",
+      count: files.data?.data?.length ?? 0,
+      content: (
+        <SubjectFiles files={files.data?.data ?? []} isPending={files.isPending} />
+      ),
+    },
     ...(student.resultLines?.length
       ? [
           {

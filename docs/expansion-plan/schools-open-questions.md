@@ -368,15 +368,19 @@ the data model and changes nothing about who can reach it.
   Filing a document against a student returns `Feature disabled: crm.core`, even
   though the storage now supports it perfectly well.
 
-**The next piece of work is module-neutral routes**, not more schools-shaped
-copies. `/api/v2/records/files`, `/api/v2/records/comments`, `/api/v2/records/tasks`
-gating on the module of the SUBJECT TYPE — `lib/records/registry.ts` already
-carries a `module` field on every type for exactly this. Two schools doors is a
-pattern; six is a mistake, and the record surface is supposed to belong to no
-single module.
+**Done for files and comments.** `/api/v2/records/{files,comments}` gate per
+subject type via `app/api/v2/records/_guard.ts`, and they are deliberately absent
+from the route registry — an entry there could name only one feature, which is the
+trap. `/api/v2/records/tasks` is the same shape when tasks get a UI.
 
-Until then the school record page has no tasks, comments or files tab. That is a
-gate away, not a schema away.
+**The one thing to be careful about**: because those routes are unregistered, the
+platform feature gate does not run for them at all, and the handler's own guard is
+the only thing standing there. `lib/schools/route-guard-coverage.test.ts` now scans
+`app/api/v2/records` as well as the schools routes for exactly this reason. Do not
+add a route under `/api/v2/records` without `guardRecordSubject`.
+
+Verified over HTTP, negative included: a school tenant asking for a `DEAL` subject
+through the neutral door is still refused `Feature disabled: crm.core`.
 
 ### 19. Do not drop the legacy subject columns yet
 

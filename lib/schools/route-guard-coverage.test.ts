@@ -17,12 +17,26 @@ import { join } from "node:path";
 const SCHOOLS_API = join(process.cwd(), "app/api/v2/schools");
 
 /**
+ * S-4.2 — the module-neutral record routes are covered here too, and they need it
+ * more than most: they are deliberately absent from the route registry, so the
+ * feature gate that protects every other /api/v2 path does not run for them. The
+ * handler's own guard is the only thing standing there.
+ */
+const RECORDS_API = join(process.cwd(), "app/api/v2/records");
+
+/**
  * Portal routes answer "who is this" through `lib/schools/portal-identity`
  * instead of a role check — a parent is allowed in, but only to their own
  * children. Both count as guarded.
  */
 const GUARD_MARKERS = [
   "schoolPermissionDenial",
+  /**
+   * S-4.2 — `/api/v2/records/**` gates per subject type, checking the owning
+   * module's feature and then the caller's role. It is the only guard those
+   * routes have, because they are not in the route registry.
+   */
+  "guardRecordSubject",
   /**
    * S-3.3. An import is not one permission: loading the roll is registrar work
    * and loading what every family owes is the bursar's, so the import routes
@@ -49,9 +63,9 @@ function routeFiles(dir: string): string[] {
   return found;
 }
 
-const files = routeFiles(SCHOOLS_API);
+const files = [...routeFiles(SCHOOLS_API), ...routeFiles(RECORDS_API)];
 
-describe("school API route guards", () => {
+describe("school and shared-record API route guards", () => {
   it("finds the route files at all", () => {
     // A silent zero here would make every assertion below vacuously true.
     expect(files.length).toBeGreaterThan(60);
