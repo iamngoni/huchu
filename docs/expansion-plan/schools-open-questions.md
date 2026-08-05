@@ -415,7 +415,7 @@ tests that touch Postgres.
 
 ---
 
-### 21. Every authenticated page still throws its tree away on hydration
+### 21. Every authenticated page threw its tree away on hydration — FIXED
 
 Not a schools defect, not introduced by Iteration 4, and worth fixing before
 anyone measures performance.
@@ -455,6 +455,27 @@ module is doing the same thing; it wants resolving on the server (from the
 hostname or the session, both of which are available there) or deferring to an
 effect.
 
-I have not fixed it: it is in the platform shell, it affects every module, and a
-change there wants to be its own piece of work with its own verification rather
-than a footnote to a schools iteration.
+**Fixed.** The cause was one line missing in `app/layout.tsx`: `SessionProvider`
+was mounted with no `session` prop, so `useSession()` had no data during SSR.
+`getWorkspaceSidebarModel` falls back to the first profile when handed no role and
+no features — hence Scrap & Recycling on the server and School Operations in the
+browser, icon included. The sidebar was only the visible casualty; the nav filter,
+the command bar's module bands and the quick actions all read the same three
+fields and all rendered their signed-out shape into the HTML.
+
+The fix resolves the session on the server — the layout is already dynamic, so it
+costs a decode — and hands it to the provider, which then treats it as the initial
+value instead of fetching on mount. That removes the opening
+`/api/auth/session` round trip as well.
+
+Guarded two ways, because neither alone would have caught it: `e2e/hydration.spec.ts`
+walks eight school pages at both viewports and fails on any `pageerror`, and
+asserts the *server* HTML carries the school's workspace; and
+`components/providers/session-ssr.test.ts` asserts the wiring itself, since a prop
+that looks unused is easy to tidy away and nothing else fails loudly when it goes.
+
+One thing this diagnosis exposed, worth knowing: when Postgres is unreachable the
+JWT session callback throws (`getCompanyFeatureMap` reads four tables), so the
+server resolves no session at all. Before the fix that produced this exact
+mismatch on every page; after it, the app renders signed-out until the database
+returns, which is at least honest.
