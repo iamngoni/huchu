@@ -233,5 +233,39 @@ for (const viewport of [
         fullPage: true,
       });
     });
+
+    test("class record page", async ({ page }) => {
+      const list = await page.request.get("/api/v2/schools/classes?limit=25");
+      expect(list.status()).toBeLessThan(400);
+      const body = await list.json();
+      const candidates: { id: string; code: string; name: string }[] = body?.data ?? [];
+      expect(candidates.length, "the demo tenant has no classes to open").toBeGreaterThan(0);
+
+      // Prefer one with pupils on the roll, so the landing tab has content.
+      let klass = candidates[0];
+      for (const candidate of candidates) {
+        const roll = await page.request.get(
+          `/api/v2/schools/students?classId=${candidate.id}&limit=1`,
+        );
+        const rollBody = await roll.json().catch(() => null);
+        if ((rollBody?.data?.length ?? 0) > 0) {
+          klass = candidate;
+          break;
+        }
+      }
+
+      await expect(async () => {
+        await page.goto(`/schools/classes/${klass.id}`);
+        // The class code, rendered as the identity strip's reference.
+        await expect(page.getByText(klass.code).first()).toBeVisible({ timeout: 20_000 });
+      }).toPass({ timeout: 120_000 });
+
+      // A class is a thing, not a person: the mark is a tile, not initials.
+      await expect(page.getByRole("tab", { name: /Roll/ })).toBeVisible();
+      await page.screenshot({
+        path: `${SHOTS}/record-class-${viewport.name}.png`,
+        fullPage: true,
+      });
+    });
   });
 }

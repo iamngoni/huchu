@@ -17,6 +17,12 @@ const updateClassSchema = z
     level: z.number().int().nullable().optional(),
     capacity: z.number().int().positive().nullable().optional(),
     termId: z.string().uuid().nullable().optional(),
+    // S-4.3 — the record page's identity strip. A class is a thing, so it may
+    // carry an emoji as well as a picture: a form room reads faster as 🔵 in a
+    // list than as a repeated generic icon.
+    avatarUrl: z.string().trim().url().max(2000).nullable().optional(),
+    emoji: z.string().trim().min(1).max(16).nullable().optional(),
+    accent: z.string().trim().min(1).max(40).nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
@@ -140,6 +146,9 @@ export async function PATCH(
     const updated = await prisma.schoolClass.update({
       where: { id: existing.id },
       data: {
+        ...(validated.avatarUrl !== undefined ? { avatarUrl: validated.avatarUrl } : {}),
+        ...(validated.emoji !== undefined ? { emoji: validated.emoji } : {}),
+        ...(validated.accent !== undefined ? { accent: validated.accent } : {}),
         ...(validated.code !== undefined ? { code: validated.code } : {}),
         ...(validated.name !== undefined ? { name: validated.name } : {}),
         ...(validated.level !== undefined ? { level: validated.level } : {}),
