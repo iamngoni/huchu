@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import {
   errorResponse,
   isValidUUID,
@@ -7,6 +8,76 @@ import {
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
+
+/**
+ * S-4.3 — what a record page may edit about a hostel.
+ *
+ * `genderPolicy` is a choice rather than free text because S-1.6 enforces it when
+ * allocating a bed: a typo here would not be a cosmetic problem, it would be a
+ * boy placed in a girls' house. The values are the ones `lib/schools/boarding-rules.ts`
+ * knows how to check.
+ */
+const updateHostelSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    genderPolicy: z.enum(["MIXED", "MALE", "FEMALE"]).optional(),
+    capacity: z.number().int().positive().nullable().optional(),
+    isActive: z.boolean().optional(),
+    avatarUrl: z.string().trim().url().max(2000).nullable().optional(),
+    emoji: z.string().trim().min(1).max(16).nullable().optional(),
+    accent: z.string().trim().min(1).max(40).nullable().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field must be provided",
+  });
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const sessionResult = await validateSession(request);
+    if (sessionResult instanceof NextResponse) return sessionResult;
+    const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.boarding", "edit");
+    if (denied) return errorResponse(denied, 403);
+
+    const { id } = await params;
+    if (!isValidUUID(id)) return errorResponse("Invalid hostel ID", 400);
+
+    const validated = updateHostelSchema.parse(await request.json());
+
+    const existing = await prisma.schoolHostel.findFirst({
+      where: { id, companyId: session.user.companyId },
+      select: { id: true },
+    });
+    if (!existing) return errorResponse("Hostel not found", 404);
+
+    const updated = await prisma.schoolHostel.update({
+      where: { id: existing.id },
+      data: {
+        ...(validated.name !== undefined ? { name: validated.name } : {}),
+        ...(validated.genderPolicy !== undefined
+          ? { genderPolicy: validated.genderPolicy }
+          : {}),
+        ...(validated.capacity !== undefined ? { capacity: validated.capacity } : {}),
+        ...(validated.isActive !== undefined ? { isActive: validated.isActive } : {}),
+        ...(validated.avatarUrl !== undefined ? { avatarUrl: validated.avatarUrl } : {}),
+        ...(validated.emoji !== undefined ? { emoji: validated.emoji } : {}),
+        ...(validated.accent !== undefined ? { accent: validated.accent } : {}),
+      },
+    });
+
+    return successResponse(updated);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return errorResponse("Validation failed", 400, error.issues);
+    }
+    console.error("[API] PATCH /api/v2/schools/boarding/hostels/[id] error:", error);
+    return errorResponse("Failed to update hostel");
+  }
+}
 
 export async function GET(
   request: NextRequest,

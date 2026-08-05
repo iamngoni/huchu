@@ -267,5 +267,34 @@ for (const viewport of [
         fullPage: true,
       });
     });
+
+    test("hostel record page", async ({ page }) => {
+      const list = await page.request.get("/api/v2/schools/boarding/hostels?limit=25");
+      expect(list.status()).toBeLessThan(400);
+      const body = await list.json();
+      const candidates: { id: string; code: string; name: string }[] = body?.data ?? [];
+      test.skip(candidates.length === 0, "the demo tenant has no hostels");
+
+      const hostel = candidates[0];
+      await expect(async () => {
+        await page.goto(`/schools/boarding/${hostel.id}`);
+        // `exact: true` is load-bearing. getByText does CASE-INSENSITIVE
+        // SUBSTRING matching, so "NIGHTINGALE" also matches the app bar's
+        // <h1>Nightingale House</h1> — and `.first()` then picked that h1, which
+        // is hidden at desktop width, so the assertion failed on a page that was
+        // rendering perfectly. The other record types pass without this only
+        // because their references (S1002, T001, F1) are not substrings of their
+        // names; this one was luck, not correctness.
+        await expect(page.getByText(hostel.code, { exact: true }).first()).toBeVisible({
+          timeout: 20_000,
+        });
+      }).toPass({ timeout: 120_000 });
+
+      await expect(page.getByRole("tab", { name: /Boarders/ })).toBeVisible();
+      await page.screenshot({
+        path: `${SHOTS}/record-hostel-${viewport.name}.png`,
+        fullPage: true,
+      });
+    });
   });
 }
