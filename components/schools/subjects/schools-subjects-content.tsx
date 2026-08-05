@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -79,11 +80,26 @@ export function SchoolsSubjectsContent() {
       {
         accessorKey: "code",
         header: "Code",
-        cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
+        cell: ({ row }) => (
+          <Link
+            href={`/schools/subjects/${row.original.id}`}
+            className="font-medium text-primary hover:underline"
+          >
+            {row.original.code}
+          </Link>
+        ),
       },
       {
         accessorKey: "name",
         header: "Name",
+        cell: ({ row }) => (
+          <Link
+            href={`/schools/subjects/${row.original.id}`}
+            className="hover:underline"
+          >
+            {row.original.name}
+          </Link>
+        ),
       },
       {
         id: "type",

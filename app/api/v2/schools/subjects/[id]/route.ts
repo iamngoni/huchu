@@ -17,12 +17,39 @@ const updateSubjectSchema = z
     isCore: z.boolean().optional(),
     passMark: z.number().finite().min(0).max(100).optional(),
     isActive: z.boolean().optional(),
+    // S-4.3 — the record page's identity strip. A subject is a thing, so it may
+    // carry an emoji: 📐 reads faster down a list than a repeated generic icon.
+    avatarUrl: z.string().trim().url().max(2000).nullable().optional(),
+    emoji: z.string().trim().min(1).max(16).nullable().optional(),
+    accent: z.string().trim().min(1).max(40).nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
   });
 
 const subjectDetailInclude = {
+  /**
+   * S-4.3 — who teaches this subject, and to whom.
+   *
+   * The include used to be `_count.classSubjects` alone, which answers "how many"
+   * and is enough for a list of subjects. The record page is opened to ask which
+   * classes take it and who teaches each, so it needs the rows.
+   */
+  classSubjects: {
+    include: {
+      class: { select: { id: true, code: true, name: true } },
+      stream: { select: { id: true, code: true, name: true } },
+      term: { select: { id: true, code: true, name: true } },
+      teacherProfile: {
+        select: {
+          id: true,
+          employeeCode: true,
+          user: { select: { id: true, name: true, email: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" as const },
+  },
   _count: {
     select: {
       classSubjects: true,
@@ -94,6 +121,9 @@ export async function PATCH(
     const updated = await prisma.schoolSubject.update({
       where: { id: existing.id },
       data: {
+        ...(validated.avatarUrl !== undefined ? { avatarUrl: validated.avatarUrl } : {}),
+        ...(validated.emoji !== undefined ? { emoji: validated.emoji } : {}),
+        ...(validated.accent !== undefined ? { accent: validated.accent } : {}),
         ...(validated.code !== undefined ? { code: validated.code } : {}),
         ...(validated.name !== undefined ? { name: validated.name } : {}),
         ...(validated.isCore !== undefined ? { isCore: validated.isCore } : {}),

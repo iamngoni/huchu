@@ -268,6 +268,59 @@ for (const viewport of [
       });
     });
 
+    test("subject record page", async ({ page }) => {
+      const list = await page.request.get("/api/v2/schools/subjects?limit=50");
+      expect(list.status()).toBeLessThan(400);
+      const body = await list.json();
+      const candidates: { id: string; code: string; name: string }[] = body?.data ?? [];
+      expect(candidates.length, "the demo tenant has no subjects to open").toBeGreaterThan(0);
+
+      // Prefer one that is actually timetabled, so the landing tab has rows —
+      // the Classes tab is the whole reason the detail include gained
+      // `classSubjects` instead of keeping `_count`.
+      let subject = candidates[0];
+      for (const candidate of candidates) {
+        const detail = await page.request.get(`/api/v2/schools/subjects/${candidate.id}`);
+        const record = await detail.json().catch(() => null);
+        if ((record?.classSubjects?.length ?? 0) > 0) {
+          subject = candidate;
+          break;
+        }
+      }
+
+      // Reached by clicking the row rather than by typing the URL. The page
+      // existed before the list linked to it, which is the same as not
+      // existing — so the click is the thing worth photographing.
+      await expect(async () => {
+        await page.goto("/schools/subjects");
+        await expect(
+          page.getByRole("link", { name: subject.code, exact: true }).first(),
+        ).toBeVisible({ timeout: 20_000 });
+      }).toPass({ timeout: 120_000 });
+      await page.screenshot({
+        path: `${SHOTS}/subjects-list-${viewport.name}.png`,
+        fullPage: true,
+      });
+      await page.getByRole("link", { name: subject.code, exact: true }).first().click();
+      await expect(page).toHaveURL(new RegExp(`/schools/subjects/${subject.id}$`));
+
+      // `exact: true` for the same reason as the hostel: a subject code like
+      // MATH is a substring of "Mathematics", so a loose match would find the
+      // title (and the app bar's hidden copy of it) rather than the reference.
+      await expect(page.getByText(subject.code, { exact: true }).first()).toBeVisible({
+        timeout: 20_000,
+      });
+
+      await expect(page.getByRole("tab", { name: /Classes/ })).toBeVisible();
+      // The rail's answer to "which classes take this with nobody teaching it",
+      // which is what the page exists for.
+      await expect(page.getByText("Without a teacher").first()).toBeVisible();
+      await page.screenshot({
+        path: `${SHOTS}/record-subject-${viewport.name}.png`,
+        fullPage: true,
+      });
+    });
+
     test("hostel record page", async ({ page }) => {
       const list = await page.request.get("/api/v2/schools/boarding/hostels?limit=25");
       expect(list.status()).toBeLessThan(400);
