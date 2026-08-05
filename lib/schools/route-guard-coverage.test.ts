@@ -44,6 +44,13 @@ const GUARD_MARKERS = [
    * repeating the pair in six files.
    */
   "importPermissionDenial",
+  /**
+   * S-4.5 — global search does not refuse, it narrows. An arm the caller's role
+   * cannot see is not queried at all, so there is no denial message to return
+   * and `schoolPermissionDenial` is the wrong shape; the predicate underneath it
+   * is what decides. A route naming this is still deciding by role.
+   */
+  "canSchoolRoleDo",
   "canViewAnyPortalSubject",
   "resolvePortalStudent",
   "resolvePortalGuardian",

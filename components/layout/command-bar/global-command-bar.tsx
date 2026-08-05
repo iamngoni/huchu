@@ -17,16 +17,20 @@ import {
   Checklist,
   Funnel,
   HelpCircle,
+  Home,
+  ManageAccounts,
   MapPin,
+  MedusaBookOpenIcon,
   Package,
   PanelLeft,
   Receipt,
   Search,
+  TableRows,
   Users,
   Wallet,
   type LucideIcon,
 } from "@/lib/icons";
-import type { SearchResult, SearchResultType } from "@/lib/crm/search";
+import type { SearchResult, SearchResultType } from "@/lib/records/search-result";
 
 import { CommandBar } from "./command-bar";
 import type { CommandGroup, CommandItem } from "./command-bar-types";
@@ -40,6 +44,8 @@ import {
 
 type SearchGroup = { type: SearchResultType; label: string; results: SearchResult[] };
 
+// The same icons `RecordMark` draws for these kinds, so a pupil looks like a
+// pupil whether you found her in the search box or opened her from a register.
 const TYPE_ICONS: Record<SearchResultType, LucideIcon> = {
   PERSON: Users,
   COMPANY: Building2,
@@ -51,6 +57,12 @@ const TYPE_ICONS: Record<SearchResultType, LucideIcon> = {
   RECEIPT: Receipt,
   PRODUCT: Package,
   CUSTOMER: Wallet,
+  STUDENT: Users,
+  GUARDIAN: Users,
+  TEACHER: ManageAccounts,
+  CLASS: TableRows,
+  SUBJECT: MedusaBookOpenIcon,
+  HOSTEL: Home,
 };
 
 type AppointmentRow = {
@@ -165,11 +177,23 @@ export function GlobalCommandBar() {
     queryKey: ["global-search", debounced],
     queryFn: () =>
       fetchJson<{ groups: SearchGroup[]; total: number }>(
-        `/api/v2/crm/search?q=${encodeURIComponent(debounced)}`,
+        `/api/v2/records/search?q=${encodeURIComponent(debounced)}`,
       ),
     enabled: open && debounced.length >= 2,
     placeholderData: (previous) => previous,
   });
+
+  const enabledFeatures = (session?.user as { enabledFeatures?: string[] } | undefined)
+    ?.enabledFeatures;
+
+  // Which modules this tenant actually has. The bar is one component on every
+  // page of every module, and until S-4.5 its every band was a CRM band: a
+  // school's bursar pressing ⌘K was offered "New deal" and a NOW band fed by
+  // `/api/v2/crm/appointments`, which her tenant answers with 403 because the
+  // prefix is gated on `crm.core`. Search is now module-neutral; these are the
+  // parts that cannot be, so they are asked for only where they exist.
+  const hasCrm = (enabledFeatures ?? []).includes("crm.core");
+  const hasSchools = (enabledFeatures ?? []).some((feature) => feature.startsWith("schools."));
 
   // Today's appointments, for the NOW band. Asked for only while the bar is
   // open: it is a band at the top of a palette, not a reason to poll.
@@ -184,12 +208,9 @@ export function GlobalCommandBar() {
         `/api/v2/crm/appointments?from=${start.toISOString()}&to=${end.toISOString()}`,
       );
     },
-    enabled: open,
+    enabled: open && hasCrm,
     staleTime: 60_000,
   });
-
-  const enabledFeatures = (session?.user as { enabledFeatures?: string[] } | undefined)
-    ?.enabledFeatures;
 
   const go = React.useCallback(
     (href: string, entry?: RecentEntry) => {
@@ -332,19 +353,39 @@ export function GlobalCommandBar() {
       });
     }
 
-    // 4. The things people make.
+    // 4. The things people make. Per module, because a shortcut to a page the
+    // tenant's gating refuses is a shortcut to /access-blocked.
     const creates: Array<{ label: string; href: string; icon: LucideIcon }> = [
-      { label: "New task", href: "/crm/tasks?new=1", icon: Checklist },
-      { label: "New deal", href: "/crm/deals?new=1", icon: Funnel },
-      { label: "New person", href: "/crm/people?new=1", icon: Users },
-      { label: "New company", href: "/crm/companies?new=1", icon: Building2 },
-      { label: "Search tasks", href: "/crm/tasks", icon: Search },
+      ...(hasCrm
+        ? [
+            { label: "New task", href: "/crm/tasks?new=1", icon: Checklist },
+            { label: "New deal", href: "/crm/deals?new=1", icon: Funnel },
+            { label: "New person", href: "/crm/people?new=1", icon: Users },
+            { label: "New company", href: "/crm/companies?new=1", icon: Building2 },
+            { label: "Search tasks", href: "/crm/tasks", icon: Search },
+          ]
+        : []),
+      ...(hasSchools
+        ? [
+            // Lists rather than forms: a pupil is admitted through admissions
+            // (S-1.4), not through a "new student" dialog, and a shortcut that
+            // promises a form nobody wrote is worse than none.
+            { label: "Students", href: "/schools/students", icon: Users },
+            { label: "Admissions", href: "/schools/admissions", icon: AddressBook },
+            { label: "Classes", href: "/schools/classes", icon: TableRows },
+            { label: "Subjects", href: "/schools/subjects", icon: MedusaBookOpenIcon },
+            { label: "Staff", href: "/schools/teachers", icon: ManageAccounts },
+          ]
+        : []),
     ].filter((entry) => matches(entry.label));
 
     if (creates.length > 0) {
       built.push({
         id: "create",
-        label: "Tasks suggestions",
+        // "Shortcuts" rather than "Tasks suggestions": the group holds whatever
+        // the tenant's module offers — forms in the CRM, registers in a school —
+        // and none of a school's are tasks.
+        label: "Shortcuts",
         items: creates.map((entry): CommandItem => ({
           id: `create-${entry.href}`,
           group: "create",
@@ -441,7 +482,9 @@ export function GlobalCommandBar() {
             body="The full search page, with filters and saved queries."
           />
         ),
-        primary: { label: "Open", run: () => go("/crm/leads") },
+        // Where "everything, with filters" lives depends on what the tenant
+        // has: a school's is the student register, not the CRM's lead list.
+        primary: { label: "Open", run: () => go(hasSchools && !hasCrm ? "/schools/students" : "/crm/leads") },
       },
     ];
     const general = generalItems.filter(
@@ -456,6 +499,8 @@ export function GlobalCommandBar() {
   }, [
     enabledFeatures,
     go,
+    hasCrm,
+    hasSchools,
     needle,
     now,
     recents,

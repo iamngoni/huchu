@@ -181,7 +181,7 @@ export function RichTextComposer({
   const { data: records } = useQuery({
     queryKey: ["crm-reference-search", query],
     queryFn: () =>
-      fetchJson<SearchResponse>(`/api/v2/crm/search?q=${encodeURIComponent(query ?? "")}&limit=4`),
+      fetchJson<SearchResponse>(`/api/v2/records/search?q=${encodeURIComponent(query ?? "")}&limit=4`),
     enabled: !peopleOnly && query !== null && query.trim().length >= 2,
     staleTime: 30_000,
   });

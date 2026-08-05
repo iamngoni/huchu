@@ -14,6 +14,8 @@
  * of every other thing you might want to do with the words later.
  */
 
+import { recordType } from "@/lib/records/registry";
+
 export const REFERENCE_KINDS = [
   "user",
   "person",
@@ -24,6 +26,16 @@ export const REFERENCE_KINDS = [
   "quotation",
   "invoice",
   "receipt",
+  // Schools (S-4.5). A note on a pupil that says "sat with @[Form 2 Blue]" is
+  // the same idea as a note on a deal that names the company behind it: half of
+  // what somebody writes about a record is about a neighbouring one. Only people
+  // are notified — referring to a class is a link, not a summons.
+  "student",
+  "guardian",
+  "teacher",
+  "class",
+  "subject",
+  "hostel",
 ] as const;
 export type ReferenceKind = (typeof REFERENCE_KINDS)[number];
 
@@ -275,6 +287,21 @@ export function referenceHref(reference: Reference): string | null {
       return `/crm/invoices/${reference.id}`;
     case "receipt":
       return `/crm/receipts/${reference.id}`;
+    // Through the record registry rather than written out again: S-4.3 already
+    // decided where a student record lives, and a second copy of that answer is
+    // a broken link waiting for the first route change.
+    case "student":
+      return recordType("STUDENT").href(reference.id);
+    case "guardian":
+      return recordType("GUARDIAN").href(reference.id);
+    case "teacher":
+      return recordType("TEACHER").href(reference.id);
+    case "class":
+      return recordType("CLASS").href(reference.id);
+    case "subject":
+      return recordType("SUBJECT").href(reference.id);
+    case "hostel":
+      return recordType("HOSTEL").href(reference.id);
     default:
       return null;
   }

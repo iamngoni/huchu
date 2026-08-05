@@ -140,4 +140,23 @@ describe("referenceHref", () => {
       `/crm/people/${USER}`,
     );
   });
+
+  it("sends a school reference to the record page S-4.3 built", () => {
+    // Through `lib/records/registry.ts`, so a route change moves the mention
+    // with the page rather than leaving a link that 404s.
+    expect(referenceHref({ kind: "student", id: USER, label: "Tendai" })).toBe(
+      `/schools/students/${USER}`,
+    );
+    expect(referenceHref({ kind: "class", id: USER, label: "Form 2 Blue" })).toBe(
+      `/schools/classes/${USER}`,
+    );
+  });
+
+  it("reads a school reference somebody typed", () => {
+    const segments = segmentRichText(`Sat with @[Form 2 Blue](class:${USER})`);
+    expect(segments[1]).toEqual({
+      kind: "reference",
+      reference: { kind: "class", id: USER, label: "Form 2 Blue" },
+    });
+  });
 });
