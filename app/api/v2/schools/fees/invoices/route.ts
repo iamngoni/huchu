@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-utils";
 import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   apportionBase,
@@ -19,6 +20,7 @@ import {
   rate,
   resolveDocumentCurrency,
   taxOn,
+  toNumberOrZero,
   UnknownExchangeRateError,
 } from "@/lib/schools/money";
 import {
@@ -394,6 +396,32 @@ export async function POST(request: NextRequest) {
         invoiceId: invoice.id,
       });
       if (!refreshed) throw new Error("Failed to refresh invoice balances");
+
+      // S-2.8. Raising a bill is where a family's debt begins, so it is the
+      // first thing "why does this family owe this" has to be traceable to.
+      // Written on `tx`, so a bill and the record of who raised it cannot
+      // disagree about whether they happened.
+      await writeSchoolAuditEvent(tx, {
+        companyId,
+        actorId: session.user.id,
+        eventType: "schools.fee.invoice.created",
+        entityType: "SchoolFeeInvoice",
+        entityId: invoice.id,
+        payload: {
+          invoiceNo,
+          studentId: validated.studentId,
+          termId: validated.termId,
+          feeStructureId: validated.feeStructureId ?? null,
+          currency: refreshed.currency,
+          // `Decimal` in, `number` out — deliberately, at the JSON boundary.
+          totalAmount: toNumberOrZero(refreshed.totalAmount),
+          balanceAmount: toNumberOrZero(refreshed.balanceAmount),
+          lineCount: sourceLines.length,
+          status: refreshed.status,
+          issueDate: issueDate.toISOString(),
+          dueDate: dueDate.toISOString(),
+        },
+      });
 
       return tx.schoolFeeInvoice.findUnique({
         where: { id: invoice.id },

@@ -8,6 +8,7 @@ import {
 } from "@/lib/api-utils";
 import { reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   apportionBase,
@@ -16,7 +17,9 @@ import {
   percent,
   rate,
   resolveDocumentCurrency,
+  sumMoney,
   taxOn,
+  toNumberOrZero,
   UnknownExchangeRateError,
 } from "@/lib/schools/money";
 import {
@@ -202,6 +205,17 @@ export async function POST(request: NextRequest) {
       created: 0,
       skipped: students.length - eligibleStudents.length,
       errors: [] as Array<{ studentId: string; studentNo: string; error: string }>,
+      /**
+       * S-2.8. Every bill this run actually raised, for the audit row below.
+       * Collected as it goes so the row can name them rather than count them.
+       */
+      raised: [] as Array<{
+        invoiceId: string;
+        invoiceNo: string;
+        studentId: string;
+        studentNo: string;
+        totalAmount: Prisma.Decimal;
+      }>,
     };
 
     // Process in batches of 50 to avoid timeout
@@ -217,7 +231,7 @@ export async function POST(request: NextRequest) {
               entity: "SCHOOL_FEE_INVOICE",
             });
 
-            await prisma.$transaction(async (tx) => {
+            const raised = await prisma.$transaction(async (tx) => {
               const invoice = await tx.schoolFeeInvoice.create({
                 data: {
                   companyId,
@@ -289,8 +303,19 @@ export async function POST(request: NextRequest) {
                   },
                 });
               }
+
+              return {
+                invoiceId: invoice.id,
+                invoiceNo: invoice.invoiceNo,
+                studentId: student.id,
+                studentNo: student.studentNo,
+                totalAmount: refreshed.totalAmount,
+              };
             });
 
+            // Only what committed. A transaction that rolled back raised no
+            // bill and must not appear in the run's audit row.
+            results.raised.push(raised);
             results.created += 1;
           } catch (error) {
             // S-2.4. The index is what actually closes the door — two bursars
@@ -310,6 +335,64 @@ export async function POST(request: NextRequest) {
               error: error instanceof Error ? error.message : "Unknown error",
             });
           }
+        }),
+      );
+    }
+
+    /**
+     * S-2.8 — **one event for the run, not one per invoice.**
+     *
+     * A bursar performed one action: "bill Form 1 for Term 2 off this fee
+     * sheet". A hundred rows would multiply that single decision by the size of
+     * the class and bury the events that actually need finding — a write-off, a
+     * waiver — under a wall of identical rows. So the run gets one row, and it
+     * is useless unless it names what it raised: every invoice is listed by id,
+     * number, student and amount, so "where did this bill come from" is still
+     * answerable from the log.
+     *
+     * It is written after the invoices rather than inside them because there is
+     * no single transaction to be inside — the run is already N transactions by
+     * construction, one per student, so that a duplicate for one child does not
+     * abort the other ninety-nine. The row is written on a transaction of its
+     * own and its failure is not swallowed: a run whose record cannot be
+     * written is reported as a failure rather than reported as a success.
+     *
+     * A run that raised nothing — everything skipped as already billed — moved
+     * no money and gets no row.
+     */
+    if (results.raised.length > 0) {
+      await prisma.$transaction((tx) =>
+        writeSchoolAuditEvent(tx, {
+          companyId,
+          actorId: session.user.id,
+          eventType: "schools.fee.invoice.bulk-generated",
+          // The sheet the run was driven from. There is no "run" entity to
+          // point at, and the fee structure is what decided every amount.
+          entityType: "SchoolFeeStructure",
+          entityId: feeStructure.id,
+          payload: {
+            termId: validated.termId,
+            classId: validated.classId ?? feeStructure.classId,
+            streamId: validated.streamId ?? null,
+            feeStructureId: feeStructure.id,
+            feeStructureName: feeStructure.name,
+            currency: documentCurrency.currency,
+            issuedImmediately: Boolean(validated.issueNow),
+            invoiceCount: results.raised.length,
+            // Decimals summed as Decimals, coerced once at the boundary.
+            totalBilled: toNumberOrZero(
+              sumMoney(results.raised.map((invoice) => invoice.totalAmount)),
+            ),
+            skipped: results.skipped,
+            failed: results.errors.length,
+            invoices: results.raised.map((invoice) => ({
+              invoiceId: invoice.invoiceId,
+              invoiceNo: invoice.invoiceNo,
+              studentId: invoice.studentId,
+              studentNo: invoice.studentNo,
+              totalAmount: toNumberOrZero(invoice.totalAmount),
+            })),
+          },
         }),
       );
     }

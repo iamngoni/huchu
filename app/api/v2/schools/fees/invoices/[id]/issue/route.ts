@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   apportionBase,
   isZeroOrLess,
   resolveBaseCurrency,
+  toNumberOrZero,
 } from "@/lib/schools/money";
 import { emitSchoolFeeAccountingEvent, refreshFeeInvoiceBalance } from "../../../_helpers";
 
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         throw new Error("Cannot issue an invoice with zero amount");
       }
 
-      return tx.schoolFeeInvoice.update({
+      const issued = await tx.schoolFeeInvoice.update({
         where: { id: existing.id },
         data: {
           issueDate,
@@ -74,6 +76,31 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           feeStructure: { select: { currency: true } },
         },
       });
+
+      // S-2.8. Inside the transaction that issued it. A draft is a school
+      // talking to itself; an issued invoice is a demand on a family, and the
+      // moment it becomes one is the thing an auditor asks about.
+      await writeSchoolAuditEvent(tx, {
+        companyId,
+        actorId: session.user.id,
+        eventType: "schools.fee.invoice.issued",
+        entityType: "SchoolFeeInvoice",
+        entityId: issued.id,
+        payload: {
+          invoiceNo: issued.invoiceNo,
+          studentId: issued.studentId,
+          termId: issued.termId,
+          currency: issued.currency,
+          // Money is `Decimal`. Coerced here rather than left to whatever
+          // `JSON.stringify` makes of a Decimal on its way into `payloadJson`.
+          totalAmount: toNumberOrZero(issued.totalAmount),
+          balanceAmount: toNumberOrZero(issued.balanceAmount),
+          issueDate: issued.issueDate.toISOString(),
+          status: issued.status,
+        },
+      });
+
+      return issued;
     });
 
     if (!updated) return errorResponse("Fee invoice not found", 404);

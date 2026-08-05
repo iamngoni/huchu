@@ -778,7 +778,11 @@ export function SchoolsFeesContent() {
           </p>
         </div>
         <div>
-          <h2 className="text-sm font-semibold">Issued Invoices</h2>
+          {/* The figure behind this counts ISSUED and PART_PAID — invoices
+              still owing something. It was labelled "Issued Invoices", which
+              read as nought beside three invoices that had been issued and
+              paid. The count is right; the word was wrong. */}
+          <h2 className="text-sm font-semibold">Unpaid invoices</h2>
           <p className="font-mono tabular-nums">{summary?.issuedInvoices ?? 0}</p>
         </div>
         <div>

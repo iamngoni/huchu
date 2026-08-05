@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   isZeroOrLess,
   money,
   resolveBaseCurrency,
   toBaseAmount,
+  toNumberOrZero,
 } from "@/lib/schools/money";
 import { emitSchoolFeeAccountingEvent } from "../../../_helpers";
 
@@ -42,17 +44,46 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return errorResponse("Invoice has no outstanding balance", 400);
     }
 
-    const updated = await prisma.schoolFeeInvoice.update({
-      where: { id: invoice.id },
-      data: {
-        status: "WRITEOFF",
-        writeOffAmount: money(invoice.balanceAmount),
-        balanceAmount: money(0),
-        notes: invoice.notes
-          ? `${invoice.notes}\nWrite-off: ${validated.reason}`
-          : `Write-off: ${validated.reason}`,
-      },
-      include: { feeStructure: { select: { currency: true } } },
+    // S-2.8. This update used to stand on its own, with nothing anywhere
+    // recording who gave up on the money. The transaction exists so the
+    // write-off and the row that names its author commit together: an audit
+    // event that survives a rolled-back write is a lie, and one skipped by a
+    // failed commit is a hole.
+    const updated = await prisma.$transaction(async (tx) => {
+      const written = await tx.schoolFeeInvoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: "WRITEOFF",
+          writeOffAmount: money(invoice.balanceAmount),
+          balanceAmount: money(0),
+          notes: invoice.notes
+            ? `${invoice.notes}\nWrite-off: ${validated.reason}`
+            : `Write-off: ${validated.reason}`,
+        },
+        include: { feeStructure: { select: { currency: true } } },
+      });
+
+      await writeSchoolAuditEvent(tx, {
+        companyId,
+        actorId: session.user.id,
+        eventType: "schools.fee.invoice.written-off",
+        entityType: "SchoolFeeInvoice",
+        entityId: written.id,
+        reason: validated.reason,
+        payload: {
+          invoiceNo: written.invoiceNo,
+          studentId: written.studentId,
+          termId: written.termId,
+          currency: written.currency,
+          // Decimal columns, coerced at the JSON boundary on purpose.
+          writtenOff: toNumberOrZero(written.writeOffAmount),
+          totalAmount: toNumberOrZero(written.totalAmount),
+          paidAmount: toNumberOrZero(written.paidAmount),
+          statusBefore: invoice.status,
+        },
+      });
+
+      return written;
     });
 
     const baseCurrency = await resolveBaseCurrency(companyId);

@@ -8,11 +8,11 @@ import {
  *
  * DoD item 7 — "every privileged action writes a `PlatformAuditEvent`" — was
  * unmet across the whole fee surface: before S-2.5/S-2.6 not one route in
- * `app/api/v2/schools/**` wrote an audit row. This closes it for the actions
- * that move money in or out, which are the ones this pass touches. Issuing an
- * invoice, writing one off, voiding a receipt and applying a waiver are equally
- * privileged and equally silent; they are named in the report rather than fixed
- * here.
+ * `app/api/v2/schools/**` wrote an audit row. That pass closed it for the
+ * actions that move money in or out, and named the rest — raising a bill,
+ * issuing it, writing it off, granting a waiver — as equally privileged and
+ * equally silent. They are covered here now: a school that cannot answer "who
+ * wrote off this $400 and when" has no answer at all.
  *
  * The union exists so that a new event type is a deliberate addition rather
  * than a string typed twice slightly differently — an audit log is only
@@ -26,7 +26,27 @@ export type SchoolAuditEventType =
   | "schools.fee.credit.allocated"
   | "schools.fee.refund.requested"
   | "schools.fee.refund.paid"
-  | "schools.fee.refund.cancelled";
+  | "schools.fee.refund.cancelled"
+  /**
+   * S-2.8 — the rest of DoD item 7. Six bursar actions changed what a family
+   * owed and said nothing about it. Each of these is written inside the
+   * transaction that performs the mutation, so no row describes a bill that
+   * was never raised and none is lost to a failed commit.
+   */
+  | "schools.fee.invoice.created"
+  | "schools.fee.invoice.issued"
+  /** One row for one bulk run, naming every invoice it raised. */
+  | "schools.fee.invoice.bulk-generated"
+  | "schools.fee.invoice.written-off"
+  | "schools.fee.waiver.created"
+  /**
+   * A waiver created straight into `APPROVED` or `APPLIED` was authorised in
+   * the same breath as it was written down. Approving is the privileged half —
+   * a draft costs a family nothing — so it is named separately rather than
+   * hidden in the created row's payload.
+   */
+  | "schools.fee.waiver.approved"
+  | "schools.fee.waiver.applied";
 
 export type SchoolAuditArgs = {
   companyId: string;

@@ -178,6 +178,7 @@ The models the pack promises but does not have.
 | S-2.5 | As a bursar, an overpayment becomes a credit rather than disappearing | Allocation validated inside the transaction; surplus carried, not clamped to zero | `done` |
 | S-2.6 | As a bursar, I can refund a parent | `SchoolFeeRefund` model and workflow replacing the 501 stub | `done` |
 | S-2.7 | As a school on the fiscalisation add-on, fee receipts are fiscalised | School receipts issue a `FiscalReceipt` through the existing FDMS link | `done` |
+| S-2.8 | As a bursar's head, I can see who changed what a family owed | The six privileged fee actions S-2.5/S-2.6 named and left silent — creating an invoice, issuing one, bulk-generating a run, writing one off, granting a waiver, applying one — each write a `PlatformAuditEvent` inside the transaction that performs the mutation. A bulk run is one event naming every invoice it raised, not one per child. Tested per site, and for a write-off and a waiver application tested to leave no row behind when the mutation rolls back | `done` |
 
 ## Iteration 3 — Provisioning
 

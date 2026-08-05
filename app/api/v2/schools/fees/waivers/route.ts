@@ -9,12 +9,14 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   exceeds,
   money,
   resolveDocumentCurrency,
   toBaseAmount,
+  toNumberOrZero,
   UnknownExchangeRateError,
 } from "@/lib/schools/money";
 
@@ -184,44 +186,91 @@ export async function POST(request: NextRequest) {
 
     const amount = money(validated.amount);
     const status = validated.status ?? "DRAFT";
-    const created = await prisma.schoolFeeWaiver.create({
-      data: {
+    const approvedHere = status === "APPROVED" || status === "APPLIED";
+
+    // S-2.8. The create and the rows that describe it commit together. This
+    // route can hand out an approval in the same call that writes the waiver
+    // down — `status: "APPROVED"` stamps `approvedById` — and that approval is
+    // what reduces a family's bill, so it cannot be the one thing with no
+    // record behind it.
+    const created = await prisma.$transaction(async (tx) => {
+      const waiver = await tx.schoolFeeWaiver.create({
+        data: {
+          companyId,
+          studentId: validated.studentId,
+          termId: validated.termId,
+          invoiceId: validated.invoiceId ?? null,
+          waiverType: validated.waiverType,
+          amount,
+          currency: documentCurrency.currency,
+          exchangeRate: documentCurrency.exchangeRate,
+          baseAmount: toBaseAmount(amount, documentCurrency.exchangeRate),
+          reason: validated.reason ?? null,
+          status,
+          approvedById: approvedHere ? session.user.id : null,
+          approvedAt: approvedHere ? new Date() : null,
+          appliedById: status === "APPLIED" ? session.user.id : null,
+          appliedAt: status === "APPLIED" ? new Date() : null,
+          createdById: session.user.id,
+        },
+        include: {
+          student: {
+            select: {
+              id: true,
+              studentNo: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          term: { select: { id: true, code: true, name: true } },
+          invoice: {
+            select: {
+              id: true,
+              invoiceNo: true,
+              status: true,
+              balanceAmount: true,
+            },
+          },
+        },
+      });
+
+      const shared = {
         companyId,
-        studentId: validated.studentId,
-        termId: validated.termId,
-        invoiceId: validated.invoiceId ?? null,
-        waiverType: validated.waiverType,
-        amount,
-        currency: documentCurrency.currency,
-        exchangeRate: documentCurrency.exchangeRate,
-        baseAmount: toBaseAmount(amount, documentCurrency.exchangeRate),
-        reason: validated.reason ?? null,
-        status,
-        approvedById: status === "APPROVED" || status === "APPLIED" ? session.user.id : null,
-        approvedAt: status === "APPROVED" || status === "APPLIED" ? new Date() : null,
-        appliedById: status === "APPLIED" ? session.user.id : null,
-        appliedAt: status === "APPLIED" ? new Date() : null,
-        createdById: session.user.id,
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            studentNo: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        term: { select: { id: true, code: true, name: true } },
-        invoice: {
-          select: {
-            id: true,
-            invoiceNo: true,
-            status: true,
-            balanceAmount: true,
-          },
-        },
-      },
+        actorId: session.user.id,
+        entityType: "SchoolFeeWaiver",
+        entityId: waiver.id,
+        reason: validated.reason ?? undefined,
+      } as const;
+      const shape = {
+        studentId: waiver.studentId,
+        termId: waiver.termId,
+        invoiceId: waiver.invoiceId,
+        waiverType: waiver.waiverType,
+        currency: waiver.currency,
+        // `amount` is a `Decimal`; a number is what belongs in the payload.
+        amount: toNumberOrZero(waiver.amount),
+        baseAmount: toNumberOrZero(waiver.baseAmount),
+        status: waiver.status,
+      };
+
+      await writeSchoolAuditEvent(tx, {
+        ...shared,
+        eventType: "schools.fee.waiver.created",
+        payload: shape,
+      });
+
+      // Two things happened when a waiver arrives already approved, and only
+      // one of them costs the school money. "Who authorised this discount" is
+      // the question an auditor asks, and it wants its own verb.
+      if (approvedHere) {
+        await writeSchoolAuditEvent(tx, {
+          ...shared,
+          eventType: "schools.fee.waiver.approved",
+          payload: { ...shape, approvedAt: waiver.approvedAt?.toISOString() ?? null },
+        });
+      }
+
+      return waiver;
     });
 
     return successResponse(created, 201);

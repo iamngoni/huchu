@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
 import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   exceeds,
   resolveBaseCurrency,
   toBaseAmount,
+  toNumberOrZero,
 } from "@/lib/schools/money";
 import {
   emitSchoolFeeAccountingEvent,
@@ -152,6 +154,34 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       if (!refreshedInvoice) {
         throw new Error("Failed to refresh invoice after waiver application");
       }
+
+      // S-2.8. Applying is the moment the discount actually comes off a bill,
+      // and it is written on `tx` alongside the update that did it. The
+      // balance before and after is on the row because the whole question is
+      // how much the family stopped owing.
+      await writeSchoolAuditEvent(tx, {
+        companyId,
+        actorId: session.user.id,
+        eventType: "schools.fee.waiver.applied",
+        entityType: "SchoolFeeWaiver",
+        entityId: updatedWaiver.id,
+        reason: validated.reason ?? waiver.reason ?? undefined,
+        payload: {
+          studentId: updatedWaiver.studentId,
+          termId: updatedWaiver.termId,
+          invoiceId: invoice.id,
+          invoiceNo: invoice.invoiceNo,
+          waiverType: updatedWaiver.waiverType,
+          currency: updatedWaiver.currency,
+          // Every one of these is a `Decimal` column. Coerced here rather
+          // than left to be stringified on the way into `payloadJson`.
+          amount: toNumberOrZero(updatedWaiver.amount),
+          baseAmount: toNumberOrZero(updatedWaiver.baseAmount),
+          balanceBefore: toNumberOrZero(invoice.balanceAmount),
+          balanceAfter: toNumberOrZero(refreshedInvoice.balanceAmount),
+          statusWhenApproved: waiver.status,
+        },
+      });
 
       return tx.schoolFeeWaiver.findUnique({
         where: { id: updatedWaiver.id },
