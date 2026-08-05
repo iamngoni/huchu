@@ -103,6 +103,8 @@ export type ParentPortalData = {
     status: string;
     issueDate: string;
     dueDate: string;
+    /** The currency the figures below are stated in (S-2.2). */
+    currency: string;
     totalAmount: number;
     paidAmount: number;
     waivedAmount: number;
@@ -217,6 +219,8 @@ export type StudentPortalData = {
     status: string;
     issueDate: string;
     dueDate: string;
+    /** The currency the figures below are stated in (S-2.2). */
+    currency: string;
     totalAmount: number;
     paidAmount: number;
     waivedAmount: number;

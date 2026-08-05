@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { formatSchoolMoney } from "@/lib/schools/format";
 import { bulkGenerateInvoices, fetchSchoolFeeStructures } from "@/lib/schools/fees-v2";
 import { fetchSchoolsClasses } from "@/lib/schools/admin-v2";
 
@@ -255,8 +256,13 @@ export function BulkGenerateInvoicesDialog({ open, onOpenChange }: BulkGenerateD
               </Select>
               {selectedStructure && (
                 <p className="text-xs text-muted-foreground">
-                  Total: <span className="font-mono">{selectedStructure.totals?.amount.toFixed(2)}</span>{" "}
-                  {selectedStructure.currency}
+                  Total:{" "}
+                  <span className="font-mono tabular-nums">
+                    {formatSchoolMoney(
+                      selectedStructure.totals?.amount ?? 0,
+                      selectedStructure.currency,
+                    )}
+                  </span>
                 </p>
               )}
             </div>

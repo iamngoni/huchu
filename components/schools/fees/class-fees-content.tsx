@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { fetchSchoolsClasses } from "@/lib/schools/admin-v2";
+import { formatSchoolMoney } from "@/lib/schools/format";
 import { fetchSchoolFeeInvoices } from "@/lib/schools/fees-v2";
 
 const STATUS_OPTIONS = [
@@ -21,13 +22,6 @@ const STATUS_OPTIONS = [
 ];
 
 type InvoiceStatus = "DRAFT" | "ISSUED" | "PART_PAID" | "PAID" | "VOIDED" | "WRITEOFF";
-
-function money(amount: number) {
-  return amount.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 function statusBadge(status: InvoiceStatus) {
   if (status === "PAID") return <Badge variant="secondary">Paid</Badge>;
@@ -121,7 +115,8 @@ export function ClassFeesContent({
       </FilterBar>
 
       <p className="text-sm text-muted-foreground">
-        {money(outstanding)} outstanding across {owing} student
+        <span className="tabular-nums">{formatSchoolMoney(outstanding)}</span> outstanding across{" "}
+        {owing} student
         {owing === 1 ? "" : "s"}, from {invoices.length} invoice
         {invoices.length === 1 ? "" : "s"}.
       </p>
@@ -142,10 +137,13 @@ export function ClassFeesContent({
               subtitle={
                 <span className="mt-1 flex flex-wrap items-center gap-2">
                   <span>
-                    {invoice.invoiceNo} · {invoice.term.name} · {money(invoice.totalAmount)}{" "}
+                    {invoice.invoiceNo} · {invoice.term.name} ·{" "}
+                    <span className="tabular-nums">
+                      {formatSchoolMoney(invoice.totalAmount, invoice.currency)}
+                    </span>{" "}
                     billed
                     {invoice.balanceAmount > 0
-                      ? ` · ${money(invoice.balanceAmount)} outstanding`
+                      ? ` · ${formatSchoolMoney(invoice.balanceAmount, invoice.currency)} outstanding`
                       : ""}
                   </span>
                   {statusBadge(invoice.status)}
