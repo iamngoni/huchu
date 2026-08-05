@@ -10,6 +10,17 @@ import { AppearanceProvider } from "@/components/providers/appearance-provider"
 import { OfflineProvider } from "@/components/providers/offline-provider"
 import { Toaster } from "@/components/ui/toaster"
 
+/**
+ * Whether the browser has told us it is offline.
+ *
+ * Guarded on `onLine` rather than on `navigator`, because Node defines a
+ * global `navigator` without it and `!undefined` reads as "offline" anywhere
+ * this runs outside a browser.
+ */
+function browserIsOffline() {
+  return typeof navigator !== "undefined" && navigator.onLine === false
+}
+
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [queryClient] = React.useState(
@@ -22,7 +33,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             staleTime: 60_000,
             refetchOnWindowFocus: false,
             retry: (failureCount) => {
-              if (typeof navigator !== "undefined" && !navigator.onLine) {
+              if (browserIsOffline()) {
                 return false
               }
               return failureCount < 2
@@ -31,7 +42,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           mutations: {
             networkMode: "offlineFirst",
             retry: (failureCount) => {
-              if (typeof navigator !== "undefined" && !navigator.onLine) {
+              if (browserIsOffline()) {
                 return false
               }
               return failureCount < 1

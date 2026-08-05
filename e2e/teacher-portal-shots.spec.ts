@@ -24,6 +24,12 @@ test.use({
     args: ["--no-proxy-server"],
   },
   storageState: AUTH_STATE,
+  // The app registers an offline service worker. Once it installs it sits in
+  // front of `/api/v2`, and a run would pass or hang depending on whether the
+  // install had finished — the same test green in one context and stuck on a
+  // skeleton in the next. Offline behaviour has its own spec; this one is
+  // about what the screens look like.
+  serviceWorkers: "block",
 });
 
 test.skip(process.env.VISUAL_PASS !== "1", "See visual-pass.spec.ts for setup.");
@@ -37,6 +43,7 @@ test.skip(process.env.VISUAL_PASS !== "1", "See visual-pass.spec.ts for setup.")
  */
 const SCREENS = [
   { slug: "today", path: "/portal/teacher", ready: "Today's lessons" },
+  { slug: "attendance", path: "/portal/teacher/attendance", ready: "on the class list" },
 ];
 
 test.beforeAll(async ({ browser }) => {
@@ -82,19 +89,27 @@ test.beforeAll(async ({ browser }) => {
 /**
  * Compile the routes before measuring them.
  *
- * `next dev` builds a route on its first request, which is tens of seconds for
- * a page and its API. Without this the first viewport screenshots a skeleton
- * and the second screenshots the real screen — the run reads as flaky when it
- * is just a cold server.
+ * `next dev` builds a route on its first request, and the client bundle only
+ * when a browser actually runs it. An earlier version warmed with
+ * `request.get()`, which fetches the HTML and compiles none of the JavaScript
+ * — so the first two tests in the run still screenshotted skeletons and the
+ * last two passed, which reads as flakiness and is really a cold server. Warm
+ * with a real navigation, and wait for the screen the tests wait for.
  */
 test.beforeAll(async ({ browser }) => {
+  // Compiling a screen takes longer than a test does, and there is one per
+  // screen. The default 60s hook budget is for asserting, not for building.
+  test.setTimeout(60_000 * SCREENS.length);
   const context = await browser.newContext({ storageState: AUTH_STATE });
-  await Promise.all(
-    [
-      "/api/v2/schools/portal/teacher/me/today",
-      ...SCREENS.map((screen) => screen.path),
-    ].map((target) => context.request.get(target).catch(() => undefined)),
-  );
+  const page = await context.newPage();
+  for (const screen of SCREENS) {
+    // Compiling is the point; whether this render finishes is not. The tests
+    // do the waiting, and a hook that blocks on the same condition just moves
+    // the timeout somewhere it reports worse.
+    await page
+      .goto(screen.path, { waitUntil: "domcontentloaded", timeout: 45_000 })
+      .catch(() => undefined);
+  }
   await context.close();
 });
 
@@ -108,10 +123,20 @@ for (const viewport of [
 
     for (const screen of SCREENS) {
       test(`${screen.slug}`, async ({ page }) => {
-        await page.goto(screen.path);
-        await expect(page.getByText(screen.ready).first()).toBeVisible({
-          timeout: 30_000,
-        });
+        // Reload rather than wait harder.
+        //
+        // The app-wide hydration mismatch recorded in schools-open-questions
+        // makes React discard the tree and rebuild it, and often enough the
+        // rebuilt tree never gets its data — the page sits on its header with
+        // no query in flight. Waiting longer does not help, because nothing is
+        // pending; loading the page again does. Two attempts, so a screen that
+        // is genuinely broken still fails.
+        await expect(async () => {
+          await page.goto(screen.path);
+          await expect(page.getByText(screen.ready).first()).toBeVisible({
+            timeout: 20_000,
+          });
+        }).toPass({ timeout: 90_000, intervals: [1_000] });
         // The rail is part of every screenshot, so wait for it to stop being
         // a skeleton too.
         await expect(page.getByText("Loading your classes…")).toHaveCount(0, {

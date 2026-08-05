@@ -137,6 +137,38 @@ Two calls inside that I want to flag:
 - **Library is split.** Borrowing and browsing are a student portal screen;
   the catalogue, stock and fines are the librarian's, which is office work.
 
+
+### 12. Three app-wide bugs the portal build turned up
+
+None of these are schools defects, but all three were breaking the portal, so
+they are fixed. Recording them because they affect every module.
+
+**Node's `navigator` made the server think it was offline.** Node 18 and later
+define a global `navigator` carrying little more than `userAgent`. The offline
+layer guarded on `typeof navigator === "undefined"`, which passed on the
+server, read `navigator.onLine` as `undefined`, and concluded the machine was
+offline. Every authenticated page server-rendered the offline guard, the client
+rendered the app, and React threw the page away on hydration. Guarded on
+`onLine` itself now, in `hooks/use-offline-connectivity.ts` and
+`lib/offline/connectivity.ts`.
+
+**The design system's `Toaster` renders nothing on the server and a viewport on
+the client**, which is the same mismatch one layer down. It is gated on
+`useSyncExternalStore` with a server snapshot of `false` so the first client
+render matches. Worth reporting upstream. Two obvious-looking fixes are wrong:
+`dynamic(…, { ssr: false })` suspends during hydration and the commit never
+lands, and a `useState`+`useEffect` mount flag is a cascading render the
+compiler's lint rejects.
+
+**A TanStack Query `useQuery` mounted in a Next layout does not re-render when
+it resolves.** The request returned 200 with the right body, the `queryFn`
+promise resolved, and the observer never notified React — the screen sat on its
+skeleton until something else forced a render. The same query in a *page*
+component is fine. The teacher portal now loads its day on the server in the
+layout and hands it to the client provider as `initialData`, which is better
+anyway. **If you see a portal screen stuck loading, this is the first thing to
+suspect.** I have not found the root cause and it deserves one.
+
 ---
 
 _The changelog for this work lives in the roadmap; this file is a wall, not a

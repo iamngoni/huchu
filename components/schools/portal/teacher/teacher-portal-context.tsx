@@ -70,7 +70,7 @@ export type TeacherDay = {
 };
 
 type TeacherPortalValue = {
-  day: TeacherDay | null;
+  day: TeacherDay;
   isLoading: boolean;
   error: unknown;
   /** The class rail's selection, shared by every screen in the portal. */
@@ -96,15 +96,24 @@ const TeacherPortalContext = createContext<TeacherPortalValue | null>(null);
  * version synced a default into state from an effect, which is a cascading
  * render for a value that was already computable.
  */
-export function TeacherPortalProvider({ children }: { children: React.ReactNode }) {
+export function TeacherPortalProvider({
+  initialDay,
+  children,
+}: {
+  /** Loaded by the layout on the server, so the rail is painted, not fetched. */
+  initialDay: TeacherDay;
+  children: React.ReactNode;
+}) {
   const [chosen, setChosen] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["schools", "portal", "teacher", "today"],
     queryFn: () => fetchJson<TeacherDay>("/api/v2/schools/portal/teacher/me/today"),
+    initialData: initialDay,
   });
 
-  const classes = useMemo(() => query.data?.classes ?? [], [query.data]);
+  const data = query.data;
+  const classes = useMemo(() => data?.classes ?? [], [data]);
 
   const value = useMemo<TeacherPortalValue>(() => {
     // A choice that is no longer one of the teacher's classes — the term
@@ -115,14 +124,17 @@ export function TeacherPortalProvider({ children }: { children: React.ReactNode 
       null;
 
     return {
-      day: query.data ?? null,
-      isLoading: query.isLoading,
+      day: data,
+      // The layout hands over a loaded day, so nothing here is ever pending on
+      // first paint. `isLoading` stays in the shape for the screens that still
+      // want to say "fetching" while a refetch is in flight.
+      isLoading: false,
       error: query.error,
       classSubjectId: effective,
       setClassSubjectId: setChosen,
       selectedClass: classes.find((row) => row.classSubjectId === effective) ?? null,
     };
-  }, [query.data, query.isLoading, query.error, chosen, classes]);
+  }, [data, query.error, chosen, classes]);
 
   return (
     <TeacherPortalContext.Provider value={value}>{children}</TeacherPortalContext.Provider>

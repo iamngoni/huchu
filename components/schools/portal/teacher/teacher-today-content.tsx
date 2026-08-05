@@ -8,7 +8,6 @@ import {
   Card,
   EmptyState,
   RowCard,
-  Skeleton,
   StatCard,
 } from "@corelithzw/react";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -45,7 +44,7 @@ function currentPeriod(periods: TeacherPeriod[], minute: number) {
  * been done would be silent about exactly the thing a teacher is behind on.
  */
 export function TeacherTodayContent() {
-  const { day, isLoading, error, setClassSubjectId } = useTeacherPortal();
+  const { day, error, setClassSubjectId } = useTeacherPortal();
 
   const minute = nowMinute();
   const periods = day?.periods ?? [];
@@ -62,20 +61,6 @@ export function TeacherTodayContent() {
       <Alert tone="danger" title="Your day would not load">
         {getApiErrorMessage(error)}
       </Alert>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-4" aria-busy="true">
-        <Skeleton variant="text" height={56} />
-        {/* Deliberately not titled "Today's lessons": a loading card that
-            names the loaded card is a card a test cannot tell apart from it,
-            and this one already fooled the screenshot pass once. */}
-        <Card title="Reading your timetable…">
-          <Skeleton variant="text" height={96} />
-        </Card>
-      </div>
     );
   }
 

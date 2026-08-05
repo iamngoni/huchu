@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AppShell, Avatar, Badge, NavRail, NavRailGroup, Skeleton } from "@corelithzw/react";
+import { AppShell, Avatar, Badge, NavRail, NavRailGroup } from "@corelithzw/react";
 import { NavRailItem } from "@/components/ui/nav-rail";
 import {
   BarChart3,
@@ -79,12 +79,12 @@ const ACCOUNT = [
  */
 export function TeacherPortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { day, isLoading, classSubjectId, setClassSubjectId } = useTeacherPortal();
+  const { day, classSubjectId, setClassSubjectId } = useTeacherPortal();
 
   const [crumb, title] = TITLES[pathname] ?? TITLES["/portal/teacher"];
-  const teacherName = day?.teacher?.user.name ?? (isLoading ? "" : "Teacher");
-  const subjects = [...new Set((day?.classes ?? []).map((row) => row.subjectName))];
-  const papers = day?.workload?.papersToMark ?? 0;
+  const teacherName = day.teacher?.user.name ?? "Teacher";
+  const subjects = [...new Set((day.classes).map((row) => row.subjectName))];
+  const papers = day.workload?.papersToMark ?? 0;
 
   const isActive = (href: string) =>
     href === "/portal/teacher" ? pathname === href : pathname.startsWith(href);
@@ -105,7 +105,7 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
       >
         <Avatar
           name={teacherName}
-          {...(day?.teacher?.user.image ? { src: day.teacher.user.image } : {})}
+          {...(day.teacher?.user.image ? { src: day.teacher.user.image } : {})}
           size="md"
         />
         <span className="min-w-0">
@@ -113,18 +113,14 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
             {teacherName}
           </span>
           <span className="block truncate text-[length:var(--type-caption)] text-[color:var(--text-muted)]">
-            {isLoading
-              ? "Loading your classes…"
-              : subjects.length > 0
-                ? subjects.join(" · ")
-                : "No classes this term"}
+            {subjects.length > 0 ? subjects.join(" · ") : "No classes this term"}
           </span>
         </span>
       </Link>
 
       <NavRail label="Teacher portal navigation" className="min-h-0 flex-1 overflow-y-auto">
         <NavRailGroup label="Your classes">
-          {(day?.classes ?? []).map((row) => (
+          {(day.classes).map((row) => (
             <NavRailItem
               key={row.classSubjectId}
               active={row.classSubjectId === classSubjectId}
@@ -135,10 +131,7 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
               {row.streamName ? ` ${row.streamName}` : ""} · {row.subjectName}
             </NavRailItem>
           ))}
-          {/* "None" and "not yet loaded" are different answers, and only one of
-              them is worth telling a teacher about. */}
-          {isLoading ? <Skeleton variant="text" height={44} /> : null}
-          {!isLoading && (day?.classes ?? []).length === 0 ? (
+          {day.classes.length === 0 ? (
             <p className="px-3 py-2 text-[length:var(--type-caption)] text-[color:var(--text-muted)]">
               No classes are assigned to you this term.
             </p>
@@ -201,7 +194,7 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[length:var(--type-caption)] text-[color:var(--text-muted)]">
           {crumb}
-          {day?.term ? ` · ${day.term.name}` : ""}
+          {day.term ? ` · ${day.term.name}` : ""}
         </p>
         <h1 className="truncate text-[length:var(--type-h4)] font-semibold text-[color:var(--text-strong)]">
           {title}
