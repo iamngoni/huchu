@@ -972,6 +972,24 @@
 .student-portal .sp-setting-row .sp-sr-sb { font: 12px/1.4 var(--font-sans); color: var(--text-muted); margin-top: 2px; }
 .student-portal .sp-setting-row .sp-sr-chev { color: var(--text-subtle); display: inline-flex; }
 
+/* ── Bottom sheet: undo an off-screen transform ─────────────
+   The shipped `.x-bottom-sheet` rule parks the sheet at
+   `translateY(100%)` and slides it back with
+   `.x-bs-scrim.open .x-bottom-sheet` — a selector written for the
+   vanilla markup. The React `BottomSheet` renders its own
+   `.x-bottom-sheet-backdrop` instead and never satisfies it, so the
+   sheet opens below the fold: the scrim dims, nothing appears, and
+   handing in homework or setting a goal is unreachable.
+   The selector is deliberately narrow — a `.x-bottom-sheet` that is a
+   direct child of that backdrop only exists for the React component,
+   so nothing the vanilla CSS drives is touched. */
+.x-bottom-sheet-backdrop > .x-bottom-sheet {
+  transform: none;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
 /* ── Help cards (demo `.help-card`) ────────────────────────── */
 .student-portal .sp-help-card {
   background: var(--surface);

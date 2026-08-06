@@ -501,13 +501,11 @@
   color: var(--text-subtle);
   background: var(--surface-muted);
 }
-.te-portal .seg-item[aria-pressed="true"],
-.te-portal .segmented .seg-item.active {
-  background: var(--surface);
-  color: var(--text-strong);
-}
-.te-portal .tab-item.active,
-.te-portal .tabs [aria-selected="true"] {
+/* The design system's own tab strips already draw their underline from
+   `--brand`, which is violet in here; the label follows it. */
+.te-portal .tabs > .active,
+.te-portal .tabs > [aria-selected="true"],
+.te-portal .tabstrip > .active,
+.te-portal .tabstrip > [aria-selected="true"] {
   color: var(--te-brand-strong);
-  border-bottom-color: var(--te-brand);
 }
