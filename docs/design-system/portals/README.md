@@ -6,6 +6,18 @@ These are the **build contract** for the three school portals: every feature in 
 Open them directly (`file://`) — they are self-contained single-page prototypes with their own
 demo data, so state, empty/loading/error states and mobile behaviour can all be exercised offline.
 
+The demos reference the design-system assets at `../../` (they were served from
+`/portals/<name>/demo.html`, two levels deep), so local copies of `tokens.css`,
+`components.css`, `shared.css`, `portal-shell.css`, `icons.js`, `huchu-nav.css`
+and `huchu-nav.js` live in `docs/` — without them every demo renders unstyled.
+Re-download those alongside the demos:
+
+```bash
+for f in tokens.css components.css shared.css portal-shell.css icons.js huchu-nav.css huchu-nav.js; do
+  curl -sS -o docs/$f https://design.corelith.co.zw/$f
+done
+```
+
 | File | Audience | Primary device |
 |---|---|---|
 | `parent.html` | Parents, guardians | Mobile |
