@@ -62,14 +62,21 @@ export function SchemeOfWorkContent() {
 
   const subjects = subjectsQuery.data?.data ?? [];
   const terms = termsQuery.data?.data ?? [];
-  // The forms the school actually runs, from its classes: a scheme is written
-  // per form, and offering levels no class has invites orphan schemes.
+  // The forms the school actually runs, from its classes — labelled by the
+  // class names at each level, because the level number is internal ordering
+  // ("Form 1" may sit at level 8, above ECD and the Grades) and a picker that
+  // says "Form 8" for it would file the scheme against the wrong year group.
   const levels = useMemo(() => {
-    const found = new Set<number>();
+    const byLevel = new Map<number, Set<string>>();
     for (const row of classesQuery.data?.data ?? []) {
-      if (row.level != null) found.add(row.level);
+      if (row.level == null) continue;
+      const names = byLevel.get(row.level) ?? new Set<string>();
+      names.add(row.name);
+      byLevel.set(row.level, names);
     }
-    return [...found].sort((a, b) => a - b);
+    return [...byLevel.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([value, names]) => ({ value, label: [...names].sort().join(" / ") }));
   }, [classesQuery.data]);
 
   const ready = Boolean(subjectId && level && termId);
@@ -137,6 +144,7 @@ export function SchemeOfWorkContent() {
   };
 
   const subjectName = subjects.find((row) => row.id === subjectId)?.name;
+  const levelLabel = levels.find((row) => String(row.value) === level)?.label;
 
   return (
     <div className="space-y-4">
@@ -167,7 +175,7 @@ export function SchemeOfWorkContent() {
           label="Form"
           allLabel="Choose a form"
           value={level}
-          options={levels.map((value) => ({ value: String(value), label: `Form ${value}` }))}
+          options={levels.map((row) => ({ value: String(row.value), label: row.label }))}
           onChange={(value) => {
             setLevel(value);
             setSaved(null);
@@ -203,7 +211,7 @@ export function SchemeOfWorkContent() {
         </div>
       ) : (
         <Card
-          title={`${subjectName ?? "Subject"} — Form ${level}`}
+          title={`${subjectName ?? "Subject"} — ${levelLabel ?? "Form"}`}
           subtitle={`${weeks.length} week${weeks.length === 1 ? "" : "s"} laid out. A week with no topic is dropped on save.`}
           actions={
             <Button loading={save.isPending} onClick={() => save.mutate()}>
