@@ -10,7 +10,7 @@ import {
 import { normalizeProvidedId } from "@/lib/id-generator";
 import { buildCustomFieldValues, mergeCustomFields } from "@/lib/crm/custom-fields";
 import { prisma } from "@/lib/prisma";
-import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import { isSchoolAdmin, schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   isUniqueConstraintError,
   normalizeOptionalNullableString,
@@ -117,6 +117,16 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    // How a record is presented — its picture, emoji, accent — is an
+    // administrator's act; see `isSchoolAdmin`. Everything else on this
+    // route stays with the resource's own edit grant.
+    if (
+      ("avatarUrl" in body || "emoji" in body || "accent" in body) &&
+      !isSchoolAdmin(session.user.role)
+    ) {
+      return errorResponse("Only an administrator can change a record's display image", 403);
+    }
+
     const validated = updateGuardianSchema.parse(body);
 
     const existing = await prisma.schoolGuardian.findFirst({

@@ -116,8 +116,8 @@ export const ID_ENTITY_CONFIG: Record<ReservableIdEntity, EntityConfig> = {
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
-function buildCode(prefix: string, number: number, separator = "-") {
-  return `${prefix}${separator}${String(number).padStart(PAD, "0")}`;
+function buildCode(prefix: string, number: number, separator = "-", padWidth = PAD) {
+  return `${prefix}${separator}${String(number).padStart(padWidth, "0")}`;
 }
 
 /**
@@ -680,9 +680,37 @@ export async function reserveIdentifier(
     // A school arrives with its own numbering. See `inferNumbering`: the existing
     // codes decide what the next one looks like, so a pupil admitted through the
     // product continues `S1000` rather than starting a second scheme at `STU-0001`.
-    const numbering = SCHOOL_NUMBERED_ENTITIES.has(input.entity)
-      ? inferNumbering(await readSchoolCodes(tx, input.companyId, input.entity), config.prefix)
-      : { prefix: config.prefix, separator: "-", max: 0 };
+    //
+    // Unless the office has said otherwise. An explicit format in
+    // `SchoolIdentitySettings` is the school's own answer, and it beats the
+    // inferred one — that is the whole point of writing it down.
+    const declared =
+      input.entity === "SCHOOL_STUDENT"
+        ? await tx.schoolIdentitySettings.findUnique({
+            where: { companyId: input.companyId },
+            select: { studentPrefix: true, studentSeparator: true, studentPadWidth: true },
+          })
+        : null;
+    const numbering =
+      declared?.studentPrefix != null
+        ? {
+            prefix: declared.studentPrefix,
+            separator: declared.studentSeparator ?? "-",
+            max: inferNumbering(
+              await readSchoolCodes(tx, input.companyId, input.entity),
+              declared.studentPrefix,
+            ).max,
+            padWidth: declared.studentPadWidth ?? PAD,
+          }
+        : SCHOOL_NUMBERED_ENTITIES.has(input.entity)
+          ? {
+              ...inferNumbering(
+                await readSchoolCodes(tx, input.companyId, input.entity),
+                config.prefix,
+              ),
+              padWidth: PAD,
+            }
+          : { prefix: config.prefix, separator: "-", max: 0, padWidth: PAD };
 
     if (!existing) {
       const maxExisting = SCHOOL_NUMBERED_ENTITIES.has(input.entity)
@@ -712,7 +740,7 @@ export async function reserveIdentifier(
       select: { lastNumber: true },
     });
 
-    return buildCode(numbering.prefix, next.lastNumber, numbering.separator);
+    return buildCode(numbering.prefix, next.lastNumber, numbering.separator, numbering.padWidth);
   };
 
   // When already inside a transaction (no $transaction method), run directly.

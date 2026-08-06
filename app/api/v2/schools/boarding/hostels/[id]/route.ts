@@ -7,7 +7,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import { isSchoolAdmin, schoolPermissionDenial } from "@/lib/schools/permissions";
 
 /**
  * S-4.3 — what a record page may edit about a hostel.
@@ -46,7 +46,18 @@ export async function PATCH(
     const { id } = await params;
     if (!isValidUUID(id)) return errorResponse("Invalid hostel ID", 400);
 
-    const validated = updateHostelSchema.parse(await request.json());
+    const body = (await request.json()) as Record<string, unknown>;
+    // How a record is presented — its picture, emoji, accent — is an
+    // administrator's act; see `isSchoolAdmin`. Everything else on this
+    // route stays with the resource's own edit grant.
+    if (
+      ("avatarUrl" in body || "emoji" in body || "accent" in body) &&
+      !isSchoolAdmin(session.user.role)
+    ) {
+      return errorResponse("Only an administrator can change a record's display image", 403);
+    }
+
+    const validated = updateHostelSchema.parse(body);
 
     const existing = await prisma.schoolHostel.findFirst({
       where: { id, companyId: session.user.companyId },

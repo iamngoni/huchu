@@ -55,6 +55,22 @@ export function canSchoolRoleDo(
 export type SessionLike = { user: { role?: string | null } };
 
 /**
+ * Whether this is one of the tenant's own administrators.
+ *
+ * Some acts belong to the office's head rather than to a persona grant — how a
+ * record is *presented* (its photograph, its emoji, its accent) is one, because
+ * a display image shows on every list every role reads, and the school decided
+ * only its administrators set those.
+ */
+export function isSchoolAdmin(role: string | null | undefined): boolean {
+  if (!role) return false;
+  const normalized = role.trim().toUpperCase();
+  // The head's own account is SCHOOL_ADMIN, not a tenant-wide role; for the
+  // school's presentation decisions the head is exactly who "admin" means.
+  return TENANT_ADMIN_ROLES.has(normalized) || normalized === "SCHOOL_ADMIN";
+}
+
+/**
  * Returns null when allowed, or the message to refuse with.
  *
  * A message rather than a thrown error, because every school route already

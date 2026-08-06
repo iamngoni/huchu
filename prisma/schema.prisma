@@ -5537,6 +5537,34 @@ model SchoolPortalInvite {
   @@index([guardianId])
 }
 
+/// How this school writes its identifiers and its ID cards.
+///
+/// One row per company. When the format columns are null the generator keeps
+/// inferring the scheme from the numbers already on the books
+/// (`inferNumbering`); setting them here is the office saying "this is our
+/// scheme" out loud, and the explicit answer beats the inferred one.
+///
+/// No Company relation on purpose: this is reference data read inside the
+/// id-generator's transaction, and a settings row must never cascade anything.
+model SchoolIdentitySettings {
+  id        String   @id @default(uuid())
+  companyId String   @unique
+
+  /// Student number format. Null = keep inferring from existing numbers.
+  studentPrefix    String?
+  studentSeparator String? // "", "-" or "/"
+  studentPadWidth  Int?
+
+  /// The pupil ID card. Colour is data (printed ink), not UI theme.
+  cardAccentColor       String  @default("#1D4ED8")
+  cardMotto             String?
+  cardShowPhoto         Boolean @default(true)
+  cardShowGuardianPhone Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum SchoolAttendanceSessionStatus {
   DRAFT
   SUBMITTED

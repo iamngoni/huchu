@@ -7,7 +7,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import { isSchoolAdmin, schoolPermissionDenial } from "@/lib/schools/permissions";
 import { isUniqueConstraintError } from "../../_helpers";
 
 const updateSubjectSchema = z
@@ -108,6 +108,16 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    // How a record is presented — its picture, emoji, accent — is an
+    // administrator's act; see `isSchoolAdmin`. Everything else on this
+    // route stays with the resource's own edit grant.
+    if (
+      ("avatarUrl" in body || "emoji" in body || "accent" in body) &&
+      !isSchoolAdmin(session.user.role)
+    ) {
+      return errorResponse("Only an administrator can change a record's display image", 403);
+    }
+
     const validated = updateSubjectSchema.parse(body);
 
     const existing = await prisma.schoolSubject.findFirst({

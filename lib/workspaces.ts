@@ -469,6 +469,7 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
           { moduleId: "schools", href: "/schools/academics" },
           { moduleId: "schools", href: "/schools/classes" },
           { moduleId: "schools", href: "/schools/subjects" },
+          { moduleId: "schools", href: "/schools/academics/identity" },
         ],
       },
       {
