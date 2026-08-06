@@ -53,7 +53,14 @@ type Receipt = {
 
 export function ParentFeesScreen() {
   const { child, term } = useParentPortal();
-  const [open, setOpen] = useState<string | null>(null);
+  /**
+   * Which bill is showing its lines. `undefined` means "nobody has chosen yet",
+   * which is not the same as "closed": the first bill opens itself so the
+   * statement reads as the list of lines a parent came for rather than as one row
+   * they have to discover is tappable. Deriving it from the query data keeps that
+   * true without an effect that re-renders once the fees arrive.
+   */
+  const [open, setOpen] = useState<string | null | undefined>(undefined);
 
   const query = useQuery({
     queryKey: ["portal", "parent", "fees", child?.id],
@@ -114,6 +121,7 @@ export function ParentFeesScreen() {
   const paid = Number(fees?.paid ?? 0);
   const paidPct = billed > 0 ? Math.max(0, Math.min(100, Math.round((paid / billed) * 100))) : 0;
   const issued = invoices[0]?.issueDate ?? null;
+  const expandedId = open === undefined ? (invoices[0]?.id ?? null) : open;
 
   return (
     <div className="pp-page">
@@ -175,7 +183,7 @@ export function ParentFeesScreen() {
       ) : (
         <div className="breakdown">
           {invoices.map((invoice) => {
-            const expanded = open === invoice.id;
+            const expanded = expandedId === invoice.id;
             return (
               <div key={invoice.id}>
                 <button
