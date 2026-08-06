@@ -188,6 +188,137 @@ export async function copyWeekForward(input: {
 }
 
 /**
+ * Lay a week's plans out from the timetable.
+ *
+ * The other half of "copy last week forward". Copying needs a written week to
+ * copy, and the first week of term is exactly when there is not one — so the
+ * timetable itself becomes the source: one draft plan per lesson the class is
+ * actually going to have, dated and tied to its slot, with the topic carried
+ * forward from the last thing that was taught. The teacher renames the topic
+ * and fills the boxes; the part that made planning feel like data entry — the
+ * dates, the slots, one row per lesson — is already done.
+ *
+ * A lesson that already has a plan is left alone, same as copy-forward: this
+ * fills gaps, it never overwrites work. Dates outside the term are skipped,
+ * because a slot pattern knows nothing about half-term ending on Wednesday.
+ */
+export async function layOutWeek(input: {
+  companyId: string;
+  classSubjectId: string;
+  weekStart: Date;
+  createdById?: string | null;
+}): Promise<{
+  created: number;
+  skipped: number;
+  /** The topic the drafts were seeded from, if a previous lesson had one. */
+  seededFrom: string | null;
+  message: string | null;
+}> {
+  const day = asDay(input.weekStart);
+  // Normalise to the Monday, so "lay out this week" from a Wednesday still
+  // lays out the whole week.
+  const isoDow = day.getUTCDay() === 0 ? 7 : day.getUTCDay();
+  const monday = new Date(day.getTime() - (isoDow - 1) * 86_400_000);
+  const week = 7 * 24 * 60 * 60 * 1000;
+
+  const assignment = await prisma.schoolClassSubject.findFirst({
+    where: { id: input.classSubjectId, companyId: input.companyId },
+    select: {
+      id: true,
+      termId: true,
+      term: { select: { startDate: true, endDate: true } },
+    },
+  });
+  if (!assignment) throw new LessonPlanError("Class subject not found");
+
+  const [slots, existing, previous] = await Promise.all([
+    prisma.schoolTimetableSlot.findMany({
+      where: { companyId: input.companyId, classSubjectId: assignment.id },
+      select: {
+        id: true,
+        dayOfWeek: true,
+        period: { select: { sequence: true, startMinute: true } },
+      },
+      orderBy: [{ dayOfWeek: "asc" }, { period: { sequence: "asc" } }],
+    }),
+    prisma.schoolLessonPlan.findMany({
+      where: {
+        companyId: input.companyId,
+        classSubjectId: assignment.id,
+        lessonDate: { gte: monday, lt: new Date(monday.getTime() + week) },
+      },
+      select: { lessonDate: true, slotId: true },
+    }),
+    prisma.schoolLessonPlan.findFirst({
+      where: {
+        companyId: input.companyId,
+        classSubjectId: assignment.id,
+        lessonDate: { lt: monday },
+      },
+      orderBy: { lessonDate: "desc" },
+      select: { topic: true },
+    }),
+  ]);
+
+  if (slots.length === 0) {
+    return {
+      created: 0,
+      skipped: 0,
+      seededFrom: null,
+      message: "This class has no lessons on the timetable yet",
+    };
+  }
+
+  const taken = new Set(
+    existing.map((row) => `${row.slotId ?? ""}|${row.lessonDate.toISOString()}`),
+  );
+
+  const termStart = asDay(assignment.term.startDate);
+  const termEnd = asDay(assignment.term.endDate);
+
+  // Continuation, not repetition: the drafts pick up where teaching left off.
+  const seededFrom = previous?.topic ?? null;
+  const topic = seededFrom ? `${seededFrom} — continued` : "New topic";
+
+  const toWrite = slots
+    .map((slot) => ({
+      slot,
+      lessonDate: new Date(monday.getTime() + (slot.dayOfWeek - 1) * 86_400_000),
+    }))
+    .filter(
+      ({ slot, lessonDate }) =>
+        lessonDate >= termStart &&
+        lessonDate <= termEnd &&
+        !taken.has(`${slot.id}|${lessonDate.toISOString()}`),
+    );
+
+  if (toWrite.length > 0) {
+    await prisma.schoolLessonPlan.createMany({
+      data: toWrite.map(({ slot, lessonDate }) => ({
+        companyId: input.companyId,
+        termId: assignment.termId,
+        classSubjectId: assignment.id,
+        slotId: slot.id,
+        lessonDate,
+        topic,
+        createdById: input.createdById ?? null,
+      })),
+    });
+  }
+
+  const skipped = slots.length - toWrite.length;
+  return {
+    created: toWrite.length,
+    skipped,
+    seededFrom,
+    message:
+      toWrite.length === 0
+        ? "Every lesson this week is already planned"
+        : null,
+  };
+}
+
+/**
  * Arrange cover for one lesson.
  *
  * Refused when the covering teacher is teaching something else at the same

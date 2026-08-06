@@ -173,6 +173,32 @@ export function LessonPlansContent({
     onError: (error) => setActionError(getApiErrorMessage(error)),
   });
 
+  const layOutMutation = useMutation({
+    mutationFn: () =>
+      fetchJson<{ created: number; skipped: number; seededFrom: string | null; message: string | null }>(
+        "/api/v2/schools/lesson-plans",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "lay-out-week",
+            classSubjectId: subjectFilter,
+            weekStart,
+          }),
+        },
+      ),
+    onSuccess: (result) => {
+      setActionError(null);
+      setNote(
+        result.created === 0
+          ? (result.message ?? "Every lesson this week is already planned")
+          : `${result.created} draft${result.created === 1 ? "" : "s"} laid out from the timetable` +
+              (result.seededFrom ? `, picking up from “${result.seededFrom}”` : ""),
+      );
+      void queryClient.invalidateQueries({ queryKey: ["schools", "lesson-plans"] });
+    },
+    onError: (error) => setActionError(getApiErrorMessage(error)),
+  });
+
   const covered = plans.filter((plan) => plan.cover).length;
 
   return (
@@ -191,7 +217,7 @@ export function LessonPlansContent({
       ) : null}
       {note ? (
         <Alert>
-          <AlertTitle>Copied</AlertTitle>
+          <AlertTitle>Done</AlertTitle>
           <AlertDescription>{note}</AlertDescription>
         </Alert>
       ) : null}
@@ -228,6 +254,18 @@ export function LessonPlansContent({
           </Button>
           <Button variant="outline" onClick={() => setWeekStart(addWeeks(weekStart, 1))}>
             Next week
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!subjectFilter || layOutMutation.isPending}
+            onClick={() => layOutMutation.mutate()}
+            title={
+              subjectFilter
+                ? undefined
+                : "Choose a subject first — the timetable is laid out one subject at a time"
+            }
+          >
+            {layOutMutation.isPending ? "Laying out…" : "Lay out from timetable"}
           </Button>
           <Button
             variant="outline"

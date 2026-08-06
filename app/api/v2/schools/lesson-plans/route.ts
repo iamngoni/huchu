@@ -11,6 +11,7 @@ import { getTeacherProfile } from "@/lib/schools/governance-v2";
 import {
   arrangeCover,
   copyWeekForward,
+  layOutWeek,
   LessonPlanError,
   lessonWeek,
   saveLessonPlan,
@@ -41,6 +42,11 @@ const bodySchema = z.discriminatedUnion("action", [
     classSubjectId: z.string().uuid(),
     fromWeekStart: z.string().date(),
     toWeekStart: z.string().date(),
+  }),
+  z.object({
+    action: z.literal("lay-out-week"),
+    classSubjectId: z.string().uuid(),
+    weekStart: z.string().date(),
   }),
   z.object({
     action: z.literal("cover"),
@@ -138,6 +144,16 @@ export async function POST(request: NextRequest) {
         classSubjectId: validated.classSubjectId,
         fromWeekStart: new Date(validated.fromWeekStart),
         toWeekStart: new Date(validated.toWeekStart),
+        createdById: session.user.id,
+      });
+      return successResponse(result);
+    }
+
+    if (validated.action === "lay-out-week") {
+      const result = await layOutWeek({
+        companyId,
+        classSubjectId: validated.classSubjectId,
+        weekStart: new Date(validated.weekStart),
         createdById: session.user.id,
       });
       return successResponse(result);

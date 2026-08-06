@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import {
   arrangeCover,
   copyWeekForward,
+  layOutWeek,
   lessonWeek,
   saveLessonPlan,
 } from "./lesson-plans";
@@ -340,6 +341,130 @@ describe("copyWeekForward", () => {
         toWeekStart: date("2026-03-02"),
       }),
     ).rejects.toThrow(/different week/);
+  });
+});
+
+describe("layOutWeek", () => {
+  it("drafts one plan per timetabled lesson, tied to its slot", async () => {
+    // Maths is timetabled once, Tuesday period 1. Laying out the week of
+    // 2 March writes exactly one draft, on Tuesday the 3rd, against that slot.
+    const result = await layOutWeek({
+      companyId,
+      classSubjectId: mathsAssignmentId,
+      weekStart: date("2026-03-02"),
+    });
+    expect(result.created).toBe(1);
+
+    const drafts = await prisma.schoolLessonPlan.findMany({
+      where: { companyId, classSubjectId: mathsAssignmentId },
+    });
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0].lessonDate).toEqual(date("2026-03-03"));
+    expect(drafts[0].slotId).toBe(mathsSlotId);
+  });
+
+  it("picks the topic up from the last thing that was taught", async () => {
+    await saveLessonPlan({
+      companyId,
+      termId,
+      classSubjectId: mathsAssignmentId,
+      slotId: mathsSlotId,
+      lessonDate: date("2026-02-24"),
+      topic: "Fractions",
+    });
+
+    const result = await layOutWeek({
+      companyId,
+      classSubjectId: mathsAssignmentId,
+      weekStart: date("2026-03-02"),
+    });
+    expect(result.seededFrom).toBe("Fractions");
+
+    const draft = await prisma.schoolLessonPlan.findFirst({
+      where: { companyId, classSubjectId: mathsAssignmentId, lessonDate: date("2026-03-03") },
+    });
+    expect(draft?.topic).toBe("Fractions — continued");
+  });
+
+  it("leaves alone a lesson somebody has already planned", async () => {
+    await saveLessonPlan({
+      companyId,
+      termId,
+      classSubjectId: mathsAssignmentId,
+      slotId: mathsSlotId,
+      lessonDate: date("2026-03-03"),
+      topic: "Already written",
+    });
+
+    const result = await layOutWeek({
+      companyId,
+      classSubjectId: mathsAssignmentId,
+      weekStart: date("2026-03-02"),
+    });
+    expect(result.created).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(result.message).toMatch(/already planned/);
+
+    const plan = await prisma.schoolLessonPlan.findFirst({
+      where: { companyId, classSubjectId: mathsAssignmentId, lessonDate: date("2026-03-03") },
+    });
+    expect(plan?.topic).toBe("Already written");
+  });
+
+  it("normalises to the Monday, so a Wednesday lays out the same week", async () => {
+    const result = await layOutWeek({
+      companyId,
+      classSubjectId: mathsAssignmentId,
+      weekStart: date("2026-03-04"),
+    });
+    expect(result.created).toBe(1);
+    const draft = await prisma.schoolLessonPlan.findFirst({
+      where: { companyId, classSubjectId: mathsAssignmentId },
+    });
+    expect(draft?.lessonDate).toEqual(date("2026-03-03"));
+  });
+
+  it("skips a date the term does not reach", async () => {
+    // The term ends Friday 10 April 2026. The week of 6 April holds a Tuesday
+    // inside the term; a week later there is nothing left to plan.
+    const inside = await layOutWeek({
+      companyId,
+      classSubjectId: mathsAssignmentId,
+      weekStart: date("2026-04-06"),
+    });
+    expect(inside.created).toBe(1);
+
+    const after = await layOutWeek({
+      companyId,
+      classSubjectId: mathsAssignmentId,
+      weekStart: date("2026-04-13"),
+    });
+    expect(after.created).toBe(0);
+  });
+
+  it("says so for a class with nothing on the timetable", async () => {
+    const geography = await prisma.schoolSubject.create({
+      data: { companyId, code: `GEO${Date.now() % 100000}`, name: "Geography" },
+    });
+    const bare = await prisma.schoolClassSubject.create({
+      data: {
+        companyId,
+        termId,
+        classId,
+        subjectId: geography.id,
+        teacherProfileId: teacherAId,
+      },
+    });
+
+    const result = await layOutWeek({
+      companyId,
+      classSubjectId: bare.id,
+      weekStart: date("2026-03-02"),
+    });
+    expect(result.created).toBe(0);
+    expect(result.message).toMatch(/no lessons on the timetable/);
+
+    await prisma.schoolClassSubject.delete({ where: { id: bare.id } });
   });
 });
 

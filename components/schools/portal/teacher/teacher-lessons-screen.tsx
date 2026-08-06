@@ -228,6 +228,35 @@ export function TeacherLessonsScreen() {
     },
   });
 
+  const layOut = useMutation({
+    mutationFn: async () => {
+      if (!week) throw new Error("No week is loaded");
+      return fetchJson<{
+        created: number;
+        skipped: number;
+        seededFrom: string | null;
+        message: string | null;
+      }>("/api/v2/schools/portal/teacher/me/lessons", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "lay-out-week",
+          classSubjectId: week.classSubject.id,
+          weekStart: week.weekStart,
+        }),
+      });
+    },
+    onSuccess: (result) => {
+      setSaved(
+        result.created === 0
+          ? (result.message ?? "Every lesson this week is already planned")
+          : `Laid out ${result.created} lesson${result.created === 1 ? "" : "s"} from the timetable${
+              result.seededFrom ? `, picking up from “${result.seededFrom}”` : ""
+            } — open each one to name its topic`,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["schools", "portal", "teacher"] });
+    },
+  });
+
   const copyWeek = useMutation({
     mutationFn: async () => {
       if (!week) throw new Error("No week is loaded");
@@ -293,6 +322,11 @@ export function TeacherLessonsScreen() {
           {getApiErrorMessage(copyWeek.error)}
         </Alert>
       ) : null}
+      {layOut.error ? (
+        <Alert tone="danger" title="The week would not lay out">
+          {getApiErrorMessage(layOut.error)}
+        </Alert>
+      ) : null}
       {saved ? (
         <Alert tone="success" title={saved} onDismiss={() => setSaved(null)} />
       ) : null}
@@ -329,6 +363,19 @@ export function TeacherLessonsScreen() {
           This week
         </Button>
         <span className="flex-1" />
+        {/* The two assists, in the order a term uses them: week one has no
+            last week to copy, so the timetable lays the drafts out; from week
+            two onwards copying forward carries the shape of the week. */}
+        <Button
+          variant="secondary"
+          disabled={!week || unplanned === 0}
+          loading={layOut.isPending}
+          onClick={() => layOut.mutate()}
+        >
+          {week && unplanned > 0
+            ? `Lay out this week (${unplanned})`
+            : "Lay out this week"}
+        </Button>
         <Button
           variant="secondary"
           disabled={!week || week.lastWeekPlans === 0}

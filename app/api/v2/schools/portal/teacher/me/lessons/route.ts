@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getTeacherProfile, isPrivilegedRole } from "@/lib/schools/governance-v2";
 import {
   copyWeekForward,
+  layOutWeek,
   LessonPlanError,
   saveLessonPlan,
 } from "@/lib/schools/lesson-plans";
@@ -33,6 +34,11 @@ const bodySchema = z.discriminatedUnion("action", [
     classSubjectId: z.string().uuid(),
     fromWeekStart: z.string().date(),
     toWeekStart: z.string().date(),
+  }),
+  z.object({
+    action: z.literal("lay-out-week"),
+    classSubjectId: z.string().uuid(),
+    weekStart: z.string().date(),
   }),
 ]);
 
@@ -338,6 +344,16 @@ export async function POST(request: NextRequest) {
         classSubjectId: assignment.id,
         fromWeekStart: new Date(validated.fromWeekStart),
         toWeekStart: new Date(validated.toWeekStart),
+        createdById: session.user.id,
+      });
+      return successResponse(result);
+    }
+
+    if (validated.action === "lay-out-week") {
+      const result = await layOutWeek({
+        companyId,
+        classSubjectId: assignment.id,
+        weekStart: new Date(validated.weekStart),
         createdById: session.user.id,
       });
       return successResponse(result);
