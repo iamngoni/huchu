@@ -2,6 +2,8 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { resolvePortalGuardian } from "@/lib/schools/portal-identity";
+import { isoDayOfWeek } from "@/lib/schools/teacher-day";
+import { formatMinute } from "@/lib/schools/timetable-format";
 
 /**
  * What a parent's portal is about: their household.
@@ -24,6 +26,27 @@ import { resolvePortalGuardian } from "@/lib/schools/portal-identity";
  * balance one query away from a screen that shows it.
  */
 
+/**
+ * One row of the child's day, for Home's TODAY section.
+ *
+ * Carried on the household rather than fetched by the screen because the whole
+ * point of this loader is that Home paints rather than waits: a parent glancing
+ * at "what is my child doing now" should not watch three skeletons resolve. Free
+ * periods are not rows here — unlike the pupil's own timetable, a parent is
+ * reading a summary of the day, and blank lines would pad it without saying
+ * anything.
+ */
+export type ParentLesson = {
+  periodId: string;
+  /** "07:30". Wall clock, formatted on the server so the client never converts. */
+  startsAt: string;
+  endsAt: string;
+  startMinute: number;
+  subjectName: string;
+  teacherName: string | null;
+  roomName: string | null;
+};
+
 export type ParentChild = {
   id: string;
   studentNo: string;
@@ -40,11 +63,29 @@ export type ParentChild = {
   canSeeResults: boolean;
   currentClass: { id: string; code: string; name: string } | null;
   currentStream: { id: string; name: string } | null;
-  /** Null when this guardian may not see fees, so a screen cannot render it. */
-  fees: { currency: string; outstanding: string; overdue: string; invoices: number } | null;
+  /**
+   * Null when this guardian may not see fees, so a screen cannot render it.
+   *
+   * `billed` and `paid` cover this term's bills whatever their state, so the
+   * hero's progress bar reads "paid X of Y for the term" — a settled invoice is
+   * part of what a family has paid, and leaving it out would show a bar that
+   * slides backwards as the term is paid off.
+   */
+  fees: {
+    currency: string;
+    outstanding: string;
+    overdue: string;
+    invoices: number;
+    billed: string;
+    paid: string;
+    /** The nearest unpaid due date, ISO, for the hero's "pay by" line. */
+    nextDueDate: string | null;
+  } | null;
   attendance: { present: number; absent: number; late: number; sessions: number };
   /** Whether there is anything published to read this term. */
   hasPublishedMarks: boolean;
+  /** Today's lessons for this child's class, earliest first. Empty on a weekend. */
+  today: ParentLesson[];
 };
 
 export type ParentHousehold = {
@@ -56,11 +97,40 @@ export type ParentHousehold = {
     phone: string;
     email: string | null;
   } | null;
-  term: { id: string; code: string; name: string } | null;
+  /** The school's own name, for Home's context line. */
+  schoolName: string | null;
+  term: {
+    id: string;
+    code: string;
+    name: string;
+    /**
+     * Which week of the term today is, and how many the term runs.
+     *
+     * Computed here from the term's dates because "Week 6 of 13" is the line a
+     * parent reads to place themselves in the term, and a client that worked it
+     * out from two ISO strings would disagree with the office by a day either
+     * side of midnight. Null before the term starts or after it ends.
+     */
+    weekNumber: number | null;
+    weekCount: number;
+  } | null;
   children: ParentChild[];
   /** School notices the household has not opened yet. */
   unreadNotices: number;
 };
+
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+/** Whole weeks between two dates, counting from 1 on the term's first day. */
+function termWeeks(startDate: Date, endDate: Date, now: Date) {
+  const span = endDate.getTime() - startDate.getTime();
+  const weekCount = Math.max(1, Math.ceil(span / MS_PER_WEEK));
+  const elapsed = now.getTime() - startDate.getTime();
+  if (elapsed < 0 || now.getTime() > endDate.getTime()) {
+    return { weekNumber: null, weekCount };
+  }
+  return { weekNumber: Math.min(weekCount, Math.floor(elapsed / MS_PER_WEEK) + 1), weekCount };
+}
 
 export async function loadParentHousehold(input: {
   companyId: string;
@@ -91,13 +161,27 @@ export async function loadParentHousehold(input: {
   );
 
   const guardian = resolution.kind === "forbidden" ? null : resolution.subject;
-  const term = await prisma.schoolTerm.findFirst({
-    where: { companyId, isActive: true },
-    select: { id: true, code: true, name: true },
-  });
+  const [activeTerm, company] = await Promise.all([
+    prisma.schoolTerm.findFirst({
+      where: { companyId, isActive: true },
+      select: { id: true, code: true, name: true, startDate: true, endDate: true },
+    }),
+    prisma.company.findUnique({ where: { id: companyId }, select: { name: true } }),
+  ]);
+
+  const now = new Date();
+  const term = activeTerm
+    ? {
+        id: activeTerm.id,
+        code: activeTerm.code,
+        name: activeTerm.name,
+        ...termWeeks(activeTerm.startDate, activeTerm.endDate, now),
+      }
+    : null;
+  const schoolName = company?.name ?? null;
 
   if (!guardian) {
-    return { guardian: null, term, children: [], unreadNotices: 0 };
+    return { guardian: null, schoolName, term, children: [], unreadNotices: 0 };
   }
 
   // Notices reach a parent as notifications, which already carry read state per
@@ -131,11 +215,32 @@ export async function loadParentHousehold(input: {
     },
   });
 
+  /**
+   * The school's periods, once for the household rather than once per child.
+   *
+   * A period is a property of the school day, so two siblings at the same school
+   * share them; fetching inside the per-child loop would run the same query
+   * twice to get the same rows. Non-teaching periods are included so a break
+   * between two lessons is not silently dropped from the times.
+   */
+  const dayOfWeek = isoDayOfWeek(now);
+  const periods = term
+    ? await prisma.schoolPeriod.findMany({
+        where: {
+          companyId,
+          OR: [{ termId: term.id }, { termId: null }],
+        },
+        select: { id: true, startMinute: true, endMinute: true },
+        orderBy: { sequence: "asc" },
+      })
+    : [];
+  const periodById = new Map(periods.map((period) => [period.id, period]));
+
   const children = await Promise.all(
     links.map(async (link): Promise<ParentChild> => {
       const student = link.student;
 
-      const [invoices, attendance, published] = await Promise.all([
+      const [invoices, termInvoices, attendance, published, slots] = await Promise.all([
         link.canReceiveFinancials
           ? prisma.schoolFeeInvoice.findMany({
               where: {
@@ -146,6 +251,18 @@ export async function loadParentHousehold(input: {
               select: { currency: true, balanceAmount: true, dueDate: true },
             })
           : Promise.resolve(null),
+        // This term's bills whatever their state, for "paid X of Y".
+        link.canReceiveFinancials && term
+          ? prisma.schoolFeeInvoice.findMany({
+              where: {
+                companyId,
+                studentId: student.id,
+                termId: term.id,
+                status: { not: "DRAFT" },
+              },
+              select: { totalAmount: true, paidAmount: true },
+            })
+          : Promise.resolve([]),
         // This term's register, not all time: "was my child in school" is a
         // question about now, and a three-year total is a number nobody acts on.
         term
@@ -168,7 +285,50 @@ export async function loadParentHousehold(input: {
               },
             })
           : Promise.resolve(0),
+        // Today's lessons. Scoped to the child's own class and stream, and to
+        // today's ISO day, so a Saturday is an empty day rather than Monday's.
+        term && student.currentClass
+          ? prisma.schoolTimetableSlot.findMany({
+              where: {
+                companyId,
+                termId: term.id,
+                classId: student.currentClass.id,
+                dayOfWeek,
+                ...(student.currentStream
+                  ? { OR: [{ streamId: student.currentStream.id }, { streamId: null }] }
+                  : {}),
+              },
+              select: {
+                periodId: true,
+                room: { select: { name: true } },
+                classSubject: {
+                  select: {
+                    subject: { select: { name: true } },
+                    teacherProfile: { select: { user: { select: { name: true } } } },
+                  },
+                },
+              },
+            })
+          : Promise.resolve([]),
       ]);
+
+      const today: ParentLesson[] = slots
+        .flatMap((slot) => {
+          const period = periodById.get(slot.periodId);
+          if (!period) return [];
+          return [
+            {
+              periodId: slot.periodId,
+              startsAt: formatMinute(period.startMinute),
+              endsAt: formatMinute(period.endMinute),
+              startMinute: period.startMinute,
+              subjectName: slot.classSubject.subject.name,
+              teacherName: slot.classSubject.teacherProfile?.user?.name ?? null,
+              roomName: slot.room?.name ?? null,
+            },
+          ];
+        })
+        .sort((a, b) => a.startMinute - b.startMinute);
 
       const counts = new Map(
         (attendance as Array<{ status: string; _count: { _all: number } }>).map((row) => [
@@ -178,7 +338,6 @@ export async function loadParentHousehold(input: {
       );
       const sessions = [...counts.values()].reduce((sum, value) => sum + value, 0);
 
-      const now = new Date();
       const fees = invoices
         ? {
             currency: invoices[0]?.currency ?? "USD",
@@ -193,6 +352,16 @@ export async function loadParentHousehold(input: {
               .reduce((sum, invoice) => sum.plus(invoice.balanceAmount), new Prisma.Decimal(0))
               .toFixed(2),
             invoices: invoices.length,
+            billed: termInvoices
+              .reduce((sum, invoice) => sum.plus(invoice.totalAmount), new Prisma.Decimal(0))
+              .toFixed(2),
+            paid: termInvoices
+              .reduce((sum, invoice) => sum.plus(invoice.paidAmount), new Prisma.Decimal(0))
+              .toFixed(2),
+            nextDueDate:
+              [...invoices]
+                .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]
+                ?.dueDate.toISOString() ?? null,
           }
         : null;
 
@@ -219,9 +388,10 @@ export async function loadParentHousehold(input: {
           sessions,
         },
         hasPublishedMarks: published > 0,
+        today,
       };
     }),
   );
 
-  return { guardian, term, children, unreadNotices };
+  return { guardian, schoolName, term, children, unreadNotices };
 }

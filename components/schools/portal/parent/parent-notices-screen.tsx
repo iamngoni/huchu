@@ -3,18 +3,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { formatSchoolDate } from "@/lib/schools/format";
+import { Bell, CalendarCheck, ChevronRight, Info, Receipt } from "@/lib/icons";
 
 /**
  * S-6.12 — what the school has said, with read state.
  *
- * Unread is a weight, not a badge: an unread notice is bolder and carries a dot,
- * and opening it marks it read. "Mark all read" exists because a parent who has
- * been away for a week wants the dot gone, and clearing them one at a time to
- * achieve that is the behaviour that makes people ignore the dot entirely.
+ * Unread is a weight, not a badge: an unread notice is bolder and carries an
+ * accent pip, and opening it marks it read. "Mark all read" exists because a
+ * parent who has been away for a week wants the dot gone, and clearing them one
+ * at a time to achieve that is the behaviour that makes people ignore the dot
+ * entirely.
+ *
+ * The leading chip is toned by severity rather than coloured for decoration: a
+ * critical notice from the school and a library reminder should not look alike in
+ * a list read at a school gate.
  */
 
 type Notice = {
@@ -26,6 +31,24 @@ type Notice = {
   sentAt: string;
   isRead: boolean;
 };
+
+const TONE: Record<string, string> = {
+  CRITICAL: "danger",
+  WARNING: "warn",
+};
+
+function iconFor(notice: Notice) {
+  if (notice.severity === "CRITICAL") return Info;
+  if (notice.type.includes("FEE") || notice.type.includes("INVOICE")) return Receipt;
+  if (notice.type.includes("ATTENDANCE") || notice.type.includes("CALENDAR")) return CalendarCheck;
+  return Bell;
+}
+
+/** The sender line the prototype shows. The type is what the pipeline knows. */
+function sourceOf(notice: Notice) {
+  const words = notice.type.replace(/^SCHOOL_/, "").replace(/_/g, " ").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 export function ParentNoticesScreen() {
   const queryClient = useQueryClient();
@@ -49,14 +72,22 @@ export function ParentNoticesScreen() {
     },
   });
 
-  if (query.isPending) return <Skeleton className="h-48 w-full" />;
+  if (query.isPending) {
+    return (
+      <div className="p-4">
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
 
   if (query.isError) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Notices could not be loaded</AlertTitle>
-        <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
-      </Alert>
+      <div className="p-4">
+        <Alert variant="destructive">
+          <AlertTitle>Notices could not be loaded</AlertTitle>
+          <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
@@ -65,62 +96,66 @@ export function ParentNoticesScreen() {
 
   if (notices.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+      <p className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">
         The school has not sent you anything yet.
       </p>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {unread > 0 ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          disabled={markRead.isPending}
-          onClick={() => markRead.mutate(undefined)}
-        >
-          {markRead.isPending ? "Marking…" : `Mark all ${unread} as read`}
-        </Button>
-      ) : null}
+    <div className="pp-page">
+      <div className="section-h">
+        School news
+        <span className="mono-note">{unread > 0 ? `${unread} new` : "All read"}</span>
+      </div>
 
-      <ul className="space-y-2">
-        {notices.map((notice) => (
-          <li key={notice.id}>
+      <div className="card-block boxed">
+        {notices.map((notice) => {
+          const Icon = iconFor(notice);
+          const tone = TONE[notice.severity] ?? "";
+          return (
             <button
+              key={notice.id}
               type="button"
               onClick={() => {
                 if (!notice.isRead) markRead.mutate([notice.id]);
               }}
-              className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)] p-4 text-left"
+              className={notice.isRead ? "notice-row" : "notice-row unread"}
             >
-              <span
-                className={
-                  notice.isRead
-                    ? "mt-1.5 size-2 shrink-0 rounded-full bg-transparent"
-                    : "mt-1.5 size-2 shrink-0 rounded-full bg-[var(--status-error-border)]"
-                }
-                aria-hidden
-              />
+              <span className={tone ? `ic ${tone}` : "ic"}>
+                <Icon className="size-4" aria-hidden />
+              </span>
               <span className="min-w-0">
-                <span className={notice.isRead ? "block" : "block font-semibold"}>
-                  {notice.title}
-                </span>
-                {notice.summary ? (
-                  <span className="mt-0.5 block text-sm text-[var(--text-muted)]">
-                    {notice.summary}
-                  </span>
-                ) : null}
-                <span className="mt-1 block text-sm text-[var(--text-subtle)]">
-                  {formatSchoolDate(notice.sentAt)}
-                  {notice.isRead ? "" : " · new"}
+                <span className="nm block">{notice.title}</span>
+                {notice.summary ? <span className="sb block">{notice.summary}</span> : null}
+                <span className="meta block">
+                  {sourceOf(notice)} · {formatSchoolDate(notice.sentAt)}
                 </span>
               </span>
+              {notice.isRead ? (
+                <span className="chev">
+                  <ChevronRight className="size-[14px]" aria-hidden />
+                </span>
+              ) : (
+                <span className="pip" aria-hidden />
+              )}
             </button>
-          </li>
-        ))}
-      </ul>
+          );
+        })}
+      </div>
+
+      {unread > 0 ? (
+        <div className="p-4">
+          <button
+            type="button"
+            className="pp-wide-btn"
+            disabled={markRead.isPending}
+            onClick={() => markRead.mutate(undefined)}
+          >
+            {markRead.isPending ? "Marking…" : "Mark them all as read"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

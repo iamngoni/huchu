@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
+import { PersonAvatar } from "@/components/schools/common/person-avatar";
 import { PrintDocumentButton } from "@/components/schools/common/print-document-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,7 +21,8 @@ import { useParentPortal } from "./parent-portal-context";
  *
  * Amounts arrive as strings and are formatted, never summed here: the balance a
  * parent is shown is the one the ledger computed, and a client-side subtotal is a
- * second opinion about what a family owes.
+ * second opinion about what a family owes. The one figure the sticky bar shows is
+ * the loader's own outstanding balance, not a sum of the rows above it.
  */
 
 type FeeLine = { id: string; feeCode: string; description: string; amount: string };
@@ -50,7 +52,7 @@ type Receipt = {
 };
 
 export function ParentFeesScreen() {
-  const { child } = useParentPortal();
+  const { child, term } = useParentPortal();
   const [open, setOpen] = useState<string | null>(null);
 
   const query = useQuery({
@@ -63,24 +65,28 @@ export function ParentFeesScreen() {
   });
 
   if (!child) {
-    return <p className="py-8 text-center text-sm text-[var(--text-muted)]">No child selected.</p>;
+    return (
+      <p className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">No child selected.</p>
+    );
   }
 
   if (!child.canSeeFees) {
     return (
-      <Alert>
-        <AlertTitle>Fees are not shown on your account</AlertTitle>
-        <AlertDescription>
-          The school has set your account up without financial access for {child.firstName}. The
-          office can change that.
-        </AlertDescription>
-      </Alert>
+      <div className="p-4">
+        <Alert>
+          <AlertTitle>Fees are not shown on your account</AlertTitle>
+          <AlertDescription>
+            The school has set your account up without financial access for {child.firstName}. The
+            office can change that.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   if (query.isPending) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3 p-4">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
@@ -89,134 +95,181 @@ export function ParentFeesScreen() {
 
   if (query.isError) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Fees could not be loaded</AlertTitle>
-        <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
-      </Alert>
+      <div className="p-4">
+        <Alert variant="destructive">
+          <AlertTitle>Fees could not be loaded</AlertTitle>
+          <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   const invoices = query.data?.invoices ?? [];
   const receipts = query.data?.receipts ?? [];
-  const currency = invoices[0]?.currency ?? child.fees?.currency ?? "USD";
+  const fees = child.fees;
+  const currency = invoices[0]?.currency ?? fees?.currency ?? "USD";
+  const outstanding = Number(fees?.outstanding ?? 0);
+  const overdue = Number(fees?.overdue ?? 0);
+  const billed = Number(fees?.billed ?? 0);
+  const paid = Number(fees?.paid ?? 0);
+  const paidPct = billed > 0 ? Math.max(0, Math.min(100, Math.round((paid / billed) * 100))) : 0;
+  const issued = invoices[0]?.issueDate ?? null;
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-        <p className="text-sm text-[var(--text-muted)]">What you still owe</p>
-        <p className="text-3xl font-semibold tabular-nums">
-          {formatSchoolMoney(Number(child.fees?.outstanding ?? 0), currency)}
-        </p>
-        {Number(child.fees?.overdue ?? 0) > 0 ? (
-          <p className="mt-1 text-sm text-[var(--status-error-text)]">
-            {formatSchoolMoney(Number(child.fees?.overdue ?? 0), currency)} is past its due date.
-          </p>
-        ) : null}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <PrintDocumentButton
-            sourceKey="schools.fee.statement"
-            recordId={child.id}
-            label="Download statement"
-          />
+    <div className="pp-page">
+      {/* Whose bill this is. A parent of three reading a figure needs the name
+          beside it more than they need it anywhere else in the app. */}
+      <div className="flex items-center gap-[10px] px-4 pb-[6px] pt-[14px]">
+        <PersonAvatar
+          firstName={child.firstName}
+          lastName={child.lastName}
+          src={child.avatarUrl}
+          size="sm"
+        />
+        <div className="min-w-0">
+          <div className="text-[14px] font-medium leading-[1.3] text-[var(--text-strong)]">
+            {child.firstName} {child.lastName}
+          </div>
+          <div className="truncate text-[12px] leading-[1.3] text-[var(--text-muted)]">
+            {[child.currentClass?.name, child.currentStream?.name].filter(Boolean).join(" · ") ||
+              "No class yet"}
+          </div>
         </div>
       </div>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[var(--text-subtle)]">
-          Bills
-        </h2>
-        {invoices.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[var(--text-muted)]">
-            Nothing has been billed to {child.firstName} yet.
-          </p>
-        ) : (
-          invoices.map((invoice) => {
+      <div className="b-stat-hero">
+        <div className="b-sh-lead">
+          <div className="b-sh-l">What you still owe</div>
+          <div className="b-sh-v">{formatSchoolMoney(outstanding, currency)}</div>
+          <div className="b-sh-d">
+            {outstanding === 0
+              ? `All paid for ${term?.name ?? "this term"} — thank you.`
+              : overdue > 0
+                ? `${formatSchoolMoney(overdue, currency)} of this is past its due date.`
+                : fees?.nextDueDate
+                  ? `${term?.name ?? "This term"} fees · pay by ${formatSchoolDate(fees.nextDueDate)}`
+                  : `Across ${fees?.invoices ?? invoices.length} bills.`}
+          </div>
+          {billed > 0 ? (
+            <div className="fh-progress">
+              <div className="bar">
+                <span style={{ width: `${paidPct}%` }} />
+              </div>
+              <div className="meta">
+                <span>Paid · {formatSchoolMoney(paid, currency)}</span>
+                <span>Total · {formatSchoolMoney(billed, currency)}</span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="section-h">
+        Fee statement
+        {issued ? <span className="mono-note">Sent {formatSchoolDate(issued)}</span> : null}
+      </div>
+      {invoices.length === 0 ? (
+        <div className="breakdown">
+          <p className="pp-empty-row">Nothing has been billed to {child.firstName} yet.</p>
+        </div>
+      ) : (
+        <div className="breakdown">
+          {invoices.map((invoice) => {
             const expanded = open === invoice.id;
             return (
-              <div
-                key={invoice.id}
-                className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)]"
-              >
+              <div key={invoice.id}>
                 <button
                   type="button"
                   onClick={() => setOpen(expanded ? null : invoice.id)}
                   aria-expanded={expanded}
-                  className="flex w-full items-start justify-between gap-3 p-4 text-left"
+                  className="breakdown-row w-full cursor-pointer text-left"
                 >
-                  <span className="min-w-0">
-                    <span className="block font-medium">{invoice.term?.name ?? "Fees"}</span>
-                    <span className="block text-sm text-[var(--text-muted)]">
+                  <span>
+                    <span className="nm block">{invoice.term?.name ?? "Fees"}</span>
+                    <span className="sb block">
                       {invoice.invoiceNo} · due {formatSchoolDate(invoice.dueDate)}
                     </span>
                   </span>
-                  <span className="shrink-0 text-right">
-                    <span className="block font-semibold tabular-nums">
-                      {formatSchoolMoney(Number(invoice.balance), invoice.currency)}
-                    </span>
-                    <span className="block text-sm text-[var(--text-muted)]">
-                      {Number(invoice.balance) === 0
-                        ? "Settled"
-                        : `of ${formatSchoolMoney(Number(invoice.total), invoice.currency)}`}
-                    </span>
+                  <span className="v">
+                    {formatSchoolMoney(Number(invoice.balance), invoice.currency)}
                   </span>
                 </button>
 
                 {expanded ? (
-                  <div className="space-y-1 border-t border-[var(--border-subtle)] p-4">
+                  <>
                     {/* What the money is for. The whole reason this screen exists. */}
                     {invoice.lines.map((line) => (
-                      <div key={line.id} className="flex items-baseline justify-between gap-3 text-sm">
-                        <span className="text-[var(--text-muted)]">{line.description}</span>
-                        <span className="tabular-nums">
+                      <div key={line.id} className="breakdown-row">
+                        <span>
+                          <span className="nm block">{line.description}</span>
+                          <span className="sb block">{line.feeCode}</span>
+                        </span>
+                        <span className="v">
                           {formatSchoolMoney(Number(line.amount), invoice.currency)}
                         </span>
                       </div>
                     ))}
-                    <div className="flex items-baseline justify-between gap-3 pt-2 text-sm font-medium">
-                      <span>Paid so far</span>
-                      <span className="tabular-nums">
+                    <div className="breakdown-row paid">
+                      <span>
+                        <span className="nm block">Already paid</span>
+                        <span className="sb block">Against {invoice.invoiceNo}</span>
+                      </span>
+                      <span className="v">
                         {formatSchoolMoney(Number(invoice.paid), invoice.currency)}
                       </span>
                     </div>
-                    <div className="pt-2">
+                    <div className="px-[14px] py-3">
                       <PrintDocumentButton
                         sourceKey="schools.fee.invoice"
                         recordId={invoice.id}
                         label="Download this bill"
                       />
                     </div>
-                  </div>
+                  </>
                 ) : null}
               </div>
             );
-          })
-        )}
-      </section>
+          })}
+          {/* The term's own total, from the ledger's figures rather than a sum of
+              the rows a parent happens to have expanded. */}
+          {billed > 0 ? (
+            <div className="breakdown-row total">
+              <span>
+                <span className="nm block">Total for the term</span>
+                <span className="sb block">
+                  {term?.name ?? "This term"} · everything added up
+                </span>
+              </span>
+              <span className="v">{formatSchoolMoney(billed, currency)}</span>
+            </div>
+          ) : null}
+        </div>
+      )}
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[var(--text-subtle)]">
-          Payments you have made
-        </h2>
+      <div className="section-h">
+        Payments you have made
+        {receipts.length > 0 ? (
+          <span className="mono-note">
+            {receipts.length} {receipts.length === 1 ? "receipt" : "receipts"}
+          </span>
+        ) : null}
+      </div>
+      <div className="card-block boxed">
         {receipts.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[var(--text-muted)]">
-            No payments recorded yet.
-          </p>
+          <p className="pp-empty-row">No payments recorded yet.</p>
         ) : (
           receipts.map((receipt) => (
-            <div
-              key={receipt.id}
-              className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)] p-4"
-            >
-              <span className="min-w-0">
-                <span className="block font-medium tabular-nums">
+            <div key={receipt.id} className="pl-row">
+              <div className="min-w-0 flex-1">
+                <div className="nm">
                   {formatSchoolMoney(Number(receipt.amount), receipt.currency)}
-                </span>
-                <span className="block text-sm text-[var(--text-muted)]">
+                </div>
+                <div className="sb">
                   {formatSchoolDate(receipt.receiptDate)} ·{" "}
                   {receipt.method.replace(/_/g, " ").toLowerCase()}
                   {receipt.reference ? ` · ${receipt.reference}` : ""}
-                </span>
-              </span>
+                </div>
+              </div>
               {/* S-6.7 — the receipt itself, as a file they can keep. */}
               <PrintDocumentButton
                 sourceKey="schools.fee.receipt"
@@ -226,7 +279,22 @@ export function ParentFeesScreen() {
             </div>
           ))
         )}
-      </section>
+      </div>
+
+      {/* The statement, as paper. There is no payment flow in this portal, so the
+          sticky bar's action is the one thing a parent can actually do here. */}
+      <div className="pay-bar">
+        <div className="meta">
+          <div className="l">What you still owe</div>
+          <div className="v">{formatSchoolMoney(outstanding, currency)}</div>
+        </div>
+        <PrintDocumentButton
+          sourceKey="schools.fee.statement"
+          recordId={child.id}
+          label="Statement"
+          variant="default"
+        />
+      </div>
     </div>
   );
 }

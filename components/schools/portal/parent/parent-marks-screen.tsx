@@ -6,6 +6,7 @@ import { PrintDocumentButton } from "@/components/schools/common/print-document-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import { MedusaBookOpenIcon } from "@/lib/icons";
 
 import { useParentPortal } from "./parent-portal-context";
 
@@ -18,7 +19,9 @@ import { useParentPortal } from "./parent-portal-context";
  *
  * Pass or not is judged against each subject's own pass mark, which travels with
  * the mark. 45 is a fail in Mathematics and a pass in Shona at the same school
- * (S-1.3), so a single school-wide line would be wrong on one of them.
+ * (S-1.3), so a single school-wide line would be wrong on one of them. The bar
+ * under each subject is toned the same way — brand for a mark with no pass mark to
+ * judge it by, success or danger once there is one.
  */
 
 type Mark = {
@@ -46,28 +49,40 @@ export function ParentMarksScreen() {
   });
 
   if (!child) {
-    return <p className="py-8 text-center text-sm text-[var(--text-muted)]">No child selected.</p>;
+    return (
+      <p className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">No child selected.</p>
+    );
   }
 
   if (!child.canSeeResults) {
     return (
-      <Alert>
-        <AlertTitle>Marks are not shown on your account</AlertTitle>
-        <AlertDescription>
-          The school has set your account up without academic access for {child.firstName}.
-        </AlertDescription>
-      </Alert>
+      <div className="p-4">
+        <Alert>
+          <AlertTitle>Marks are not shown on your account</AlertTitle>
+          <AlertDescription>
+            The school has set your account up without academic access for {child.firstName}.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
-  if (query.isPending) return <Skeleton className="h-48 w-full" />;
+  if (query.isPending) {
+    return (
+      <div className="p-4">
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
 
   if (query.isError) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Marks could not be loaded</AlertTitle>
-        <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
-      </Alert>
+      <div className="p-4">
+        <Alert variant="destructive">
+          <AlertTitle>Marks could not be loaded</AlertTitle>
+          <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
@@ -75,7 +90,7 @@ export function ParentMarksScreen() {
 
   if (marks.length === 0) {
     return (
-      <div className="space-y-2 py-8 text-center">
+      <div className="space-y-2 px-6 py-10 text-center">
         <p className="font-medium">Marks have not been released yet</p>
         <p className="text-sm text-[var(--text-muted)]">
           The school publishes marks once they have been checked. Nothing is missing — there is
@@ -92,63 +107,57 @@ export function ParentMarksScreen() {
   }
 
   return (
-    <div className="space-y-5">
-      {[...byTerm.entries()].map(([termName, rows]) => {
-        const average = rows.reduce((sum, row) => sum + row.score, 0) / rows.length;
-        return (
-          <section key={termName} className="space-y-2">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[var(--text-subtle)]">
-                {termName}
-              </h2>
-              <span className="text-sm text-[var(--text-muted)] tabular-nums">
-                average {average.toFixed(1)}
-              </span>
-            </div>
-            <ul className="space-y-2">
-              {rows.map((mark) => {
-                const passed = mark.passMark == null ? null : mark.score >= mark.passMark;
-                return (
-                  <li
-                    key={mark.id}
-                    className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)] p-3"
-                  >
-                    <span className="min-w-0">
-                      <span className="block font-medium">{mark.subjectName}</span>
-                      {mark.remarks ? (
-                        <span className="block text-sm text-[var(--text-muted)]">{mark.remarks}</span>
-                      ) : null}
+    <div className="pp-page">
+      {[...byTerm.entries()].map(([termName, rows]) => (
+        <section key={termName}>
+          <div className="section-h">
+            {termName}
+            <span className="mono-note">
+              {rows.length} {rows.length === 1 ? "subject" : "subjects"}
+            </span>
+          </div>
+          <div className="px-4">
+            {rows.map((mark) => {
+              const passed = mark.passMark == null ? null : mark.score >= mark.passMark;
+              const tone = passed === null ? "" : passed ? "good" : "bad";
+              const width = Math.max(0, Math.min(100, mark.score));
+              return (
+                <div key={mark.id} className="subj-card">
+                  <div className="hd">
+                    <span className="ic-tile brand">
+                      <MedusaBookOpenIcon className="size-4" aria-hidden />
                     </span>
-                    <span className="shrink-0 text-right">
-                      <span className="block text-lg font-semibold tabular-nums">
-                        {mark.score.toFixed(0)}
-                      </span>
-                      <span
-                        className={
-                          passed === false
-                            ? "block text-sm text-[var(--status-error-text)]"
-                            : "block text-sm text-[var(--text-muted)]"
-                        }
-                      >
-                        {mark.grade ?? "—"}
-                        {passed === false ? " · below pass" : ""}
-                      </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="nm">{mark.subjectName}</div>
+                      <div className="sb">
+                        {[mark.grade, mark.remarks].filter(Boolean).join(" · ") ||
+                          mark.subjectCode}
+                      </div>
+                    </div>
+                    <span className={tone ? `v ${tone}` : "v"}>
+                      {mark.score.toFixed(0)}
+                      <span className="unit">%</span>
                     </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
+                  </div>
+                  <div className="bar">
+                    <span className={tone} style={{ width: `${width}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
 
       {term?.id ? (
-        <PrintDocumentButton
-          sourceKey="schools.report-card"
-          recordId={child.id}
-          filters={{ termId: term.id }}
-          label="Download report card"
-        />
+        <div className="px-4 pt-2">
+          <PrintDocumentButton
+            sourceKey="schools.report-card"
+            recordId={child.id}
+            filters={{ termId: term.id }}
+            label="Download report card"
+          />
+        </div>
       ) : null}
     </div>
   );

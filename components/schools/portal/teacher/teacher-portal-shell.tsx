@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AppShell, Avatar, Badge, NavRail, NavRailGroup } from "@corelithzw/react";
+import { accentVar, AppShell, Avatar, NavRail, NavRailGroup } from "@corelithzw/react";
 import { NavRailItem } from "@/components/ui/nav-rail";
+import { useOfflineConnectivity } from "@/hooks/use-offline-connectivity";
 import {
   BarChart3,
   Bell,
@@ -23,6 +24,7 @@ import {
   UserRound,
 } from "@/lib/icons";
 import { useTeacherPortal } from "./teacher-portal-context";
+import "./teacher-portal.css";
 
 /**
  * Route → page title. The old two-line bar put a category label above the
@@ -71,6 +73,42 @@ const ACCOUNT = [
 ];
 
 /**
+ * The strip under the bar: the five screens a teacher moves between
+ * inside one lesson, promoted out of the rail so they are one tap away
+ * from wherever they are. Same routes as the rail — a second way in, not
+ * a second place to be.
+ */
+const TABS = [
+  { href: "/portal/teacher", label: "Today" },
+  { href: "/portal/teacher/marks", label: "Marks" },
+  { href: "/portal/teacher/messages", label: "Messages" },
+  { href: "/portal/teacher/timetable", label: "Timetable" },
+  { href: "/portal/teacher/lessons", label: "Lessons" },
+];
+
+/**
+ * The class rail's colour bars. Subject → hue, held to a short rotation
+ * so a rail of six classes reads as two or three subjects rather than as
+ * six unrelated colours — which is what the demo's violet/blue pair does.
+ * Derived from the subject name, so the same subject is the same colour on
+ * every visit and nothing has to be stored.
+ */
+const CLASS_HUES = ["violet", "blue", "teal"] as const;
+
+function greeting(minute: number) {
+  if (minute < 12 * 60) return "Good morning";
+  if (minute < 17 * 60) return "Good afternoon";
+  return "Good evening";
+}
+
+const CAPTION_DATE = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+/**
  * The teacher portal's own chrome.
  *
  * A portal is not the dashboard with a different nav: a teacher signs in on a
@@ -85,63 +123,86 @@ const ACCOUNT = [
 export function TeacherPortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { day, classSubjectId, setClassSubjectId } = useTeacherPortal();
+  const { isOffline } = useOfflineConnectivity();
 
-  const title = TITLES[pathname] ?? TITLES["/portal/teacher"];
   const teacherName = day.teacher?.user.name ?? "Teacher";
   const subjects = [...new Set((day.classes).map((row) => row.subjectName))];
   const papers = day.workload?.papersToMark ?? 0;
   const selected = day.classes.find((row) => row.classSubjectId === classSubjectId);
+  const onToday = pathname === "/portal/teacher";
   /**
-   * What the bar's caption line says: the term and the class in view. Both are
-   * live state rather than a category label — they change what every number on
-   * the screen means, which is what earns them the space.
+   * The bar's two lines. The caption is context — the school day this is,
+   * or the class the screen is anchored to — and the title is where the
+   * teacher stands. On Today the title greets them, because the screen is
+   * their day rather than a record: the demo opens the same way.
    */
-  const context = [
-    day.term?.name,
-    selected
-      ? `${selected.className}${selected.streamName ? ` ${selected.streamName}` : ""} · ${selected.subjectName}`
-      : null,
-  ]
+  const now = new Date();
+  const title = onToday
+    ? `${greeting(now.getHours() * 60 + now.getMinutes())}, ${teacherName}`
+    : (TITLES[pathname] ?? TITLES["/portal/teacher"]);
+  const classContext = selected
+    ? `${selected.className}${selected.streamName ? ` ${selected.streamName}` : ""} · ${selected.subjectName}`
+    : null;
+  const caption = (
+    onToday
+      ? [CAPTION_DATE.format(day.onDate ? new Date(`${day.onDate}T00:00:00`) : now), day.term?.name]
+      : [classContext, day.term?.name]
+  )
     .filter(Boolean)
-    .join(" — ");
+    .join(" · ");
+
+  /** Subject → hue, stable across renders and screens. */
+  const hues = new Map(
+    subjects.map((subject, index) => [subject, CLASS_HUES[index % CLASS_HUES.length]]),
+  );
 
   const isActive = (href: string) =>
     href === "/portal/teacher" ? pathname === href : pathname.startsWith(href);
 
   const sidebar = (
-    <div className="flex min-h-0 flex-col gap-3">
+    <div className="flex min-h-0 flex-col gap-1">
       {/* No brand label. The profile card is the rail's identity: whose
           classes these are is the only heading the portal needs. */}
-      <Link
-        href="/portal/teacher/profile"
-        className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[color:var(--border)] bg-[color:var(--surface)] p-3 no-underline"
-      >
+      <Link href="/portal/teacher/profile" className="te-who">
         <Avatar
           name={teacherName}
           {...(day.teacher?.user.image ? { src: day.teacher.user.image } : {})}
           size="md"
         />
         <span className="min-w-0">
-          <span className="block truncate text-[length:var(--type-body-sm)] font-semibold text-[color:var(--text-strong)]">
-            {teacherName}
-          </span>
-          <span className="block truncate text-[length:var(--type-caption)] text-[color:var(--text-muted)]">
+          <span className="nm truncate">{teacherName}</span>
+          <span className="sb truncate">
             {subjects.length > 0 ? subjects.join(" · ") : "No classes this term"}
           </span>
         </span>
       </Link>
 
       <NavRail label="Teacher portal navigation" className="min-h-0 flex-1 overflow-y-auto">
-        <NavRailGroup label="Your classes">
+        <NavRailGroup label="My classes">
           {(day.classes).map((row) => (
             <NavRailItem
               key={row.classSubjectId}
+              className="te-class-row"
               active={row.classSubjectId === classSubjectId}
               onClick={() => setClassSubjectId(row.classSubjectId)}
               count={row.size}
             >
-              {row.className}
-              {row.streamName ? ` ${row.streamName}` : ""} · {row.subjectName}
+              <span
+                aria-hidden
+                className="swatch"
+                style={{
+                  background: accentVar(hues.get(row.subjectName) ?? "gray", "solid"),
+                }}
+              />
+              <span className="cb">
+                <span className="cn">
+                  {row.className}
+                  {row.streamName ? ` ${row.streamName}` : ""} · {row.subjectName}
+                </span>
+                <span className="cs">
+                  {row.classCode} · {row.size}
+                </span>
+              </span>
             </NavRailItem>
           ))}
           {day.classes.length === 0 ? (
@@ -203,34 +264,45 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
   );
 
   const topbar = (
-    <div className="flex w-full min-w-0 items-center gap-3">
-      <div className="min-w-0 flex-1">
-        <h1 className="flex min-w-0 items-baseline gap-2 truncate text-[length:var(--type-h4)] font-semibold text-[color:var(--text-strong)]">
-          <span className="truncate">{title}</span>
-          {context ? (
-            <span className="truncate text-[length:var(--type-body-sm)] font-normal text-[color:var(--text-muted)]">
-              {context}
+    <>
+      <div className="te-bar">
+        <div className="meta">
+          {caption ? <div className="crumbs">{caption}</div> : null}
+          <h1>{title}</h1>
+        </div>
+        <span className={isOffline ? "te-chip off" : "te-chip"}>
+          <span aria-hidden className="pdot" />
+          {isOffline ? "Offline" : "Online"}
+        </span>
+        <Link href="/portal/teacher/messages" aria-label="Messages" className="te-bell">
+          <Bell className="size-4" aria-hidden />
+          {papers > 0 ? (
+            <span className="ndot" aria-hidden>
+              {papers}
             </span>
           ) : null}
-        </h1>
+        </Link>
       </div>
-      {papers > 0 ? (
-        <Badge tone="warn">
-          {papers} paper{papers === 1 ? "" : "s"} to mark
-        </Badge>
-      ) : null}
-      <Link
-        href="/portal/teacher/messages"
-        aria-label="Messages"
-        className="inline-flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[color:var(--text-muted)] hover:bg-[color:var(--surface-muted)] hover:text-[color:var(--text-strong)]"
-      >
-        <Bell className="size-4" aria-hidden />
-      </Link>
-    </div>
+      <nav className="te-tabs" aria-label="Teacher portal sections">
+        {TABS.map((tab) => (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className={isActive(tab.href) ? "tab active" : "tab"}
+            {...(isActive(tab.href) ? { "aria-current": "page" as const } : {})}
+          >
+            {tab.label}
+            {tab.href === "/portal/teacher/marks" && papers > 0 ? (
+              <span className="bdg">{papers}</span>
+            ) : null}
+          </Link>
+        ))}
+      </nav>
+    </>
   );
 
   return (
-    <AppShell sidebar={sidebar} topbar={topbar}>
+    <AppShell className="te-portal" sidebar={sidebar} topbar={topbar}>
       {children}
     </AppShell>
   );

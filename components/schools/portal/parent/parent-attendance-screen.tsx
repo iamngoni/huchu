@@ -32,10 +32,10 @@ type Day = {
 };
 
 const TONE: Record<string, string> = {
-  PRESENT: "text-[var(--status-success-text)]",
-  ABSENT: "text-[var(--status-error-text)]",
-  LATE: "text-[var(--status-warning-text)]",
-  EXCUSED: "text-[var(--text-muted)]",
+  PRESENT: "pp-tone-success",
+  ABSENT: "pp-tone-danger",
+  LATE: "pp-tone-warn",
+  EXCUSED: "pp-tone-muted",
 };
 
 const LABEL: Record<string, string> = {
@@ -60,65 +60,80 @@ export function ParentAttendanceScreen() {
   });
 
   if (!child) {
-    return <p className="py-8 text-center text-sm text-[var(--text-muted)]">No child selected.</p>;
+    return (
+      <p className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">No child selected.</p>
+    );
   }
 
   const rate =
     child.attendance.sessions > 0
       ? Math.round((child.attendance.present / child.attendance.sessions) * 100)
       : null;
+  const days = query.data?.days ?? [];
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-        <p className="text-sm text-[var(--text-muted)]">
-          {term?.name ?? "This term"} — {child.firstName}
-        </p>
-        <p className="text-3xl font-semibold tabular-nums">
-          {rate === null ? "No register yet" : `${rate}%`}
-        </p>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
+    <div className="pp-page">
+      <div className="att-card">
+        <div className="summary">
+          <span className="v">{rate === null ? "—" : `${rate}%`}</span>
+          <span className="lbl">at school · {child.firstName}</span>
+        </div>
+        <div className="sb">
           {child.attendance.sessions === 0
-            ? "Nothing has been recorded for this term."
-            : `${child.attendance.present} in school · ${child.attendance.absent} away · ${child.attendance.late} late`}
-        </p>
+            ? `Nothing has been recorded for ${term?.name ?? "this term"} yet.`
+            : `Present ${child.attendance.present} days · late ${child.attendance.late} · away ${child.attendance.absent} — out of ${child.attendance.sessions} school days so far.`}
+        </div>
+      </div>
+
+      <div className="section-h">
+        Day by day
+        {days.length > 0 ? (
+          <span className="mono-note">
+            {days.length} {days.length === 1 ? "day" : "days"}
+          </span>
+        ) : null}
       </div>
 
       {query.isPending ? (
-        <Skeleton className="h-40 w-full" />
+        <div className="px-4">
+          <Skeleton className="h-40 w-full" />
+        </div>
       ) : query.isError ? (
-        <Alert variant="destructive">
-          <AlertTitle>Attendance could not be loaded</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
-        </Alert>
-      ) : (query.data?.days ?? []).length === 0 ? (
-        <p className="py-4 text-center text-sm text-[var(--text-muted)]">
-          No registers have been taken for {child.firstName} this term.
-        </p>
+        <div className="px-4">
+          <Alert variant="destructive">
+            <AlertTitle>Attendance could not be loaded</AlertTitle>
+            <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
+          </Alert>
+        </div>
       ) : (
-        <ul className="space-y-2">
-          {(query.data?.days ?? []).map((day) => (
-            <li
-              key={day.id}
-              className="flex items-start justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)] p-3"
-            >
-              <span className="min-w-0">
-                <span className="block font-medium">{formatSchoolDate(day.date)}</span>
-                <span className="block text-sm text-[var(--text-muted)]">
-                  {[day.className, day.remarks].filter(Boolean).join(" · ") || "—"}
-                </span>
-              </span>
-              <span className="shrink-0 text-right">
-                <span className={`block text-sm font-medium ${TONE[day.status] ?? ""}`}>
-                  {LABEL[day.status] ?? day.status.toLowerCase()}
-                </span>
-                {day.register !== "SUBMITTED" && day.register !== "LOCKED" ? (
-                  <span className="block text-sm text-[var(--text-subtle)]">not yet submitted</span>
-                ) : null}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div className="card-block boxed">
+          {days.length === 0 ? (
+            <p className="pp-empty-row">
+              No registers have been taken for {child.firstName} this term.
+            </p>
+          ) : (
+            days.map((day) => (
+              <div key={day.id} className="pl-row">
+                <div className="min-w-0 flex-1">
+                  <div className="nm">{formatSchoolDate(day.date)}</div>
+                  <div className="sb">
+                    {[day.className, day.remarks].filter(Boolean).join(" · ") || "—"}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className={`text-[13px] font-medium ${TONE[day.status] ?? ""}`}>
+                    {LABEL[day.status] ?? day.status.toLowerCase()}
+                  </div>
+                  {day.register !== "SUBMITTED" && day.register !== "LOCKED" ? (
+                    <div className="text-[11.5px] text-[var(--text-subtle)]">
+                      not yet submitted
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       )}
     </div>
   );
