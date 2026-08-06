@@ -58,9 +58,10 @@ export function StudentPortalShell({ children }: { children: React.ReactNode }) 
   const name = day.student
     ? `${day.student.firstName} ${day.student.lastName}`
     : "Student";
-  const title =
-    TITLES[pathname] ??
-    (day.student ? `Hi, ${day.student.firstName}` : "Home");
+  // The screen's name. Home's own greeting line does the greeting, so the
+  // bar does not repeat it — the prototype's does only because its bar sits
+  // under the demo site's chrome rather than being the app's one bar.
+  const title = TITLES[pathname] ?? "Home";
 
   const isActive = (href: string) =>
     href === "/portal/student" ? pathname === href : pathname.startsWith(href);

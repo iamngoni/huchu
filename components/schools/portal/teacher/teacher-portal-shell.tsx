@@ -83,12 +83,6 @@ const TABS = [
   { href: "/portal/teacher/lessons", label: "Lessons", icon: Layers },
 ];
 
-function greeting(minute: number) {
-  if (minute < 12 * 60) return "Good morning";
-  if (minute < 17 * 60) return "Good afternoon";
-  return "Good evening";
-}
-
 /**
  * "Thursday · 6 August 2026", built from two single-field formatters.
  *
@@ -130,15 +124,14 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
   const selected = day.classes.find((row) => row.classSubjectId === classSubjectId);
   const onToday = pathname === "/portal/teacher";
   /**
-   * The bar's two lines. The caption is context — the school day this is,
-   * or the class the screen is anchored to — and the title is where the
-   * teacher stands. On Today the title greets them, because the screen is
-   * their day rather than a record: the demo opens the same way.
+   * The bar's two lines: the caption is context — the school day this is, or
+   * the class the screen is anchored to — and the title is where the teacher
+   * stands. It does not greet them. The prototype's bar does, but that bar
+   * sits inside a device frame under the demo site's own chrome; this is the
+   * app's single bar, and Today's own heading greets them one line below.
    */
   const now = new Date();
-  const title = onToday
-    ? `${greeting(now.getHours() * 60 + now.getMinutes())}, ${teacherName}`
-    : (TITLES[pathname] ?? TITLES["/portal/teacher"]);
+  const title = TITLES[pathname] ?? TITLES["/portal/teacher"];
   const classContext = selected
     ? `${selected.className}${selected.streamName ? ` ${selected.streamName}` : ""} · ${selected.subjectName}`
     : null;

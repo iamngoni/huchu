@@ -73,11 +73,11 @@ export function ParentPortalShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="pa-shell">
       <header className="pa-bar">
-        <h1>
-          {pathname === "/portal/parent" && guardian
-            ? `Hi, ${guardian.firstName}`
-            : title}
-        </h1>
+        {/* The screen's name, and only that. The prototype's bar greets the
+            parent because it sits under the demo site's own chrome; here the
+            bar is the app's one bar, and Home's greeting block below already
+            says hello — saying it twice is a wasted line on a phone. */}
+        <h1>{title}</h1>
         <div className="actions">
           {child ? (
             <button
