@@ -457,6 +457,37 @@
   margin-top: 4px;
 }
 
+/* ── Register: the counter row ─────────────────────────────────── */
+.te-portal .te-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 10px;
+}
+.te-portal .te-count {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+.te-portal .te-count .v {
+  font: 700 26px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+  margin: 0;
+}
+.te-portal .te-count .lbl {
+  font: 500 11px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 5px 0 0;
+}
+.te-portal .te-count.success { background: var(--tone-success-bg); }
+.te-portal .te-count.success .v { color: var(--tone-success); }
+.te-portal .te-count.danger { background: var(--tone-danger-bg); }
+.te-portal .te-count.danger .v { color: var(--tone-danger); }
+.te-portal .te-count.warn { background: var(--tone-warn-bg); }
+.te-portal .te-count.warn .v { color: var(--tone-warn); }
+
 /* ── Screen sweep ──────────────────────────────────────────────
    The demo's visual language across the other screens: section
    titles at the same tier, a violet-tinted table head, and the

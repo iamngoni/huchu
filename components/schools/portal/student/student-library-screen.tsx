@@ -208,7 +208,7 @@ export function StudentLibraryScreen() {
           const due = dueLook(loan);
           return (
             <div key={loan.id} className="sp-borrow-card">
-              <div className="w-[56px]">
+              <div className="sp-cover w-[56px]">
                 <BookCover
                   title={loan.book.title}
                   author={loan.book.author}
@@ -266,7 +266,7 @@ export function StudentLibraryScreen() {
       ) : (
         books.map((book) => (
           <div key={book.id} className="sp-catalog-card">
-            <div className="w-[42px]">
+            <div className="sp-cover sm w-[42px]">
               <BookCover title={book.title} author={book.author} size="sm" />
             </div>
             <div className="min-w-0">

@@ -340,9 +340,11 @@ export function StudentGoalsScreen() {
                   <Badge tone={status.tone}>
                     <status.Icon className="size-3" aria-hidden /> {status.label}
                   </Badge>
-                  <span className="sp-gc-note">
-                    Started at {markLabel(baseline)}
-                  </span>
+                  {baseline === null ? null : (
+                    <span className="sp-gc-note">
+                      Started at {markLabel(baseline)}
+                    </span>
+                  )}
                 </span>
 
                 {goal?.plan ? (

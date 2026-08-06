@@ -87,20 +87,14 @@ export function StudentHomeScreen() {
   );
   const nextIndex = next ? periods.indexOf(next) + 1 : 0;
 
-  const yearGroup = [
-    student.currentClass?.name ?? "No year group yet",
-    student.currentStream?.name ?? null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
     <div className="flex flex-col">
-      <div>
-        <h2 className="sp-greet-h">Hi, {student.firstName}</h2>
-        <div className="sp-greet">
-          {[yearGroup, term?.name].filter(Boolean).join(" · ")}
-        </div>
+      {/* The greeting itself is the app bar's, as in the prototype; this line is
+          the school context under it. */}
+      <div className="sp-greet">
+        {[student.currentClass?.name, student.currentStream?.name, term?.name]
+          .filter(Boolean)
+          .join(" · ") || "No year group yet"}
       </div>
 
       <div className="sp-psh">

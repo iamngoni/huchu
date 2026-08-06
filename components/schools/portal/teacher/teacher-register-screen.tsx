@@ -207,23 +207,20 @@ export function TeacherRegisterScreen() {
           </div>
         }
       >
-        <div className="grid gap-2 sm:grid-cols-4">
+        {/* The counter carries its meaning in the tint as well as the number:
+            present green, absent red, late amber, the rest neutral. A row of
+            four grey tiles makes the teacher read four labels to find the one
+            that matters. */}
+        <div className="te-counts">
           {[
             { label: "Present", value: counts.present, tone: "success" as const },
             { label: "Absent", value: counts.absent, tone: "danger" as const },
             { label: "Late", value: counts.late, tone: "warn" as const },
             { label: "Not marked", value: counts.unmarked, tone: "neutral" as const },
           ].map((cell) => (
-            <div
-              key={cell.label}
-              className="rounded-[var(--radius-md)] bg-[color:var(--surface-muted)] px-4 py-3"
-            >
-              <p className="font-[family-name:var(--font-mono)] text-[length:var(--type-h3)] font-semibold tabular-nums text-[color:var(--text-strong)]">
-                {cell.value}
-              </p>
-              <p className="text-[length:var(--type-caption)] uppercase text-[color:var(--text-muted)]">
-                {cell.label}
-              </p>
+            <div key={cell.label} className={`te-count ${cell.tone}`}>
+              <p className="v">{cell.value}</p>
+              <p className="lbl">{cell.label}</p>
             </div>
           ))}
         </div>

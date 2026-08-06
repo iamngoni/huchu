@@ -330,8 +330,27 @@
   flex-direction: column;
   gap: 2px;
 }
-.student-portal .sp-tt .sp-pd .sp-pd-nm { font: 600 10px/1.1 var(--font-sans); color: var(--text-strong); overflow-wrap: anywhere; }
-.student-portal .sp-tt .sp-pd .sp-pd-rm { font: 500 9px/1 var(--font-mono); color: var(--text-muted); margin-top: auto; }
+/* Two lines, never a split word: "Combined Science" wraps between the words
+   rather than becoming "Combine / d Science". */
+.student-portal .sp-tt .sp-pd .sp-pd-nm {
+  font: 600 9.5px/1.15 var(--font-sans);
+  color: var(--text-strong);
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.student-portal .sp-tt .sp-pd .sp-pd-rm {
+  font: 500 8.5px/1 var(--font-mono);
+  color: var(--text-muted);
+  margin-top: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .student-portal .sp-tt .sp-pd.free {
   background: transparent;
   border: 1px dashed var(--border-strong);
@@ -678,6 +697,16 @@
   gap: 12px;
   align-items: center;
 }
+/* The shared `BookCover` sets its own type scale for a grid tile. At the
+   prototype's 56px and 42px spine widths that overflows, so the spine type is
+   stepped down here rather than in the shared component, which other screens
+   still want at full size. */
+.student-portal .sp-cover { flex: none; }
+.student-portal .sp-cover > div { padding: 5px 4px; border-radius: 6px; }
+.student-portal .sp-cover span { font-size: 8.5px; line-height: 1.15; }
+.student-portal .sp-cover.sm > div { padding: 4px 3px; }
+.student-portal .sp-cover.sm span { font-size: 7px; line-height: 1.1; }
+
 .student-portal .sp-borrow-card .sp-bc-nm { font: 600 13.5px/1.3 var(--font-sans); color: var(--text-strong); }
 .student-portal .sp-borrow-card .sp-bc-sb { font: 11.5px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
 .student-portal .sp-borrow-card .sp-bc-due {

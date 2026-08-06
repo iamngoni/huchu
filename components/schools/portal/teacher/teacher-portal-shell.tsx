@@ -24,6 +24,7 @@ import {
   UserRound,
 } from "@/lib/icons";
 import { useTeacherPortal } from "./teacher-portal-context";
+import { hueFor, subjectHues } from "./teacher-subject-hues";
 import "./teacher-portal.css";
 
 /**
@@ -85,15 +86,6 @@ const TABS = [
   { href: "/portal/teacher/timetable", label: "Timetable", icon: Calendar },
   { href: "/portal/teacher/lessons", label: "Lessons", icon: Layers },
 ];
-
-/**
- * The class rail's colour bars. Subject → hue, held to a short rotation
- * so a rail of six classes reads as two or three subjects rather than as
- * six unrelated colours — which is what the demo's violet/blue pair does.
- * Derived from the subject name, so the same subject is the same colour on
- * every visit and nothing has to be stored.
- */
-const CLASS_HUES = ["violet", "blue", "teal"] as const;
 
 function greeting(minute: number) {
   if (minute < 12 * 60) return "Good morning";
@@ -162,10 +154,8 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
     .filter(Boolean)
     .join(" · ");
 
-  /** Subject → hue, stable across renders and screens. */
-  const hues = new Map(
-    subjects.map((subject, index) => [subject, CLASS_HUES[index % CLASS_HUES.length]]),
-  );
+  /** Subject → hue, the same mapping the timetable grid draws from. */
+  const hues = subjectHues(day.classes);
 
   const isActive = (href: string) =>
     href === "/portal/teacher" ? pathname === href : pathname.startsWith(href);
@@ -201,9 +191,7 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
               <span
                 aria-hidden
                 className="swatch"
-                style={{
-                  background: accentVar(hues.get(row.subjectName) ?? "gray", "solid"),
-                }}
+                style={{ background: accentVar(hueFor(hues, row.subjectName), "solid") }}
               />
               <span className="cb">
                 <span className="cn">

@@ -14,16 +14,22 @@ import { BarChart3, Bell, Calendar, Home, UserRound } from "@/lib/icons";
 import { useStudentPortal } from "./student-portal-context";
 import "./student-portal.css";
 
-/** The screen's own title, so the app bar never has to be told twice. */
+/**
+ * The screen's own title, so the app bar never has to be told twice.
+ *
+ * The wording is the prototype's, which says "My marks" and "My timetable"
+ * rather than "Marks" and "Timetable": on a pupil's phone every screen is about
+ * them, and saying so is what makes it feel like their app rather than the
+ * school's. Home is the exception — its bar carries the greeting.
+ */
 const TITLES: Record<string, string> = {
-  "/portal/student": "Home",
-  "/portal/student/timetable": "Timetable",
+  "/portal/student/timetable": "My timetable",
   "/portal/student/marks": "My marks",
   "/portal/student/homework": "Homework",
   "/portal/student/library": "Library",
   "/portal/student/goals": "My goals",
-  "/portal/student/notifications": "Notifications",
-  "/portal/student/profile": "Profile",
+  "/portal/student/notifications": "Messages",
+  "/portal/student/profile": "My profile",
   "/portal/student/settings": "Settings",
   "/portal/student/help": "Help",
 };
@@ -49,10 +55,12 @@ export function StudentPortalShell({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const day = useStudentPortal();
 
-  const title = TITLES[pathname] ?? "Home";
   const name = day.student
     ? `${day.student.firstName} ${day.student.lastName}`
     : "Student";
+  const title =
+    TITLES[pathname] ??
+    (day.student ? `Hi, ${day.student.firstName}` : "Home");
 
   const isActive = (href: string) =>
     href === "/portal/student" ? pathname === href : pathname.startsWith(href);

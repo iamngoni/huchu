@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Alert, EmptyState, SegmentedControl, Skeleton } from "@corelithzw/react";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { ChevronRight, MedusaBookOpenIcon } from "@/lib/icons";
+import { MedusaBookOpenIcon } from "@/lib/icons";
 import { DAY_NAMES } from "@/lib/schools/timetable-format";
 import { useStudentPortal } from "./student-portal-context";
 import { subjectAccentClass } from "./student-subject-accent";
@@ -229,9 +229,9 @@ export function StudentTimetableScreen() {
                     : `${row.time} · no lesson`}
                 </span>
               </span>
-              <span className="sp-lr-chev">
-                <ChevronRight className="size-4" aria-hidden />
-              </span>
+              {/* No chevron: unlike Profile's rows, a lesson row here does not
+                  go anywhere, and a chevron that opens nothing is a lie. */}
+              <span />
             </div>
           ))}
         </div>

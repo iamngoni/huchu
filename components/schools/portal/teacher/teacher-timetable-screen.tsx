@@ -4,7 +4,6 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  accentFor,
   accentVar,
   Alert,
   Badge,
@@ -17,6 +16,7 @@ import {
 import { ChevronLeftIcon, ChevronRight } from "@/lib/icons";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { useTeacherPortal } from "./teacher-portal-context";
+import { hueFor, subjectHues } from "./teacher-subject-hues";
 
 type WeekDay = { dayOfWeek: number; date: string; isToday: boolean };
 
@@ -130,8 +130,9 @@ function weekLabel(days: WeekDay[]) {
  * actually go.
  *
  * Subject colour is categorical, not decorative, so it comes from
- * `accentFor(subject)` — the same subject is the same hue everywhere, derived
- * rather than chosen, and every hue is a token. Cover keeps its own hue and
+ * `hueFor(subject)` — the same subject is the same hue everywhere in the
+ * portal, the class rail included, derived rather than chosen, and every hue
+ * is a token. Cover keeps its own hue and
  * carries the word "Cover" as well, because a lesson somebody else's class is
  * waiting for must not be distinguishable by colour alone.
  */
@@ -186,7 +187,10 @@ export function TeacherTimetableScreen() {
   const onThisWeek = week ? weekStart === "" || weekStart === week.weekStart : true;
   const isThisWeek = days.some((weekDay) => weekDay.isToday);
 
-  // The subjects on this week's grid, each with the hue its cells carry.
+  // The subjects on this week's grid, each with the hue its cells carry —
+  // the same subject → hue mapping the class rail paints its bars with, so a
+  // colour means one subject everywhere in the portal.
+  const hues = subjectHues(day.classes);
   const legend = [...new Set(lessons.map((row) => row.subjectName))].sort();
 
   const openCell = selected
@@ -271,7 +275,7 @@ export function TeacherTimetableScreen() {
         <span className="flex-1" />
         <div className="flex flex-wrap items-center gap-2">
           {legend.map((subject) => (
-            <Badge key={subject} accent={accentFor(subject)} dot>
+            <Badge key={subject} accent={hueFor(hues, subject)} dot>
               {subject}
             </Badge>
           ))}
@@ -368,7 +372,7 @@ export function TeacherTimetableScreen() {
                       );
                     }
 
-                    const hue = covering ? "orange" : accentFor(lesson?.subjectName);
+                    const hue = covering ? "orange" : hueFor(hues, lesson?.subjectName);
                     const title = covering
                       ? `${covering.className}${covering.streamName ? ` ${covering.streamName}` : ""}`
                       : `${lesson?.className}${lesson?.streamName ? ` ${lesson.streamName}` : ""}`;

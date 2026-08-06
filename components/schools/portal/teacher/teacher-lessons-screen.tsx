@@ -3,7 +3,6 @@
 import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  accentFor,
   accentVar,
   Alert,
   Badge,
@@ -20,6 +19,7 @@ import { ChevronLeftIcon, ChevronRight } from "@/lib/icons";
 import { PersonAvatar } from "@/components/schools/common/person-avatar";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { useTeacherPortal } from "./teacher-portal-context";
+import { hueFor, subjectHues } from "./teacher-subject-hues";
 
 type WeekDay = { dayOfWeek: number; date: string; isToday: boolean };
 
@@ -198,7 +198,11 @@ export function TeacherLessonsScreen() {
   const planned = lessons.filter((row) => row.plan).length;
   const unplanned = lessons.length - planned;
   const onThisWeek = week ? weekStart === "" || weekStart === week.weekStart : true;
-  const hue = accentFor(week?.classSubject.subjectName ?? selectedClass?.subjectName);
+  // Same subject → hue mapping as the class rail and the timetable grid.
+  const hue = hueFor(
+    subjectHues(day.classes),
+    week?.classSubject.subjectName ?? selectedClass?.subjectName,
+  );
 
   const save = useMutation({
     mutationFn: async () => {
