@@ -119,7 +119,7 @@ export function ParentFeesScreen() {
     <div className="pp-page">
       {/* Whose bill this is. A parent of three reading a figure needs the name
           beside it more than they need it anywhere else in the app. */}
-      <div className="flex items-center gap-[10px] px-4 pb-[6px] pt-[14px]">
+      <div className="fee-who">
         <PersonAvatar
           firstName={child.firstName}
           lastName={child.lastName}
@@ -127,10 +127,10 @@ export function ParentFeesScreen() {
           size="sm"
         />
         <div className="min-w-0">
-          <div className="text-[14px] font-medium leading-[1.3] text-[var(--text-strong)]">
+          <div className="nm">
             {child.firstName} {child.lastName}
           </div>
-          <div className="truncate text-[12px] leading-[1.3] text-[var(--text-muted)]">
+          <div className="sb truncate">
             {[child.currentClass?.name, child.currentStream?.name].filter(Boolean).join(" · ") ||
               "No class yet"}
           </div>

@@ -4,12 +4,9 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
-  Badge,
   BottomSheet,
   Button,
-  Card,
   EmptyState,
-  Select,
   Skeleton,
 } from "@corelithzw/react";
 import { Input } from "@/components/ui/input";
@@ -18,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle, Check, Clock } from "@/lib/icons";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { useStudentPortal } from "./student-portal-context";
+import { subjectAccentClass } from "./student-subject-accent";
 
 type SubmissionStatus = "SUBMITTED" | "LATE" | "RETURNED" | "RESUBMIT";
 
@@ -34,13 +32,6 @@ const STATUS_LABELS: Record<SubmissionStatus, string> = {
   LATE: "Handed in late",
   RETURNED: "Marked",
   RESUBMIT: "Do it again",
-};
-
-const STATUS_TONES: Record<SubmissionStatus, "success" | "warn" | "info"> = {
-  SUBMITTED: "success",
-  LATE: "warn",
-  RETURNED: "info",
-  RESUBMIT: "warn",
 };
 
 type Homework = {
@@ -93,20 +84,41 @@ function deadline(row: Homework) {
   return `Due in ${days} days`;
 }
 
-type Filter = "all" | "todo" | "in" | "marked";
+type Filter = "all" | "todo" | "overdue" | "in" | "marked";
 
 const FILTERS: Array<{ value: Filter; label: string }> = [
   { value: "all", label: "Everything" },
-  { value: "todo", label: "Still to do" },
+  { value: "todo", label: "To do" },
+  { value: "overdue", label: "Overdue" },
   { value: "in", label: "Handed in" },
   { value: "marked", label: "Marked" },
 ];
 
 function matches(row: Homework, filter: Filter) {
   if (filter === "todo") return row.submission === null;
+  if (filter === "overdue") return row.submission === null && row.isOverdue;
   if (filter === "in") return row.submission !== null;
   if (filter === "marked") return row.submission?.status === "RETURNED";
   return true;
+}
+
+/**
+ * Which of the demo's four due-pill looks a row wears.
+ *
+ * The pill carries an icon and a sentence as well as a colour, because a red
+ * pill and an amber pill are the same pill to a child who cannot tell them
+ * apart.
+ */
+function pillOf(row: Homework) {
+  const submission = row.submission;
+  if (submission?.status === "RETURNED") {
+    return { tone: "graded", Icon: Check, label: STATUS_LABELS.RETURNED };
+  }
+  if (submission) {
+    return { tone: "submitted", Icon: Check, label: STATUS_LABELS[submission.status] };
+  }
+  if (row.isOverdue) return { tone: "overdue", Icon: AlertTriangle, label: deadline(row) };
+  return { tone: "upcoming", Icon: Clock, label: deadline(row) };
 }
 
 /**
@@ -124,9 +136,10 @@ function matches(row: Homework, filter: Filter) {
  * wants the essay. The button says "Hand in late" so nobody is surprised by
  * what the teacher sees.
  *
- * The demo filtered with a row of chips. This is a dropdown — the standing
- * instruction, and on a phone it is also the only one of the two that says
- * what it is set to without being scrolled sideways.
+ * The filter is the demo's chip row, counts and all, because the counts are half
+ * the answer: "Overdue 1" tells a pupil what to do next before they have tapped
+ * anything. The row scrolls sideways rather than wrapping, so a fifth state
+ * costs no vertical space.
  */
 export function StudentHomeworkScreen() {
   const queryClient = useQueryClient();
@@ -212,8 +225,11 @@ export function StudentHomeworkScreen() {
     );
   }
 
+  const countFor = (value: Filter) =>
+    assignments.filter((row) => matches(row, value)).length;
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       {handedIn ? (
         <Alert
           tone="success"
@@ -231,96 +247,75 @@ export function StudentHomeworkScreen() {
         />
       ) : (
         <>
-          <Select
-            label="Show"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value as Filter)}
-          >
+          <div className="sp-chips" role="group" aria-label="Show">
             {FILTERS.map((option) => (
-              <option key={option.value} value={option.value}>
+              <button
+                key={option.value}
+                type="button"
+                className={`sp-chip${filter === option.value ? " on" : ""}`}
+                aria-pressed={filter === option.value}
+                onClick={() => setFilter(option.value)}
+              >
                 {option.label}
-              </option>
+                <span className="sp-chip-ct">{countFor(option.value)}</span>
+              </button>
             ))}
-          </Select>
+          </div>
 
-          <p className="text-[length:var(--type-body-sm)] text-[color:var(--text-body)]">
-            <span className="tabular-nums">{stillToDo}</span>{" "}
-            {stillToDo === 1 ? "piece" : "pieces"} of work still to hand in.
-          </p>
+          <div className="sp-psh">
+            <span>
+              <span className="tabular-nums">{stillToDo}</span>{" "}
+              {stillToDo === 1 ? "piece" : "pieces"} still to hand in
+            </span>
+          </div>
 
           {shown.length === 0 ? (
             <EmptyState
               title="Nothing here"
-              body="Change what the dropdown is showing to see the rest of your homework."
+              body="Tap one of the other chips above to see the rest of your homework."
             />
           ) : (
-            <ul className="flex flex-col gap-3">
+            <ul className="m-0 flex list-none flex-col p-0">
               {shown.map((row) => {
                 const submission = row.submission;
+                const pill = pillOf(row);
                 return (
-                  <li key={row.id}>
-                    <Card>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge tone="outline">{row.subjectName}</Badge>
-                        {submission ? (
-                          <Badge tone={STATUS_TONES[submission.status]}>
-                            <Check className="size-3" aria-hidden />
-                            {STATUS_LABELS[submission.status]}
-                          </Badge>
-                        ) : row.isOverdue ? (
-                          <Badge tone="danger">
-                            <AlertTriangle className="size-3" aria-hidden />
-                            Late
-                          </Badge>
-                        ) : (
-                          <Badge tone="warn">
-                            <Clock className="size-3" aria-hidden />
-                            Still to do
-                          </Badge>
-                        )}
-                      </div>
-
-                      <p className="mt-2 text-[length:var(--type-body)] font-semibold text-[color:var(--text-strong)]">
-                        {row.title}
-                      </p>
-                      <p className="text-[length:var(--type-caption)] text-[color:var(--text-muted)]">
-                        {row.teacherName ?? "Your teacher"} · {deadline(row)}
-                        {row.dueAt ? ` · ${dayOf(row.dueAt)}` : ""}
-                      </p>
-
-                      {submission ? (
-                        <p className="mt-2 text-[length:var(--type-body-sm)] text-[color:var(--text-body)]">
-                          You handed this in on{" "}
-                          <span className="tabular-nums">
-                            {dayOf(submission.submittedAt)}
+                  <li key={row.id} className={subjectAccentClass(row.subjectName)}>
+                    <button
+                      type="button"
+                      className="sp-row-card"
+                      onClick={() => show(row)}
+                    >
+                      <span className="sp-rc-top">
+                        <span className="sp-tag" />
+                        <span className="sp-rc-info block">
+                          <span className="sp-as-subj block">{row.subjectName}</span>
+                          <span className="sp-rc-nm mt-1 block">{row.title}</span>
+                          <span className="sp-rc-sb block">
+                            {row.teacherName ?? "Your teacher"}
+                            {row.dueAt ? ` · ${dayOf(row.dueAt)}` : ""}
                           </span>
-                          {submission.score !== null
-                            ? ` · you scored ${submission.score}${row.maxScore ? ` out of ${row.maxScore}` : ""}`
-                            : " · your teacher has not marked it yet"}
-                        </p>
-                      ) : null}
-
-                      {submission?.feedback ? (
-                        <p className="mt-2 rounded-[var(--radius-md)] bg-[color:var(--surface-muted)] px-3 py-2 text-[length:var(--type-body-sm)] text-[color:var(--text-body)]">
-                          {submission.feedback}
-                        </p>
-                      ) : null}
-
-                      <div className="mt-3">
-                        <Button
-                          variant={submission ? "secondary" : "primary"}
-                          size="lg"
-                          block
-                          onClick={() => show(row)}
-                        >
-                          {submission
-                            ? "See what you handed in"
-                            : row.isOverdue
-                              ? "Hand in late"
-                              : "Hand it in"}
-                        </Button>
-                      </div>
-                    </Card>
+                          <span className="sp-as-meta">
+                            <span className={`sp-as-due ${pill.tone}`}>
+                              <pill.Icon className="size-[11px]" aria-hidden />
+                              {pill.label}
+                            </span>
+                            {submission?.score !== null &&
+                            submission?.score !== undefined ? (
+                              <span className="sp-as-grade">
+                                {submission.score}
+                                {row.maxScore ? `/${row.maxScore}` : ""}
+                              </span>
+                            ) : null}
+                          </span>
+                          {submission?.feedback ? (
+                            <span className="sp-rc-note block">
+                              {submission.feedback}
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
+                    </button>
                   </li>
                 );
               })}

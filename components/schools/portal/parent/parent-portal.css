@@ -317,6 +317,24 @@
 }
 .notice-row .chev { color: var(--text-subtle); margin-top: 8px; }
 
+/* ── Fees: whose bill this is ──────────────────────────────── */
+.fee-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 6px;
+}
+/* Brand-soft, as the prototype has it, without swapping the avatar component. */
+.fee-who .avatar {
+  width: 36px;
+  height: 36px;
+  font: 600 13px/1 var(--font-sans);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+.fee-who .nm { font: 500 14px/1.3 var(--font-sans); color: var(--text-strong); }
+.fee-who .sb { font: 12px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 2px; }
+
 /* ── Fees: statement breakdown ─────────────────────────────── */
 .breakdown {
   background: var(--surface);
@@ -393,10 +411,15 @@
   background: linear-gradient(180deg, var(--brand-soft), transparent);
 }
 .prof-hero .av-wrap { display: flex; justify-content: center; }
+/* The prototype's hero avatar is solid brand with white initials. `PersonAvatar`
+   is still what renders it — this only paints it, so the guardian keeps the same
+   avatar component every other person in the app has. */
 .prof-hero .av-wrap .avatar {
   width: 78px;
   height: 78px;
-  font-size: 28px;
+  font: 700 28px/1 var(--font-sans);
+  background: var(--brand);
+  color: var(--text-inverse);
 }
 .prof-hero h2 {
   font: 700 18px/1.2 var(--font-sans);

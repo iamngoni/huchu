@@ -2,18 +2,12 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Alert,
-  Badge,
-  Card,
-  EmptyState,
-  Progress,
-  Select,
-  Skeleton,
-  StatHero,
-} from "@corelithzw/react";
+import Link from "next/link";
+import { Alert, Badge, EmptyState, Skeleton } from "@corelithzw/react";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import { Shield, TrendingUp } from "@/lib/icons";
 import { useStudentPortal } from "./student-portal-context";
+import { subjectAccentClass } from "./student-subject-accent";
 
 type ResultLine = {
   id: string;
@@ -103,9 +97,9 @@ function movement(now: number, before: number | null) {
  * signed in.
  *
  * Every mark is shown against the one before it, because "78" means nothing on
- * its own and "78, up 4" is the whole reason a child opens this. The term
- * picker is a dropdown rather than the demo's three tabs: one control that
- * says what it is set to, at any term count, on a phone.
+ * its own and "78, up 4" is the whole reason a child opens this. The term picker
+ * is the demo's segmented tab strip, which scrolls sideways rather than
+ * overflowing when a school runs more than three terms.
  */
 export function StudentMarksScreen() {
   const { student, term: currentTerm } = useStudentPortal();
@@ -219,44 +213,61 @@ export function StudentMarksScreen() {
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <Select
-        label="Term"
-        value={activeTermId}
-        onChange={(event) => setChosenTermId(event.target.value)}
-      >
-        {terms.map((row) => (
-          <option key={row.id} value={row.id}>
-            {row.name}
-          </option>
-        ))}
-      </Select>
+  const publishedAt = subjects[0]?.sheet.publishedAt;
 
-      <StatHero
-        label={`Your average mark · ${terms[activeIndex]?.name ?? "this term"}`}
-        value={
+  return (
+    <div className="flex flex-col">
+      <div className="sp-term-row">
+        <div className="sp-term-tabs" role="group" aria-label="Term">
+          {terms.map((row) => (
+            <button
+              key={row.id}
+              type="button"
+              className={row.id === activeTermId ? "on" : undefined}
+              aria-pressed={row.id === activeTermId}
+              onClick={() => setChosenTermId(row.id)}
+            >
+              {row.name}
+            </button>
+          ))}
+        </div>
+        {publishedAt ? (
+          <span className="sp-term-year">
+            {new Date(publishedAt).getFullYear()}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="sp-hero">
+        <div className="sp-hero-l">
+          Overall mark · {terms[activeIndex]?.name ?? "this term"}
+        </div>
+        <div className="sp-hero-v">
           <span className="tabular-nums">
             {nowAverage === null ? "—" : nowAverage.toFixed(1)}
           </span>
-        }
-        {...(overall
-          ? {
-              change: overall.label,
-              trend:
-                overall.tone === "success"
-                  ? ("up" as const)
-                  : overall.tone === "warn"
-                    ? ("down" as const)
-                    : ("neutral" as const),
-            }
-          : {})}
-        subtitle={
-          previousTerm
-            ? `Out of ${FULL_MARK}, across ${subjects.length} ${subjects.length === 1 ? "subject" : "subjects"} · compared with ${previousTerm.name}`
-            : `Out of ${FULL_MARK}, across ${subjects.length} ${subjects.length === 1 ? "subject" : "subjects"}`
-        }
-      />
+          <span className="sp-hero-u">/ {FULL_MARK}</span>
+        </div>
+        <div className="sp-hero-d">
+          {overall
+            ? previousTerm
+              ? `${overall.label} on ${previousTerm.name}`
+              : overall.label
+            : "No marks in this term yet"}
+        </div>
+        <span className="sp-hero-pos">
+          <TrendingUp className="size-3" aria-hidden />
+          Across {subjects.length}{" "}
+          {subjects.length === 1 ? "subject" : "subjects"}
+        </span>
+      </div>
+
+      <div className="sp-psh">
+        Your subjects · {subjects.length}
+        <Link href="/portal/student/goals" className="sp-psh-link">
+          Set goals
+        </Link>
+      </div>
 
       {subjects.length === 0 ? (
         <EmptyState
@@ -264,45 +275,48 @@ export function StudentMarksScreen() {
           body="Pick another term above, or wait for the school to publish this one."
         />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="m-0 flex list-none flex-col p-0">
           {subjects.map((line) => {
             const before = lastTerm.get(line.subjectCode);
             const change = movement(line.score, before ? before.score : null);
+            const name = nameByCode.get(line.subjectCode) ?? line.subjectCode;
             return (
-              <li key={line.id}>
-                <Card>
-                  <div className="flex min-h-[var(--h-control-lg)] flex-wrap items-center gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[length:var(--type-body)] font-semibold text-[color:var(--text-strong)]">
-                        {nameByCode.get(line.subjectCode) ?? line.subjectCode}
-                      </p>
-                      <p className="truncate text-[length:var(--type-caption)] text-[color:var(--text-muted)]">
+              <li key={line.id} className={subjectAccentClass(name)}>
+                <div className="sp-row-card">
+                  <div className="sp-rc-top">
+                    <span className="sp-tag marks" />
+                    <div className="sp-rc-info">
+                      <div className="sp-rc-nm">{name}</div>
+                      <div className="sp-rc-sb truncate">
                         <span className="font-[family-name:var(--font-mono)]">
                           {line.subjectCode}
                         </span>{" "}
                         · {line.sheet.title}
-                      </p>
+                      </div>
                     </div>
-                    {line.grade ? <Badge tone="neutral">{line.grade}</Badge> : null}
-                    <p className="font-[family-name:var(--font-mono)] text-[length:var(--type-body-lg)] font-semibold tabular-nums text-[color:var(--text-strong)]">
+                    <div className="sp-rc-val">
                       {line.score}
-                      <span className="text-[length:var(--type-caption)] font-normal text-[color:var(--text-subtle)]">
-                        /{FULL_MARK}
-                      </span>
-                    </p>
+                      <span className="sp-rc-of">/{FULL_MARK}</span>
+                    </div>
                   </div>
 
-                  <Progress
-                    className="mt-3"
-                    value={Math.min(line.score, FULL_MARK)}
-                    max={FULL_MARK}
-                    label={`${line.subjectCode}: ${line.score} out of ${FULL_MARK}`}
-                  />
+                  <div
+                    className="sp-subj-bar"
+                    role="img"
+                    aria-label={`${line.subjectCode}: ${line.score} out of ${FULL_MARK}`}
+                  >
+                    <span
+                      style={{
+                        width: `${Math.min(line.score, FULL_MARK)}%`,
+                      }}
+                    />
+                  </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="sp-as-meta">
                     <Badge tone={change.tone} dot>
                       {change.label}
                     </Badge>
+                    {line.grade ? <Badge tone="neutral">{line.grade}</Badge> : null}
                     {before ? (
                       <span className="font-[family-name:var(--font-mono)] text-[length:var(--type-caption)] tabular-nums text-[color:var(--text-muted)]">
                         {previousTerm?.name}: {before.score}
@@ -315,20 +329,23 @@ export function StudentMarksScreen() {
                       {line.remarks}
                     </p>
                   ) : null}
-                </Card>
+                </div>
               </li>
             );
           })}
         </ul>
       )}
 
-      <p className="text-[length:var(--type-caption)] text-[color:var(--text-muted)]">
+      <div className="sp-note">
+        <span className="sp-note-ic">
+          <Shield className="size-3.5" aria-hidden />
+        </span>
         Only marks the school has published are here. A mark your teacher is still
         working on appears once the school releases it.
-        {subjects[0]?.sheet.publishedAt
-          ? ` This term was published on ${DAY.format(new Date(subjects[0].sheet.publishedAt))}.`
+        {publishedAt
+          ? ` This term was published on ${DAY.format(new Date(publishedAt))}.`
           : ""}
-      </p>
+      </div>
     </div>
   );
 }

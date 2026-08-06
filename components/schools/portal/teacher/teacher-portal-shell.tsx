@@ -79,11 +79,11 @@ const ACCOUNT = [
  * a second place to be.
  */
 const TABS = [
-  { href: "/portal/teacher", label: "Today" },
-  { href: "/portal/teacher/marks", label: "Marks" },
-  { href: "/portal/teacher/messages", label: "Messages" },
-  { href: "/portal/teacher/timetable", label: "Timetable" },
-  { href: "/portal/teacher/lessons", label: "Lessons" },
+  { href: "/portal/teacher", label: "Today", icon: Home },
+  { href: "/portal/teacher/marks", label: "Marks", icon: EditSquare },
+  { href: "/portal/teacher/messages", label: "Messages", icon: ChatCircle },
+  { href: "/portal/teacher/timetable", label: "Timetable", icon: Calendar },
+  { href: "/portal/teacher/lessons", label: "Lessons", icon: Layers },
 ];
 
 /**
@@ -101,12 +101,23 @@ function greeting(minute: number) {
   return "Good evening";
 }
 
-const CAPTION_DATE = new Intl.DateTimeFormat("en-GB", {
-  weekday: "long",
+/**
+ * "Thursday · 6 August 2026", built from two single-field formatters.
+ *
+ * One combined formatter would be shorter and wrong: Node's ICU writes
+ * "Thursday, 6 August" where Chrome's writes "Thursday 6 August", and a
+ * client component that renders the difference fails hydration. Formatting
+ * each field on its own leaves no separator for the two to disagree about.
+ */
+const CAPTION_WEEKDAY = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
+const CAPTION_DAY = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
   year: "numeric",
 });
+function captionDate(date: Date) {
+  return `${CAPTION_WEEKDAY.format(date)} · ${CAPTION_DAY.format(date)}`;
+}
 
 /**
  * The teacher portal's own chrome.
@@ -145,7 +156,7 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
     : null;
   const caption = (
     onToday
-      ? [CAPTION_DATE.format(day.onDate ? new Date(`${day.onDate}T00:00:00`) : now), day.term?.name]
+      ? [captionDate(day.onDate ? new Date(`${day.onDate}T00:00:00`) : now), day.term?.name]
       : [classContext, day.term?.name]
   )
     .filter(Boolean)
@@ -291,6 +302,7 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
             className={isActive(tab.href) ? "tab active" : "tab"}
             {...(isActive(tab.href) ? { "aria-current": "page" as const } : {})}
           >
+            <tab.icon className="size-4" aria-hidden />
             {tab.label}
             {tab.href === "/portal/teacher/marks" && papers > 0 ? (
               <span className="bdg">{papers}</span>

@@ -1,41 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { Card, EmptyState, RowCard, StatCard } from "@corelithzw/react";
+import { EmptyState } from "@corelithzw/react";
 import {
   BarChart3,
+  Bell,
+  ChevronRight,
+  MapPin,
   MedusaBookOpenIcon,
-  Calendar,
   ListBullets,
-  UserRound,
 } from "@/lib/icons";
 import { useStudentPortal } from "./student-portal-context";
 
-/** Where the rest of the app lives, since only four things get a tab. */
-const ELSEWHERE = [
+/**
+ * The demo's "Quick links" grid: where the rest of the app lives, since only
+ * four things get a bottom tab.
+ */
+const QUICK_LINKS = [
   {
     href: "/portal/student/homework",
     label: "Homework",
-    body: "What is set and what you have handed in",
+    value: "See all",
+    body: "What is set and what you handed in",
     icon: ListBullets,
   },
   {
     href: "/portal/student/library",
     label: "Library",
-    body: "Borrow a book, or see what you have out",
+    value: "Books out",
+    body: "Borrow a book, or see what you have",
     icon: MedusaBookOpenIcon,
   },
   {
     href: "/portal/student/goals",
     label: "My goals",
-    body: "What you are aiming for in each subject",
+    value: "Your targets",
+    body: "What you are aiming for each subject",
     icon: BarChart3,
   },
   {
-    href: "/portal/student/profile",
-    label: "Profile",
-    body: "Your details and settings",
-    icon: UserRound,
+    href: "/portal/student/notifications",
+    label: "Messages",
+    value: "From school",
+    body: "School news · marks · homework",
+    icon: Bell,
   },
 ];
 
@@ -47,10 +55,14 @@ function nowMinute() {
 /**
  * A pupil's home screen: what is happening now, and what is next.
  *
- * The day is the anchor because that is what a pupil opens the app to check
+ * The order is the prototype's — greeting, next class, this week's numbers,
+ * then the quick links — because the day is what a pupil opens the app to check
  * between lessons. Everything else on the phone is one tap from here, which is
- * why only four things earn a bottom tab — a row of eight is a row nobody
- * reads.
+ * why only four things earn a bottom tab: a row of eight is a row nobody reads.
+ *
+ * The demo also carries a week-at-a-glance strip and an eight-test sparkline.
+ * Both need numbers this screen is not given — the layout hands down today's
+ * periods and nothing else — so they are left out rather than invented.
  */
 export function StudentHomeScreen() {
   const { student, term, periods } = useStudentPortal();
@@ -73,77 +85,115 @@ export function StudentHomeScreen() {
   const next = periods.find(
     (period) => period.startMinute > minute && period.lesson !== null,
   );
+  const nextIndex = next ? periods.indexOf(next) + 1 : 0;
+
+  const yearGroup = [
+    student.currentClass?.name ?? "No year group yet",
+    student.currentStream?.name ?? null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       <div>
-        <h2 className="text-[length:var(--type-h3)] font-semibold text-[color:var(--text-strong)]">
-          Hello, {student.firstName}
-        </h2>
-        <p className="text-[length:var(--type-body-sm)] text-[color:var(--text-muted)]">
-          {student.currentClass?.name ?? "No year group yet"}
-          {student.currentStream ? ` ${student.currentStream.name}` : ""}
-          {term ? ` · ${term.name}` : ""}
-        </p>
+        <h2 className="sp-greet-h">Hi, {student.firstName}</h2>
+        <div className="sp-greet">
+          {[yearGroup, term?.name].filter(Boolean).join(" · ")}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Lessons today" value={lessons.length} />
-        <StatCard
-          label="Right now"
-          value={current?.lesson?.subjectName ?? (current ? "Free" : "—")}
-          {...(current ? { footer: `${current.startsAt} – ${current.endsAt}` } : {})}
-        />
+      <div className="sp-psh">
+        Your next class
+        <Link href="/portal/student/timetable" className="sp-psh-link">
+          See timetable
+        </Link>
       </div>
-
-      <Card
-        title="Next lesson"
-        subtitle={next ? `${next.name} at ${next.startsAt}` : undefined}
-        actions={
-          <Link
-            href="/portal/student/timetable"
-            className="text-[length:var(--type-body-sm)] text-[color:var(--text-link)]"
-          >
-            Whole week
-          </Link>
-        }
-      >
-        {next?.lesson ? (
-          <RowCard
-            icon={<Calendar className="size-5" aria-hidden />}
-            title={next.lesson.subjectName}
-            subtitle={[
-              next.lesson.roomName,
-              next.lesson.teacherName ? `with ${next.lesson.teacherName}` : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            status={
-              <span className="font-[family-name:var(--font-mono)] tabular-nums text-[color:var(--text-strong)]">
-                {next.startsAt}
+      {next?.lesson ? (
+        <Link href="/portal/student/timetable" className="sp-next-class">
+          <span className="sp-nc-badge">
+            <span className="sp-nc-col">
+              <span className="sp-nc-t">{next.startsAt}</span>
+              <span className="sp-nc-d">
+                {nextIndex > 0 ? `Per ${nextIndex}` : next.code}
               </span>
-            }
-          />
-        ) : (
-          <EmptyState
-            title="Nothing left today"
-            body={
-              lessons.length > 0
-                ? "Your last lesson has been and gone."
-                : "There are no lessons on your timetable for today."
-            }
-          />
-        )}
-      </Card>
+            </span>
+          </span>
+          <span className="block min-w-0">
+            <span className="sp-nc-nm block truncate">
+              {next.lesson.subjectName}
+            </span>
+            <span className="sp-nc-sb block truncate">
+              {next.lesson.teacherName ?? "Your teacher"} · {next.name}
+            </span>
+            <span className="sp-nc-meta">
+              {next.lesson.roomName ? (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="size-[11px]" aria-hidden />
+                  {next.lesson.roomName}
+                </span>
+              ) : null}
+              <span>
+                {next.startsAt} – {next.endsAt}
+              </span>
+            </span>
+          </span>
+          <span className="sp-nc-chev">
+            <ChevronRight className="size-4" aria-hidden />
+          </span>
+        </Link>
+      ) : (
+        <EmptyState
+          title="Nothing left today"
+          body={
+            lessons.length > 0
+              ? "Your last lesson has been and gone."
+              : "There are no lessons on your timetable for today."
+          }
+        />
+      )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {ELSEWHERE.map((item) => (
-          <Link key={item.href} href={item.href} className="no-underline">
-            <RowCard
-              icon={<item.icon className="size-5" aria-hidden />}
-              title={item.label}
-              subtitle={item.body}
-            />
+      <div className="sp-psh">
+        This week
+        <Link href="/portal/student/timetable" className="sp-psh-link">
+          Whole week
+        </Link>
+      </div>
+      <div className="sp-kpi-row">
+        <Link href="/portal/student/timetable" className="sp-kpi">
+          <span className="sp-kpi-l block">Lessons today</span>
+          <span className="sp-kpi-v block">{lessons.length}</span>
+          <span className="sp-kpi-sb block">
+            {lessons.length === 0
+              ? "Nothing timetabled"
+              : `${periods.length} periods on your day`}
+          </span>
+        </Link>
+        <Link href="/portal/student/timetable" className="sp-kpi brand">
+          <span className="sp-kpi-l block">Right now</span>
+          <span
+            className={`sp-kpi-v block truncate${current?.lesson ? " sm" : ""}`}
+          >
+            {current?.lesson?.subjectName ?? (current ? "Free" : "—")}
+          </span>
+          <span className="sp-kpi-sb block">
+            {current
+              ? `${current.startsAt} – ${current.endsAt}`
+              : "No lesson at the moment"}
+          </span>
+        </Link>
+      </div>
+
+      <div className="sp-psh">Quick links</div>
+      <div className="sp-kpi-row">
+        {QUICK_LINKS.map((item) => (
+          <Link key={item.href} href={item.href} className="sp-kpi">
+            <span className="sp-kpi-l flex items-center gap-1.5">
+              <item.icon className="size-3.5" aria-hidden />
+              {item.label}
+            </span>
+            <span className="sp-kpi-v sm block">{item.value}</span>
+            <span className="sp-kpi-sb block">{item.body}</span>
           </Link>
         ))}
       </div>

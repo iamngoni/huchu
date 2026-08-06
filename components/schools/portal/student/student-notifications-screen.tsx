@@ -3,14 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
-  Badge,
-  Button,
-  Card,
   ClientDate,
   EmptyState,
-  IconTile,
-  MobileList,
-  MobileListRow,
   StatusState,
 } from "@corelithzw/react";
 import { dsConfirm } from "@/components/ui/ds-confirm";
@@ -35,12 +29,12 @@ const QUERY_KEY = ["notifications", "student", "inbox"] as const;
  */
 function toneOf(item: NotificationListItem) {
   if (item.severity === "CRITICAL") {
-    return { accent: "red" as const, Icon: ShieldAlert, label: "Important" };
+    return { accent: "sp-c-2", Icon: ShieldAlert, label: "Important" };
   }
   if (item.severity === "WARNING") {
-    return { accent: "amber" as const, Icon: AlertTriangle, label: "Worth reading" };
+    return { accent: "sp-c-9", Icon: AlertTriangle, label: "Worth reading" };
   }
-  return { accent: "blue" as const, Icon: Info, label: "News" };
+  return { accent: "sp-c-0", Icon: Info, label: "News" };
 }
 
 /**
@@ -112,7 +106,7 @@ export function StudentNotificationsScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       {inbox.error ? (
         <Alert tone="danger" title="Your messages would not load">
           {getApiErrorMessage(inbox.error)}
@@ -129,100 +123,90 @@ export function StudentNotificationsScreen() {
         </Alert>
       ) : null}
 
-      <Card
-        title="Messages"
-        subtitle={
-          inbox.isPending
-            ? undefined
-            : `${messages.length} message${messages.length === 1 ? "" : "s"} · ${unread.length} unread`
-        }
-        actions={
-          messages.length > 0 ? (
-            <span className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={unread.length === 0}
-                loading={read.isPending}
-                onClick={() => read.mutate(unread.map((item) => item.recipientId))}
-              >
-                Mark all read
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                loading={clear.isPending}
+      <div className="sp-notif-meta">
+        <span>
+          {inbox.isPending
+            ? "Reading your messages…"
+            : `${messages.length} message${messages.length === 1 ? "" : "s"} · ${unread.length} new`}
+        </span>
+        {messages.length > 0 ? (
+          <span className="flex items-center gap-3">
+            <button
+              type="button"
+              className="sp-psh-link"
+              disabled={unread.length === 0 || read.isPending}
+              onClick={() => read.mutate(unread.map((item) => item.recipientId))}
+            >
+              Mark all read
+            </button>
+            <button
+              type="button"
+              className="sp-psh-link"
+              disabled={clear.isPending}
+              onClick={() => {
+                void (async () => {
+                  const confirmed = await dsConfirm({
+                    title: `Clear ${messages.length} message${messages.length === 1 ? "" : "s"}`,
+                    description:
+                      "They come off this list. The school still has them, so nothing is lost.",
+                    confirmLabel: "Clear them",
+                    variant: "warning",
+                  });
+                  if (!confirmed) return;
+                  clear.mutate(messages.map((item) => item.recipientId));
+                })();
+              }}
+            >
+              Clear all
+            </button>
+          </span>
+        ) : null}
+      </div>
+
+      {inbox.isPending ? (
+        <StatusState
+          variant="loading"
+          title="Getting your messages…"
+          body="Reading what the school has sent you."
+        />
+      ) : messages.length === 0 ? (
+        <EmptyState
+          icon={<Bell className="size-5" aria-hidden />}
+          title="Nothing new"
+          body="Messages from the school land here — marks going up, homework set, notices from the office."
+        />
+      ) : (
+        <div className="sp-notifs">
+          {messages.map((item) => {
+            const tone = toneOf(item);
+            return (
+              <button
+                key={item.recipientId}
+                type="button"
+                className={`sp-notif${item.isRead ? "" : " unread"} ${tone.accent}`}
+                aria-label={`${tone.label}: ${item.title}${item.isRead ? "" : ", unread"}`}
                 onClick={() => {
-                  void (async () => {
-                    const confirmed = await dsConfirm({
-                      title: `Clear ${messages.length} message${messages.length === 1 ? "" : "s"}`,
-                      description:
-                        "They come off this list. The school still has them, so nothing is lost.",
-                      confirmLabel: "Clear them",
-                      variant: "warning",
-                    });
-                    if (!confirmed) return;
-                    clear.mutate(messages.map((item) => item.recipientId));
-                  })();
+                  if (item.isRead) return;
+                  read.mutate([item.recipientId]);
                 }}
               >
-                Clear
-              </Button>
-            </span>
-          ) : undefined
-        }
-        flush
-      >
-        {inbox.isPending ? (
-          <StatusState
-            variant="loading"
-            title="Getting your messages…"
-            body="Reading what the school has sent you."
-          />
-        ) : messages.length === 0 ? (
-          <EmptyState
-            icon={<Bell className="size-5" aria-hidden />}
-            title="Nothing new"
-            body="Messages from the school land here — marks going up, homework set, notices from the office."
-          />
-        ) : (
-          <MobileList>
-            {messages.map((item) => {
-              const tone = toneOf(item);
-              return (
-                <MobileListRow
-                  key={item.recipientId}
-                  className="min-h-[var(--h-control-lg)]"
-                  leading={
-                    <IconTile accent={tone.accent}>
-                      <tone.Icon className="size-4" aria-hidden />
-                    </IconTile>
-                  }
-                  title={
-                    <span className={item.isRead ? undefined : "t-strong"}>
-                      {item.title}
-                    </span>
-                  }
-                  subtitle={item.summary}
-                  trailing={
-                    <span className="flex flex-col items-end gap-1">
-                      {item.isRead ? null : <Badge tone="info">Unread</Badge>}
-                      <span className="t-mono t-subtle tabular-nums">
-                        <ClientDate value={item.createdAt} mode="datetime" />
-                      </span>
-                    </span>
-                  }
-                  aria-label={`${tone.label}: ${item.title}${item.isRead ? "" : ", unread"}`}
-                  onClick={() => {
-                    if (item.isRead) return;
-                    read.mutate([item.recipientId]);
-                  }}
-                />
-              );
-            })}
-          </MobileList>
-        )}
-      </Card>
+                <span className="sp-nf-ic">
+                  <tone.Icon className="size-4" aria-hidden />
+                </span>
+                <span className="sp-nf-body">
+                  <span className="sp-nf-nm block">{item.title}</span>
+                  {item.summary ? (
+                    <span className="sp-nf-sb block">{item.summary}</span>
+                  ) : null}
+                  <span className="sp-nf-tm block">
+                    <ClientDate value={item.createdAt} mode="datetime" />
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,21 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Badge,
-  Callout,
-  Card,
-  EmptyState,
-  MobileList,
-  MobileListChevron,
-  MobileListContent,
-  MobileListIcon,
-  MobileListItem,
-  MobileListSubtitle,
-  MobileListTitle,
-} from "@corelithzw/react";
+import { Badge, Callout, EmptyState } from "@corelithzw/react";
 import { PersonAvatar } from "@/components/schools/common/person-avatar";
-import { Bell, HelpCircle, Settings2, TrendingUp } from "@/lib/icons";
+import {
+  Bell,
+  Calendar,
+  ChevronRight,
+  MedusaAcademicCapIcon,
+  HelpCircle,
+  Home,
+  Info,
+  Mail,
+  Settings2,
+  TrendingUp,
+} from "@/lib/icons";
 import { useStudentPortal } from "./student-portal-context";
 
 /** Where the rest of the pupil's own account lives. */
@@ -118,99 +117,132 @@ export function StudentProfileScreen() {
     ? `${student.currentClass.name}${student.currentStream ? ` ${student.currentStream.name}` : ""}`
     : "Not in a year group yet";
 
-  const facts: Array<{ label: string; value: string; mono?: boolean }> = [
-    { label: "Student number", value: student.studentNo, mono: true },
-    { label: "Year group", value: yearGroup },
-    { label: "Boarding", value: student.isBoarding ? "Boarder" : "Day pupil" },
-    { label: "Term", value: term?.name ?? "No term running" },
+  const facts: Array<{
+    label: string;
+    value: string;
+    mono?: boolean;
+    icon: typeof Info;
+  }> = [
+    { label: "Student number", value: student.studentNo, mono: true, icon: Info },
+    { label: "Year group", value: yearGroup, icon: MedusaAcademicCapIcon },
+    {
+      label: "Boarding",
+      value: student.isBoarding ? "Boarder" : "Day pupil",
+      icon: Home,
+    },
+    { label: "Term", value: term?.name ?? "No term running", icon: Calendar },
     {
       label: "Sign-in email",
       value: student.user?.email ?? "No portal account linked",
       mono: Boolean(student.user?.email),
+      icon: Mail,
     },
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card>
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col">
+      {/* The prototype's ID card: the pupil's own face and number on the portal's
+          identity colour, so the screen opens with something that is theirs. */}
+      <div className="sp-id-card">
+        <div className="sp-id-top">
           <PersonAvatar
             firstName={student.firstName}
             lastName={student.lastName}
             src={student.user?.image ?? null}
             size="lg"
           />
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="t-body-lg t-strong truncate">{name}</span>
-            <span className="t-caption t-muted truncate">{yearGroup}</span>
-            <span className="flex flex-wrap gap-2">
-              <Badge tone="neutral">{student.studentNo}</Badge>
-              {student.isBoarding ? <Badge tone="info">Boarder</Badge> : null}
-            </span>
+          <div className="min-w-0">
+            <div className="sp-id-nm truncate">{name}</div>
+            <div className="sp-id-sb truncate">
+              {[yearGroup, term?.name].filter(Boolean).join(" · ")}
+            </div>
+            <div className="sp-id-pills">
+              <span className="sp-id-pill">{student.studentNo}</span>
+              <span className="sp-id-pill">
+                {student.isBoarding ? "Boarder" : "Day pupil"}
+              </span>
+            </div>
           </div>
         </div>
-      </Card>
+        <div className="sp-id-stats">
+          <div>
+            <div className="sp-id-stat-l">Year group</div>
+            <div className="sp-id-stat-v">
+              {student.currentClass?.name ?? "Not set"}
+            </div>
+          </div>
+          <div>
+            <div className="sp-id-stat-l">Stream</div>
+            <div className="sp-id-stat-v">
+              {student.currentStream?.name ?? "—"}
+            </div>
+          </div>
+          <div>
+            <div className="sp-id-stat-l">Term</div>
+            <div className="sp-id-stat-v">{term?.name ?? "None"}</div>
+          </div>
+        </div>
+      </div>
 
-      <Card title="Your details" subtitle="The school keeps these. You cannot change them here.">
-        <dl className="m-0 flex flex-col gap-3">
-          {facts.map((fact) => (
-            <div key={fact.label} className="flex flex-col gap-1">
-              <dt className="t-caption t-subtle">{fact.label}</dt>
-              <dd
-                className={`m-0 ${fact.mono ? "t-mono t-strong tabular-nums" : "t-body t-strong"}`}
+      <div className="sp-psh">Your details</div>
+      <div className="sp-list">
+        {facts.map((fact) => (
+          <div key={fact.label} className="sp-list-row">
+            <span className="sp-ic-tile">
+              <fact.icon className="size-[18px]" aria-hidden />
+            </span>
+            <span className="block min-w-0">
+              <span
+                className={`sp-lr-nm block truncate${fact.mono ? " font-[family-name:var(--font-mono)] tabular-nums" : ""}`}
               >
                 {fact.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </Card>
+              </span>
+              <span className="sp-lr-sb block truncate">{fact.label}</span>
+            </span>
+            <span />
+          </div>
+        ))}
+      </div>
 
-      <Card title="More" flush>
-        <MobileList>
-          {/* `asChild` onto a Next `Link` keeps the whole row one real anchor —
-              a 44px tap target that is also a link a keyboard can reach — while
-              still routing on the client. */}
-          {ELSEWHERE.map((item) => (
-            <MobileListItem
-              key={item.href}
-              variant="touchable"
-              className="min-h-[var(--h-control-lg)]"
-              asChild
-            >
-              <Link href={item.href}>
-                <MobileListIcon>
-                  <item.icon className="size-5" aria-hidden />
-                </MobileListIcon>
-                <MobileListContent>
-                  <MobileListTitle>{item.label}</MobileListTitle>
-                  <MobileListSubtitle>{item.body}</MobileListSubtitle>
-                </MobileListContent>
-                <MobileListChevron />
-              </Link>
-            </MobileListItem>
-          ))}
-        </MobileList>
-      </Card>
+      <div className="sp-psh">More</div>
+      <div className="sp-list">
+        {ELSEWHERE.map((item) => (
+          <Link key={item.href} href={item.href} className="sp-list-row">
+            <span className="sp-ic-tile">
+              <item.icon className="size-[18px]" aria-hidden />
+            </span>
+            <span className="block min-w-0">
+              <span className="sp-lr-nm block truncate">{item.label}</span>
+              <span className="sp-lr-sb block truncate">{item.body}</span>
+            </span>
+            <span className="sp-lr-chev">
+              <ChevronRight className="size-4" aria-hidden />
+            </span>
+          </Link>
+        ))}
+      </div>
 
-      <Card title="Held by the school" subtitle="Who to ask when one of these is wrong">
-        <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {SCHOOL_OWNED.map((row) => (
-            <li key={row.field} className="flex flex-col gap-1">
+      <div className="sp-psh">Held by the school</div>
+      <div className="sp-group">
+        {SCHOOL_OWNED.map((row) => (
+          <div key={row.field} className="sp-setting-row">
+            <span className="sp-sr-body">
               <span className="flex flex-wrap items-center gap-2">
-                <span className="t-label-sm">{row.field}</span>
+                <span className="sp-sr-nm">{row.field}</span>
                 <Badge tone="outline">{row.owner}</Badge>
               </span>
-              <span className="t-caption">{row.why}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+              <span className="sp-sr-sb block">{row.why}</span>
+            </span>
+          </div>
+        ))}
+      </div>
 
-      <Callout tone="info" title="Something here is wrong">
-        Tell your form teacher or the school office. They hold the record this
-        app reads from, so fixing it there fixes it on your report too.
-      </Callout>
+      <div className="mt-3">
+        <Callout tone="info" title="Something here is wrong">
+          Tell your form teacher or the school office. They hold the record this
+          app reads from, so fixing it there fixes it on your report too.
+        </Callout>
+      </div>
     </div>
   );
 }

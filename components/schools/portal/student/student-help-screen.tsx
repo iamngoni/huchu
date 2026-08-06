@@ -1,12 +1,6 @@
 "use client";
 
-import { Card } from "@corelithzw/react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { ChevronRight, HelpCircle, Info } from "@/lib/icons";
 
 /**
  * Help, written for the reader.
@@ -14,6 +8,11 @@ import {
  * Questions a pupil actually has about *this* app, answered in the words they
  * would use. Nothing generic: if an answer would be true of any school app, it
  * is not worth the space.
+ *
+ * The prototype draws each article as its own card with a tinted icon tile and a
+ * chevron, and opens it in a sheet. Here the card *is* the disclosure — a native
+ * `<details>`, so the answer is one tap away with no sheet to dismiss, and it is
+ * still keyboard-reachable and readable with the page's own find-in-page.
  */
 const QUESTIONS = [
   {
@@ -30,7 +29,7 @@ const QUESTIONS = [
   },
   {
     q: "How do I keep a library book longer?",
-    a: "Open Library and tap Renew on the book. You can renew a limited number of times, and not at all once a book is late or if you owe a fine.",
+    a: "Open Library and tap Keep longer on the book. You can renew a limited number of times, and not at all once a book is late or if you owe a fine.",
   },
   {
     q: "What happens if a book is late?",
@@ -48,25 +47,39 @@ const QUESTIONS = [
 
 export function StudentHelpScreen() {
   return (
-    <div className="flex flex-col gap-4">
-      <Card title="Questions people ask">
-        <Accordion type="single" collapsible className="w-full">
-          {QUESTIONS.map((row) => (
-            <AccordionItem key={row.q} value={row.q}>
-              <AccordionTrigger>{row.q}</AccordionTrigger>
-              <AccordionContent>{row.a}</AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </Card>
+    <div className="flex flex-col">
+      <div className="sp-psh">How to use the app</div>
 
-      <Card title="Still stuck">
-        <p className="text-[length:var(--type-body-sm)] text-[color:var(--text-body)]">
-          Ask at the school office. Anything about your class, your marks or your
-          fees is theirs to change — this app only shows you what they have
-          recorded.
-        </p>
-      </Card>
+      {QUESTIONS.map((row) => (
+        <details key={row.q} className="sp-help-card">
+          <summary className="sp-hc-head">
+            <span className="sp-hc-ic">
+              <HelpCircle className="size-4" aria-hidden />
+            </span>
+            <span className="sp-hc-nm min-w-0 flex-1">{row.q}</span>
+            <span className="sp-hc-chev">
+              <ChevronRight className="size-4" aria-hidden />
+            </span>
+          </summary>
+          <div className="sp-hc-body">{row.a}</div>
+        </details>
+      ))}
+
+      <div className="sp-psh">Talk to someone</div>
+      <div className="sp-group">
+        <div className="sp-setting-row">
+          <span className="sp-sr-ic">
+            <Info className="size-4" aria-hidden />
+          </span>
+          <span className="sp-sr-body">
+            <span className="sp-sr-nm block">The school office</span>
+            <span className="sp-sr-sb block">
+              Anything about your class, your marks or your fees is theirs to
+              change — this app only shows you what they have recorded.
+            </span>
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

@@ -27,10 +27,59 @@
   color: var(--text-strong) !important;
 }
 
-/* Demo `.greet .hi` — the meta line under the greeting. */
+.student-portal .sp-appbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.student-portal .sp-nav-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--text-strong);
+  text-decoration: none;
+}
+.student-portal .sp-nav-btn:hover { background: var(--surface-muted); }
+
+/* Bottom tabs — the demo bar is 64px with a safe-area inset and a
+   22px icon well. Both the DS CSS class and the component's inline
+   styles are in play, so height needs !important. */
+.student-portal .b-bottom-tabs {
+  height: 64px !important;
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 8px));
+  box-shadow: var(--shadow-bar-bottom);
+}
+.student-portal .b-bottom-tabs .b-bt-ic {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+.student-portal .b-bottom-tab-item.active { color: var(--brand) !important; }
+
+/* One screen's page box. The demo runs a 16px gutter (12px on true
+   phones) and leaves room for the tab bar under the last card. */
+.student-portal .sp-page {
+  padding: 14px 16px calc(80px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 400px) {
+  .student-portal .sp-page { padding-left: 12px; padding-right: 12px; }
+}
+
+/* Demo `.greet` — the greeting block above the first section. */
+.student-portal .sp-greet-h {
+  font: 700 20px/1.2 var(--font-sans);
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  margin: 0;
+}
 .student-portal .sp-greet {
   font: 500 13px/1.3 var(--font-sans);
   color: var(--text-muted);
+  margin-top: 4px;
 }
 
 /* ── Section header (demo `.demo-psh`) ─────────────────────
@@ -228,6 +277,24 @@
 .student-portal .sp-ink-card .sp-ink-sb { font: 12.5px/1.4 var(--font-sans); color: var(--text-inverse); opacity: 0.78; margin-top: 3px; }
 .student-portal .sp-ink-card .sp-ink-chev { color: var(--text-inverse); opacity: 0.6; display: inline-flex; }
 
+/* ── Timetable: week label + day picker (demo `.tt-wk-nav`) ──
+   The demo's arrows step a week at a time; this portal's route has
+   no week offset, so the label stands on its own rather than
+   flanked by buttons that would do nothing. */
+.student-portal .sp-tt-nav {
+  text-align: center;
+  font: 600 13px/1.3 var(--font-sans);
+  color: var(--text-strong);
+  padding: 4px 0 10px;
+}
+.student-portal .sp-tt-nav .sp-tt-nav-sb {
+  font: 11px/1.3 var(--font-mono);
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: block;
+}
+.student-portal .sp-tt-days { padding: 12px 0 0; }
+
 /* ── Timetable: week grid (demo `.tt-grid`) ────────────────── */
 .student-portal .sp-tt { padding: 4px 0 0; }
 .student-portal .sp-tt .sp-tt-tbl {
@@ -311,6 +378,21 @@
 .student-portal .sp-ic-tile.brand { background: var(--brand-soft); color: var(--brand-strong); }
 
 /* ── Marks: term tabs (demo `.term-tabs`) ──────────────────── */
+.student-portal .sp-term-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 0 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.student-portal .sp-term-row::-webkit-scrollbar { display: none; }
+.student-portal .sp-term-year {
+  font: 500 12px/1 var(--font-sans);
+  color: var(--text-muted);
+  flex: none;
+}
 .student-portal .sp-term-tabs {
   display: inline-flex;
   padding: 4px;
@@ -443,6 +525,20 @@
   background: var(--sp-a, var(--brand));
 }
 
+/* Footnote strip (demo's marks privacy line) */
+.student-portal .sp-note {
+  margin-top: 8px;
+  padding: 9px 12px;
+  background: var(--surface-muted);
+  border-radius: 9px;
+  font: 500 11.5px/1.4 var(--font-sans);
+  color: var(--text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.student-portal .sp-note .sp-note-ic { color: var(--text-subtle); display: inline-flex; padding-top: 1px; flex: none; }
+
 /* ── Homework: subject eyebrow + due pill (demo `.as-*`) ──── */
 .student-portal .sp-as-subj {
   font: 500 10.5px/1 var(--font-sans);
@@ -471,6 +567,18 @@
 .student-portal .sp-as-due.overdue { background: var(--tone-danger); color: var(--text-inverse); }
 .student-portal .sp-as-due.submitted { background: var(--tone-success-bg); color: var(--tone-success); }
 .student-portal .sp-as-due.graded { background: var(--brand-soft); color: var(--brand-strong); }
+.student-portal .sp-as-grade {
+  font: 600 12px/1 var(--font-mono);
+  color: var(--brand-strong);
+}
+.student-portal .sp-rc-note {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  font: 12.5px/1.45 var(--font-sans);
+  color: var(--text-body);
+}
 
 /* Filter chips (demo `.b-filter-chips` / `.b-fc`) */
 .student-portal .sp-chips {
@@ -670,8 +778,33 @@
   background: var(--sp-a, var(--brand));
 }
 .student-portal .sp-goal-card .sp-gc-note { font: 12px/1.45 var(--font-sans); color: var(--text-muted); margin-top: 8px; }
+.student-portal .sp-goal-card .sp-gc-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.student-portal .sp-goal-card .sp-gc-foot .sp-gc-note { margin-top: 0; }
+
+/* Disabled row actions read as unavailable, not broken. */
+.student-portal .sp-renew[disabled],
+.student-portal .sp-borrow-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 /* ── Notifications (demo `.notif-row`) ─────────────────────── */
+.student-portal .sp-notif-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 0 10px;
+  font: 500 12px/1.3 var(--font-sans);
+  color: var(--text-muted);
+}
+.student-portal .sp-psh-link[disabled] { opacity: 0.5; cursor: not-allowed; }
 .student-portal .sp-notifs {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -817,7 +950,16 @@
   width: 100%;
   text-align: left;
   cursor: pointer;
+  list-style: none;
 }
+.student-portal .sp-help-card .sp-hc-head::-webkit-details-marker { display: none; }
+.student-portal .sp-help-card .sp-hc-chev {
+  color: var(--text-subtle);
+  display: inline-flex;
+  flex: none;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.student-portal .sp-help-card[open] .sp-hc-chev { transform: rotate(90deg); }
 .student-portal .sp-help-card .sp-hc-ic {
   width: 36px;
   height: 36px;

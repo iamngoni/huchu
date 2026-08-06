@@ -12,6 +12,7 @@ import {
 import { PersonAvatar } from "@/components/schools/common/person-avatar";
 import { BarChart3, Bell, Calendar, Home, UserRound } from "@/lib/icons";
 import { useStudentPortal } from "./student-portal-context";
+import "./student-portal.css";
 
 /** The screen's own title, so the app bar never has to be told twice. */
 const TITLES: Record<string, string> = {
@@ -57,22 +58,22 @@ export function StudentPortalShell({ children }: { children: React.ReactNode }) 
     href === "/portal/student" ? pathname === href : pathname.startsWith(href);
 
   return (
-    <MobileShell>
+    <MobileShell className="student-portal">
       <MobileShellHeader
         title={title}
         rightAction={
-          <span className="flex items-center gap-1">
+          <span className="sp-appbar-right">
             <Link
               href="/portal/student/notifications"
               aria-label="Notifications"
-              className="inline-flex size-10 items-center justify-center rounded-[var(--radius-md)] text-[color:var(--text-muted)]"
+              className="sp-nav-btn"
             >
-              <Bell className="size-5" aria-hidden />
+              <Bell className="size-[18px]" aria-hidden />
             </Link>
             <Link
               href="/portal/student/profile"
               aria-label="Your profile"
-              className="inline-flex size-10 items-center justify-center"
+              className="sp-nav-btn"
             >
               <PersonAvatar
                 name={name}
@@ -83,15 +84,19 @@ export function StudentPortalShell({ children }: { children: React.ReactNode }) 
           </span>
         }
       />
-      <MobileShellBody>
-        <div className="p-4 pb-24">{children}</div>
+      <MobileShellBody style={{ padding: 0 }}>
+        <div className="sp-page">{children}</div>
       </MobileShellBody>
       <BottomTabs aria-label="Primary">
         {TABS.map((tab) => (
           <BottomTabItem
             key={tab.href}
             active={isActive(tab.href)}
-            icon={<tab.icon className="size-5" aria-hidden />}
+            icon={
+              <span className="b-bt-ic">
+                <tab.icon className="size-[22px]" aria-hidden />
+              </span>
+            }
             label={tab.label}
             onClick={() => router.push(tab.href)}
           />
