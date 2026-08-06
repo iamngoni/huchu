@@ -386,6 +386,7 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/schools/assignments", featureKey: "schools.core" },
   { scope: "api", prefix: "/api/v2/schools/library", featureKey: "schools.core" },
   { scope: "api", prefix: "/api/v2/schools/lesson-plans", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/syllabus", featureKey: "schools.core" },
   { scope: "api", prefix: "/api/v2/schools/teaching-resources", featureKey: "schools.core" },
   { scope: "api", prefix: "/api/v2/schools/transport", featureKey: "schools.core" },
   { scope: "api", prefix: "/api/v2/schools/meetings", featureKey: "schools.core" },

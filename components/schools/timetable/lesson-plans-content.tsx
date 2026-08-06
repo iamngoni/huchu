@@ -175,24 +175,29 @@ export function LessonPlansContent({
 
   const layOutMutation = useMutation({
     mutationFn: () =>
-      fetchJson<{ created: number; skipped: number; seededFrom: string | null; message: string | null }>(
-        "/api/v2/schools/lesson-plans",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            action: "lay-out-week",
-            classSubjectId: subjectFilter,
-            weekStart,
-          }),
-        },
-      ),
+      fetchJson<{
+        created: number;
+        skipped: number;
+        seededFrom: string | null;
+        fromScheme: boolean;
+        message: string | null;
+      }>("/api/v2/schools/lesson-plans", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "lay-out-week",
+          classSubjectId: subjectFilter,
+          weekStart,
+        }),
+      }),
     onSuccess: (result) => {
       setActionError(null);
       setNote(
         result.created === 0
           ? (result.message ?? "Every lesson this week is already planned")
-          : `${result.created} draft${result.created === 1 ? "" : "s"} laid out from the timetable` +
-              (result.seededFrom ? `, picking up from “${result.seededFrom}”` : ""),
+          : result.fromScheme
+            ? `${result.created} draft${result.created === 1 ? "" : "s"} laid out from the scheme of work — “${result.seededFrom}”`
+            : `${result.created} draft${result.created === 1 ? "" : "s"} laid out from the timetable` +
+                (result.seededFrom ? `, picking up from “${result.seededFrom}”` : ""),
       );
       void queryClient.invalidateQueries({ queryKey: ["schools", "lesson-plans"] });
     },

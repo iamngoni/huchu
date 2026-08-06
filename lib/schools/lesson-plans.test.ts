@@ -17,6 +17,7 @@ import {
 let companyId: string;
 let termId: string;
 let classId: string;
+let mathsSubjectId: string;
 let mathsAssignmentId: string;
 let englishAssignmentId: string;
 let teacherAId: string;
@@ -67,6 +68,7 @@ beforeAll(async () => {
   const maths = await prisma.schoolSubject.create({
     data: { companyId, code: "MAT", name: "Mathematics" },
   });
+  mathsSubjectId = maths.id;
   const english = await prisma.schoolSubject.create({
     data: { companyId, code: "ENG", name: "English" },
   });
@@ -155,6 +157,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   await prisma.schoolCoverAssignment.deleteMany({ where: { companyId } });
   await prisma.schoolLessonPlan.deleteMany({ where: { companyId } });
+  await prisma.schoolSchemeOfWork.deleteMany({ where: { companyId } });
 });
 
 afterAll(async () => {
@@ -440,6 +443,98 @@ describe("layOutWeek", () => {
       weekStart: date("2026-04-13"),
     });
     expect(after.created).toBe(0);
+  });
+
+  it("drafts from the scheme of work when the week has a row in it", async () => {
+    // The term starts Thursday 8 January, so its first Monday is the 5th and
+    // the week of 2 March is week 9 of the term.
+    await prisma.schoolSchemeOfWork.create({
+      data: {
+        companyId,
+        subjectId: mathsSubjectId,
+        termId,
+        level: 1,
+        weekOfTerm: 9,
+        topic: "Simultaneous equations",
+        objectives: "Solve two linear equations by elimination",
+        resourcesNote: "Textbook ch. 7",
+      },
+    });
+
+    const result = await layOutWeek({
+      companyId,
+      classSubjectId: mathsAssignmentId,
+      weekStart: date("2026-03-02"),
+    });
+    expect(result.created).toBe(1);
+    expect(result.fromScheme).toBe(true);
+    expect(result.seededFrom).toBe("Simultaneous equations");
+
+    const draft = await prisma.schoolLessonPlan.findFirst({
+      where: { companyId, classSubjectId: mathsAssignmentId },
+    });
+    expect(draft?.topic).toBe("Simultaneous equations");
+    expect(draft?.objectives).toBe("Solve two linear equations by elimination");
+    expect(draft?.resourcesNote).toBe("Textbook ch. 7");
+  });
+
+  it("lets the scheme beat continuation when both could answer", async () => {
+    await saveLessonPlan({
+      companyId,
+      termId,
+      classSubjectId: mathsAssignmentId,
+      slotId: mathsSlotId,
+      lessonDate: date("2026-02-24"),
+      topic: "Fractions",
+    });
+    await prisma.schoolSchemeOfWork.create({
+      data: {
+        companyId,
+        subjectId: mathsSubjectId,
+        termId,
+        level: 1,
+        weekOfTerm: 9,
+        topic: "Simultaneous equations",
+      },
+    });
+
+    const result = await layOutWeek({
+      companyId,
+      classSubjectId: mathsAssignmentId,
+      weekStart: date("2026-03-02"),
+    });
+    // The syllabus says what week 9 teaches; "Fractions — continued" is the
+    // fallback for a school that has not written one, not a competitor.
+    expect(result.fromScheme).toBe(true);
+    const draft = await prisma.schoolLessonPlan.findFirst({
+      where: { companyId, classSubjectId: mathsAssignmentId, lessonDate: date("2026-03-03") },
+    });
+    expect(draft?.topic).toBe("Simultaneous equations");
+  });
+
+  it("ignores another form's scheme for the same subject and week", async () => {
+    await prisma.schoolSchemeOfWork.create({
+      data: {
+        companyId,
+        subjectId: mathsSubjectId,
+        termId,
+        level: 4,
+        weekOfTerm: 9,
+        topic: "Quadratic functions",
+      },
+    });
+
+    const result = await layOutWeek({
+      companyId,
+      classSubjectId: mathsAssignmentId,
+      weekStart: date("2026-03-02"),
+    });
+    // Form 1's maths must not open on Form 4's topic.
+    expect(result.fromScheme).toBe(false);
+    const draft = await prisma.schoolLessonPlan.findFirst({
+      where: { companyId, classSubjectId: mathsAssignmentId },
+    });
+    expect(draft?.topic).toBe("New topic");
   });
 
   it("says so for a class with nothing on the timetable", async () => {

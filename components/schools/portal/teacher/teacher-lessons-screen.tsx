@@ -235,6 +235,7 @@ export function TeacherLessonsScreen() {
         created: number;
         skipped: number;
         seededFrom: string | null;
+        fromScheme: boolean;
         message: string | null;
       }>("/api/v2/schools/portal/teacher/me/lessons", {
         method: "POST",
@@ -249,9 +250,11 @@ export function TeacherLessonsScreen() {
       setSaved(
         result.created === 0
           ? (result.message ?? "Every lesson this week is already planned")
-          : `Laid out ${result.created} lesson${result.created === 1 ? "" : "s"} from the timetable${
-              result.seededFrom ? `, picking up from “${result.seededFrom}”` : ""
-            } — open each one to name its topic`,
+          : result.fromScheme
+            ? `Laid out ${result.created} lesson${result.created === 1 ? "" : "s"} from the scheme of work — “${result.seededFrom}”`
+            : `Laid out ${result.created} lesson${result.created === 1 ? "" : "s"} from the timetable${
+                result.seededFrom ? `, picking up from “${result.seededFrom}”` : ""
+              } — open each one to name its topic`,
       );
       void queryClient.invalidateQueries({ queryKey: ["schools", "portal", "teacher"] });
     },

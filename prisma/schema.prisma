@@ -128,6 +128,7 @@ model Company {
   schoolResultModerationActions SchoolResultModerationAction[]
   schoolTeacherProfiles         SchoolTeacherProfile[]
   schoolSubjects                SchoolSubject[]
+  schoolSchemesOfWork           SchoolSchemeOfWork[]
   schoolClassSubjects           SchoolClassSubject[]
   schoolPublishWindows          SchoolPublishWindow[]
   schoolFeeStructures           SchoolFeeStructure[]
@@ -5546,6 +5547,42 @@ model SchoolPortalInvite {
 ///
 /// No Company relation on purpose: this is reference data read inside the
 /// id-generator's transaction, and a settings row must never cascade anything.
+/// A scheme of work: the term's teaching, written down week by week.
+///
+/// Keyed by week-of-term because that is how schemes are actually written — a
+/// scheme is a table whose rows are weeks, not a list of topics floating free.
+/// Held per subject and *level* rather than per class, because Form 2A and
+/// Form 2B follow one scheme; the class is which room it happens in.
+///
+/// This is what "lay out this week" reads: a lesson drafted in week 4 takes
+/// week 4's topic and objectives from here, and the planner stops being a
+/// blank form.
+model SchoolSchemeOfWork {
+  id        String @id @default(uuid())
+  companyId String
+  subjectId String
+  termId    String
+  /// The class level (form) this scheme teaches, matching SchoolClass.level.
+  level     Int
+  /// 1-based week within the term, counted from the term's first Monday.
+  weekOfTerm Int
+
+  topic         String
+  objectives    String?
+  activities    String?
+  resourcesNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subject SchoolSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  term    SchoolTerm    @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, subjectId, termId, level, weekOfTerm])
+  @@index([companyId, termId, subjectId, level])
+}
+
 model SchoolIdentitySettings {
   id        String   @id @default(uuid())
   companyId String   @unique
@@ -5631,6 +5668,7 @@ model SchoolTerm {
   assessments            SchoolAssessment[]
   assignments            SchoolAssignment[]
   lessonPlans            SchoolLessonPlan[]
+  schemesOfWork          SchoolSchemeOfWork[]
   studentGoals           SchoolStudentGoal[]
   transportRiders        SchoolTransportRider[]
   applications           SchoolApplication[]
@@ -5775,6 +5813,7 @@ model SchoolSubject {
   teachingResources SchoolTeachingResource[]
   studentGoals      SchoolStudentGoal[]
   classSubjects SchoolClassSubject[]
+  schemesOfWork SchoolSchemeOfWork[]
 
   @@unique([companyId, code])
   @@index([companyId, isActive])

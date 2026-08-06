@@ -18,6 +18,7 @@ import {
   Fuel,
   Funnel,
   History,
+  Layers,
   Zap,
   LocalShipping,
   ManageAccounts,
@@ -287,6 +288,7 @@ export const navSections: NavSection[] = [
       { href: "/schools/academics", icon: TableRows, label: "Years and terms", group: "academics" },
       { href: "/schools/classes", icon: Checklist, label: "Classes", group: "academics" },
       { href: "/schools/subjects", icon: Dataset, label: "Subjects", group: "academics" },
+      { href: "/schools/academics/syllabus", icon: Layers, label: "Scheme of work", group: "academics" },
       { href: "/schools/academics/identity", icon: UserRound, label: "Identity and records", group: "academics" },
 
       { href: "/schools/timetable", icon: Calendar, label: "Timetable" },

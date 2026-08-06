@@ -201,6 +201,12 @@ export async function copyWeekForward(input: {
  * A lesson that already has a plan is left alone, same as copy-forward: this
  * fills gaps, it never overwrites work. Dates outside the term are skipped,
  * because a slot pattern knows nothing about half-term ending on Wednesday.
+ *
+ * Where a scheme of work exists for this subject, level and term, the week's
+ * row in it wins: the drafts take that week's topic, objectives, activities
+ * and resources, and the planner opens already saying what the syllabus says
+ * should be taught. Without one, the topic falls back to continuing whatever
+ * was taught last.
  */
 export async function layOutWeek(input: {
   companyId: string;
@@ -210,8 +216,10 @@ export async function layOutWeek(input: {
 }): Promise<{
   created: number;
   skipped: number;
-  /** The topic the drafts were seeded from, if a previous lesson had one. */
+  /** The topic the drafts were seeded from, if anything seeded them. */
   seededFrom: string | null;
+  /** True when the seed came from the scheme of work rather than continuation. */
+  fromScheme: boolean;
   message: string | null;
 }> {
   const day = asDay(input.weekStart);
@@ -226,10 +234,39 @@ export async function layOutWeek(input: {
     select: {
       id: true,
       termId: true,
+      subjectId: true,
+      class: { select: { level: true } },
       term: { select: { startDate: true, endDate: true } },
     },
   });
   if (!assignment) throw new LessonPlanError("Class subject not found");
+
+  // Which week of the term this is, counted Monday to Monday from the term's
+  // first week — the row a scheme of work would file this week under.
+  const termStartDay = asDay(assignment.term.startDate);
+  const termStartDow = termStartDay.getUTCDay() === 0 ? 7 : termStartDay.getUTCDay();
+  const termFirstMonday = new Date(
+    termStartDay.getTime() - (termStartDow - 1) * 86_400_000,
+  );
+  const weekOfTerm =
+    Math.floor((monday.getTime() - termFirstMonday.getTime()) / (7 * 86_400_000)) + 1;
+
+  // A class with no declared level cannot be matched to a scheme, which is
+  // filed per form; such a class simply falls back to continuation.
+  const scheme =
+    weekOfTerm >= 1 && assignment.class.level != null
+      ? await prisma.schoolSchemeOfWork.findUnique({
+          where: {
+            companyId_subjectId_termId_level_weekOfTerm: {
+              companyId: input.companyId,
+              subjectId: assignment.subjectId,
+              termId: assignment.termId,
+              level: assignment.class.level,
+              weekOfTerm,
+            },
+          },
+        })
+      : null;
 
   const [slots, existing, previous] = await Promise.all([
     prisma.schoolTimetableSlot.findMany({
@@ -265,6 +302,7 @@ export async function layOutWeek(input: {
       created: 0,
       skipped: 0,
       seededFrom: null,
+      fromScheme: false,
       message: "This class has no lessons on the timetable yet",
     };
   }
@@ -273,12 +311,18 @@ export async function layOutWeek(input: {
     existing.map((row) => `${row.slotId ?? ""}|${row.lessonDate.toISOString()}`),
   );
 
-  const termStart = asDay(assignment.term.startDate);
+  const termStart = termStartDay;
   const termEnd = asDay(assignment.term.endDate);
 
-  // Continuation, not repetition: the drafts pick up where teaching left off.
-  const seededFrom = previous?.topic ?? null;
-  const topic = seededFrom ? `${seededFrom} — continued` : "New topic";
+  // The scheme's row for this week wins; failing that, continuation rather
+  // than repetition — the drafts pick up where teaching left off.
+  const seededFrom = scheme?.topic ?? previous?.topic ?? null;
+  const fromScheme = Boolean(scheme);
+  const topic = scheme
+    ? scheme.topic
+    : previous
+      ? `${previous.topic} — continued`
+      : "New topic";
 
   const toWrite = slots
     .map((slot) => ({
@@ -301,6 +345,9 @@ export async function layOutWeek(input: {
         slotId: slot.id,
         lessonDate,
         topic,
+        objectives: scheme?.objectives ?? null,
+        activities: scheme?.activities ?? null,
+        resourcesNote: scheme?.resourcesNote ?? null,
         createdById: input.createdById ?? null,
       })),
     });
@@ -311,6 +358,7 @@ export async function layOutWeek(input: {
     created: toWrite.length,
     skipped,
     seededFrom,
+    fromScheme,
     message:
       toWrite.length === 0
         ? "Every lesson this week is already planned"
