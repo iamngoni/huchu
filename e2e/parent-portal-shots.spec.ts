@@ -40,7 +40,7 @@ test.describe.configure({ timeout: 180_000 });
 /** Each screen names something only the *loaded* screen renders. */
 const SCREENS = [
   { slug: "home", path: "/portal/parent", ready: /Attendance this term|linked any children/i },
-  { slug: "fees", path: "/portal/parent/fees", ready: /Invoice|No invoices|not been shared/i },
+  { slug: "fees", path: "/portal/parent/fees", ready: /What you still owe|not shown on your account/i },
   { slug: "attendance", path: "/portal/parent/attendance", ready: /present|absent|attendance/i },
   { slug: "marks", path: "/portal/parent/marks", ready: /out of|score|have not been released|not been shared/i },
   { slug: "notices", path: "/portal/parent/notices", ready: /notice|nothing here/i },
