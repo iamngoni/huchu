@@ -284,6 +284,15 @@ export function getSamplePayload(sourceKey: string): UniversalDocumentPayload {
           { label: "Method", value: "mobile money" },
           { label: "Reference", value: "EC-77120" },
         ],
+        // A receipt acknowledges, it does not bill. The real resolver emits no
+        // party block at all; the sample matches it rather than inheriting the
+        // invoice's "Bill to".
+        parties: [
+          {
+            title: "Received from",
+            lines: ["Rudo Moyo", "mother of Tendai Moyo", "0772 000 111"],
+          },
+        ],
         totals: [{ label: "Amount received", value: "USD 180.00", emphasis: true }],
         record: {
           sections: [],

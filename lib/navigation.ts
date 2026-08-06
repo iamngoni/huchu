@@ -237,13 +237,13 @@ export const navSections: NavSection[] = [
       { href: "/stores/price-lists", icon: Scale, label: "Price lists", group: "selling" },
     ],
   },
-  // A school is not one thing you open either. Fifteen flat entries read as an
-  // inventory of pages rather than as navigation, and "Academics" next to
-  // "Results Moderation" next to "Documents" gives no sense of which of them a
-  // registrar, a bursar and a class teacher each live in. Grouped the way a
-  // school is actually organised — the people, the teaching week, the money,
-  // the paperwork — each group expanding to its own children, which is the
-  // pattern the other module sections already set.
+  // A school's sidebar is organised by *record*, not by department. The people
+  // who use it — a registrar, a bursar, a boarding master, an examinations
+  // officer — each go straight to the thing they run: Students, Fees, Boarding,
+  // Results. So every entity with more than one page is its own top-level entry
+  // that expands to its pages, and an entity with exactly one page is a
+  // top-level link with no ceremony. Nothing is buried two levels down under a
+  // department heading nobody says out loud.
   //
   // Classroom work is deliberately absent. Lesson plans, teaching resources,
   // homework and mark capture live in the teacher portal, because a teacher
@@ -252,7 +252,7 @@ export const navSections: NavSection[] = [
   // asked of the same tables.
   //
   // Every group shares `schools.core`, so a tenant without the module loses the
-  // whole set rather than being left with six empty headings.
+  // whole set rather than being left with empty headings.
   {
     id: "schools",
     title: "School Operations",
@@ -260,42 +260,53 @@ export const navSections: NavSection[] = [
     featureKey: "schools.core",
     flattenGroups: true,
     groups: [
-      { id: "people", label: "People" },
-      { id: "teaching", label: "Teaching" },
-      { id: "attendance", label: "Attendance and welfare" },
-      { id: "assessment", label: "Assessment" },
-      { id: "money", label: "Fees" },
-      { id: "admin", label: "Office" },
+      { id: "students", label: "Students" },
+      { id: "boarding", label: "Boarding" },
+      { id: "academics", label: "Academic setup" },
+      { id: "results", label: "Results" },
+      { id: "fees", label: "Fees" },
+      { id: "paperwork", label: "Reports and documents" },
     ],
     items: [
       { href: "/schools", icon: Building2, label: "School Overview" },
 
-      { href: "/schools/students", icon: Users, label: "Students", group: "people" },
-      { href: "/schools/students/roll-up", icon: Users, label: "Roll up the year", group: "people" },
-      { href: "/schools/guardians", icon: Users, label: "Guardians", group: "people" },
-      { href: "/schools/teachers", icon: ManageAccounts, label: "Teachers", group: "people" },
-      { href: "/schools/admissions", icon: EventNote, label: "Admissions", group: "people" },
+      // The registrar's desk: the roll and everything that changes it.
+      { href: "/schools/students", icon: Users, label: "All students", group: "students" },
+      { href: "/schools/admissions", icon: NoteAdd, label: "Admissions", group: "students" },
+      { href: "/schools/students/roll-up", icon: History, label: "Roll up the year", group: "students" },
+      { href: "/schools/imports", icon: Upload, label: "Import records", group: "students" },
 
-      { href: "/schools/academics", icon: TableRows, label: "Academics setup", group: "teaching" },
-      { href: "/schools/timetable", icon: Calendar, label: "Timetable", group: "teaching" },
-      { href: "/schools/library", icon: Calendar, label: "Library", group: "teaching" },
-      { href: "/schools/classes", icon: TableRows, label: "Classes", group: "teaching" },
-      { href: "/schools/subjects", icon: TableRows, label: "Subjects", group: "teaching" },
+      // One page each, so one click each. Top level, no expansion to open.
+      { href: "/schools/guardians", icon: UserRound, label: "Guardians" },
+      { href: "/schools/teachers", icon: ManageAccounts, label: "Teachers" },
+      { href: "/schools/attendance", icon: UserCheck, label: "Attendance" },
 
-      { href: "/schools/attendance", icon: UserCheck, label: "Attendance", group: "attendance" },
-      { href: "/schools/boarding", icon: Home, label: "Boarding", group: "attendance" },
-      { href: "/schools/boarding/welfare", icon: Home, label: "Health and welfare", group: "attendance" },
+      { href: "/schools/boarding", icon: Home, label: "Bed board", group: "boarding" },
+      { href: "/schools/boarding/welfare", icon: ShieldCheck, label: "Health and welfare", group: "boarding" },
 
-      { href: "/schools/results/moderation", icon: FileCheck, label: "Moderation", group: "assessment" },
-      { href: "/schools/results/publish", icon: FileCheck, label: "Results publishing", group: "assessment" },
+      { href: "/schools/academics", icon: TableRows, label: "Years and terms", group: "academics" },
+      { href: "/schools/classes", icon: Checklist, label: "Classes", group: "academics" },
+      { href: "/schools/subjects", icon: Dataset, label: "Subjects", group: "academics" },
 
-      { href: "/schools/finance", icon: ReceiptLong, label: "Fees and finance", group: "money" },
+      { href: "/schools/timetable", icon: Calendar, label: "Timetable" },
 
-      { href: "/schools/imports", icon: Upload, label: "Import records", group: "admin" },
-      { href: "/schools/transport", icon: LocalShipping, label: "Transport", group: "admin" },
-      { href: "/schools/notices", icon: EventNote, label: "Notices", group: "admin" },
-      { href: "/schools/reports", icon: BarChart3, label: "School reports", group: "admin" },
-      { href: "/schools/documents", icon: FileText, label: "Documents", group: "admin" },
+      { href: "/schools/results", icon: FileCheck, label: "Results overview", group: "results" },
+      { href: "/schools/results/sheets", icon: Checklist, label: "Result sheets", group: "results" },
+      { href: "/schools/results/moderation", icon: Scale, label: "Moderation", group: "results" },
+      { href: "/schools/results/publish", icon: FileCheck, label: "Publishing", group: "results" },
+
+      { href: "/schools/finance", icon: ReceiptLong, label: "Fees by year group", group: "fees" },
+      { href: "/schools/finance/ledger", icon: Payments, label: "Ledger and structures", group: "fees" },
+      { href: "/schools/finance/receipts", icon: ReceiptLong, label: "Receipts", group: "fees" },
+      { href: "/schools/finance/refunds", icon: Wallet, label: "Refunds", group: "fees" },
+      { href: "/schools/finance/waivers", icon: Scale, label: "Waivers", group: "fees" },
+
+      { href: "/schools/library", icon: Dataset, label: "Library" },
+      { href: "/schools/transport", icon: LocalShipping, label: "Transport" },
+      { href: "/schools/notices", icon: EventNote, label: "Notices" },
+
+      { href: "/schools/reports", icon: BarChart3, label: "School reports", group: "paperwork" },
+      { href: "/schools/documents", icon: FileText, label: "Documents", group: "paperwork" },
     ],
   },
   {

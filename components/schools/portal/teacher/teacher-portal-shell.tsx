@@ -24,22 +24,27 @@ import {
 } from "@/lib/icons";
 import { useTeacherPortal } from "./teacher-portal-context";
 
-/** Route → [what sits above the title, the title]. Mirrors the demo's bar. */
-const TITLES: Record<string, [string, string]> = {
-  "/portal/teacher": ["Today", "Your day"],
-  "/portal/teacher/attendance": ["Attendance", "Mark the register"],
-  "/portal/teacher/marks": ["Assessment", "Enter marks"],
-  "/portal/teacher/marks-book": ["Assessment", "Marks book"],
-  "/portal/teacher/messages": ["Parents", "Messages"],
-  "/portal/teacher/timetable": ["Timetable", "Your week"],
-  "/portal/teacher/lessons": ["Planning", "Lesson plans"],
-  "/portal/teacher/homework": ["Classwork", "Homework and tasks"],
-  "/portal/teacher/files": ["Department", "Shared files"],
-  "/portal/teacher/reports": ["Your classes", "Reports"],
-  "/portal/teacher/meetings": ["Parents", "Parent meetings"],
-  "/portal/teacher/profile": ["Account", "Your profile"],
-  "/portal/teacher/settings": ["Account", "Settings"],
-  "/portal/teacher/help": ["Teacher portal", "Help"],
+/**
+ * Route → page title. The old two-line bar put a category label above the
+ * title ("Parents", "Assessment"), which repeated what the rail already says.
+ * The bar now spends its one caption line on real context: the active term
+ * and the class in view.
+ */
+const TITLES: Record<string, string> = {
+  "/portal/teacher": "Your day",
+  "/portal/teacher/attendance": "Mark the register",
+  "/portal/teacher/marks": "Enter marks",
+  "/portal/teacher/marks-book": "Marks book",
+  "/portal/teacher/messages": "Messages",
+  "/portal/teacher/timetable": "Your week",
+  "/portal/teacher/lessons": "Lesson plans",
+  "/portal/teacher/homework": "Homework and tasks",
+  "/portal/teacher/files": "Shared files",
+  "/portal/teacher/reports": "Reports",
+  "/portal/teacher/meetings": "Parent meetings",
+  "/portal/teacher/profile": "Your profile",
+  "/portal/teacher/settings": "Settings",
+  "/portal/teacher/help": "Help",
 };
 
 const DAILY = [
@@ -81,24 +86,32 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const { day, classSubjectId, setClassSubjectId } = useTeacherPortal();
 
-  const [crumb, title] = TITLES[pathname] ?? TITLES["/portal/teacher"];
+  const title = TITLES[pathname] ?? TITLES["/portal/teacher"];
   const teacherName = day.teacher?.user.name ?? "Teacher";
   const subjects = [...new Set((day.classes).map((row) => row.subjectName))];
   const papers = day.workload?.papersToMark ?? 0;
+  const selected = day.classes.find((row) => row.classSubjectId === classSubjectId);
+  /**
+   * What the bar's caption line says: the term and the class in view. Both are
+   * live state rather than a category label — they change what every number on
+   * the screen means, which is what earns them the space.
+   */
+  const context = [
+    day.term?.name,
+    selected
+      ? `${selected.className}${selected.streamName ? ` ${selected.streamName}` : ""} · ${selected.subjectName}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" — ");
 
   const isActive = (href: string) =>
     href === "/portal/teacher" ? pathname === href : pathname.startsWith(href);
 
   const sidebar = (
     <div className="flex min-h-0 flex-col gap-3">
-      <Link
-        href="/portal/teacher"
-        className="flex items-center gap-2 px-2 py-1 text-[length:var(--type-body)] font-semibold text-[color:var(--text-strong)] no-underline"
-      >
-        <Layers className="size-5 text-[color:var(--brand)]" aria-hidden />
-        <span>Staffroom</span>
-      </Link>
-
+      {/* No brand label. The profile card is the rail's identity: whose
+          classes these are is the only heading the portal needs. */}
       <Link
         href="/portal/teacher/profile"
         className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[color:var(--border)] bg-[color:var(--surface)] p-3 no-underline"
@@ -192,12 +205,13 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
   const topbar = (
     <div className="flex w-full min-w-0 items-center gap-3">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[length:var(--type-caption)] text-[color:var(--text-muted)]">
-          {crumb}
-          {day.term ? ` · ${day.term.name}` : ""}
-        </p>
-        <h1 className="truncate text-[length:var(--type-h4)] font-semibold text-[color:var(--text-strong)]">
-          {title}
+        <h1 className="flex min-w-0 items-baseline gap-2 truncate text-[length:var(--type-h4)] font-semibold text-[color:var(--text-strong)]">
+          <span className="truncate">{title}</span>
+          {context ? (
+            <span className="truncate text-[length:var(--type-body-sm)] font-normal text-[color:var(--text-muted)]">
+              {context}
+            </span>
+          ) : null}
         </h1>
       </div>
       {papers > 0 ? (

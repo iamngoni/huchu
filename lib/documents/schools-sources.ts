@@ -247,13 +247,30 @@ async function resolveFeeReceipt(companyId: string, recordId: string): Promise<R
   const receipt = await prisma.schoolFeeReceipt.findFirst({
     where: { id: recordId, companyId },
     include: {
-      student: { select: { firstName: true, lastName: true, studentNo: true } },
+      student: {
+        select: {
+          firstName: true,
+          lastName: true,
+          studentNo: true,
+          guardianLinks: {
+            orderBy: { isPrimary: "desc" },
+            take: 1,
+            select: {
+              relationship: true,
+              guardian: { select: { firstName: true, lastName: true, phone: true } },
+            },
+          },
+        },
+      },
       allocations: {
         include: { invoice: { select: { invoiceNo: true, term: { select: { name: true } } } } },
       },
     },
   });
   if (!receipt) throw new Error("Fee receipt not found");
+
+  const receiptGuardianLink = receipt.student.guardianLinks[0];
+  const receiptGuardian = receiptGuardianLink?.guardian;
 
   return {
     targetType: "RECORD",
@@ -275,6 +292,21 @@ async function resolveFeeReceipt(companyId: string, recordId: string): Promise<R
         { label: "Method", value: receipt.paymentMethod.replace(/_/g, " ").toLowerCase() },
         ...(receipt.reference ? [{ label: "Reference", value: receipt.reference }] : []),
       ],
+      // A receipt acknowledges rather than bills, so the block names who paid.
+      parties: receiptGuardian
+        ? [
+            {
+              title: "Received from",
+              lines: [
+                fullName(receiptGuardian),
+                receiptGuardianLink?.relationship
+                  ? `${receiptGuardianLink.relationship.toLowerCase()} of ${fullName(receipt.student)}`
+                  : null,
+                receiptGuardian.phone,
+              ].filter((line): line is string => Boolean(line)),
+            },
+          ]
+        : [],
       record: {
         sections: [],
         // What the money was put against, invoice by invoice. A receipt showing

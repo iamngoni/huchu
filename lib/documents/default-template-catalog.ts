@@ -95,6 +95,32 @@ function recordTemplate(documentTitle: string): DocumentTemplateSchema {
   });
 }
 
+/**
+ * A record document that is not a bill. A report card with the school's bank
+ * account at the foot reads as an invoice for the marks; the bank block
+ * belongs only on paper that asks for money.
+ */
+function letterTemplate(documentTitle: string): DocumentTemplateSchema {
+  return mergeSchema({
+    page: {
+      orientation: "portrait",
+      marginMm: 10,
+    },
+    table: {
+      compact: false,
+      zebra: true,
+    },
+    labels: {
+      documentTitle,
+    },
+    footer: {
+      showFooterText: false,
+      showDisclaimer: true,
+      showPaymentDetails: false,
+    },
+  });
+}
+
 export const DEFAULT_TEMPLATE_CATALOG: DefaultTemplateCatalogEntry[] = [
   {
     key: "reports.shift",
@@ -237,7 +263,7 @@ export const DEFAULT_TEMPLATE_CATALOG: DefaultTemplateCatalogEntry[] = [
     targetType: "RECORD",
     name: "School Report Card Default",
     description: "A term's published marks per subject, with the pass outcome.",
-    schema: recordTemplate("Report Card"),
+    schema: letterTemplate("Report Card"),
   },
   {
     key: "schools.admission-letter",
@@ -246,7 +272,7 @@ export const DEFAULT_TEMPLATE_CATALOG: DefaultTemplateCatalogEntry[] = [
     targetType: "RECORD",
     name: "School Admission Letter Default",
     description: "The offer of a place, addressed to the parent who applied.",
-    schema: recordTemplate("Offer of a Place"),
+    schema: letterTemplate("Offer of a Place"),
   },
   {
     key: "schools.transfer-letter",
@@ -255,7 +281,7 @@ export const DEFAULT_TEMPLATE_CATALOG: DefaultTemplateCatalogEntry[] = [
     targetType: "RECORD",
     name: "School Transfer Letter Default",
     description: "Confirmation a pupil was here, with any fees still outstanding.",
-    schema: recordTemplate("Transfer Letter"),
+    schema: letterTemplate("Transfer Letter"),
   },
   {
     key: "schools.class-list",
