@@ -42,7 +42,7 @@ const SCREENS = [
   { slug: "home", path: "/portal/parent", ready: /Attendance this term|linked any children/i },
   { slug: "fees", path: "/portal/parent/fees", ready: /Invoice|No invoices|not been shared/i },
   { slug: "attendance", path: "/portal/parent/attendance", ready: /present|absent|attendance/i },
-  { slug: "marks", path: "/portal/parent/marks", ready: /out of|score|not been published|not been shared/i },
+  { slug: "marks", path: "/portal/parent/marks", ready: /out of|score|have not been released|not been shared/i },
   { slug: "notices", path: "/portal/parent/notices", ready: /notice|nothing here/i },
   { slug: "profile", path: "/portal/parent/profile", ready: /guardian|child|profile/i },
   { slug: "help", path: "/portal/parent/help", ready: /child|question|switch/i },

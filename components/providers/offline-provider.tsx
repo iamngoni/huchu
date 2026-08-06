@@ -558,8 +558,22 @@ export function OfflineProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      if (lastHydratedTenantKeyRef.current !== targetTenantKey) {
-        queryClient.clear();
+      /**
+       * Clearing is for *switching* tenants, not for arriving at one.
+       *
+       * `clear()` evicts in-flight queries as well as settled ones, and an
+       * evicted query never delivers its result — the observer that started it
+       * stays `pending` for the life of the screen. On the first hydration
+       * there is no previous tenant's data in the in-memory client to protect
+       * against, so the clear has nothing to do and only races whatever the
+       * page fetched on mount. The parent portal's fees and marks screens lost
+       * that race every time and rendered their skeleton forever.
+       */
+      const previousTenantKey = lastHydratedTenantKeyRef.current;
+      if (previousTenantKey !== targetTenantKey) {
+        if (previousTenantKey !== null) {
+          queryClient.clear();
+        }
         setHydratedTenantKey(null);
         lastHydratedTenantKeyRef.current = targetTenantKey;
       }
