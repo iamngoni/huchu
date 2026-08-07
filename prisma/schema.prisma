@@ -186,6 +186,10 @@ model Company {
   goldPrices                    GoldPrice[]
   goldExpenseTypes              GoldExpenseType[]
   irregularPayoutBatches        IrregularPayoutBatch[]
+  settlementIntakes             SettlementIntake[]
+  settlementRuns                SettlementRun[]
+  settlementBatches             SettlementBatch[]
+  settlementPayments            SettlementPayment[]
   scrapMaterials                ScrapMaterial[]
   scrapMetalPrices              ScrapMetalPrice[]
   scrapSellerProfiles           ScrapSellerProfile[]
@@ -996,6 +1000,16 @@ model User {
   createdIrregularPayoutBatches     IrregularPayoutBatch[]         @relation("IrregularPayoutBatchCreatedBy")
   submittedIrregularPayoutBatches   IrregularPayoutBatch[]         @relation("IrregularPayoutBatchSubmittedBy")
   approvedIrregularPayoutBatches    IrregularPayoutBatch[]         @relation("IrregularPayoutBatchApprovedBy")
+  createdSettlementIntakes          SettlementIntake[]             @relation("SettlementIntakeCreatedBy")
+  submittedSettlementIntakes        SettlementIntake[]             @relation("SettlementIntakeSubmittedBy")
+  approvedSettlementIntakes         SettlementIntake[]             @relation("SettlementIntakeApprovedBy")
+  createdSettlementRuns             SettlementRun[]                @relation("SettlementRunCreatedBy")
+  submittedSettlementRuns           SettlementRun[]                @relation("SettlementRunSubmittedBy")
+  approvedSettlementRuns            SettlementRun[]                @relation("SettlementRunApprovedBy")
+  createdSettlementBatches          SettlementBatch[]              @relation("SettlementBatchCreatedBy")
+  submittedSettlementBatches        SettlementBatch[]              @relation("SettlementBatchSubmittedBy")
+  approvedSettlementBatches         SettlementBatch[]              @relation("SettlementBatchApprovedBy")
+  createdSettlementPayments         SettlementPayment[]            @relation("SettlementPaymentCreatedBy")
   employeeProfile                   Employee?                      @relation("EmployeeUser")
   accounts                          Account[] // For NextAuth
   sessions                          Session[] // For NextAuth
@@ -1142,6 +1156,10 @@ model Employee {
   scrapMetalBalanceEntries  ScrapMetalBalanceEntry[]
   moduleAssignments         EmployeeModuleAssignment[]
   irregularPayoutBatchItems IrregularPayoutBatchItem[]
+  settlementIntakeItems     SettlementIntakeItem[]
+  settlementLines           SettlementLine[]
+  settlementBatchItems      SettlementBatchItem[]
+  settlementPayments        SettlementPayment[]
   fixedSalary               FixedSalary?
   payments                  EmployeePayment[]
   compensationProfiles      CompensationProfile[]
@@ -1917,6 +1935,307 @@ model NecAgreement {
   @@index([companyId, isActive, effectiveFrom])
 }
 
+// ============================================
+// COMMODITY & VARIABLE SETTLEMENTS
+// ============================================
+//
+// Paying somebody for a quantity of something — grams of gold from a shift
+// allocation, a scrap balance, a sales commission — rather than for a period of
+// employment.
+//
+// This is a separate domain from payroll, and it has its own tables for a
+// specific reason. Settlement used to run *through* payroll: a `PayrollRun` with
+// `domain = GOLD_PAYOUT`, four gold columns bolted onto that run, and
+// `PayrollLineItem.baseAmount` widened to `Decimal(14,4)` so it could carry a
+// weight in grams while every other row in the table held money. A payroll
+// module cannot be sold on its own while its core tables carry a mining
+// discriminator, and a money column that sometimes holds grams is a rounding bug
+// waiting for someone to treat it as money.
+//
+// So quantity is `quantity`, money is `amount`, and neither pretends to be the
+// other.
+
+enum SettlementSource {
+  GOLD
+  SCRAP
+  COMMISSION
+  OTHER
+}
+
+enum SettlementMode {
+  /// Settle what the period itself produced.
+  CURRENT_PERIOD
+  /// Settle what falls due in the period, which may have been produced earlier.
+  NEXT_PERIOD
+}
+
+/// What is owed, before anyone decides to pay it.
+///
+/// Gold does not use this — its source of truth is `GoldShiftAllocation`, which
+/// the gold module already approves through its own workflow, and duplicating
+/// those rows here would give two answers to "what does this worker have coming".
+/// Scrap, commission and everything else have no such record, so an operator
+/// enters one.
+model SettlementIntake {
+  id             String           @id @default(uuid())
+  companyId      String
+  source         SettlementSource
+  label          String
+  periodStart    DateTime
+  periodEnd      DateTime
+  dueDate        DateTime
+  currency       String           @default("USD")
+  workflowStatus WorkflowStatus   @default(DRAFT)
+  notes          String?
+  createdById    String
+  submittedById  String?
+  approvedById   String?
+  submittedAt    DateTime?
+  approvedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  company     Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy   User                   @relation("SettlementIntakeCreatedBy", fields: [createdById], references: [id])
+  submittedBy User?                  @relation("SettlementIntakeSubmittedBy", fields: [submittedById], references: [id])
+  approvedBy  User?                  @relation("SettlementIntakeApprovedBy", fields: [approvedById], references: [id])
+  items       SettlementIntakeItem[]
+  settledInto SettlementLineOrigin[]
+
+  @@index([companyId, source, workflowStatus, dueDate])
+}
+
+model SettlementIntakeItem {
+  id         String   @id @default(uuid())
+  intakeId   String
+  employeeId String
+  /// How much of the thing. Grams, kilos, units — whatever `unit` says.
+  quantity   Decimal  @default(0) @db.Decimal(12, 4)
+  unit       String   @default("unit")
+  /// What it is worth. Money, always, at money's scale.
+  amount     Decimal  @db.Decimal(14, 2)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  intake   SettlementIntake @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+  employee Employee         @relation(fields: [employeeId], references: [id])
+
+  @@unique([intakeId, employeeId])
+  @@index([employeeId])
+}
+
+/// One settlement, computed and frozen.
+///
+/// The payroll analogue is `PayrollRun`, and the workflow is the same shape —
+/// draft, submit, approve — so the two read alike on screen. What it is not is a
+/// `PayrollRun` with a flag.
+model SettlementRun {
+  id                   String           @id @default(uuid())
+  companyId            String
+  code                 String
+  source               SettlementSource
+  periodStart          DateTime
+  periodEnd            DateTime
+  dueDate              DateTime
+  mode                 SettlementMode   @default(CURRENT_PERIOD)
+  currency             String           @default("USD")
+  /// Money per unit of quantity, weighted across the run. Four places because a
+  /// gold price per gram is not a price in cents.
+  ratePerUnit          Decimal?         @db.Decimal(14, 4)
+  rateUnit             String           @default("unit")
+  totalQuantity        Decimal          @default(0) @db.Decimal(14, 4)
+  totalAmount          Decimal          @default(0) @db.Decimal(14, 2)
+  status               PayrollRunStatus @default(DRAFT)
+  journalEntryId       String?
+  postingSkippedReason String?
+  notes                String?
+  createdById          String
+  submittedById        String?
+  approvedById         String?
+  submittedAt          DateTime?
+  approvedAt           DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  company     Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy   User               @relation("SettlementRunCreatedBy", fields: [createdById], references: [id])
+  submittedBy User?              @relation("SettlementRunSubmittedBy", fields: [submittedById], references: [id])
+  approvedBy  User?              @relation("SettlementRunApprovedBy", fields: [approvedById], references: [id])
+  lines       SettlementLine[]
+  batches     SettlementBatch[]
+  payments    SettlementPayment[]
+
+  @@unique([companyId, source, code])
+  @@index([companyId, source, status, periodStart])
+}
+
+model SettlementLine {
+  id         String  @id @default(uuid())
+  runId      String
+  employeeId String
+  /// The quantity being settled. This is the column that used to be
+  /// `PayrollLineItem.baseAmount` on a gold run.
+  quantity   Decimal @default(0) @db.Decimal(12, 4)
+  unit       String  @default("unit")
+  unitRate   Decimal @default(0) @db.Decimal(14, 4)
+  grossAmount Decimal @db.Decimal(14, 2)
+  netAmount   Decimal @db.Decimal(14, 2)
+  currency    String  @default("USD")
+  /// Frozen at compute time, so a later rate change cannot restate a settled run.
+  exchangeRate Decimal @default(1) @db.Decimal(12, 4)
+  baseAmount   Decimal @default(0) @db.Decimal(14, 2)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  run      SettlementRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employee Employee              @relation(fields: [employeeId], references: [id])
+  items    SettlementBatchItem[]
+  payments SettlementPayment[]
+  origins  SettlementLineOrigin[]
+
+  @@unique([runId, employeeId])
+  @@index([employeeId])
+}
+
+/// Which upstream records a line settled.
+///
+/// A line aggregates: one gold worker can have shares from six shifts in a
+/// month, and they settle as one payment. Without this, "has allocation X been
+/// settled?" had no answer — the code that needed it wrote
+/// `AUTO_PAYOUT_FROM_SHIFT_ALLOCATION:<uuid>` into a free-text `notes` column and
+/// parsed the UUID back out with a regex, which loses the link the moment anyone
+/// edits the note.
+model SettlementLineOrigin {
+  id                    String  @id @default(uuid())
+  lineId                String
+  goldShiftAllocationId String?
+  settlementIntakeId    String?
+  /// The share of the line this origin contributed, so a partially settled
+  /// upstream record can be reconciled.
+  quantity              Decimal @default(0) @db.Decimal(12, 4)
+  amount                Decimal @default(0) @db.Decimal(14, 2)
+
+  line                SettlementLine       @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  goldShiftAllocation GoldShiftAllocation? @relation(fields: [goldShiftAllocationId], references: [id])
+  settlementIntake    SettlementIntake?    @relation(fields: [settlementIntakeId], references: [id])
+
+  @@unique([lineId, goldShiftAllocationId])
+  @@unique([lineId, settlementIntakeId])
+  @@index([goldShiftAllocationId])
+  @@index([settlementIntakeId])
+}
+
+/// Handing the money over.
+///
+/// `settlementRunId` is required, which is the mirror image of
+/// `DisbursementBatch.payrollRunId` being required — and the reason a gold payout
+/// had to fabricate a `PayrollRun` before this model existed.
+model SettlementBatch {
+  id              String                    @id @default(uuid())
+  companyId       String
+  settlementRunId String
+  code            String
+  method          PayoutMethod              @default(CASH)
+  cashCustodian   String?
+  cashIssuedAt    DateTime?
+  status          DisbursementBatchStatus   @default(DRAFT)
+  totalAmount     Decimal                   @default(0) @db.Decimal(14, 2)
+  currency        String                    @default("USD")
+  itemCount       Int                       @default(0)
+  notes           String?
+  createdById     String
+  submittedById   String?
+  approvedById    String?
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  company     Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  run         SettlementRun         @relation(fields: [settlementRunId], references: [id], onDelete: Cascade)
+  createdBy   User                  @relation("SettlementBatchCreatedBy", fields: [createdById], references: [id])
+  submittedBy User?                 @relation("SettlementBatchSubmittedBy", fields: [submittedById], references: [id])
+  approvedBy  User?                 @relation("SettlementBatchApprovedBy", fields: [approvedById], references: [id])
+  items       SettlementBatchItem[]
+  payments    SettlementPayment[]
+
+  @@unique([companyId, code])
+  @@index([companyId, status, createdAt])
+  @@index([settlementRunId])
+}
+
+model SettlementBatchItem {
+  id         String                  @id @default(uuid())
+  batchId    String
+  lineId     String
+  employeeId String
+  amount     Decimal                 @db.Decimal(14, 2)
+  paidAmount Decimal?                @db.Decimal(14, 2)
+  currency   String                  @default("USD")
+  status     String                  @default("DUE")
+  paidAt     DateTime?
+  receiptReference String?
+  notes      String?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  batch    SettlementBatch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  line     SettlementLine      @relation(fields: [lineId], references: [id])
+  employee Employee            @relation(fields: [employeeId], references: [id])
+  payments SettlementPayment[]
+
+  @@unique([batchId, employeeId])
+  @@index([lineId])
+  @@index([employeeId])
+}
+
+/// What an employee was actually paid, per settlement.
+///
+/// Replaces the gold half of `EmployeePayment`, which carried `amount Float` read
+/// in whatever `unit` said — grams on a gold payout — plus five gold-specific
+/// columns. Here `quantity` is the weight and `amount` is the money, so neither
+/// needs a comment explaining that it means something else on Tuesdays.
+model SettlementPayment {
+  id                    String           @id @default(uuid())
+  companyId             String
+  employeeId            String
+  source                SettlementSource
+  settlementRunId       String?
+  lineId                String?
+  batchId               String?
+  batchItemId           String?
+  quantity              Decimal          @default(0) @db.Decimal(12, 4)
+  unit                  String           @default("unit")
+  valuationDate         DateTime?
+  unitPrice             Decimal?         @db.Decimal(14, 4)
+  amount                Decimal          @db.Decimal(14, 2)
+  paidAmount            Decimal?         @db.Decimal(14, 2)
+  currency              String           @default("USD")
+  periodStart           DateTime
+  periodEnd             DateTime
+  dueDate               DateTime
+  paidAt                DateTime?
+  status                String           @default("DUE")
+  notes                 String?
+  createdById           String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee            Employee             @relation(fields: [employeeId], references: [id])
+  run                 SettlementRun?       @relation(fields: [settlementRunId], references: [id])
+  line                SettlementLine?      @relation(fields: [lineId], references: [id])
+  batch               SettlementBatch?     @relation(fields: [batchId], references: [id])
+  batchItem           SettlementBatchItem? @relation(fields: [batchItemId], references: [id])
+  createdBy           User?                @relation("SettlementPaymentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId, employeeId, source, status])
+  @@index([settlementRunId])
+}
+
 model IrregularPayoutBatch {
   id             String                @id @default(uuid())
   companyId      String
@@ -2179,6 +2498,9 @@ enum ApprovalTargetType {
   GOLD_SHIFT_ALLOCATION
   IRREGULAR_PAYOUT_BATCH
   DISCIPLINARY_ACTION
+  SETTLEMENT_INTAKE
+  SETTLEMENT_RUN
+  SETTLEMENT_BATCH
 }
 
 enum ApprovalActionType {
@@ -2885,6 +3207,7 @@ model GoldShiftAllocation {
   workerShares     GoldShiftWorkerShare[]
   pours            GoldPour[]
   employeePayments EmployeePayment[]
+  settlementOrigins SettlementLineOrigin[]
 
   @@unique([siteId, date, shift, shiftGroupId])
   @@index([siteId, date])

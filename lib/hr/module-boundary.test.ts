@@ -40,6 +40,11 @@ const GUARDED_ROOTS = [
   "lib/people",
   "lib/payroll",
   "lib/workflow",
+  // Settlements sits downstream of gold and scrap, and reads their tables — but
+  // reading a shared Prisma model is not importing a vertical's logic. Keeping it
+  // guarded is what stopped the rewrite from reaching for `convertUsdToGrams`
+  // again: quantity is a column now, so nothing needs converting.
+  "lib/settlements",
 ].map((relative) => join(process.cwd(), relative));
 
 /** Verticals HR must not depend on. */
