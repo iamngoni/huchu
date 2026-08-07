@@ -4031,6 +4031,21 @@ enum PostingBasis {
   GROSS
   DEDUCTIONS
   ALLOWANCES
+  // Payroll statutory bases. Each is the sum of the `PayrollLineComponent` rows
+  // carrying the matching `statutoryKey`, so the ledger balance on a payable
+  // account and the return filed against it are summed from the same rows.
+  PAYE
+  AIDS_LEVY
+  NSSA_EMPLOYEE
+  NSSA_EMPLOYER
+  ZIMDEF
+  STANDARDS_DEVELOPMENT_LEVY
+  NEC_EMPLOYEE
+  NEC_EMPLOYER
+  /// Employee deductions that are not statutory — pension, union, advances.
+  OTHER_DEDUCTIONS
+  /// Everything the employer owes on top of the wage, summed.
+  EMPLOYER_CONTRIBUTIONS
 }
 
 enum AllocationType {

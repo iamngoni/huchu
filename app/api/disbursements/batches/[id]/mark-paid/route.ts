@@ -305,6 +305,9 @@ export async function POST(
           entryDate: updatedBatch.paidAt ?? new Date(),
           description: `Payroll disbursement batch ${updatedBatch.code} paid`,
           createdById: session.user.id,
+          // A batch is one currency, and the entry has to say which — without
+          // it a ZWG payout posted ZWG figures into a USD ledger.
+          currency: updatedBatch.currency,
           amount: updatedBatch.totalAmount,
           netAmount: updatedBatch.totalAmount,
           taxAmount: 0,

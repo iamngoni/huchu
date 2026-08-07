@@ -60,6 +60,15 @@ export type PostingContext = {
   deductionsAmount?: MoneyLike;
   allowancesAmount?: MoneyLike;
   currency?: string;
+  /**
+   * Payroll's statutory breakdown, keyed by `PostingBasis`.
+   *
+   * Present only on a payroll posting. Each figure is the sum of the
+   * `PayrollLineComponent` rows carrying the matching `statutoryKey`, which is
+   * what makes the ledger balance on a payable account and the return filed
+   * against it reconcile — they are summed from the same rows.
+   */
+  statutory?: Partial<Record<StatutoryPostingBasis, MoneyLike>>;
   actorRole?: string | null;
   periodOverrideReason?: string | null;
   invertDirection?: boolean;
@@ -103,7 +112,43 @@ export type PostingSimulationResult = {
   code?: string;
 };
 
+/**
+ * The payroll bases, which are read off `context.statutory` rather than from a
+ * dedicated field. Kept as a set so `resolveBasisAmount` stays one switch.
+ */
+export type StatutoryPostingBasis =
+  | "PAYE"
+  | "AIDS_LEVY"
+  | "NSSA_EMPLOYEE"
+  | "NSSA_EMPLOYER"
+  | "ZIMDEF"
+  | "STANDARDS_DEVELOPMENT_LEVY"
+  | "NEC_EMPLOYEE"
+  | "NEC_EMPLOYER"
+  | "OTHER_DEDUCTIONS"
+  | "EMPLOYER_CONTRIBUTIONS";
+
+const STATUTORY_BASES = new Set<string>([
+  "PAYE",
+  "AIDS_LEVY",
+  "NSSA_EMPLOYEE",
+  "NSSA_EMPLOYER",
+  "ZIMDEF",
+  "STANDARDS_DEVELOPMENT_LEVY",
+  "NEC_EMPLOYEE",
+  "NEC_EMPLOYER",
+  "OTHER_DEDUCTIONS",
+  "EMPLOYER_CONTRIBUTIONS",
+]);
+
 function resolveBasisAmount(basis: PostingBasis, context: PostingContext) {
+  // A statutory basis with nothing behind it is zero, and a zero line is dropped
+  // downstream — so a company with no NEC agreement simply has no NEC line,
+  // rather than an unbalanced entry or a rule that has to be edited.
+  if (STATUTORY_BASES.has(basis)) {
+    return toMoney(context.statutory?.[basis as StatutoryPostingBasis] ?? 0);
+  }
+
   switch (basis) {
     case "NET":
       return toMoney(context.netAmount ?? context.amount);
