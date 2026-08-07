@@ -26,6 +26,21 @@ const { validateSessionMock, createApprovalActionMock, prismaMock } = vi.hoisted
       currencyRate: {
         findFirst: vi.fn(),
       },
+      // A salary run seeds and then checks the Zimbabwe statutory tables before
+      // it writes anything, so the whole statutory surface has to be mocked.
+      payeTable: {
+        count: vi.fn(),
+        create: vi.fn(),
+        findFirst: vi.fn(),
+      },
+      statutoryRate: {
+        create: vi.fn(),
+        findMany: vi.fn(),
+      },
+      taxCredit: {
+        create: vi.fn(),
+        findMany: vi.fn(),
+      },
       $transaction: vi.fn(),
     },
   }),
@@ -119,6 +134,25 @@ describe("POST /api/payroll/periods/[id]/generate-run", () => {
       baseCurrency: "USD",
     })
     prismaMock.currencyRate.findFirst.mockResolvedValue(null)
+
+    // Already seeded, so `ensureHrPayrollDefaults` is a no-op, and April 2026
+    // is covered by a USD table and the two rates `findStatutoryGaps` insists
+    // on. A test that wants the refusal path overrides these.
+    prismaMock.payeTable.count.mockResolvedValue(2)
+    prismaMock.payeTable.findFirst.mockResolvedValue({
+      id: "paye-usd",
+      label: "Monthly USD PAYE",
+      currency: "USD",
+      cycle: "MONTHLY",
+      effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
+      bands: [
+        { lowerBound: 0, upperBound: null, ratePercent: 20, deductAmount: 0 },
+      ],
+    })
+    prismaMock.statutoryRate.findMany.mockResolvedValue([
+      { key: "NSSA_POBS_EMPLOYEE", currency: "USD", ratePercent: 4.5, ceilingAmount: 700, floorAmount: null },
+    ])
+    prismaMock.taxCredit.findMany.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -156,6 +190,48 @@ describe("POST /api/payroll/periods/[id]/generate-run", () => {
     expect(body.details.warnings).toEqual([
       "No eligible employees found for this payroll period scope.",
     ])
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+  })
+
+  it("REFUSES when no PAYE table covers the pay period", async () => {
+    // The behaviour the whole effective-dated design exists for. A run with no
+    // table for its period must stop and name the gap — not reach for last
+    // month's bands and produce a payslip that looks right and is wrong.
+    prismaMock.payrollPeriod.findUnique.mockResolvedValue(makePeriod())
+    prismaMock.employee.findMany.mockResolvedValue([
+      {
+        id: "emp-1",
+        name: "Ada",
+        employeeId: "EMP-001",
+        departmentId: null,
+        gradeId: null,
+        defaultCurrency: "USD",
+      },
+    ])
+    prismaMock.compensationProfile.findMany.mockResolvedValue([
+      {
+        id: "profile-1",
+        employeeId: "emp-1",
+        baseAmount: 1000,
+        currency: "USD",
+        effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    ])
+    prismaMock.compensationRule.findMany.mockResolvedValue([])
+    prismaMock.payeTable.findFirst.mockResolvedValue(null)
+
+    const response = await POST(makeRequest({}), {
+      params: Promise.resolve({ id: "period-1" }),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(409)
+    expect(body.error).toBe(
+      "This period is not covered by the statutory tables on file",
+    )
+    expect(body.details.warnings).toContain(
+      "No PAYE table covers April 2026 for USD",
+    )
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
   })
 

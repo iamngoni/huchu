@@ -9,6 +9,8 @@ import {
   createApprovalAction,
   ensureApproverRole,
 } from "@/lib/hr-payroll"
+import { ensureHrPayrollDefaults } from "@/lib/hr/bootstrap"
+import { findStatutoryGaps } from "@/lib/hr/statutory/tables"
 import {
   money,
   rate,
@@ -608,6 +610,34 @@ export async function POST(
         return errorResponse("No eligible salary employees found for this period", 409, {
           warnings: runDraft.warnings,
         })
+      }
+    }
+
+    // A salary run is a statutory run. Make sure the tables exist (a no-op for
+    // any company that already has them), then check the period is covered
+    // before anything is written — an operator would rather see every gap at
+    // once than fix one, retry, and find the next.
+    if (period.domain !== "GOLD_PAYOUT") {
+      await ensureHrPayrollDefaults(session.user.companyId)
+
+      const gaps = await findStatutoryGaps({
+        companyId: session.user.companyId,
+        currencies: runDraft.lineItems.map((line) => line.currency),
+        on: new Date(period.endDate),
+      })
+      if (gaps.length > 0) {
+        logger.info("generate_run_statutory_gaps", {
+          companyId: session.user.companyId,
+          actorId: session.user.id,
+          periodId: id,
+          gapCount: gaps.length,
+          statusCode: 409,
+        })
+        return errorResponse(
+          "This period is not covered by the statutory tables on file",
+          409,
+          { warnings: [...runDraft.warnings, ...gaps] },
+        )
       }
     }
 

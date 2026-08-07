@@ -39,6 +39,10 @@ model Company {
   jobGrades                     JobGrade[]
   compensationRules             CompensationRule[]
   compensationTemplates         CompensationTemplate[]
+  payeTables                    PayeTable[]
+  statutoryRates                StatutoryRate[]
+  taxCredits                    TaxCredit[]
+  necAgreements                 NecAgreement[]
   payrollPeriods                PayrollPeriod[]
   payrollRuns                   PayrollRun[]
   disbursementBatches           DisbursementBatch[]
@@ -1737,6 +1741,168 @@ model AdjustmentEntry {
   @@index([employeeId])
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Zimbabwe statutory payroll tables
+//
+// Every one of these is effective-dated, and that is the whole point. PAYE bands
+// change with each budget, the NSSA insurable-earnings ceiling is revised
+// separately, and a ZWG table is revised more often than a USD one. Hard-coding
+// any of it means a rate change needs a deploy, and — worse — means last
+// month's payroll silently recomputes on this month's numbers the next time
+// anybody opens it.
+//
+// So: a rate is looked up for the pay period, and when no row covers that period
+// the run REFUSES rather than reaching for the nearest one. A stale table
+// produces a plausible wrong number, which is the only kind of wrong number
+// that reaches a payslip.
+//
+// The seeded pack is a STARTING SET, labelled with its date. Verify against
+// ZIMRA and NSSA before relying on it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A PAYE band table for one currency, valid over one window.
+///
+/// One table per currency, per the dual-currency rule: USD earnings are taxed
+/// on the USD table and ZWG earnings on the ZWG table. They are not converted
+/// and pooled — ZIMRA publishes them separately because they are separate.
+model PayeTable {
+  id            String       @id @default(uuid())
+  companyId     String
+  currency      String
+  cycle         PayrollCycle @default(MONTHLY)
+  /// What ZIMRA calls it, e.g. "Aug 2026 monthly USD".
+  label         String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  /// Free-form provenance — the circular or gazette this came from. Present so
+  /// an operator correcting a rate can say where the new one came from.
+  source        String?
+  /// True on rows the seeded pack wrote. A company that has entered its own
+  /// table should not have it quietly replaced on the next provision.
+  isSeeded      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  company Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bands   PayeBand[]
+
+  @@unique([companyId, currency, cycle, effectiveFrom])
+  @@index([companyId, currency, cycle, effectiveFrom])
+}
+
+/// One band of a PAYE table.
+///
+/// Stored in ZIMRA's own subtract-method form — `taxableGross × ratePercent −
+/// deductAmount` — rather than as a cumulative marginal calculation. That is
+/// how the published tables read, so an accountant can check a payslip against
+/// the circular line by line without re-deriving anything, and a transcription
+/// error is visible rather than buried in arithmetic.
+model PayeBand {
+  id          String   @id @default(uuid())
+  tableId     String
+  /// Inclusive.
+  lowerBound  Decimal  @db.Decimal(14, 2)
+  /// Inclusive. Null on the top band, which has no ceiling.
+  upperBound  Decimal? @db.Decimal(14, 2)
+  ratePercent Decimal  @db.Decimal(5, 2)
+  /// The published subtraction for this band. Zero on the first band.
+  deductAmount Decimal @default(0) @db.Decimal(14, 2)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  table PayeTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@unique([tableId, lowerBound])
+  @@index([tableId, sortOrder])
+}
+
+/// A single named statutory rate, effective-dated.
+///
+/// One model rather than a column per levy, because the list grows: NSSA, the
+/// AIDS levy, ZIMDEF, the Standards Development Levy and APWCS all reduce to
+/// "a percentage of something, sometimes capped, sometimes floored". A new levy
+/// is a new `key`, not a migration.
+model StatutoryRate {
+  id            String            @id @default(uuid())
+  companyId     String
+  key           StatutoryRateKey
+  /// Null means "applies to every currency" — the AIDS levy is 3% of PAYE
+  /// whichever currency the PAYE was struck in. A currency-specific row (the
+  /// NSSA ceiling) names its currency.
+  currency      String?
+  ratePercent   Decimal           @db.Decimal(7, 4)
+  /// The insurable-earnings ceiling for NSSA: contributions are charged on
+  /// earnings up to this and not beyond. Null where the levy is uncapped.
+  ceilingAmount Decimal?          @db.Decimal(14, 2)
+  /// A floor, where one exists.
+  floorAmount   Decimal?          @db.Decimal(14, 2)
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  source        String?
+  isSeeded      Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, key, currency, effectiveFrom])
+  @@index([companyId, key, effectiveFrom])
+}
+
+/// A credit that reduces PAYE after it has been computed.
+///
+/// Not a deduction from gross — these come off the tax, which is why they are
+/// their own model and are applied at their own stage. Medical aid is the one
+/// that is a proportion of something the employee paid; the elderly and
+/// disability credits are flat monthly amounts.
+model TaxCredit {
+  id            String        @id @default(uuid())
+  companyId     String
+  key           TaxCreditKey
+  currency      String
+  /// A flat monthly amount, for the elderly and disability credits.
+  amount        Decimal?      @db.Decimal(14, 2)
+  /// A proportion of a contribution the employee made — 50% for medical aid.
+  ratePercent   Decimal?      @db.Decimal(7, 4)
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  source        String?
+  isSeeded      Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, key, currency, effectiveFrom])
+  @@index([companyId, key, effectiveFrom])
+}
+
+/// An NEC agreement — the industry council dues an employer and employee owe.
+///
+/// Not seeded, and cannot be: dues are set per National Employment Council and
+/// there are dozens. A company enters the one for its industry, or has none.
+model NecAgreement {
+  id                    String    @id @default(uuid())
+  companyId             String
+  /// The council, e.g. "NEC for the Commercial Sectors of Zimbabwe".
+  councilName           String
+  currency              String    @default("USD")
+  employeeRatePercent   Decimal?  @db.Decimal(7, 4)
+  employeeFixedAmount   Decimal?  @db.Decimal(14, 2)
+  employerRatePercent   Decimal?  @db.Decimal(7, 4)
+  employerFixedAmount   Decimal?  @db.Decimal(14, 2)
+  effectiveFrom         DateTime
+  effectiveTo           DateTime?
+  source                String?
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, isActive, effectiveFrom])
+}
+
 model IrregularPayoutBatch {
   id             String                @id @default(uuid())
   companyId      String
@@ -1879,6 +2045,36 @@ enum CompensationProfileStatus {
 /// CONTRACTOR is paid gross with no PAYE withheld — the payment is theirs to
 /// declare — which is a different thing from EXEMPT and must not be conflated
 /// with it, since the NSSA treatment differs too.
+/// The statutory rates a Zimbabwean payroll needs, one key each.
+enum StatutoryRateKey {
+  /// 3% of the PAYE figure — not of gross. A common and expensive mistake.
+  AIDS_LEVY
+  /// NSSA Pension and Other Benefits Scheme, employee side. 4.5% of insurable
+  /// earnings up to the ceiling on the same row.
+  NSSA_POBS_EMPLOYEE
+  /// NSSA POBS, employer side. Same rate, same ceiling, employer's cost.
+  NSSA_POBS_EMPLOYER
+  /// Accident Prevention and Workers Compensation Scheme — employer only, and
+  /// the rate varies by industry risk class.
+  NSSA_APWCS
+  /// Zimbabwe Manpower Development Fund, 1% of gross, employer only.
+  ZIMDEF
+  /// Standards Development Levy, employer only.
+  STANDARDS_DEVELOPMENT_LEVY
+  /// The portion of an annual bonus that is not taxed. Held here rather than on
+  /// the PAYE table because it is revised on its own schedule.
+  BONUS_EXEMPTION
+}
+
+enum TaxCreditKey {
+  /// 50% of the employee's medical aid contributions.
+  MEDICAL_AID
+  /// The elderly persons' credit, for employees over the qualifying age.
+  ELDERLY
+  /// The disabled persons' credit.
+  DISABILITY
+}
+
 enum EmployeeTaxStatus {
   STANDARD
   EXEMPT
