@@ -9,7 +9,12 @@ import "dotenv/config";
 import { prisma } from "@/lib/prisma";
 import { ensureAccountingDefaults } from "@/lib/accounting/bootstrap";
 import { seedZimbabweStatutoryPack } from "@/lib/hr/statutory/zimbabwe-pack";
-import { FEATURE_BUNDLES, FEATURE_CATALOG } from "@/lib/platform/feature-catalog";
+import { FEATURE_BUNDLES, FEATURE_CATALOG, TIERS } from "@/lib/platform/feature-catalog";
+import {
+  getClientTemplateBundleCodes,
+  getClientTemplateDisabledFeatureKeys,
+  getClientTemplateFeatureKeys,
+} from "@/lib/platform/client-templates";
 import { assembleSalaryRun } from "@/lib/hr/payroll/assemble";
 import { postPayrollRun } from "@/lib/hr/payroll/posting";
 import bcrypt from "bcryptjs";
@@ -55,6 +60,7 @@ async function main() {
     await prisma.taxRule.deleteMany({ where: { companyId } });
     await prisma.taxTemplateLine.deleteMany({ where: { template: { companyId } } });
     await prisma.taxTemplate.deleteMany({ where: { companyId } });
+    await prisma.site.deleteMany({ where: { companyId } });
     await prisma.company.delete({ where: { id: companyId } });
   }
 
@@ -66,10 +72,19 @@ async function main() {
       // Auth refuses a tenant that is still PROVISIONING, so a demo left at the
       // default cannot be signed into at all.
       tenantStatus: "ACTIVE",
+      // Without this the onboarding provider decides the workspace is unset up
+      // and opens a modal over every screen that cannot be dismissed until the
+      // wizard is finished.
+      isProvisioned: true,
     },
     select: { id: true },
   });
   const companyId = company.id;
+
+  // The onboarding check is "at least one site", and a bureau is one office.
+  await prisma.site.create({
+    data: { companyId, name: "Harare Office", code: "HRE" },
+  });
 
   const admin = await prisma.user.create({
     data: {
@@ -88,21 +103,90 @@ async function main() {
   await ensureAccountingDefaults(companyId);
   await seedZimbabweStatutoryPack({ companyId });
 
-  // Turn on the payroll surface. Provisioning normally does this from the
-  // template's bundles; here it is direct, so the demo has exactly the features
-  // TEMPLATE_PAYROLL_BUREAU grants and nothing else.
-  const bureauKeys = new Set(
-    FEATURE_BUNDLES.filter((bundle) =>
-      ["ADDON_WORKFORCE_CORE", "ADDON_ADVANCED_PAYROLL", "ADDON_ZIMBABWE_PAYROLL"].includes(
-        bundle.code,
-      ),
-    ).flatMap((bundle) => bundle.features),
-  );
-  bureauKeys.add("accounting.core");
-  bureauKeys.add("accounting.journals");
-  bureauKeys.add("accounting.chart-of-accounts");
+  // What the bureau buys: the template's recommended tier and its bundles, plus
+  // accounting bought separately so the journal seam has a ledger to post into.
+  // Going up a tier for accounting would drag maintenance and the portal suite
+  // in with it, and a payroll bureau has neither.
+  const TEMPLATE_CODE = "TEMPLATE_PAYROLL_BUREAU";
+  const TIER_CODE = "STANDARD";
+  const bureauBundleCodes = [
+    ...getClientTemplateBundleCodes(TEMPLATE_CODE),
+    "ADDON_ACCOUNTING_CORE",
+  ];
 
-  for (const key of bureauKeys) {
+  // A tenant with no subscription is refused at sign-in: getSubscriptionHealth
+  // returns MISSING_SUBSCRIPTION with shouldBlock, which turns an ACTIVE tenant
+  // status inactive in the credentials callback. So the demo needs a real
+  // subscription row, not just the ACTIVE flag above. It is also what entitles
+  // the billable feature keys — a CompanyFeatureFlag on a billable feature that
+  // no tier or bundle entitles is ignored by getCompanyFeatureMap.
+  const tier = TIERS.find((candidate) => candidate.code === TIER_CODE) ?? TIERS[0];
+  const plan = await prisma.subscriptionPlan.upsert({
+    where: { code: tier.code },
+    update: { name: tier.name, isActive: true },
+    create: {
+      code: tier.code,
+      name: tier.name,
+      description: tier.description,
+      monthlyPrice: tier.monthlyPrice,
+      currency: "USD",
+      warningDays: tier.warningDays,
+      graceDays: tier.graceDays,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+
+  await prisma.companySubscription.create({
+    data: { companyId, planId: plan.id, status: "ACTIVE" },
+  });
+
+  for (const code of bureauBundleCodes) {
+    const definition = FEATURE_BUNDLES.find((bundle) => bundle.code === code);
+    if (!definition) continue;
+    const bundle = await prisma.featureBundle.upsert({
+      where: { code: definition.code },
+      update: { name: definition.name, isActive: true },
+      create: {
+        code: definition.code,
+        name: definition.name,
+        description: definition.description,
+        monthlyPrice: definition.monthlyPrice,
+        additionalSiteMonthlyPrice: definition.additionalSiteMonthlyPrice,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    await prisma.companySubscriptionAddon.upsert({
+      where: { companyId_bundleId: { companyId, bundleId: bundle.id } },
+      update: { isEnabled: true },
+      create: { companyId, bundleId: bundle.id, isEnabled: true },
+    });
+  }
+
+  // Turn on the payroll surface. Ask the template what it grants rather than
+  // listing keys here — that applies its disabledFeatureKeys too, so the
+  // sidebar is the payroll-only one a real bureau would see rather than the
+  // tier's full base set with stores and gold hanging off it. The accounting
+  // bundle is unioned in separately because it sits outside the template.
+  const disabledKeys = new Set(getClientTemplateDisabledFeatureKeys(TEMPLATE_CODE));
+  const bureauKeys = new Set(getClientTemplateFeatureKeys(TEMPLATE_CODE, TIER_CODE));
+  for (const key of FEATURE_BUNDLES.find(
+    (bundle) => bundle.code === "ADDON_ACCOUNTING_CORE",
+  )?.features ?? []) {
+    if (!disabledKeys.has(key)) bureauKeys.add(key);
+  }
+
+  // Writing only the enabled keys is not enough. A key the bureau never asked
+  // for can still be on, because a non-billable catalog feature defaults to
+  // enabled and a billable one rides in on the tier. The disabled keys need an
+  // explicit `false` row, which is what provisioning writes too — otherwise the
+  // sidebar carries Stores and Maintenance into a payroll workspace.
+  const flagStates = new Map<string, boolean>();
+  for (const key of bureauKeys) flagStates.set(key, true);
+  for (const key of disabledKeys) flagStates.set(key, false);
+
+  for (const [key, isEnabled] of flagStates) {
     const catalog = FEATURE_CATALOG.find((feature) => feature.key === key);
     const feature = await prisma.platformFeature.upsert({
       where: { key },
@@ -119,8 +203,8 @@ async function main() {
     });
     await prisma.companyFeatureFlag.upsert({
       where: { companyId_featureId: { companyId, featureId: feature.id } },
-      update: { isEnabled: true },
-      create: { companyId, featureId: feature.id, isEnabled: true },
+      update: { isEnabled },
+      create: { companyId, featureId: feature.id, isEnabled },
     });
   }
 
@@ -327,7 +411,7 @@ async function main() {
   console.log(JSON.stringify({
     companyId,
     slug: SLUG,
-    login: "payroll@demo.local / Password123!",
+    login: "rudo.chirwa@payroll-demo.test / Password123!",
     lineItemIds: run.lineItems.map((l) => l.id),
     posted: outcome.posted,
   }, null, 2));
