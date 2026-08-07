@@ -616,9 +616,9 @@ const scrapReportSnapshotRoutes = [
   "/scrap-metal/reports/variance-aging",
 ];
 const hrWorkforceCoreRoutes = [
-  "/human-resources",
-  "/human-resources/shift-groups",
-  "/human-resources/incidents",
+  "/people",
+  "/people/rosters",
+  "/people/incidents",
 ];
 
 export const OFFLINE_MODULES: OfflineModuleDefinition[] = [

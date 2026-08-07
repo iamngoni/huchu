@@ -35,7 +35,8 @@ import {
   VERTICAL_PRODUCT_BUNDLES,
 } from "@/lib/workspace-products";
 import { getWorkspaceProfileForTemplate } from "@/lib/workspaces";
-import { HR_TABS, HR_CATEGORIES } from "@/lib/hr/tab-config";
+import { PEOPLE_TABS, PEOPLE_CATEGORIES } from "@/lib/people/tab-config";
+import { PAYROLL_TABS, PAYROLL_CATEGORIES } from "@/lib/payroll/tab-config";
 
 const CATALOG_KEYS = new Set(FEATURE_CATALOG.map((feature) => feature.key));
 
@@ -149,12 +150,15 @@ describe("the standalone payroll product", () => {
     expect(disabled).not.toContain("accounting.core");
   });
 
-  it("lands the client on the HR module, not a general dashboard", () => {
+  it("lands the client on payroll, not a general dashboard", () => {
     const bundle = VERTICAL_PRODUCT_BUNDLES.find(
       (row) => row.id === "payroll-services",
     )!;
-    expect(bundle.preferredHomeHref).toBe("/human-resources");
-    expect(bundle.primaryModules).toEqual(["hr"]);
+    expect(bundle.preferredHomeHref).toBe("/payroll/runs");
+    // Payroll is the product for a bureau. People is foundational — you need
+    // employees to pay, but nobody buys this to keep a staff directory.
+    expect(bundle.primaryModules).toEqual(["payroll"]);
+    expect(bundle.foundationalModules).toContain("people");
     // Foundational, not required: accounting is offered, never assumed.
     expect(bundle.foundationalModules).toContain("accounting");
   });
@@ -270,10 +274,10 @@ describe("navigation", () => {
   });
 
   it("resolves the longest prefix, so returns is not swallowed by tables", () => {
-    expect(resolveFeatureKeyForPath("/human-resources/statutory")).toBe(
+    expect(resolveFeatureKeyForPath("/payroll/statutory")).toBe(
       "hr.statutory-tables",
     );
-    expect(resolveFeatureKeyForPath("/human-resources/statutory/returns")).toBe(
+    expect(resolveFeatureKeyForPath("/payroll/statutory/returns")).toBe(
       "hr.statutory-returns",
     );
     expect(resolveFeatureKeyForPath("/api/payroll/returns")).toBe(
@@ -286,21 +290,40 @@ describe("navigation", () => {
   it("declares the statutory tabs in the one place nav is declared", () => {
     // `lib/navigation.ts` derives from this, so a tab added anywhere else does
     // not appear.
-    const ids = HR_TABS.map((tab) => tab.id);
+    const ids = PAYROLL_TABS.map((tab) => tab.id);
     expect(ids).toContain("statutory-tables");
     expect(ids).toContain("statutory-returns");
-    expect(HR_CATEGORIES.map((c) => c.id)).toContain("statutory");
+    expect(PAYROLL_CATEGORIES.map((c) => c.id)).toContain("statutory");
+  });
+
+  it("keeps money out of People and people out of Payroll", () => {
+    // The split this module exists to hold. People had six categories and five
+    // were money, so the directory sat behind four screens about salary bills.
+    const peopleHrefs = PEOPLE_TABS.map((tab) => tab.href);
+    const payrollHrefs = PAYROLL_TABS.map((tab) => tab.href);
+    expect(peopleHrefs.every((href) => href.startsWith("/people"))).toBe(true);
+    expect(payrollHrefs.every((href) => href.startsWith("/payroll"))).toBe(true);
+    // Compensation is payroll's, which is the move that prompted the split.
+    expect(payrollHrefs).toContain("/payroll/compensation");
+    expect(peopleHrefs).not.toContain("/payroll/compensation");
   });
 
   it("gives every tab a category that exists", () => {
-    const categories = new Set(HR_CATEGORIES.map((category) => category.id));
-    for (const tab of HR_TABS) {
-      expect(categories.has(tab.categoryId), `${tab.id} has no category`).toBe(true);
+    for (const [tabs, categories] of [
+      [PEOPLE_TABS, PEOPLE_CATEGORIES],
+      [PAYROLL_TABS, PAYROLL_CATEGORIES],
+    ] as const) {
+      const ids = new Set(categories.map((category) => category.id as string));
+      for (const tab of tabs) {
+        expect(ids.has(tab.categoryId), `${tab.id} has no category`).toBe(true);
+      }
     }
   });
 
   it("orders the categories without a collision", () => {
-    const orders = HR_CATEGORIES.map((category) => category.order);
-    expect(new Set(orders).size).toBe(orders.length);
+    for (const categories of [PEOPLE_CATEGORIES, PAYROLL_CATEGORIES]) {
+      const orders = categories.map((category) => category.order);
+      expect(new Set(orders).size).toBe(orders.length);
+    }
   });
 });

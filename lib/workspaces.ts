@@ -102,7 +102,7 @@ type WorkspaceProfileRecipe = {
 };
 
 const DEFAULT_WORKSPACE_PROFILE: WorkspaceProfile = "GENERAL";
-const CANONICAL_MODULE_IDS: readonly WorkspaceModuleId[] = ["hr", "accounting", "management"];
+const CANONICAL_MODULE_IDS: readonly WorkspaceModuleId[] = ["people", "payroll", "accounting", "management"];
 const STRICT_WORKSPACE_MODULE_FEATURE_KEYS: Partial<Record<WorkspaceModuleId, string>> = {
   "scrap-metal": "scrap-metal.home",
 };
@@ -114,7 +114,7 @@ const PROFILE_OWNER_MODULES: Record<Exclude<WorkspaceProfile, "GENERAL">, Worksp
   RETAIL: "retail",
   // The only profile whose owning module is one every other profile treats as
   // foundational. For a bureau, HR is not a supporting module — it is the product.
-  PAYROLL: "hr",
+  PAYROLL: "payroll",
 };
 const WORKSPACE_PROFILE_ICONS: Record<WorkspaceProfile, LucideIcon> = {
   GOLD_MINE: Gem,
@@ -132,7 +132,8 @@ const WORKSPACE_MODULE_ORDER: readonly WorkspaceModuleId[] = [
   "car-sales",
   "retail",
   "crm",
-  "hr",
+  "people",
+  "payroll",
   "stores",
   "maintenance",
   "accounting",
@@ -270,11 +271,17 @@ const WORKSPACE_MODULES: Record<WorkspaceModuleId, WorkspaceModuleDefinition> = 
       return context.navSectionById.get("crm")?.groups;
     },
   },
-  hr: createSectionModule({
-    id: "hr",
-    label: "Human Resources",
-    sectionId: "hr",
-    homeHref: "/human-resources",
+  people: createSectionModule({
+    id: "people",
+    label: "People",
+    sectionId: "people",
+    homeHref: "/people",
+  }),
+  payroll: createSectionModule({
+    id: "payroll",
+    label: "Payroll",
+    sectionId: "payroll",
+    homeHref: "/payroll/runs",
   }),
   stores: createSectionModule({
     id: "stores",
@@ -620,32 +627,33 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
   PAYROLL: {
     label: "Payroll",
     // Somewhere real to land. A bureau sent to the general dashboard sees eight
-    // tiles for modules it does not have.
-    preferredHomeHref: "/human-resources",
-    nativeModules: ["hr", "accounting", "management"],
+    // tiles for modules it does not have — and it lands on the runs screen, not
+    // the directory, because paying people is what it opened this for.
+    preferredHomeHref: "/payroll/runs",
+    nativeModules: ["people", "payroll", "accounting", "management"],
     sections: [
       {
         id: "payroll-month-end",
         title: "Month end",
         refs: [
-          { moduleId: "hr", href: "/human-resources/payroll" },
-          { moduleId: "hr", href: "/human-resources/disbursements" },
+          { moduleId: "payroll", href: "/payroll/runs" },
+          { moduleId: "payroll", href: "/payroll/disbursements" },
         ],
       },
       {
         id: "payroll-statutory",
         title: "Statutory",
         refs: [
-          { moduleId: "hr", href: "/human-resources/statutory" },
-          { moduleId: "hr", href: "/human-resources/statutory/returns" },
+          { moduleId: "payroll", href: "/payroll/statutory" },
+          { moduleId: "payroll", href: "/payroll/statutory/returns" },
         ],
       },
       {
         id: "payroll-people",
         title: "People",
         refs: [
-          { moduleId: "hr", href: "/human-resources" },
-          { moduleId: "hr", href: "/human-resources/compensation" },
+          { moduleId: "people", href: "/people" },
+          { moduleId: "payroll", href: "/payroll/compensation" },
         ],
       },
     ],
@@ -1072,7 +1080,8 @@ export function getWorkspaceSidebarModel(args: WorkspaceModelArgs): WorkspaceSid
       profile === "SCRAP_METAL" &&
       isScrapOperatorExperienceRole(context.role) &&
       (section.id === "management" ||
-        section.id === "hr" ||
+        section.id === "people" ||
+        section.id === "payroll" ||
         section.id === "accounting" ||
         section.id.startsWith("accounting-"))
     ) {

@@ -676,9 +676,9 @@ export async function getExecutiveDashboardAggregations({
   };
 
   const quickLinkBadges: Record<string, ExecutiveQuickBadge> = {
-    "/human-resources/approvals": { count: pendingApprovals, label: "Pending approvals" },
-    "/human-resources/payroll": { count: payrollSubmitted, label: "Pending payroll" },
-    "/human-resources/disbursements": {
+    "/people/approvals": { count: pendingApprovals, label: "Pending approvals" },
+    "/payroll/runs": { count: payrollSubmitted, label: "Pending payroll" },
+    "/payroll/disbursements": {
       count: disbursementSubmitted,
       label: "Pending disbursements",
     },

@@ -27,16 +27,16 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
 
   // Longest prefix wins, so the returns page must precede the tables page it
   // sits under.
-  { scope: "page", prefix: "/human-resources/statutory/returns", featureKey: "hr.statutory-returns" },
-  { scope: "page", prefix: "/human-resources/statutory", featureKey: "hr.statutory-tables" },
-  { scope: "page", prefix: "/human-resources/payroll", featureKey: "hr.payroll" },
-  { scope: "page", prefix: "/human-resources/disbursements", featureKey: "hr.disbursements" },
-  { scope: "page", prefix: "/human-resources/compensation", featureKey: "hr.compensation-rules" },
-  { scope: "page", prefix: "/human-resources/shift-groups", featureKey: "hr.employees" },
-  { scope: "page", prefix: "/human-resources/salaries", featureKey: "hr.salaries" },
-  { scope: "page", prefix: "/human-resources/approvals", featureKey: "hr.approvals-history" },
-  { scope: "page", prefix: "/human-resources/incidents", featureKey: "hr.incidents" },
-  { scope: "page", prefix: "/human-resources", featureKey: "hr.employees" },
+  { scope: "page", prefix: "/payroll/statutory/returns", featureKey: "hr.statutory-returns" },
+  { scope: "page", prefix: "/payroll/statutory", featureKey: "hr.statutory-tables" },
+  { scope: "page", prefix: "/payroll/runs", featureKey: "hr.payroll" },
+  { scope: "page", prefix: "/payroll/disbursements", featureKey: "hr.disbursements" },
+  { scope: "page", prefix: "/payroll/compensation", featureKey: "hr.compensation-rules" },
+  { scope: "page", prefix: "/people/rosters", featureKey: "hr.employees" },
+  { scope: "page", prefix: "/payroll/salaries", featureKey: "hr.salaries" },
+  { scope: "page", prefix: "/people/approvals", featureKey: "hr.approvals-history" },
+  { scope: "page", prefix: "/people/incidents", featureKey: "hr.incidents" },
+  { scope: "page", prefix: "/people", featureKey: "hr.employees" },
 
   { scope: "page", prefix: "/maintenance/work-orders", featureKey: "maintenance.work-orders" },
   { scope: "page", prefix: "/maintenance/equipment", featureKey: "maintenance.equipment" },

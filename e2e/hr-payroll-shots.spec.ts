@@ -5,7 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
  *
  * Run against the tenant host, not localhost. The demo tenant has
  * `core.multitenancy.tenant-host-enforcement` on, so localhost is the central
- * admin host and every `/human-resources` path 307s to `/admin`:
+ * admin host and every `/people` path 307s to `/admin`:
  *
  *   echo '127.0.0.1 payroll-demo.apps.pagka.local' >> /etc/hosts
  *   npx tsx scripts/seed-payroll-demo.ts
@@ -30,10 +30,10 @@ type Screen = {
 };
 
 const SCREENS: Screen[] = [
-  { name: "statutory-tables", path: "/human-resources/statutory" },
+  { name: "statutory-tables", path: "/payroll/statutory" },
   {
     name: "statutory-returns",
-    path: "/human-resources/statutory/returns",
+    path: "/payroll/statutory/returns",
     prepare: async (page) => {
       const trigger = page.getByRole("combobox").first();
       if (!(await trigger.isVisible().catch(() => false))) return;
@@ -43,12 +43,12 @@ const SCREENS: Screen[] = [
       await page.waitForLoadState("networkidle");
     },
   },
-  { name: "employees", path: "/human-resources" },
+  { name: "employees", path: "/people" },
   {
     name: "payroll-runs",
-    // The resolved URL. /human-resources/payroll redirects here, and a shot
+    // The resolved URL. /payroll/runs redirects here, and a shot
     // taken mid-redirect catches the periods table still loading.
-    path: "/human-resources/payroll/salary",
+    path: "/payroll/runs",
     prepare: async (page) => {
       await page
         .getByText("2026-08")

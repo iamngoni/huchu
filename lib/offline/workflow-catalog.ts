@@ -1,4 +1,4 @@
-import { HR_TABS } from "@/lib/hr/tab-config";
+import { PEOPLE_TABS } from "@/lib/people/tab-config";
 import { SCRAP_TABS } from "@/lib/scrap-metal/tab-config";
 import type {
   OfflineMutationPolicy,
@@ -38,8 +38,8 @@ const SCRAP_REPORT_ROUTES = [
   "/scrap-metal/reports/variance-aging",
 ];
 
-const HR_MINIMAL_ROUTES = HR_TABS.filter((tab) =>
-  ["/human-resources", "/human-resources/shift-groups", "/human-resources/incidents"].includes(
+const PEOPLE_MINIMAL_ROUTES = PEOPLE_TABS.filter((tab) =>
+  ["/people", "/people/rosters", "/people/incidents"].includes(
     tab.href,
   ),
 ).map((tab) => tab.href);
@@ -93,7 +93,7 @@ export const OFFLINE_WORKFLOW_CATALOG: OfflineWorkflowCatalogEntry[] = [
     vertical: "HR",
     audience: "OPERATOR",
     warmupScope: "required",
-    routes: HR_MINIMAL_ROUTES,
+    routes: PEOPLE_MINIMAL_ROUTES,
     queryKeys: [
       "employees",
       "sites",
@@ -177,7 +177,11 @@ export function getRouteOfflineMutationPolicy(pathname: string): OfflineMutation
   if (routeMatches(pathname, "/scrap-metal/tickets")) {
     return "offline-safe";
   }
-  if (pathname.startsWith("/scrap-metal") || pathname.startsWith("/human-resources")) {
+  if (
+    pathname.startsWith("/scrap-metal") ||
+    pathname.startsWith("/people") ||
+    pathname.startsWith("/payroll")
+  ) {
     return "online-only";
   }
   return "online-only";
@@ -202,7 +206,11 @@ export function getOfflineRouteAvailability(
     };
   }
 
-  if (pathname.startsWith("/scrap-metal") || pathname.startsWith("/human-resources")) {
+  if (
+    pathname.startsWith("/scrap-metal") ||
+    pathname.startsWith("/people") ||
+    pathname.startsWith("/payroll")
+  ) {
     return {
       availability: "online-only" as const,
       reason: "This workflow is available online only and is not part of the warmed offline scope for this user.",
