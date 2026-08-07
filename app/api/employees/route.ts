@@ -10,7 +10,7 @@ import {
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { ensureApproverRole } from "@/lib/hr-payroll"
+import { ensureApproverRole } from "@/lib/workflow/approvals"
 import {
   EMPLOYEE_POSITION_VALUES,
   getDefaultEmployeePosition,

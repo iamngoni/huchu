@@ -9,7 +9,7 @@ import {
   extractAllocationIdFromPayoutNotes,
 } from "@/lib/gold/payouts"
 import { snapshotGoldUsdValue } from "@/lib/gold/valuation"
-import { derivePaidStatus } from "@/lib/hr-payroll"
+import { derivePaidStatus } from "@/lib/payroll/disbursements"
 import { isLegacyGoldPaymentType, normalizeIrregularPayoutSource } from "@/lib/hr-irregular-payouts"
 import { prisma } from "@/lib/prisma"
 

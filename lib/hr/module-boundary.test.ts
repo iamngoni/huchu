@@ -1,5 +1,5 @@
 /**
- * `lib/hr/**` does not import a vertical.
+ * The people, payroll and workflow modules do not import a vertical.
  *
  * The rule the payroll-only product stands on. Dependencies point inward —
  * toward `lib/money.ts`, `lib/accounting/`, `lib/documents/` and
@@ -12,16 +12,35 @@
  * is discovered not at review time but when somebody provisions a payroll-only
  * workspace and a screen throws.
  *
+ * **It covered `lib/hr/` only, and that is exactly how it was evaded.** The gold
+ * coupling moved to `lib/hr-payroll.ts` — one directory up, outside the glob —
+ * where a `buildGoldPaymentWhere` keyed on `GoldSettlementMode` sat on the import
+ * path of all 41 approval call sites in the product. So the roots are listed
+ * explicitly below and every new directory in this family joins the list.
+ *
  * The direction is deliberately asymmetric. `lib/gold/payouts.ts` may reach into
- * HR's shape, and does — that is the seam HR-1 touched. HR reaching back is what
+ * HR's shape, and does — that is the sanctioned seam. HR reaching back is what
  * this forbids.
  */
 
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const HR_ROOT = join(process.cwd(), "lib/hr");
+
+/**
+ * Every directory that must stay vertical-free.
+ *
+ * `lib/workflow` is here because approvals are not an HR concept — eight domains
+ * write `ApprovalAction`, and a vertical import there reaches all of them.
+ */
+const GUARDED_ROOTS = [
+  "lib/hr",
+  "lib/people",
+  "lib/payroll",
+  "lib/workflow",
+].map((relative) => join(process.cwd(), relative));
 
 /** Verticals HR must not depend on. */
 const FORBIDDEN_IMPORTS = [
@@ -47,12 +66,30 @@ function sourceFiles(dir: string): string[] {
   return found;
 }
 
-const files = sourceFiles(HR_ROOT);
+const files = GUARDED_ROOTS.filter((root) => existsSync(root)).flatMap(sourceFiles);
 
 describe("HR module boundary", () => {
-  it("finds the HR source files", () => {
+  it("finds the guarded source files", () => {
     // Guards against a rename quietly making every assertion below vacuous.
     expect(files.length).toBeGreaterThan(4);
+  });
+
+  it("has no unguarded sibling holding the shared workflow helpers", () => {
+    // `lib/hr-payroll.ts` was that sibling: 308 lines of approvals, period maths
+    // and one gold query builder, sitting one directory above the glob that was
+    // supposed to keep gold out. It is gone, and this fails if it comes back.
+    //
+    // `lib/hr-irregular-payouts.ts` is the remaining offender and moves into
+    // `lib/settlements/` with the settlement tables, which is where its source
+    // enum belongs. It is deliberately not asserted here yet — a test that is
+    // known-red says nothing.
+    for (const orphan of ["lib/hr-payroll.ts", "lib/payroll-shared.ts"]) {
+      expect(
+        existsSync(join(process.cwd(), orphan)),
+        `${orphan} is outside every guarded root, so nothing stops a vertical ` +
+          `import in it. Put it under one of the ${GUARDED_ROOTS.length} guarded roots.`,
+      ).toBe(false);
+    }
   });
 
   it.each(files.map((file) => [file.replace(process.cwd() + "/", ""), file]))(

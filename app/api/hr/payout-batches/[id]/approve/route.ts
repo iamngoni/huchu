@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
-import {
-  canTransitionStandardWorkflow,
-  createApprovalAction,
-  ensureApproverRole,
-  isTwoStepActionAllowed,
-} from "@/lib/hr-payroll"
+import { canTransitionStandardWorkflow, createApprovalAction, ensureApproverRole, isTwoStepActionAllowed } from "@/lib/workflow/approvals"
 import { prisma } from "@/lib/prisma"
 
 export async function POST(

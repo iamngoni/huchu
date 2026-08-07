@@ -11,8 +11,7 @@
 import type { Prisma } from "@prisma/client"
 import { convertUsdToGrams } from "@/lib/gold/valuation"
 import { toNumber, toNumberOrZero } from "@/lib/money"
-import { derivePaidStatus } from "@/lib/hr-payroll"
-
+import { derivePaidStatus } from "@/lib/payroll/disbursements"
 const AUTO_PAYOUT_NOTE_PREFIX = "AUTO_PAYOUT_FROM_SHIFT_ALLOCATION:"
 const AUTO_BATCH_NOTE_PREFIX = "AUTO_BATCH_FROM_SHIFT_ALLOCATION:"
 

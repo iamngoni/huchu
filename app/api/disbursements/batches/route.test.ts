@@ -59,14 +59,24 @@ vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
 }))
 
-vi.mock("@/lib/hr-payroll", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/hr-payroll")>(
-    "@/lib/hr-payroll",
+vi.mock("@/lib/workflow/approvals", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/workflow/approvals")>(
+    "@/lib/workflow/approvals",
   )
 
   return {
     ...actual,
     createApprovalAction: createApprovalActionMock,
+  }
+})
+
+vi.mock("@/lib/payroll/disbursements", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/payroll/disbursements")
+  >("@/lib/payroll/disbursements")
+
+  return {
+    ...actual,
     generateDisbursementCode: () => "DB-TEST-00001",
   }
 })

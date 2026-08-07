@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
-import { createApprovalAction, ensureApproverRole } from "@/lib/hr-payroll"
+import { createApprovalAction, ensureApproverRole } from "@/lib/workflow/approvals"
 import { createRouteLogger } from "@/lib/observability/route-logger"
 
 export async function POST(

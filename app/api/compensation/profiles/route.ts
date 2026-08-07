@@ -9,8 +9,7 @@ import {
 } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
-import { createApprovalAction, ensureApproverRole } from "@/lib/hr-payroll"
-
+import { createApprovalAction, ensureApproverRole } from "@/lib/workflow/approvals"
 const profileSchema = z.object({
   employeeId: z.string().uuid(),
   baseAmount: z.number().min(0),

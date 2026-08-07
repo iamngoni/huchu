@@ -3,13 +3,7 @@ import { z } from "zod"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
-import {
-  canTransitionStandardWorkflow,
-  createApprovalAction,
-  ensureApproverRole,
-  isTwoStepActionAllowed,
-} from "@/lib/hr-payroll"
-
+import { canTransitionStandardWorkflow, createApprovalAction, ensureApproverRole, isTwoStepActionAllowed } from "@/lib/workflow/approvals"
 const rejectSchema = z.object({
   note: z.string().trim().min(1).max(1000),
 })

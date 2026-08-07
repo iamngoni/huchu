@@ -9,7 +9,7 @@ import {
   validateSession,
 } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
-import { createApprovalAction, ensureApproverRole } from "@/lib/hr-payroll"
+import { createApprovalAction, ensureApproverRole } from "@/lib/workflow/approvals"
 import { prisma } from "@/lib/prisma"
 
 const createActionSchema = z.object({

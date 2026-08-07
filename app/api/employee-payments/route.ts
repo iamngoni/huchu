@@ -21,7 +21,7 @@ import {
   sourceToEmployeePaymentType,
 } from "@/lib/hr-irregular-payouts"
 import { snapshotGoldUsdValue } from "@/lib/gold/valuation"
-import { derivePaidStatus } from "@/lib/hr-payroll"
+import { derivePaidStatus } from "@/lib/payroll/disbursements"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 

@@ -3,8 +3,7 @@ import { z } from "zod"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
-import { createApprovalAction, ensureApproverRole } from "@/lib/hr-payroll"
-
+import { createApprovalAction, ensureApproverRole } from "@/lib/workflow/approvals"
 const adjustmentSchema = z.object({
   lineItemId: z.string().uuid().optional(),
   employeeId: z.string().uuid().optional(),

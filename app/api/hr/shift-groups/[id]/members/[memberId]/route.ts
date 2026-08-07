@@ -7,7 +7,7 @@ import {
   validateSession,
 } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
-import { ensureApproverRole } from "@/lib/hr-payroll"
+import { ensureApproverRole } from "@/lib/workflow/approvals"
 import { prisma } from "@/lib/prisma"
 
 const updateMembershipSchema = z.object({

@@ -5,11 +5,8 @@ import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { applyDisbursementToGoldShares } from "@/lib/gold/payouts"
 import { prisma } from "@/lib/prisma"
 import { createJournalEntryFromSource } from "@/lib/accounting/posting"
-import {
-  createApprovalAction,
-  derivePaidStatus,
-  ensureApproverRole,
-} from "@/lib/hr-payroll"
+import { derivePaidStatus } from "@/lib/payroll/disbursements"
+import { createApprovalAction, ensureApproverRole } from "@/lib/workflow/approvals"
 import { isPositive, money, toNumber, toNumberOrZero } from "@/lib/money"
 import { writePlatformAuditEvent } from "@/lib/audit/platform"
 import { createRouteLogger } from "@/lib/observability/route-logger"

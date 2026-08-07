@@ -4,8 +4,7 @@ import { errorResponse, successResponse, validateSession } from "@/lib/api-utils
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { captureAccountingEvent } from "@/lib/accounting/integration"
 import { prisma } from "@/lib/prisma"
-import { ensureApproverRole } from "@/lib/hr-payroll"
-
+import { ensureApproverRole } from "@/lib/workflow/approvals"
 const patchSchema = z
   .object({
     method: z.enum(["CASH"]).optional(),

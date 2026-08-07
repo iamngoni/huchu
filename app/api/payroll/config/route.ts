@@ -3,8 +3,7 @@ import { z } from "zod"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
-import { ensureApproverRole } from "@/lib/hr-payroll"
-
+import { ensureApproverRole } from "@/lib/workflow/approvals"
 const updateSchema = z
   .object({
     payrollCycle: z.enum(["MONTHLY", "FORTNIGHTLY"]).optional(),

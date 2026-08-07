@@ -10,11 +10,8 @@ import {
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { captureAccountingEvent } from "@/lib/accounting/integration"
 import { prisma } from "@/lib/prisma"
-import {
-  createApprovalAction,
-  ensureApproverRole,
-  generateDisbursementCode,
-} from "@/lib/hr-payroll"
+import { generateDisbursementCode } from "@/lib/payroll/disbursements"
+import { createApprovalAction, ensureApproverRole } from "@/lib/workflow/approvals"
 import { isZeroOrLess, money, sumMoney } from "@/lib/money"
 import { createRouteLogger } from "@/lib/observability/route-logger"
 

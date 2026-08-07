@@ -1,11 +1,6 @@
 import type { PayrollCycle, PrismaClient, RunDomain } from "@prisma/client"
 
-import {
-  deriveCyclePeriodKey,
-  deriveCycleWindow,
-  nextCycleAnchor,
-  startOfDayUtc,
-} from "@/lib/hr-payroll"
+import { deriveCyclePeriodKey, deriveCycleWindow, nextCycleAnchor, startOfDayUtc } from "@/lib/workflow/periods"
 import { resolveVerticalDefaults } from "@/lib/platform/vertical-defaults"
 
 type SeedInput = {

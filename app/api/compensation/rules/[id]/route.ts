@@ -3,8 +3,7 @@ import { z } from "zod"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
-import { createApprovalAction, ensureApproverRole } from "@/lib/hr-payroll"
-
+import { createApprovalAction, ensureApproverRole } from "@/lib/workflow/approvals"
 const updateRuleSchema = z
   .object({
     name: z.string().trim().min(1).max(200).optional(),

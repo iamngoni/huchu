@@ -26,7 +26,7 @@ import {
   ZERO,
 } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
-import { calculateRuleAmount } from "@/lib/hr-payroll";
+import { calculateRuleAmount } from "@/lib/hr/payroll/rules";
 import {
   findStatutoryGaps,
   resolveNecAgreement,

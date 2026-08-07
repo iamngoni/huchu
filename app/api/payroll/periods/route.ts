@@ -10,13 +10,8 @@ import {
 } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
-import {
-  deriveCyclePeriodKey,
-  deriveCycleWindow,
-  ensureApproverRole,
-  monthPeriodKey,
-  nextCycleAnchor,
-} from "@/lib/hr-payroll"
+import { ensureApproverRole } from "@/lib/workflow/approvals"
+import { deriveCyclePeriodKey, deriveCycleWindow, monthPeriodKey, nextCycleAnchor } from "@/lib/workflow/periods"
 import { ensureAutoPeriods } from "@/lib/payroll-periods"
 
 const periodSchema = z.object({

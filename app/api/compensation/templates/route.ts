@@ -9,7 +9,7 @@ import {
 } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
-import { ensureApproverRole } from "@/lib/hr-payroll"
+import { ensureApproverRole } from "@/lib/workflow/approvals"
 import { EMPLOYEE_POSITION_VALUES } from "@/lib/platform/vertical-defaults"
 
 const templateSchema = z.object({

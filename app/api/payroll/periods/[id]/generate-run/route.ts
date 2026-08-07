@@ -5,7 +5,7 @@ import type { CompensationCalcMethod, CompensationRuleType } from "@prisma/clien
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { writePlatformAuditEvent } from "@/lib/audit/platform"
-import { createApprovalAction, ensureApproverRole } from "@/lib/hr-payroll"
+import { createApprovalAction, ensureApproverRole } from "@/lib/workflow/approvals"
 import { ensureHrPayrollDefaults } from "@/lib/hr/bootstrap"
 import {
   assembleSalaryRun,
