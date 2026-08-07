@@ -186,6 +186,10 @@ model Company {
   goldPrices                    GoldPrice[]
   goldExpenseTypes              GoldExpenseType[]
   irregularPayoutBatches        IrregularPayoutBatch[]
+  leaveTypes                    LeaveType[]
+  leaveEntitlements             LeaveEntitlement[]
+  leaveRequests                 LeaveRequest[]
+  publicHolidays                PublicHoliday[]
   settlementIntakes             SettlementIntake[]
   settlementRuns                SettlementRun[]
   settlementBatches             SettlementBatch[]
@@ -817,6 +821,7 @@ model Site {
   updatedAt DateTime @updatedAt
 
   company               Company                @relation(fields: [companyId], references: [id])
+  publicHolidays        PublicHoliday[]
   sections              Section[]
   shiftGroups           ShiftGroup[]
   shiftGroupSchedules   ShiftGroupSchedule[]
@@ -1000,6 +1005,8 @@ model User {
   createdIrregularPayoutBatches     IrregularPayoutBatch[]         @relation("IrregularPayoutBatchCreatedBy")
   submittedIrregularPayoutBatches   IrregularPayoutBatch[]         @relation("IrregularPayoutBatchSubmittedBy")
   approvedIrregularPayoutBatches    IrregularPayoutBatch[]         @relation("IrregularPayoutBatchApprovedBy")
+  createdLeaveRequests              LeaveRequest[]                 @relation("LeaveRequestCreatedBy")
+  decidedLeaveRequests              LeaveRequest[]                 @relation("LeaveRequestDecidedBy")
   createdSettlementIntakes          SettlementIntake[]             @relation("SettlementIntakeCreatedBy")
   submittedSettlementIntakes        SettlementIntake[]             @relation("SettlementIntakeSubmittedBy")
   approvedSettlementIntakes         SettlementIntake[]             @relation("SettlementIntakeApprovedBy")
@@ -1156,6 +1163,9 @@ model Employee {
   scrapMetalBalanceEntries  ScrapMetalBalanceEntry[]
   moduleAssignments         EmployeeModuleAssignment[]
   irregularPayoutBatchItems IrregularPayoutBatchItem[]
+  leaveEntitlements         LeaveEntitlement[]
+  leaveRequests             LeaveRequest[]                @relation("LeaveRequestEmployee")
+  coveredLeaveRequests      LeaveRequest[]                @relation("LeaveRequestCover")
   settlementIntakeItems     SettlementIntakeItem[]
   settlementLines           SettlementLine[]
   settlementBatchItems      SettlementBatchItem[]
@@ -1933,6 +1943,175 @@ model NecAgreement {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId, isActive, effectiveFrom])
+}
+
+// ============================================
+// LEAVE
+// ============================================
+//
+// Time off, and what is left of it.
+//
+// The module had no model for any of this — no type, no entitlement, no request,
+// no public holiday. A Zimbabwean employer is required by the Labour Act to give
+// 22 days' annual leave and 12 days' sick, and the product could not record
+// either, which meant it also could not tell payroll that a month contained
+// unpaid leave.
+//
+// One rule shapes the whole design: **a balance is derived, never stored.**
+// `LeaveEntitlement` holds what was granted and carried over; what has been taken
+// is the sum of approved requests. Keeping a running `remaining` column means two
+// numbers that disagree the first time a request is edited, and the one on screen
+// is the one nobody recomputed.
+
+enum LeaveUnit {
+  DAY
+  HALF_DAY
+  HOUR
+}
+
+enum LeaveAccrualMethod {
+  /// The whole entitlement on day one of the leave year.
+  ANNUAL_GRANT
+  /// A twelfth each month worked. What the Labour Act actually describes.
+  MONTHLY_ACCRUAL
+  /// The whole entitlement on each employment anniversary.
+  ANNIVERSARY_GRANT
+  /// Tracked but not limited — compassionate leave at some employers.
+  UNLIMITED
+}
+
+enum LeaveRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+  /// Withdrawn by the employee after approval, so the days go back.
+  WITHDRAWN
+}
+
+model LeaveType {
+  id                       String             @id @default(uuid())
+  companyId                String
+  code                     String
+  name                     String
+  unit                     LeaveUnit          @default(DAY)
+  accrualMethod            LeaveAccrualMethod @default(ANNUAL_GRANT)
+  defaultEntitlement       Decimal            @default(0) @db.Decimal(6, 2)
+  isPaid                   Boolean            @default(true)
+  /// Sick leave needs a doctor's note from day 3. Null means never.
+  requiresDocumentAfterDays Int?
+  carryOverLimit           Decimal?           @db.Decimal(6, 2)
+  /// `MM-DD`. Unused days expire on this date, not on a rolling anniversary —
+  /// which is how the policy is actually written and displayed.
+  carryOverExpiresOn       String?
+  /// Shown verbatim on the balance card. The staff portal displays the rule next
+  /// to the number, so the rule lives with the type rather than in the UI.
+  policyNote               String?
+  effectiveFrom            DateTime
+  effectiveTo              DateTime?
+  source                   String?
+  isSeeded                 Boolean            @default(false)
+  isActive                 Boolean            @default(true)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entitlements LeaveEntitlement[]
+  requests     LeaveRequest[]
+
+  @@unique([companyId, code, effectiveFrom])
+  @@index([companyId, isActive, effectiveFrom])
+}
+
+/// What one employee was granted for one leave year.
+///
+/// `taken` and `pending` are deliberately absent: both are sums over
+/// `LeaveRequest` and storing them invites the two to drift.
+model LeaveEntitlement {
+  id          String   @id @default(uuid())
+  companyId   String
+  employeeId  String
+  leaveTypeId String
+  /// The leave year, as a calendar year. Anniversary-granted types still record
+  /// the year the grant falls in so a balance can be asked for by year.
+  year        Int
+  granted     Decimal  @default(0) @db.Decimal(6, 2)
+  carriedOver Decimal  @default(0) @db.Decimal(6, 2)
+  /// A manual correction, signed. Separate from `granted` so an adjustment is
+  /// visible as an adjustment rather than folded into the entitlement.
+  adjustment  Decimal  @default(0) @db.Decimal(6, 2)
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([companyId, year])
+}
+
+model LeaveRequest {
+  id           String             @id @default(uuid())
+  companyId    String
+  employeeId   String
+  leaveTypeId  String
+  startDate    DateTime
+  endDate      DateTime
+  /// Working days, computed at submission against the work week and the public
+  /// holiday calendar, then frozen. Recomputing it later would restate a taken
+  /// balance when somebody adds a holiday.
+  workingDays  Decimal            @db.Decimal(6, 2)
+  /// Which half, when a HALF_DAY type is taken for part of a day.
+  isHalfDay    Boolean            @default(false)
+  reason       String
+  attachmentUrl String?
+  /// Who covers the work. Nullable — not every role needs cover.
+  coveringEmployeeId String?
+  status       LeaveRequestStatus @default(DRAFT)
+  decidedById  String?
+  decidedAt    DateTime?
+  decisionNote String?
+  createdById  String
+  submittedAt  DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee         Employee  @relation("LeaveRequestEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType        LeaveType @relation(fields: [leaveTypeId], references: [id])
+  coveringEmployee Employee? @relation("LeaveRequestCover", fields: [coveringEmployeeId], references: [id])
+  createdBy        User      @relation("LeaveRequestCreatedBy", fields: [createdById], references: [id])
+  decidedBy        User?     @relation("LeaveRequestDecidedBy", fields: [decidedById], references: [id])
+
+  @@index([companyId, employeeId, startDate])
+  @@index([companyId, status, startDate])
+}
+
+/// A day nobody is expected to work.
+///
+/// `siteId` is nullable so a company-wide holiday is one row rather than one per
+/// site, and a site-specific one — a local shutdown — is still expressible.
+model PublicHoliday {
+  id                String   @id @default(uuid())
+  companyId         String
+  date              DateTime
+  name              String
+  isPaid            Boolean  @default(true)
+  /// The demo's "double pay if you work" case. Payroll reads this, not the UI.
+  doublePayIfWorked Boolean  @default(false)
+  siteId            String?
+  isSeeded          Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  site    Site?   @relation(fields: [siteId], references: [id])
+
+  @@unique([companyId, date, siteId])
+  @@index([companyId, date])
 }
 
 // ============================================
