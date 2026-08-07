@@ -44,7 +44,19 @@ const SCREENS: Screen[] = [
     },
   },
   { name: "employees", path: "/human-resources" },
-  { name: "payroll-runs", path: "/human-resources/payroll" },
+  {
+    name: "payroll-runs",
+    // The resolved URL. /human-resources/payroll redirects here, and a shot
+    // taken mid-redirect catches the periods table still loading.
+    path: "/human-resources/payroll/salary",
+    prepare: async (page) => {
+      await page
+        .getByText("2026-08")
+        .first()
+        .waitFor({ state: "visible", timeout: 30000 })
+        .catch(() => {});
+    },
+  },
 ];
 
 // The environment ships chromium-1194 but this Playwright wants 1217, so point
