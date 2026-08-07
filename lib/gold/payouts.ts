@@ -10,6 +10,7 @@
  */
 import type { Prisma } from "@prisma/client"
 import { convertUsdToGrams } from "@/lib/gold/valuation"
+import { toNumber, toNumberOrZero } from "@/lib/money"
 import { derivePaidStatus } from "@/lib/hr-payroll"
 
 const AUTO_PAYOUT_NOTE_PREFIX = "AUTO_PAYOUT_FROM_SHIFT_ALLOCATION:"
@@ -50,14 +51,21 @@ export function buildGoldPayoutNotes(
     : `${AUTO_PAYOUT_NOTE_PREFIX}${allocationId}`
 }
 
+/**
+ * The slice of a disbursement item this needs.
+ *
+ * The money fields are `Decimal` since the HR columns moved off `Float`; gold
+ * weights and the per-gram price are still `number` because they are not money
+ * and their columns did not move.
+ */
 type DisbursementItemForGold = {
   id: string
   employeeId: string
-  amount: number
-  paidAmount: number | null
+  amount: Prisma.Decimal
+  paidAmount: Prisma.Decimal | null
   paidAt: Date | null
   lineItemId: string | null
-  lineItem: { currency: string; baseAmount: number; netAmount: number }
+  lineItem: { currency: string; baseAmount: Prisma.Decimal; netAmount: Prisma.Decimal }
   notes: string | null
 }
 
@@ -102,7 +110,9 @@ export async function applyDisbursementToGoldShares(
   })
 
   if (linkedGoldPayments.length > 0) {
-    let remainingPaidUsd = updatedItem.paidAmount ?? 0
+    // Everything below apportions a USD payment across gold weights, and
+    // `EmployeePayment` is still `Float`. Cross out of `Decimal` once, here.
+    let remainingPaidUsd = toNumberOrZero(updatedItem.paidAmount)
 
     for (const linked of linkedGoldPayments) {
       const amountUsd =
@@ -144,6 +154,13 @@ export async function applyDisbursementToGoldShares(
       })
     }
   } else {
+    // On a gold run the line's "base amount" is a weight in grams, not money —
+    // which is why the record it writes puts it in `goldWeightGrams` as well as
+    // `amount`. `EmployeePayment` is still `Float`, so cross over here.
+    const weightGrams = toNumberOrZero(updatedItem.lineItem.baseAmount)
+    const payoutUsd = toNumberOrZero(updatedItem.amount)
+    const paidUsd = toNumber(updatedItem.paidAmount)
+
     await tx.employeePayment.create({
       data: {
         employeeId: updatedItem.employeeId,
@@ -152,17 +169,14 @@ export async function applyDisbursementToGoldShares(
         periodStart: batch.payrollRun.period.startDate,
         periodEnd: batch.payrollRun.period.endDate,
         dueDate: batch.payrollRun.period.dueDate,
-        amount: updatedItem.lineItem.baseAmount,
-        amountUsd: updatedItem.amount,
+        amount: weightGrams,
+        amountUsd: payoutUsd,
         unit: updatedItem.lineItem.currency,
-        goldWeightGrams: updatedItem.lineItem.baseAmount,
-        goldPriceUsdPerGram:
-          updatedItem.lineItem.baseAmount > 0
-            ? updatedItem.amount / updatedItem.lineItem.baseAmount
-            : null,
+        goldWeightGrams: weightGrams,
+        goldPriceUsdPerGram: weightGrams > 0 ? payoutUsd / weightGrams : null,
         valuationDate: batch.payrollRun.period.endDate,
-        paidAmount: updatedItem.paidAmount,
-        paidAmountUsd: updatedItem.paidAmount,
+        paidAmount: paidUsd,
+        paidAmountUsd: paidUsd,
         paidAt: updatedItem.paidAt,
         status: derivePaidStatus(updatedItem.amount, updatedItem.paidAmount ?? 0),
         notes: updatedItem.notes ?? `Gold disbursement batch ${batch.code}`,

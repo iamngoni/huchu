@@ -7,6 +7,7 @@ import {
   ensureApproverRole,
   isTwoStepActionAllowed,
 } from "@/lib/hr-payroll"
+import { toNumberOrZero } from "@/lib/money"
 
 export async function POST(
   request: NextRequest,
@@ -136,6 +137,9 @@ export async function POST(
         (sourceType === "PAYROLL_RUN" && existing.payrollRun?.domain === "GOLD_PAYOUT") ||
         (sourceType === "PAYROLL_DISBURSEMENT" &&
           existing.disbursementBatch?.payrollRun?.domain === "GOLD_PAYOUT")
+      // The event carries the size of the correction and a direction flag, so
+      // the sign lives in `invertDirection` and never in the amount.
+      const magnitude = toNumberOrZero(updated.amountDelta.abs())
       await captureAccountingEvent({
         companyId: session.user.companyId,
         sourceDomain: "payroll",
@@ -144,14 +148,14 @@ export async function POST(
         sourceId: updated.id,
         entryDate: updated.approvedAt,
         description: `Adjustment ${updated.id} approved`,
-        amount: Math.abs(updated.amountDelta),
-        netAmount: Math.abs(updated.amountDelta),
-        grossAmount: Math.abs(updated.amountDelta),
+        amount: magnitude,
+        netAmount: magnitude,
+        grossAmount: magnitude,
         payload: {
           targetType: updated.targetType,
           payrollRunId: updated.payrollRunId,
           disbursementBatchId: updated.disbursementBatchId,
-          invertDirection: updated.amountDelta < 0,
+          invertDirection: updated.amountDelta.isNegative(),
         },
         createdById: session.user.id,
         status: isGoldDomain ? "IGNORED" : "PENDING",

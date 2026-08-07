@@ -1081,6 +1081,25 @@ model Employee {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
+  // Statutory identity. ZIMRA identifies a taxpayer by BP number and NSSA by
+  // its own membership number; neither return can be filed without them, so
+  // payroll surfaces a missing one as a run exception rather than filing a
+  // blank. Nullable because an employee record exists before HR has chased the
+  // paperwork.
+  taxNumber  String?
+  nssaNumber String?
+  taxStatus  EmployeeTaxStatus @default(STANDARD)
+
+  // Where the money actually goes. `PayoutMethod` has had BANK and MOBILE
+  // since it was written, but the disbursement route validates an enum of
+  // exactly ["CASH"] and then hardcodes CASH — because there was nowhere to
+  // put an account number. There is now.
+  bankName            String?
+  bankAccountNumber   String?
+  bankBranchCode      String?
+  mobileMoneyProvider String?
+  mobileMoneyNumber   String?
+
   company                   Company                    @relation(fields: [companyId], references: [id])
   user                      User?                      @relation("EmployeeUser", fields: [userId], references: [id])
   schoolTeacherProfile      SchoolTeacherProfile?      @relation("SchoolTeacherProfileEmployee")
@@ -1165,6 +1184,11 @@ model EmployeePayment {
   periodStart            DateTime
   periodEnd              DateTime
   dueDate                DateTime
+  // Deliberately still `Float`. `amount` here is polymorphic — it is read in
+  // whatever `unit` says, which for a GOLD payout is grams, not money. Giving
+  // it `Decimal(14,2)` would round a gold weight to two places and quietly
+  // lose the rest. Deciding what this column means per `type` is Gold's call,
+  // not this change's; the Zimbabwe payroll path does not touch this model.
   amount                 Float
   unit                   String
   paidAmount             Float?
@@ -1243,7 +1267,7 @@ model JobGrade {
 model CompensationProfile {
   id             String                    @id @default(uuid())
   employeeId     String
-  baseAmount     Float
+  baseAmount     Decimal                   @db.Decimal(14, 2)
   currency       String                    @default("USD")
   effectiveFrom  DateTime
   effectiveTo    DateTime?
@@ -1275,10 +1299,21 @@ model CompensationRule {
   name           String
   type           CompensationRuleType
   calcMethod     CompensationCalcMethod
-  value          Float
-  cap            Float?
+  value          Decimal                @db.Decimal(14, 4)
+  cap            Decimal?               @db.Decimal(14, 2)
   taxable        Boolean                @default(false)
   currency       String                 @default("USD")
+  /// Where this rule sits in the pipeline. Order matters and cannot be
+  /// inferred from the type: a pension deduction comes off before PAYE is
+  /// struck and a union subscription comes off after, and both are DEDUCTION.
+  sequence       Int                    @default(100)
+  /// For PERCENT_OF_COMPONENT — the `statutoryKey` of the stage this is a
+  /// percentage of. The AIDS levy points at PAYE.
+  basedOnKey     String?
+  /// Set on the rules the statutory pack owns (PAYE, NSSA, AIDS_LEVY, ZIMDEF,
+  /// SDL, APWCS, NEC_*). Null on anything a company wrote itself. This is what
+  /// tells the payslip and the returns which lines are the state's.
+  statutoryKey   String?
   isActive       Boolean                @default(true)
   workflowStatus WorkflowStatus         @default(DRAFT)
   employeeId     String?
@@ -1390,11 +1425,20 @@ model PayrollRun {
   runNumber          Int                    @default(1)
   status             PayrollRunStatus       @default(DRAFT)
   notes              String?
-  grossTotal         Float                  @default(0)
-  allowancesTotal    Float                  @default(0)
-  deductionsTotal    Float                  @default(0)
-  netTotal           Float                  @default(0)
-  goldRatePerUnit    Float?
+  grossTotal         Decimal                @default(0) @db.Decimal(14, 2)
+  allowancesTotal    Decimal                @default(0) @db.Decimal(14, 2)
+  deductionsTotal    Decimal                @default(0) @db.Decimal(14, 2)
+  netTotal           Decimal                @default(0) @db.Decimal(14, 2)
+  /// What the employer owes on top — NSSA employer, ZIMDEF, SDL, APWCS, NEC.
+  /// Not part of gross and not part of net; a separate number the employer
+  /// remits and the P2/NSSA returns report.
+  employerCostTotal  Decimal                @default(0) @db.Decimal(14, 2)
+  /// Set when the run posted to the ledger, null when it did not. A payroll-only
+  /// workspace has no accounting module, so a run legitimately completes
+  /// without a journal — but it says so rather than leaving the caller to guess.
+  journalEntryId     String?
+  postingSkippedReason String?
+  goldRatePerUnit    Decimal?               @db.Decimal(14, 4)
   goldRateUnit       String                 @default("g")
   goldSettlementMode GoldSettlementMode     @default(CURRENT_PERIOD)
   createdById        String
@@ -1424,13 +1468,32 @@ model PayrollLineItem {
   runId                 String
   employeeId            String
   compensationProfileId String?
-  baseAmount            Float    @default(0)
-  variableAmount        Float    @default(0)
-  allowancesTotal       Float    @default(0)
-  deductionsTotal       Float    @default(0)
-  grossAmount           Float    @default(0)
-  netAmount             Float    @default(0)
+  /// Basic pay — except on a GOLD_PAYOUT run, where the gold settlement path
+  /// overloads it to carry a weight in grams and `mark-paid` copies it straight
+  /// into `EmployeePayment.goldWeightGrams`. Hence scale 4, not 2: gold weights
+  /// are `Decimal(12,4)` everywhere else and two places would truncate them.
+  /// Money written through `money()` still lands on exact cents. The overload
+  /// itself is a wart Gold owns; see `lib/gold/payouts.ts`.
+  baseAmount            Decimal  @default(0) @db.Decimal(14, 4)
+  variableAmount        Decimal  @default(0) @db.Decimal(14, 2)
+  allowancesTotal       Decimal  @default(0) @db.Decimal(14, 2)
+  deductionsTotal       Decimal  @default(0) @db.Decimal(14, 2)
+  grossAmount           Decimal  @default(0) @db.Decimal(14, 2)
+  netAmount             Decimal  @default(0) @db.Decimal(14, 2)
+  /// The slice of gross PAYE is actually struck on — gross less the
+  /// non-taxable allowances and the pre-tax deductions. Stored because a
+  /// payslip has to show it and a P2 is filed on it.
+  taxableGross          Decimal  @default(0) @db.Decimal(14, 2)
+  /// Employer contributions attributable to this employee.
+  employerCost          Decimal  @default(0) @db.Decimal(14, 2)
   currency              String   @default("USD")
+  /// Quote units per one base unit at the period end, frozen here so a payslip
+  /// reprinted next year shows the rate it was actually computed at.
+  exchangeRate          Decimal  @default(1) @db.Decimal(12, 4)
+  /// `netAmount` in the company's base currency. Not called `baseAmount` —
+  /// that name is already taken on this model and means basic salary, which is
+  /// a different thing entirely.
+  netBaseAmount         Decimal  @default(0) @db.Decimal(14, 2)
   notes                 String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -1455,9 +1518,22 @@ model PayrollLineComponent {
   name         String
   type         CompensationRuleType
   calcMethod   CompensationCalcMethod
-  rateOrAmount Float
-  amount       Float
+  rateOrAmount Decimal                @db.Decimal(14, 4)
+  amount       Decimal                @db.Decimal(14, 2)
   isTaxable    Boolean                @default(false)
+  /// Non-null on the lines the state owns — PAYE, AIDS_LEVY, NSSA_EMPLOYEE,
+  /// NSSA_EMPLOYER, ZIMDEF, SDL, APWCS, NEC_EMPLOYEE, NEC_EMPLOYER. The P2 and
+  /// the NSSA schedule are built by summing on this, so a return and a payslip
+  /// are reading the same rows.
+  statutoryKey String?
+  /// Position in the computed pipeline, so a payslip can show the working in
+  /// the order it happened rather than in insertion order.
+  sequence     Int                    @default(100)
+  /// What this stage was calculated on — taxable gross for PAYE, the PAYE
+  /// figure for the AIDS levy, capped insurable earnings for NSSA. Stored so
+  /// an employee querying their payslip gets an answer without anyone
+  /// re-deriving it.
+  basis        Decimal?               @db.Decimal(14, 2)
   createdAt    DateTime               @default(now())
 
   lineItem PayrollLineItem   @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
@@ -1477,7 +1553,8 @@ model DisbursementBatch {
   notes         String?
   cashCustodian String?
   cashIssuedAt  DateTime?
-  totalAmount   Float                   @default(0)
+  totalAmount   Decimal                 @default(0) @db.Decimal(14, 2)
+  currency      String                  @default("USD")
   itemCount     Int                     @default(0)
   createdById   String
   submittedById String?
@@ -1507,8 +1584,11 @@ model DisbursementItem {
   batchId          String
   lineItemId       String
   employeeId       String
-  amount           Float
-  paidAmount       Float?
+  amount           Decimal       @db.Decimal(14, 2)
+  paidAmount       Decimal?      @db.Decimal(14, 2)
+  currency         String        @default("USD")
+  exchangeRate     Decimal       @default(1) @db.Decimal(12, 4)
+  baseAmount       Decimal       @default(0) @db.Decimal(14, 2)
   status           PaymentStatus @default(DUE)
   paidAt           DateTime?
   receiptReference String?
@@ -1630,7 +1710,7 @@ model AdjustmentEntry {
   lineItemId          String?
   disbursementItemId  String?
   employeeId          String?
-  amountDelta         Float
+  amountDelta         Decimal              @db.Decimal(14, 2)
   reason              String
   status              AdjustmentStatus     @default(DRAFT)
   createdById         String
@@ -1792,14 +1872,41 @@ enum CompensationProfileStatus {
   INACTIVE
 }
 
+/// How an employee is treated for PAYE.
+///
+/// STANDARD is the ordinary employed person on the monthly band table.
+/// EXEMPT covers the handful ZIMRA does not tax through PAYE at all.
+/// CONTRACTOR is paid gross with no PAYE withheld — the payment is theirs to
+/// declare — which is a different thing from EXEMPT and must not be conflated
+/// with it, since the NSSA treatment differs too.
+enum EmployeeTaxStatus {
+  STANDARD
+  EXEMPT
+  CONTRACTOR
+}
+
 enum CompensationRuleType {
   ALLOWANCE
   DEDUCTION
+  /// Withheld from the employee and owed to an authority — PAYE, the AIDS
+  /// levy, NSSA employee, NEC employee dues. Reduces net pay and credits a
+  /// statutory payable rather than the generic deductions account.
+  STATUTORY_DEDUCTION
+  /// Paid by the employer on top of the wage — NSSA employer, ZIMDEF, SDL,
+  /// APWCS, NEC employer dues. Cost to the company and a liability to the
+  /// authority; never touches net pay.
+  EMPLOYER_CONTRIBUTION
 }
 
 enum CompensationCalcMethod {
   FIXED
   PERCENT
+  /// Resolved from an effective-dated `PayeTable` for the line's currency
+  /// rather than from a value on the rule.
+  TAX_TABLE
+  /// A percentage of a named earlier stage rather than of gross — the AIDS
+  /// levy is 3% of the PAYE figure, not of anything the employee earned.
+  PERCENT_OF_COMPONENT
 }
 
 enum PayrollCycle {

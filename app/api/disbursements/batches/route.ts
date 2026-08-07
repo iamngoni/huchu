@@ -14,6 +14,7 @@ import {
   ensureApproverRole,
   generateDisbursementCode,
 } from "@/lib/hr-payroll"
+import { isZeroOrLess, money, sumMoney } from "@/lib/money"
 import { createRouteLogger } from "@/lib/observability/route-logger"
 
 const batchSchema = z.object({
@@ -28,10 +29,6 @@ const batchSchema = z.object({
     .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .optional(),
 })
-
-function roundMoney(value: number) {
-  return Math.round(value * 100) / 100
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -138,6 +135,9 @@ export async function POST(request: NextRequest) {
             employeeId: true,
             baseAmount: true,
             netAmount: true,
+            currency: true,
+            exchangeRate: true,
+            netBaseAmount: true,
             notes: true,
           },
         },
@@ -178,17 +178,34 @@ export async function POST(request: NextRequest) {
 
     const isIrregularRun = run.domain === "GOLD_PAYOUT"
     const irregularLabel = run.payoutSource ? `${run.payoutSource} payout` : "Irregular payout"
+    // Currency, rate and base amount are copied off the line rather than
+    // re-derived. The line froze its rate when the run was computed; looking the
+    // rate up again here would pay a ZWG employee at today's rate against a
+    // figure struck at last month's, and the ledger would not balance.
     const disbursementItems = run.lineItems.map((line) => ({
       employeeId: line.employeeId,
       lineItemId: line.id,
-      amount: roundMoney(line.netAmount),
+      amount: money(line.netAmount),
+      currency: line.currency,
+      exchangeRate: line.exchangeRate,
+      baseAmount: money(line.netBaseAmount),
       status: "DUE" as const,
     }))
 
     const code = validated.code ?? generateDisbursementCode()
-    const totalAmount = disbursementItems.reduce((sum, item) => sum + item.amount, 0)
+    const totalAmount = sumMoney(disbursementItems.map((item) => item.amount))
     const itemCount = disbursementItems.length
-    if (itemCount === 0 || totalAmount <= 0) {
+    // A batch is one currency. Mixed-currency runs need one batch per currency,
+    // which the caller drives by filtering the run — a single batch total that
+    // added USD to ZWG would be a number with no meaning.
+    const batchCurrency = disbursementItems[0]?.currency ?? "USD"
+    if (disbursementItems.some((item) => item.currency !== batchCurrency)) {
+      return errorResponse(
+        "This run pays in more than one currency. Create one batch per currency.",
+        400,
+      )
+    }
+    if (itemCount === 0 || isZeroOrLess(totalAmount)) {
       logger.info("create_disbursement_batch_empty", {
         companyId: session.user.companyId,
         actorId: session.user.id,
@@ -217,6 +234,7 @@ export async function POST(request: NextRequest) {
           cashCustodian: validated.cashCustodian,
           cashIssuedAt: validated.cashIssuedAt ? new Date(validated.cashIssuedAt) : undefined,
           totalAmount,
+          currency: batchCurrency,
           itemCount,
           createdById: session.user.id,
           items: {

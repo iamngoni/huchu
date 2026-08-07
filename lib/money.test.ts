@@ -1,10 +1,11 @@
 /**
- * School money arithmetic.
+ * Money arithmetic.
  *
  * These need no database. They exist because the thing S-2.1 replaced looked
  * correct and was not: `Math.round((v + Number.EPSILON) * 100) / 100` is a
  * one-liner that everybody reads past, and it loses a cent on values a school
- * bills every day.
+ * bills every day — and, since the module moved out of `lib/schools/`, on
+ * values a payroll pays every month.
  */
 
 import { describe, it, expect } from "vitest";

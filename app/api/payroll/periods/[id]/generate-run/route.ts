@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { Prisma } from "@prisma/client"
+import type { CompensationCalcMethod, CompensationRuleType } from "@prisma/client"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
 import {
   calculateRuleAmount,
@@ -7,6 +9,16 @@ import {
   createApprovalAction,
   ensureApproverRole,
 } from "@/lib/hr-payroll"
+import {
+  money,
+  rate,
+  resolveBaseCurrency,
+  resolveExchangeRate,
+  sumMoney,
+  toBaseAmount,
+  UnknownExchangeRateError,
+  ZERO,
+} from "@/lib/money"
 import { createRouteLogger } from "@/lib/observability/route-logger"
 import { prisma } from "@/lib/prisma"
 
@@ -19,40 +31,88 @@ const generateRunSchema = z.object({
 type LineComponentDraft = {
   ruleId?: string
   name: string
-  type: "ALLOWANCE" | "DEDUCTION"
-  calcMethod: "FIXED" | "PERCENT"
-  rateOrAmount: number
-  amount: number
+  type: CompensationRuleType
+  calcMethod: CompensationCalcMethod
+  rateOrAmount: Prisma.Decimal
+  amount: Prisma.Decimal
   isTaxable: boolean
 }
 
 type LineItemDraft = {
   employeeId: string
   compensationProfileId: string | null
-  baseAmount: number
-  variableAmount: number
-  allowancesTotal: number
-  deductionsTotal: number
-  grossAmount: number
-  netAmount: number
+  baseAmount: Prisma.Decimal
+  variableAmount: Prisma.Decimal
+  allowancesTotal: Prisma.Decimal
+  deductionsTotal: Prisma.Decimal
+  grossAmount: Prisma.Decimal
+  netAmount: Prisma.Decimal
   currency: string
   notes?: string
   components: LineComponentDraft[]
 }
 
+/**
+ * Stamp every line with the rate its currency was worth at the period end, and
+ * the base-currency value of its net pay.
+ *
+ * Frozen on the row rather than looked up when something reads it: a payslip
+ * reprinted in a year, and the journal that posted alongside it, have to agree,
+ * and the ZWG rate will not be what it was. A currency with no rate on file
+ * raises `UnknownExchangeRateError` — the run stops rather than paying somebody
+ * against an invented number.
+ */
+async function stampLineCurrencies(input: {
+  companyId: string
+  on: Date
+  lineItems: LineItemDraft[]
+}) {
+  const baseCurrency = await resolveBaseCurrency(input.companyId)
+  const currencies = new Set(input.lineItems.map((line) => line.currency))
+  const rateByCurrency = new Map<string, Prisma.Decimal>()
+
+  for (const currency of currencies) {
+    rateByCurrency.set(
+      currency,
+      await resolveExchangeRate({
+        companyId: input.companyId,
+        currency,
+        baseCurrency,
+        on: input.on,
+      }),
+    )
+  }
+
+  return input.lineItems.map((line) => {
+    const exchangeRate = rateByCurrency.get(line.currency) ?? new Prisma.Decimal(1)
+    return {
+      ...line,
+      exchangeRate,
+      netBaseAmount: toBaseAmount(line.netAmount, exchangeRate),
+    }
+  })
+}
+
 type RunDraft = {
   lineItems: LineItemDraft[]
   totals: {
-    grossTotal: number
-    allowancesTotal: number
-    deductionsTotal: number
-    netTotal: number
+    grossTotal: Prisma.Decimal
+    allowancesTotal: Prisma.Decimal
+    deductionsTotal: Prisma.Decimal
+    netTotal: Prisma.Decimal
   }
   workflowNote: string
   warnings: string[]
   goldRatePerUnit?: number
   goldRateUnit?: string
   goldSettlementMode?: "CURRENT_PERIOD" | "NEXT_PERIOD"
+}
+
+const ZERO_TOTALS = {
+  grossTotal: ZERO,
+  allowancesTotal: ZERO,
+  deductionsTotal: ZERO,
+  netTotal: ZERO,
 }
 
 function parseEmployeeScopeIds(raw: string | null | undefined) {
@@ -67,15 +127,12 @@ function parseEmployeeScopeIds(raw: string | null | undefined) {
 }
 
 function deriveRunTotals(lineItems: LineItemDraft[]) {
-  return lineItems.reduce(
-    (acc, line) => ({
-      grossTotal: acc.grossTotal + line.grossAmount,
-      allowancesTotal: acc.allowancesTotal + line.allowancesTotal,
-      deductionsTotal: acc.deductionsTotal + line.deductionsTotal,
-      netTotal: acc.netTotal + line.netAmount,
-    }),
-    { grossTotal: 0, allowancesTotal: 0, deductionsTotal: 0, netTotal: 0 },
-  )
+  return {
+    grossTotal: sumMoney(lineItems.map((line) => line.grossAmount)),
+    allowancesTotal: sumMoney(lineItems.map((line) => line.allowancesTotal)),
+    deductionsTotal: sumMoney(lineItems.map((line) => line.deductionsTotal)),
+    netTotal: sumMoney(lineItems.map((line) => line.netAmount)),
+  }
 }
 
 async function buildIrregularPayoutRunDraft(input: {
@@ -107,12 +164,18 @@ async function buildIrregularPayoutRunDraft(input: {
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
     })
 
-    const payoutByEmployee = new Map<string, { amount: number; batchCount: number }>()
+    const payoutByEmployee = new Map<
+      string,
+      { amount: Prisma.Decimal; batchCount: number }
+    >()
     for (const batch of approvedBatches) {
       for (const item of batch.items) {
-        const current = payoutByEmployee.get(item.employeeId) ?? { amount: 0, batchCount: 0 }
+        const current = payoutByEmployee.get(item.employeeId) ?? {
+          amount: ZERO,
+          batchCount: 0,
+        }
         payoutByEmployee.set(item.employeeId, {
-          amount: current.amount + item.amount,
+          amount: sumMoney([current.amount, item.amount]),
           batchCount: current.batchCount + 1,
         })
       }
@@ -136,15 +199,15 @@ async function buildIrregularPayoutRunDraft(input: {
     const employeeById = new Map(employees.map((employee) => [employee.id, employee]))
 
     const lineItems: LineItemDraft[] = employeeIds.map((employeeId) => {
-      const payout = payoutByEmployee.get(employeeId) ?? { amount: 0, batchCount: 0 }
+      const payout = payoutByEmployee.get(employeeId) ?? { amount: ZERO, batchCount: 0 }
       const employee = employeeById.get(employeeId)
       return {
         employeeId,
         compensationProfileId: null,
-        baseAmount: 0,
+        baseAmount: ZERO,
         variableAmount: payout.amount,
-        allowancesTotal: 0,
-        deductionsTotal: 0,
+        allowancesTotal: ZERO,
+        deductionsTotal: ZERO,
         grossAmount: payout.amount,
         netAmount: payout.amount,
         currency: employee?.defaultCurrency ?? "USD",
@@ -241,12 +304,14 @@ async function buildIrregularPayoutRunDraft(input: {
     return {
       employeeId,
       compensationProfileId: null,
-      baseAmount: goldWeight,
-      variableAmount: convertedAmount,
-      allowancesTotal: 0,
-      deductionsTotal: 0,
-      grossAmount: convertedAmount,
-      netAmount: convertedAmount,
+      // Grams, not money — see the note on `PayrollLineItem.baseAmount`. Kept at
+      // four places through `rate()` rather than rounded to cents by `money()`.
+      baseAmount: rate(goldWeight),
+      variableAmount: money(convertedAmount),
+      allowancesTotal: ZERO,
+      deductionsTotal: ZERO,
+      grossAmount: money(convertedAmount),
+      netAmount: money(convertedAmount),
       currency: employee?.defaultCurrency ?? "USD",
       notes: derivedRate
         ? `Gold payout snapshot: ${goldWeight.toFixed(3)} g => ${convertedAmount.toFixed(2)} USD @ ${derivedRate.toFixed(4)} per g`
@@ -302,7 +367,7 @@ async function buildSalaryPayrollRunDraft(input: {
   if (employees.length === 0) {
     return {
       lineItems: [] as LineItemDraft[],
-      totals: { grossTotal: 0, allowancesTotal: 0, deductionsTotal: 0, netTotal: 0 },
+      totals: ZERO_TOTALS,
       workflowNote: "Salary payroll run generated from compensation profiles and active rules.",
       warnings: ["No eligible employees found for this payroll period scope."],
     } satisfies RunDraft
@@ -399,7 +464,7 @@ async function buildSalaryPayrollRunDraft(input: {
 
     const totals = computeLineTotals({
       baseAmount,
-      variableAmount: 0,
+      variableAmount: ZERO,
       rules: components,
     })
 
@@ -407,7 +472,7 @@ async function buildSalaryPayrollRunDraft(input: {
       employeeId: employee.id,
       compensationProfileId: profile.id,
       baseAmount,
-      variableAmount: 0,
+      variableAmount: ZERO,
       allowancesTotal: totals.allowancesTotal,
       deductionsTotal: totals.deductionsTotal,
       grossAmount: totals.grossAmount,
@@ -546,6 +611,29 @@ export async function POST(
       }
     }
 
+    // Freeze the FX rate before anything is written. A missing rate is a hard
+    // stop, not a warning: the alternative is paying somebody in ZWG against a
+    // rate nobody entered.
+    let stampedLines: Awaited<ReturnType<typeof stampLineCurrencies>>
+    try {
+      stampedLines = await stampLineCurrencies({
+        companyId: session.user.companyId,
+        on: new Date(period.endDate),
+        lineItems: runDraft.lineItems,
+      })
+    } catch (error) {
+      if (error instanceof UnknownExchangeRateError) {
+        logger.info("generate_run_missing_exchange_rate", {
+          companyId: session.user.companyId,
+          actorId: session.user.id,
+          periodId: id,
+          statusCode: 409,
+        })
+        return errorResponse(error.message, 409, { warnings: runDraft.warnings })
+      }
+      throw error
+    }
+
     const createdRun = await prisma.$transaction(async (tx) => {
       if (draftRun && validated.overwriteDraft) {
         await tx.payrollRun.delete({ where: { id: draftRun.id } })
@@ -569,7 +657,7 @@ export async function POST(
           goldSettlementMode: runDraft.goldSettlementMode ?? period.company.goldSettlementMode,
           createdById: session.user.id,
           lineItems: {
-            create: runDraft.lineItems.map((line) => ({
+            create: stampedLines.map((line) => ({
               employeeId: line.employeeId,
               compensationProfileId: line.compensationProfileId,
               baseAmount: line.baseAmount,
@@ -579,6 +667,8 @@ export async function POST(
               grossAmount: line.grossAmount,
               netAmount: line.netAmount,
               currency: line.currency,
+              exchangeRate: line.exchangeRate,
+              netBaseAmount: line.netBaseAmount,
               notes: line.notes,
               components:
                 line.components.length > 0

@@ -9,6 +9,7 @@ import {
   derivePaidStatus,
   ensureApproverRole,
 } from "@/lib/hr-payroll"
+import { isPositive, money, toNumber, toNumberOrZero } from "@/lib/money"
 import { createRouteLogger } from "@/lib/observability/route-logger"
 
 const markPaidSchema = z.object({
@@ -113,10 +114,13 @@ export async function POST(
 
       for (const payload of validated.items) {
         const item = itemById.get(payload.id)!
-        const paidAmount = payload.paidAmount ?? item.amount
+        const paidAmount = money(payload.paidAmount ?? item.amount)
         const status = derivePaidStatus(item.amount, paidAmount)
-        const paidAt =
-          paidAmount > 0 ? (payload.paidAt ? new Date(payload.paidAt) : new Date()) : null
+        const paidAt = isPositive(paidAmount)
+          ? payload.paidAt
+            ? new Date(payload.paidAt)
+            : new Date()
+          : null
 
         const updatedItem = await tx.disbursementItem.update({
           where: { id: payload.id },
@@ -129,6 +133,12 @@ export async function POST(
           },
           include: { lineItem: { select: { currency: true, baseAmount: true, netAmount: true } } },
         })
+
+        // `EmployeePayment` is still `Float` — see the note on the model, where
+        // `amount` means grams for a gold payout. Convert once here rather than
+        // letting a `Decimal` reach a `Float` column four times over.
+        const legacyAmount = toNumberOrZero(updatedItem.amount)
+        const legacyPaidAmount = toNumber(updatedItem.paidAmount)
 
         if (isGoldRun) {
           await applyDisbursementToGoldShares(tx, {
@@ -146,12 +156,12 @@ export async function POST(
             await tx.employeePayment.update({
               where: { id: existingPayment.id },
               data: {
-                amount: updatedItem.amount,
-                amountUsd: updatedItem.amount,
+                amount: legacyAmount,
+                amountUsd: legacyAmount,
                 unit: updatedItem.lineItem.currency,
                 payoutSource: irregularSource,
-                paidAmount: updatedItem.paidAmount,
-                paidAmountUsd: updatedItem.paidAmount,
+                paidAmount: legacyPaidAmount,
+                paidAmountUsd: legacyPaidAmount,
                 paidAt: updatedItem.paidAt,
                 status: updatedItem.status,
                 notes: updatedItem.notes ?? `Irregular payout batch ${batch.code}`,
@@ -166,11 +176,11 @@ export async function POST(
                 periodStart: batch.payrollRun.period.startDate,
                 periodEnd: batch.payrollRun.period.endDate,
                 dueDate: batch.payrollRun.period.dueDate,
-                amount: updatedItem.amount,
-                amountUsd: updatedItem.amount,
+                amount: legacyAmount,
+                amountUsd: legacyAmount,
                 unit: updatedItem.lineItem.currency,
-                paidAmount: updatedItem.paidAmount,
-                paidAmountUsd: updatedItem.paidAmount,
+                paidAmount: legacyPaidAmount,
+                paidAmountUsd: legacyPaidAmount,
                 paidAt: updatedItem.paidAt,
                 status: updatedItem.status,
                 notes: updatedItem.notes ?? `Irregular payout batch ${batch.code}`,
@@ -192,10 +202,10 @@ export async function POST(
             await tx.employeePayment.update({
               where: { id: existingPayment.id },
               data: {
-                amount: updatedItem.amount,
-                amountUsd: updatedItem.amount,
-                paidAmount: updatedItem.paidAmount,
-                paidAmountUsd: updatedItem.paidAmount,
+                amount: legacyAmount,
+                amountUsd: legacyAmount,
+                paidAmount: legacyPaidAmount,
+                paidAmountUsd: legacyPaidAmount,
                 paidAt: updatedItem.paidAt,
                 status: updatedItem.status,
                 notes: updatedItem.notes ?? `Disbursement batch ${batch.code}`,
@@ -209,11 +219,11 @@ export async function POST(
                 periodStart: batch.payrollRun.period.startDate,
                 periodEnd: batch.payrollRun.period.endDate,
                 dueDate: batch.payrollRun.period.dueDate,
-                amount: updatedItem.amount,
-                amountUsd: updatedItem.amount,
+                amount: legacyAmount,
+                amountUsd: legacyAmount,
                 unit: updatedItem.lineItem.currency,
-                paidAmount: updatedItem.paidAmount,
-                paidAmountUsd: updatedItem.paidAmount,
+                paidAmount: legacyPaidAmount,
+                paidAmountUsd: legacyPaidAmount,
                 paidAt: updatedItem.paidAt,
                 status: updatedItem.status,
                 notes: updatedItem.notes ?? `Disbursement batch ${batch.code}`,

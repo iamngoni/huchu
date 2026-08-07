@@ -17,6 +17,15 @@ const { validateSessionMock, createApprovalActionMock, prismaMock } = vi.hoisted
       compensationRule: {
         findMany: vi.fn(),
       },
+      // `stampLineCurrencies` reads both of these to freeze the FX rate on each
+      // line. A USD-only company never reaches `currencyRate`, but the mock has
+      // to exist or the lookup throws instead of returning "no rate".
+      accountingSettings: {
+        findUnique: vi.fn(),
+      },
+      currencyRate: {
+        findFirst: vi.fn(),
+      },
       $transaction: vi.fn(),
     },
   }),
@@ -106,6 +115,10 @@ describe("POST /api/payroll/periods/[id]/generate-run", () => {
     vi.spyOn(console, "log").mockImplementation(() => {})
     vi.spyOn(console, "error").mockImplementation(() => {})
     validateSessionMock.mockResolvedValue({ session })
+    prismaMock.accountingSettings.findUnique.mockResolvedValue({
+      baseCurrency: "USD",
+    })
+    prismaMock.currencyRate.findFirst.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -223,20 +236,28 @@ describe("POST /api/payroll/periods/[id]/generate-run", () => {
 
     expect(response.status).toBe(201)
     expect(body.id).toBe("run-1")
-    expect(createInput.data.grossTotal).toBe(1100)
-    expect(createInput.data.allowancesTotal).toBe(100)
-    expect(createInput.data.deductionsTotal).toBe(100)
-    expect(createInput.data.netTotal).toBe(1000)
-    expect(createInput.data.lineItems.create[0]).toMatchObject({
+    // Totals are `Prisma.Decimal` now, not `number`, so compare the rendered
+    // value — `toBe(1100)` would pass against a `Decimal` of 1100.0001 only by
+    // accident and fail against an honest one.
+    expect(createInput.data.grossTotal.toString()).toBe("1100")
+    expect(createInput.data.allowancesTotal.toString()).toBe("100")
+    expect(createInput.data.deductionsTotal.toString()).toBe("100")
+    expect(createInput.data.netTotal.toString()).toBe("1000")
+
+    const line = createInput.data.lineItems.create[0]
+    expect(line).toMatchObject({
       employeeId: "emp-1",
       compensationProfileId: "profile-1",
-      baseAmount: 1000,
-      allowancesTotal: 100,
-      deductionsTotal: 100,
-      grossAmount: 1100,
-      netAmount: 1000,
       currency: "USD",
     })
+    expect(line.baseAmount.toString()).toBe("1000")
+    expect(line.allowancesTotal.toString()).toBe("100")
+    expect(line.deductionsTotal.toString()).toBe("100")
+    expect(line.grossAmount.toString()).toBe("1100")
+    expect(line.netAmount.toString()).toBe("1000")
+    // Base currency, so the rate is 1 and net pay converts to itself.
+    expect(line.exchangeRate.toString()).toBe("1")
+    expect(line.netBaseAmount.toString()).toBe("1000")
     expect(createApprovalActionMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({

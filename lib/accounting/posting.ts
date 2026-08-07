@@ -16,6 +16,7 @@ import { getNextEntryNumber, toMoney } from "@/lib/accounting/ledger";
 import { resolvePostingPeriod } from "@/lib/accounting/period-lock";
 import { syncPaymentLedgerEntryForSource } from "@/lib/accounting/payment-ledger";
 import { buildRetailPostingPayload } from "@/lib/accounting/retail-posting";
+import { toNumber, toNumberOrZero, type MoneyLike } from "@/lib/money";
 
 const BALANCE_TOLERANCE = 0.01;
 const BASE_RETRY_DELAY_MINUTES = 5;
@@ -47,12 +48,17 @@ export type PostingContext = {
   entryDate: Date;
   description: string;
   createdById: string;
-  amount: number;
-  netAmount?: number;
-  taxAmount?: number;
-  grossAmount?: number;
-  deductionsAmount?: number;
-  allowancesAmount?: number;
+  // `MoneyLike` rather than `number`: callers hold `Prisma.Decimal` now — the
+  // school fee columns always did, the HR payroll columns do since the
+  // Zimbabwe payroll work. `resolveBasisAmount` already went through `toMoney`,
+  // which takes `unknown`, so the only crossing that had to be made explicit is
+  // the write to the event row.
+  amount: MoneyLike;
+  netAmount?: MoneyLike;
+  taxAmount?: MoneyLike;
+  grossAmount?: MoneyLike;
+  deductionsAmount?: MoneyLike;
+  allowancesAmount?: MoneyLike;
   currency?: string;
   actorRole?: string | null;
   periodOverrideReason?: string | null;
@@ -257,12 +263,12 @@ async function createOrRefreshIntegrationEvent(context: PostingContext, envelope
       causationKey: context.causationKey ?? null,
       entryDate: context.entryDate,
       description: context.description,
-      amount: context.amount,
-      netAmount: context.netAmount ?? null,
-      taxAmount: context.taxAmount ?? null,
-      grossAmount: context.grossAmount ?? null,
-      deductionsAmount: context.deductionsAmount ?? null,
-      allowancesAmount: context.allowancesAmount ?? null,
+      amount: toNumberOrZero(context.amount),
+      netAmount: toNumber(context.netAmount),
+      taxAmount: toNumber(context.taxAmount),
+      grossAmount: toNumber(context.grossAmount),
+      deductionsAmount: toNumber(context.deductionsAmount),
+      allowancesAmount: toNumber(context.allowancesAmount),
       currency: context.currency ?? null,
       createdById: context.createdById,
       payloadJson: JSON.stringify(envelope),
@@ -283,12 +289,12 @@ async function createOrRefreshIntegrationEvent(context: PostingContext, envelope
       causationKey: context.causationKey ?? null,
       entryDate: context.entryDate,
       description: context.description,
-      amount: context.amount,
-      netAmount: context.netAmount ?? null,
-      taxAmount: context.taxAmount ?? null,
-      grossAmount: context.grossAmount ?? null,
-      deductionsAmount: context.deductionsAmount ?? null,
-      allowancesAmount: context.allowancesAmount ?? null,
+      amount: toNumberOrZero(context.amount),
+      netAmount: toNumber(context.netAmount),
+      taxAmount: toNumber(context.taxAmount),
+      grossAmount: toNumber(context.grossAmount),
+      deductionsAmount: toNumber(context.deductionsAmount),
+      allowancesAmount: toNumber(context.allowancesAmount),
       currency: context.currency ?? null,
       createdById: context.createdById,
       payloadJson: JSON.stringify(envelope),

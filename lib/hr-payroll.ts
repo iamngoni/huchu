@@ -6,6 +6,14 @@ import {
   type PayrollCycle,
 } from "@prisma/client"
 import type { AuthenticatedSession } from "@/lib/api-utils"
+import {
+  clampAtZero,
+  minMoney,
+  money,
+  sumMoney,
+  taxOn,
+  type MoneyLike,
+} from "@/lib/money"
 import { emitWorkflowNotificationFromApprovalAction } from "@/lib/notifications"
 
 type ApprovalActionInput = {
@@ -82,12 +90,12 @@ export function isTwoStepActionAllowed(
 }
 
 export function derivePaidStatus(
-  amount: number,
-  paidAmount?: number | null,
+  amount: MoneyLike,
+  paidAmount?: MoneyLike,
 ): "DUE" | "PARTIAL" | "PAID" {
-  const paid = paidAmount ?? 0
-  if (paid <= 0) return "DUE"
-  if (paid >= amount) return "PAID"
+  const paid = money(paidAmount)
+  if (paid.lessThanOrEqualTo(0)) return "DUE"
+  if (paid.greaterThanOrEqualTo(money(amount))) return "PAID"
   return "PARTIAL"
 }
 
@@ -220,18 +228,29 @@ export async function createApprovalAction(
   })
 }
 
+/**
+ * A single compensation rule, applied.
+ *
+ * `Decimal` throughout since the columns became `Decimal(14,2)`. The old
+ * version did `(baseAmount * value) / 100` in floating point and rounded
+ * nowhere, so a 4.5% deduction on 1,234.56 produced 55.5552 and whatever the
+ * next `+` made of it.
+ */
 export function calculateRuleAmount(input: {
-  baseAmount: number
+  baseAmount: MoneyLike
   calcMethod: CompensationCalcMethod
-  value: number
-  cap?: number | null
+  value: MoneyLike
+  cap?: MoneyLike
 }) {
-  let amount =
-    input.calcMethod === "PERCENT" ? (input.baseAmount * input.value) / 100 : input.value
-  if (input.cap !== null && input.cap !== undefined) {
-    amount = Math.min(amount, input.cap)
-  }
-  return Math.max(amount, 0)
+  const amount =
+    input.calcMethod === "PERCENT"
+      ? taxOn(input.baseAmount, input.value)
+      : money(input.value)
+  const capped =
+    input.cap === null || input.cap === undefined
+      ? amount
+      : minMoney(amount, input.cap)
+  return clampAtZero(capped)
 }
 
 export type ComputedRuleComponent = {
@@ -239,28 +258,50 @@ export type ComputedRuleComponent = {
   ruleId?: string
   type: CompensationRuleType
   calcMethod: CompensationCalcMethod
-  rateOrAmount: number
-  amount: number
+  rateOrAmount: Prisma.Decimal
+  amount: Prisma.Decimal
   isTaxable: boolean
 }
 
+/**
+ * Gross and net from a set of applied rules.
+ *
+ * Employer contributions are deliberately absent from both totals. They are a
+ * cost to the company and a liability to an authority; adding them to gross
+ * would inflate what the employee appears to have earned, and adding them to
+ * deductions would take them out of a wage they were never in.
+ *
+ * The Zimbabwe statutory pipeline in `lib/hr/payroll/` supersedes this for a
+ * real payroll run. This stays for the settlement domains that have no
+ * statutory dimension.
+ */
 export function computeLineTotals(input: {
-  baseAmount: number
-  variableAmount: number
+  baseAmount: MoneyLike
+  variableAmount: MoneyLike
   rules: ComputedRuleComponent[]
 }) {
-  const allowancesTotal = input.rules
-    .filter((rule) => rule.type === "ALLOWANCE")
-    .reduce((sum, rule) => sum + rule.amount, 0)
-  const deductionsTotal = input.rules
-    .filter((rule) => rule.type === "DEDUCTION")
-    .reduce((sum, rule) => sum + rule.amount, 0)
-  const grossAmount = input.baseAmount + input.variableAmount + allowancesTotal
-  const netAmount = Math.max(grossAmount - deductionsTotal, 0)
+  const allowancesTotal = sumMoney(
+    input.rules.filter((rule) => rule.type === "ALLOWANCE").map((rule) => rule.amount),
+  )
+  const deductionsTotal = sumMoney(
+    input.rules
+      .filter(
+        (rule) => rule.type === "DEDUCTION" || rule.type === "STATUTORY_DEDUCTION",
+      )
+      .map((rule) => rule.amount),
+  )
+  const employerCost = sumMoney(
+    input.rules
+      .filter((rule) => rule.type === "EMPLOYER_CONTRIBUTION")
+      .map((rule) => rule.amount),
+  )
+  const grossAmount = sumMoney([input.baseAmount, input.variableAmount, allowancesTotal])
+  const netAmount = clampAtZero(grossAmount.minus(deductionsTotal))
 
   return {
     allowancesTotal,
     deductionsTotal,
+    employerCost,
     grossAmount,
     netAmount,
   }
