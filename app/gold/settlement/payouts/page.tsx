@@ -112,10 +112,10 @@ export default function GoldSettlementPayoutsPage() {
         ?.enabledFeatures,
     [session],
   );
-  const canOpenHrPayouts = useMemo(
+  const canOpenSettlementApprovals = useMemo(
     () =>
       canViewHrefWithEnabledFeatures(
-        "/human-resources/payouts",
+        "/gold/settlement/approvals",
         enabledFeatures,
       ),
     [enabledFeatures],
@@ -462,9 +462,9 @@ export default function GoldSettlementPayoutsPage() {
       title="Payouts"
       actions={
         <div className="flex gap-2">
-          {canOpenHrPayouts ? (
+          {canOpenSettlementApprovals ? (
             <Button asChild size="sm" variant="outline">
-              <Link href="/human-resources/payouts?source=GOLD">Manage payouts in HR</Link>
+              <Link href="/gold/settlement/approvals?source=GOLD">Manage settlement approvals</Link>
             </Button>
           ) : null}
           {canOpenSales ? (

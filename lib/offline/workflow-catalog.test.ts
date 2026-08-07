@@ -35,7 +35,7 @@ describe("offline workflow catalog", () => {
 
     const warmRoutes = getOfflineWarmupRoutes(enabledFeatures);
     expect(warmRoutes).not.toContain("/scrap-metal/settlements");
-    expect(warmRoutes).not.toContain("/human-resources/payouts");
+    expect(warmRoutes).not.toContain("/gold/settlement/approvals");
     expect(warmRoutes).not.toContain("/accounting");
   });
 

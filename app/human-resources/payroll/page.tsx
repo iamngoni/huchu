@@ -1,18 +1,30 @@
-import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+
+/**
+ * Payroll's front door.
+ *
+ * This used to be a router. It read the session's workspace profile to decide
+ * whether a gold mine should land on the gold settlement screen instead, and when
+ * given a `runId` or an `adjustmentId` it queried `PayrollRun.domain` to work out
+ * which of the two screens owned that record. Two database reads to answer a
+ * question that only existed because settlements were pretending to be payroll.
+ *
+ * Settlements have their own screens now, so there is one payroll screen and
+ * nothing to route. The redirect stays only because the salary path is where the
+ * screen lives; it collapses when the payroll routes move under `/payroll` in the
+ * information-architecture split.
+ */
 
 type SearchParams = Record<string, string | string[] | undefined>
 
-function firstValue(value: string | string[] | undefined) {
-  if (!value) return undefined
-  return Array.isArray(value) ? value[0] : value
-}
-
-function buildQueryString(searchParams: SearchParams) {
+export default async function PayrollRootPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const resolved = await searchParams
   const params = new URLSearchParams()
-  for (const [key, value] of Object.entries(searchParams)) {
+  for (const [key, value] of Object.entries(resolved)) {
     if (!value) continue
     if (Array.isArray(value)) {
       for (const entry of value) params.append(key, entry)
@@ -20,52 +32,7 @@ function buildQueryString(searchParams: SearchParams) {
       params.set(key, value)
     }
   }
-  return params.toString()
-}
 
-export default async function PayrollRootPage({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>
-}) {
-  const session = await getServerSession(authOptions)
-  const companyId = session?.user?.companyId
-  const workspaceProfile = session?.user?.workspaceProfile
-  const resolvedSearchParams = await searchParams
-
-  if (!session?.user?.id || !companyId) {
-    redirect("/login")
-  }
-
-  let targetPath =
-    workspaceProfile === "GOLD_MINE"
-      ? "/human-resources/payroll/gold"
-      : "/human-resources/payroll/salary"
-
-  const runId = firstValue(resolvedSearchParams.runId)
-  const adjustmentId = firstValue(resolvedSearchParams.adjustmentId)
-
-  if (runId) {
-    const run = await prisma.payrollRun.findFirst({
-      where: { id: runId, companyId },
-      select: { domain: true },
-    })
-    if (run?.domain === "PAYROLL") targetPath = "/human-resources/payroll/salary"
-    if (run?.domain === "GOLD_PAYOUT") targetPath = "/human-resources/payroll/gold"
-  } else if (adjustmentId) {
-    const adjustment = await prisma.adjustmentEntry.findFirst({
-      where: { id: adjustmentId, companyId },
-      select: {
-        payrollRun: { select: { domain: true } },
-        disbursementBatch: { select: { payrollRun: { select: { domain: true } } } },
-      },
-    })
-    const domain =
-      adjustment?.payrollRun?.domain ?? adjustment?.disbursementBatch?.payrollRun?.domain
-    if (domain === "PAYROLL") targetPath = "/human-resources/payroll/salary"
-    if (domain === "GOLD_PAYOUT") targetPath = "/human-resources/payroll/gold"
-  }
-
-  const queryString = buildQueryString(resolvedSearchParams)
-  redirect(queryString ? `${targetPath}?${queryString}` : targetPath)
+  const query = params.toString()
+  redirect(query ? `/human-resources/payroll/salary?${query}` : "/human-resources/payroll/salary")
 }

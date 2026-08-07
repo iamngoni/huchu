@@ -15,7 +15,6 @@ export type HrTab =
   | "employees"
   | "shift-groups"
   | "incidents"
-  | "payouts"
   | "compensation"
   | "salaries"
   | "salary-outstanding"
@@ -109,13 +108,6 @@ export const HR_TABS: HrTabItem[] = [
     label: "Runs",
     href: "/human-resources/payroll",
     icon: Checklist,
-    categoryId: "payroll",
-  },
-  {
-    id: "payouts",
-    label: "Settlements",
-    href: "/human-resources/payouts",
-    icon: Coins,
     categoryId: "payroll",
   },
   {

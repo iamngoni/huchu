@@ -371,7 +371,7 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
         refs: [
           { moduleId: "gold", href: "/gold/transit/dispatches/new" },
           { moduleId: "gold", href: "/gold/settlement/receipts/new" },
-          { moduleId: "hr", href: "/human-resources/payouts" },
+          { moduleId: "gold", href: "/gold/settlement/approvals" },
         ],
       },
       {

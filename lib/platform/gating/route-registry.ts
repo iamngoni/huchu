@@ -36,7 +36,6 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/human-resources/salaries", featureKey: "hr.salaries" },
   { scope: "page", prefix: "/human-resources/approvals", featureKey: "hr.approvals-history" },
   { scope: "page", prefix: "/human-resources/incidents", featureKey: "hr.incidents" },
-  { scope: "page", prefix: "/human-resources/payouts", featureKey: "settlements.core" },
   { scope: "page", prefix: "/human-resources", featureKey: "hr.employees" },
 
   { scope: "page", prefix: "/maintenance/work-orders", featureKey: "maintenance.work-orders" },
@@ -151,6 +150,7 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/gold/exceptions", featureKey: "gold.exceptions" },
   { scope: "page", prefix: "/gold/audit", featureKey: "gold.audit-trail" },
   { scope: "page", prefix: "/gold/payouts", featureKey: "settlements.gold" },
+  { scope: "page", prefix: "/gold/settlement/approvals", featureKey: "settlements.core" },
   { scope: "page", prefix: "/gold/settlement/payouts", featureKey: "settlements.gold" },
   { scope: "page", prefix: "/gold/settlement/runs", featureKey: "settlements.gold" },
   { scope: "page", prefix: "/gold/prices", featureKey: "gold.home" },

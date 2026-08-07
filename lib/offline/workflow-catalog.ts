@@ -21,8 +21,8 @@ const OFFLINE_EXCLUDED_ROUTE_REASONS: Record<string, string> = {
   "/accounting": "Accounting workflows are intentionally excluded from the current offline scope.",
   "/scrap-metal/settlements":
     "Scrap settlement workflows require tighter server coordination and are excluded.",
-  "/human-resources/payouts":
-    "HR settlement workflows are intentionally excluded from the current offline scope.",
+  "/gold/settlement/approvals":
+    "Settlement approvals need tighter server coordination and are excluded.",
 };
 
 const SCRAP_OPERATOR_ROUTES = SCRAP_TABS.filter((tab) =>
@@ -103,7 +103,7 @@ export const OFFLINE_WORKFLOW_CATALOG: OfflineWorkflowCatalogEntry[] = [
       "disciplinary-actions",
     ],
     moduleIds: ["hr-workforce-core"],
-    excludedRoutes: ["/human-resources/payouts"],
+    excludedRoutes: ["/gold/settlement/approvals"],
   },
 ];
 

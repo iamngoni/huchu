@@ -7,7 +7,7 @@ import { addDays, format, isAfter, isBefore } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { HrShell } from "@/components/human-resources/hr-shell";
+import { GoldShell } from "@/components/gold/gold-shell";
 import { RecordSavedBanner } from "@/components/shared/record-saved-banner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -42,12 +42,12 @@ import {
   type IrregularPayoutBatchRecord,
 } from "@/lib/api";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import type { SettlementSource } from "@prisma/client";
 import {
-  getIrregularPayoutSourceMeta,
-  parseIrregularPayoutSource,
-  resolveDefaultIrregularPayoutSource,
-  type IrregularPayoutSource,
-} from "@/lib/hr-irregular-payouts";
+  getSettlementSourceMeta,
+  parseSettlementSource,
+  resolveDefaultSettlementSource,
+} from "@/lib/settlements/sources";
 
 type WorkflowStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -66,7 +66,7 @@ type PayoutWorker = {
 type PayoutGroup = {
   id: string;
   kind: "gold" | "batch";
-  source: IrregularPayoutSource;
+  source: SettlementSource;
   label: string;
   context: string;
   workflowStatus: WorkflowStatus;
@@ -119,18 +119,18 @@ export default function HrPayoutsPage() {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const createdId = searchParams.get("createdId");
-  const preferredSource = useMemo(
-    () =>
-      searchParams.get("source")
-        ? parseIrregularPayoutSource(searchParams.get("source"))
-        : resolveDefaultIrregularPayoutSource(
-            (session?.user as { enabledFeatures?: string[] } | undefined)?.enabledFeatures,
-          ),
-    [searchParams, session],
-  );
-  const [source, setSource] = useState<IrregularPayoutSource>(
-    preferredSource,
-  );
+  const preferredSource = useMemo(() => {
+    const enabledFeatures = (session?.user as { enabledFeatures?: string[] } | undefined)
+      ?.enabledFeatures;
+    // `parseSettlementSource` returns null on anything unrecognised rather than
+    // quietly defaulting to GOLD, so an unreadable `?source=` falls back to what
+    // this workspace actually settles instead of showing a scrap yard gold.
+    return (
+      parseSettlementSource(searchParams.get("source")) ??
+      resolveDefaultSettlementSource(enabledFeatures)
+    );
+  }, [searchParams, session]);
+  const [source, setSource] = useState<SettlementSource>(preferredSource);
   const [windowWeeks, setWindowWeeks] = useState(searchParams.get("window") ?? "2");
   const [queryState, setQueryState] = useState<DataTableQueryState>({
     mode: "paginated",
@@ -156,7 +156,7 @@ export default function HrPayoutsPage() {
     setSource(preferredSource);
   }, [preferredSource]);
 
-  const meta = getIrregularPayoutSourceMeta(source);
+  const meta = getSettlementSourceMeta(source);
   const lookbackStart = useMemo(() => {
     const date = new Date();
     date.setDate(date.getDate() - Number(windowWeeks) * 7);
@@ -462,8 +462,9 @@ export default function HrPayoutsPage() {
   const loadError = goldQuery.error || batchQuery.error || paymentQuery.error;
 
   return (
-    <HrShell
+    <GoldShell
       activeTab="payouts"
+      title="Settlement approvals"
       actions={source !== "GOLD" ? <Button size="sm" onClick={() => setCreateOpen(true)}>{meta.createLabel}</Button> : undefined}
     >
       <RecordSavedBanner entityLabel={`${meta.label.toLowerCase()} record`} />
@@ -489,11 +490,11 @@ export default function HrPayoutsPage() {
           toolbar={
             <>
               <Select value={source} onValueChange={(value) => {
-                const nextSource = parseIrregularPayoutSource(value);
+                const nextSource = parseSettlementSource(value) ?? source;
                 setSource(nextSource);
                 const params = new URLSearchParams(searchParams.toString());
                 params.set("source", nextSource);
-                router.replace(`/human-resources/payouts?${params.toString()}`);
+                router.replace(`/gold/settlement/approvals?${params.toString()}`);
               }}>
                 <SelectTrigger size="sm" className="h-8 w-[170px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -590,6 +591,6 @@ export default function HrPayoutsPage() {
           ) : null}
         </DialogContent>
       </Dialog>
-    </HrShell>
+    </GoldShell>
   );
 }

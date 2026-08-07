@@ -13,7 +13,6 @@ import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { ArrowRight, FileText, Plus, Wrench } from "@/lib/icons";
 import { HrShell } from "@/components/human-resources/hr-shell";
-import { PayrollModeSwitch } from "@/components/human-resources/payroll/payroll-mode-switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -826,20 +825,6 @@ export default function SalaryPayrollPage() {
           </AlertDescription>
         </Alert>
       )}
-
-      <section className="space-y-3">
-        <header className="space-y-1">
-          <h2 className="text-section-title text-foreground font-bold tracking-tight">
-            Payroll Modes
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Switch between salary payroll and irregular payout payroll.
-          </p>
-        </header>
-        <div className="section-shell">
-          <PayrollModeSwitch activeMode="salary" />
-        </div>
-      </section>
 
       <VerticalDataViews
         items={[

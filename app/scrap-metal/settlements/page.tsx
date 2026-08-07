@@ -462,7 +462,7 @@ export default function ScrapSettlementsPage() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/human-resources/payouts?source=SCRAP">Open in HR</Link>
+                <Link href="/gold/settlement/approvals?source=SCRAP">Open approvals</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/scrap-metal/reports">Open reports</Link>

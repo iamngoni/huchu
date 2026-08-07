@@ -353,7 +353,7 @@ async function getWorkflowEntityContext(
       submittedById: allocation.submittedById,
       createdById: allocation.createdById,
       label: `${shiftDate} ${allocation.shift} - ${allocation.site.code}`,
-      viewPath: `/human-resources/payouts?allocationId=${allocation.id}`,
+      viewPath: `/gold/settlement/approvals?allocationId=${allocation.id}`,
       payload: {
         shiftDate,
         shift: allocation.shift,
@@ -385,7 +385,7 @@ async function getWorkflowEntityContext(
       submittedById: batch.submittedById,
       createdById: batch.createdById,
       label: `${batch.source} - ${batch.label}`,
-      viewPath: `/human-resources/payouts?batchId=${batch.id}&source=${batch.source}`,
+      viewPath: `/gold/settlement/approvals?batchId=${batch.id}&source=${batch.source}`,
       payload: {
         source: batch.source,
         label: batch.label,
@@ -1015,7 +1015,7 @@ function defaultViewPath(entityType?: NotificationEntityType | null, entityId?: 
   if (entityType === "ADJUSTMENT_ENTRY") return `/human-resources/payroll?adjustmentId=${entityId}`
   if (entityType === "COMPENSATION_PROFILE") return `/human-resources/compensation?profileId=${entityId}`
   if (entityType === "COMPENSATION_RULE") return `/human-resources/compensation?ruleId=${entityId}`
-  if (entityType === "GOLD_SHIFT_ALLOCATION") return `/human-resources/payouts?allocationId=${entityId}`
+  if (entityType === "GOLD_SHIFT_ALLOCATION") return `/gold/settlement/approvals?allocationId=${entityId}`
   if (entityType === "DISCIPLINARY_ACTION") return `/human-resources/incidents?disciplinaryId=${entityId}`
   if (entityType === "HR_INCIDENT") return `/human-resources/incidents?incidentId=${entityId}`
   if (entityType === "INCIDENT") return `/compliance/incidents?createdId=${entityId}`
