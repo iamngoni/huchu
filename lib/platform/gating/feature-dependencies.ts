@@ -9,6 +9,16 @@ const FEATURE_DEPENDENCIES: Record<string, string[]> = {
   "gold.audit-trail": ["gold.home"],
   "gold.payouts": ["gold.home"],
   "hr.settlements": ["hr.employees"],
+  // Payroll without an employee directory is runs against nobody.
+  "hr.payroll": ["hr.employees"],
+  "hr.compensation-rules": ["hr.employees"],
+  "hr.statutory-tables": ["hr.payroll"],
+  "hr.statutory-returns": ["hr.payroll", "hr.statutory-tables"],
+  "hr.payslips": ["hr.payroll"],
+  "hr.employee-self-service": ["hr.payslips"],
+  // Deliberately NOT declared: payroll does not depend on `accounting.core`.
+  // That is the seam the payroll-only product stands on — a run in a workspace
+  // with no ledger completes, posts nothing, and says so.
   "accounting.chart-of-accounts": ["accounting.core"],
   "accounting.journals": ["accounting.core"],
   "accounting.periods": ["accounting.core"],

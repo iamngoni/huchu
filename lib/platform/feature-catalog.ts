@@ -119,6 +119,14 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
   f({ key: "hr.disbursements", name: "Disbursements", description: "Cash disbursement batch operations.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 3 }),
   f({ key: "hr.approvals-history", name: "Approvals History", description: "Approval history and audit approvals.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 2 }),
   f({ key: "hr.settlements", name: "HR Settlements", description: "Settlement workflows in HR for gold, scrap, retail, commission, dividends, and other variable settlements.", domain: "hr", defaultEnabled: false, isBillable: true, monthlyPrice: 2 }),
+  // Zimbabwe statutory payroll. Separate keys because they are separately
+  // sellable: a company outside Zimbabwe wants the payroll engine without the
+  // ZIMRA returns, and a company that keeps its own books wants the payslips
+  // without giving every employee a login.
+  f({ key: "hr.statutory-tables", name: "Statutory Tables", description: "Effective-dated PAYE bands, NSSA rates, levies, tax credits and NEC agreements.", domain: "hr", defaultEnabled: false, isBillable: true, monthlyPrice: 3 }),
+  f({ key: "hr.statutory-returns", name: "Statutory Returns", description: "Monthly PAYE (P2) and NSSA contribution schedules, reconciled against the ledger.", domain: "hr", defaultEnabled: false, isBillable: true, monthlyPrice: 4 }),
+  f({ key: "hr.payslips", name: "Payslips", description: "Per-employee payslips showing every stage of the calculation.", domain: "hr", defaultEnabled: false, isBillable: true, monthlyPrice: 2 }),
+  f({ key: "hr.employee-self-service", name: "Employee Self-Service", description: "Lets an employee view their own payslips and nobody else's.", domain: "hr", defaultEnabled: false, isBillable: true, monthlyPrice: 1 }),
 
   f({ key: "accounting.core", name: "Accounting Core", description: "Accounting module dashboard and shared setup.", domain: "accounting", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "accounting.chart-of-accounts", name: "Chart of Accounts", description: "Chart of accounts and account setup.", domain: "accounting", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),

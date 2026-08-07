@@ -267,6 +267,9 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/attendance", featureKey: "ops.attendance.mark" },
   { scope: "api", prefix: "/api/plant-reports", featureKey: "ops.plant-report.submit" },
 
+  // Longest prefix wins, so these must precede the bare `/api/payroll`.
+  { scope: "api", prefix: "/api/payroll/returns", featureKey: "hr.statutory-returns" },
+  { scope: "api", prefix: "/api/payroll/statutory", featureKey: "hr.statutory-tables" },
   { scope: "api", prefix: "/api/payroll", featureKey: "hr.payroll" },
   { scope: "api", prefix: "/api/disbursements", featureKey: "hr.disbursements" },
   { scope: "api", prefix: "/api/compensation", featureKey: "hr.compensation-rules" },
