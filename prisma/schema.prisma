@@ -298,6 +298,10 @@ enum WorkspaceProfile {
   SCHOOLS
   AUTOS
   RETAIL      @map("THRIFT")
+  /// A workspace that bought payroll and nothing else. Must exist here as well
+  /// as in `lib/workspace-products.ts` — the TypeScript list is what the app
+  /// reasons with, this is what the column can actually hold.
+  PAYROLL
   GENERAL
 }
 
