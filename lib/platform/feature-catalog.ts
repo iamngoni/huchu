@@ -112,6 +112,7 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
   f({ key: "scrap-metal.pricing", name: "Scrap & Recycling Price Board", description: "Scrap and recycling material catalog and pricing controls.", domain: "scrap-metal", defaultEnabled: false, isBillable: false, monthlyPrice: 0 }),
 
   f({ key: "hr.employees", name: "Employees", description: "Employee records and directory.", domain: "hr", defaultEnabled: false, isBillable: false, monthlyPrice: 0 }),
+  f({ key: "hr.leave", name: "Leave", description: "Leave types, entitlements, requests and the public holiday calendar.", domain: "hr", defaultEnabled: false, isBillable: true, monthlyPrice: 3 }),
   f({ key: "hr.incidents", name: "HR Incidents", description: "HR incident management.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 2 }),
   f({ key: "hr.disciplinary-actions", name: "Disciplinary Actions", description: "Disciplinary action lifecycle.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 2 }),
   f({ key: "hr.compensation-rules", name: "Compensation Rules", description: "Compensation profiles/rules/templates.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 3 }),
@@ -292,7 +293,7 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
     description: "Employee directory and workforce base records.",
     monthlyPrice: 0,
     additionalSiteMonthlyPrice: 0,
-    features: ["hr.employees"],
+    features: ["hr.employees", "hr.leave"],
   },
   {
     code: "ADDON_GOLD_CORE",

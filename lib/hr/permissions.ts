@@ -27,6 +27,7 @@
 
 export const HR_RESOURCES = [
   "hr.employees",
+  "hr.leave",
   "hr.compensation",
   "hr.payroll",
   "hr.disbursements",
@@ -81,6 +82,7 @@ type Matrix = Partial<Record<string, Partial<Record<HrResource, HrAction[]>>>>;
 const MATRIX: Matrix = {
   SUPERADMIN: {
     "hr.employees": ALL,
+    "hr.leave": ALL,
     "hr.compensation": ALL,
     "hr.payroll": ALL,
     "hr.disbursements": ALL,
@@ -90,6 +92,7 @@ const MATRIX: Matrix = {
   },
   MANAGER: {
     "hr.employees": ALL,
+    "hr.leave": ALL,
     "hr.compensation": ALL,
     "hr.payroll": ALL,
     "hr.disbursements": ALL,
@@ -103,6 +106,9 @@ const MATRIX: Matrix = {
   // the run should not also be the person who changes what it is computed on.
   CLERK: {
     "hr.employees": PREPARE,
+    // A clerk records leave and submits it. Approving somebody's time off is the
+    // manager's, for the same reason approving a run is.
+    "hr.leave": PREPARE,
     "hr.compensation": PREPARE,
     "hr.payroll": PREPARE,
     "hr.disbursements": VIEW_ONLY,

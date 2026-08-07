@@ -29,6 +29,8 @@ import {
 
 export type PeopleTab =
   | "employees"
+  | "leave"
+  | "holidays"
   | "incidents"
   | "shift-groups"
   | "approvals";
@@ -70,6 +72,20 @@ export const PEOPLE_TABS: PeopleTabItem[] = [
     label: "Rosters",
     href: "/people/rosters",
     icon: Users,
+    categoryId: "time",
+  },
+  {
+    id: "leave",
+    label: "Leave",
+    href: "/people/leave",
+    icon: Checklist,
+    categoryId: "time",
+  },
+  {
+    id: "holidays",
+    label: "Public holidays",
+    href: "/people/leave/holidays",
+    icon: FileCheck,
     categoryId: "time",
   },
   {

@@ -2680,6 +2680,7 @@ enum ApprovalTargetType {
   SETTLEMENT_INTAKE
   SETTLEMENT_RUN
   SETTLEMENT_BATCH
+  LEAVE_REQUEST
 }
 
 enum ApprovalActionType {
