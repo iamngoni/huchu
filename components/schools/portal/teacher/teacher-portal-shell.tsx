@@ -9,6 +9,7 @@ import {
   BarChart3,
   Bell,
   Calendar,
+  ChatCircle,
   CheckCircle,
   ClipboardList,
   Clock,
@@ -37,6 +38,7 @@ const TITLES: Record<string, string> = {
   "/portal/teacher/attendance": "Mark the register",
   "/portal/teacher/marks": "Enter marks",
   "/portal/teacher/marks-book": "Marks book",
+  "/portal/teacher/messages": "Messages",
   "/portal/teacher/timetable": "Your week",
   "/portal/teacher/lessons": "Lesson plans",
   "/portal/teacher/homework": "Homework and tasks",
@@ -53,6 +55,7 @@ const DAILY = [
   { href: "/portal/teacher/attendance", label: "Attendance", icon: CheckCircle },
   { href: "/portal/teacher/marks", label: "Enter marks", icon: EditSquare },
   { href: "/portal/teacher/marks-book", label: "Marks book", icon: Grid3x3 },
+  { href: "/portal/teacher/messages", label: "Messages", icon: ChatCircle },
   { href: "/portal/teacher/timetable", label: "Timetable", icon: Calendar },
   { href: "/portal/teacher/lessons", label: "Lesson plans", icon: Layers },
 ];
@@ -79,6 +82,7 @@ const ACCOUNT = [
 const TABS = [
   { href: "/portal/teacher", label: "Today", icon: Home },
   { href: "/portal/teacher/marks", label: "Marks", icon: EditSquare },
+  { href: "/portal/teacher/messages", label: "Messages", icon: ChatCircle },
   { href: "/portal/teacher/timetable", label: "Timetable", icon: Calendar },
   { href: "/portal/teacher/lessons", label: "Lessons", icon: Layers },
 ];
@@ -262,7 +266,7 @@ export function TeacherPortalShell({ children }: { children: React.ReactNode }) 
           <span aria-hidden className="pdot" />
           {isOffline ? "Offline" : "Online"}
         </span>
-        <Link href="/portal/teacher/marks" aria-label="Papers to mark" className="te-bell">
+        <Link href="/portal/teacher/messages" aria-label="Messages" className="te-bell">
           <Bell className="size-4" aria-hidden />
           {papers > 0 ? (
             <span className="ndot" aria-hidden>

@@ -129,6 +129,8 @@ model Company {
   schoolTeacherProfiles         SchoolTeacherProfile[]
   schoolSubjects                SchoolSubject[]
   schoolSchemesOfWork           SchoolSchemeOfWork[]
+  schoolMessageThreads          SchoolMessageThread[]
+  schoolMessages                SchoolMessage[]
   schoolClassSubjects           SchoolClassSubject[]
   schoolPublishWindows          SchoolPublishWindow[]
   schoolFeeStructures           SchoolFeeStructure[]
@@ -1047,6 +1049,7 @@ model User {
   crmWorkOrdersAssigned             CrmWorkOrder[]                 @relation("CrmWorkOrderAssignedTo")
   crmWorkOrdersCreated              CrmWorkOrder[]                 @relation("CrmWorkOrderCreatedBy")
   productsCreated                   Product[]                      @relation("ProductCreatedBy")
+  schoolMessagesSent                SchoolMessage[]
 
   @@index([companyId])
   @@index([email])
@@ -5591,6 +5594,74 @@ model SchoolSchemeOfWork {
   @@index([companyId, termId, subjectId, level])
 }
 
+/// A conversation between one family and one member of staff, about one pupil.
+///
+/// Two-party on purpose. Both prototypes show the same thing — a parent's
+/// "Messages from teachers" and a teacher's "Parent messages", each a list of
+/// people rather than of rooms — and a school's messaging answers to a
+/// safeguarding question that group chat makes unanswerable: who could read
+/// this. Two named participants and a named child is a record the office can
+/// hand to a governor.
+///
+/// `teacherProfileId` null means the thread is with the office rather than with
+/// a teacher, which is what "Write to the school" sends.
+model SchoolMessageThread {
+  id               String    @id @default(uuid())
+  companyId        String
+  /// The pupil this is about. Null for a general enquiry to the office.
+  studentId        String?
+  guardianId       String
+  teacherProfileId String?
+  subject          String
+  /// Denormalised so an inbox can sort without reading every message.
+  lastMessageAt    DateTime  @default(now())
+  /// When each side last opened it. Unread is derived by comparing these with
+  /// message timestamps rather than kept as a counter, because a counter and
+  /// the messages it counts drift apart, and the badge is the thing people
+  /// trust.
+  guardianReadAt   DateTime?
+  staffReadAt      DateTime?
+  closedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  company        Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  student        SchoolStudent?        @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  guardian       SchoolGuardian        @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  teacherProfile SchoolTeacherProfile? @relation(fields: [teacherProfileId], references: [id], onDelete: SetNull)
+  messages       SchoolMessage[]
+
+  @@index([companyId, guardianId, lastMessageAt])
+  @@index([companyId, teacherProfileId, lastMessageAt])
+  @@index([companyId, lastMessageAt])
+  @@index([companyId, studentId])
+}
+
+/// One message in a thread. Never edited and never deleted: a school's record
+/// of what a parent was told has to still be true a year later.
+model SchoolMessage {
+  id           String            @id @default(uuid())
+  companyId    String
+  threadId     String
+  senderUserId String
+  /// Which side sent it, kept beside the sender so a reader does not have to
+  /// resolve a user to know whose message they are looking at.
+  senderSide   SchoolMessageSide
+  body         String
+  createdAt    DateTime          @default(now())
+
+  company Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  thread  SchoolMessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender  User                @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, threadId, createdAt])
+}
+
+enum SchoolMessageSide {
+  GUARDIAN
+  STAFF
+}
+
 model SchoolIdentitySettings {
   id        String   @id @default(uuid())
   companyId String   @unique
@@ -5792,6 +5863,7 @@ model SchoolTeacherProfile {
   coverAssignments SchoolCoverAssignment[] @relation("SchoolCoverTeacher")
   parentMeetings   SchoolParentMeeting[]   @relation("SchoolParentMeetingTeacher")
   teachingResources SchoolTeachingResource[] @relation("SchoolResourceUploader")
+  messageThreads    SchoolMessageThread[]
 
   @@unique([companyId, userId])
   @@unique([companyId, employeeCode])
@@ -5922,6 +5994,7 @@ model SchoolStudent {
   feeWaivers             SchoolFeeWaiver[]
   feeRefunds             SchoolFeeRefund[]
   portalInvites          SchoolPortalInvite[]
+  messageThreads         SchoolMessageThread[]
 
   @@unique([companyId, studentNo])
   @@unique([companyId, admissionNo])
@@ -5972,6 +6045,7 @@ model SchoolGuardian {
   portalInvites SchoolPortalInvite[]
 
   parentMeetings SchoolParentMeeting[]
+  messageThreads SchoolMessageThread[]
 
   @@unique([companyId, guardianNo])
   @@unique([companyId, userId])

@@ -135,6 +135,16 @@ export function ParentProfileScreen() {
 
       <div className="section-h">Your account</div>
       <div className="card-block boxed">
+        {/* Messaging has no tab of its own — the bottom bar is the demo's four
+            and a fifth would crowd a phone. It lives here, beside Help, which
+            is where a parent looks when they want to reach somebody. */}
+        <Link href="/portal/parent/messages" className="pl-row cl">
+          <span className="min-w-0 flex-1">
+            <span className="nm block">Messages</span>
+            <span className="sb block">Write to the school, and read replies</span>
+          </span>
+          <ChevronRight className="chev size-4" aria-hidden />
+        </Link>
         <Link href="/portal/parent/help" className="pl-row cl">
           <span className="min-w-0 flex-1">
             <span className="nm block">Help and common questions</span>
