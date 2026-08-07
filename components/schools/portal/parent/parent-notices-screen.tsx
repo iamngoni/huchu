@@ -44,8 +44,18 @@ function iconFor(notice: Notice) {
   return Bell;
 }
 
-/** The sender line the prototype shows. The type is what the pipeline knows. */
+/**
+ * The sender line the prototype shows.
+ *
+ * A notice the office sent is "From the school" — the enum behind it carries
+ * the audience, which is a fact about the *sending* and none of the reader's
+ * business: a parent looking at their own News tab already knows it was sent to
+ * parents, and "Notice parents" is machinery leaking onto their phone. Anything
+ * the system raised on its own keeps its humanised type, which is genuinely
+ * where it came from.
+ */
 function sourceOf(notice: Notice) {
+  if (notice.type.startsWith("SCHOOL_NOTICE_")) return "From the school";
   const words = notice.type.replace(/^SCHOOL_/, "").replace(/_/g, " ").toLowerCase();
   return words.charAt(0).toUpperCase() + words.slice(1);
 }

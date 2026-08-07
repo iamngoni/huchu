@@ -1908,6 +1908,14 @@ enum NotificationType {
   CRM_TASK_DUE
   CRM_MENTIONED
   CRM_COMMENT_ADDED
+  /// What a school sends its families and staff. The audience is part of the
+  /// type because a notice is addressed before it is written — "the Form 2
+  /// parents" is the first decision the office makes, not a filter applied
+  /// afterwards — and the reader parses it back out to label the row.
+  SCHOOL_NOTICE_ALL
+  SCHOOL_NOTICE_PARENTS
+  SCHOOL_NOTICE_STUDENTS
+  SCHOOL_NOTICE_TEACHERS
 }
 
 enum NotificationSeverity {
