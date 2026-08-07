@@ -8,7 +8,13 @@ const FEATURE_DEPENDENCIES: Record<string, string[]> = {
   "gold.exceptions": ["gold.home"],
   "gold.audit-trail": ["gold.home"],
   "gold.payouts": ["gold.home"],
-  "hr.settlements": ["hr.employees"],
+  // Settlements need somebody to settle with, and gold settlements need the gold
+  // allocations they read. Deliberately NOT dependent on `hr.payroll`: a yard that
+  // settles scrap in cash and keeps no payroll at all is a real customer, and the
+  // old `hr.settlements` key forced them to buy a payroll they never opened.
+  "settlements.core": ["hr.employees"],
+  "settlements.gold": ["settlements.core", "gold.payouts"],
+  "settlements.scrap": ["settlements.core"],
   // Payroll without an employee directory is runs against nobody.
   "hr.payroll": ["hr.employees"],
   "hr.compensation-rules": ["hr.employees"],

@@ -168,10 +168,12 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
       // A school that wants to pay its teachers from the same `Employee` rows
       // the timetable already uses now can, by buying the addon.
       //
-      // `hr.settlements` is different and stays blocked: it is the gold and scrap
-      // settlement surface, which a school has no use for and which would render
+      // The settlement keys are different and stay blocked: they are the gold and
+      // scrap payout surface, which a school has no use for and which would render
       // payout screens for commodities it does not handle.
-      "hr.settlements",
+      "settlements.core",
+      "settlements.gold",
+      "settlements.scrap",
       "maintenance.dashboard",
       "maintenance.equipment",
       "maintenance.work-orders",
@@ -362,9 +364,11 @@ export const CLIENT_BUNDLE_TEMPLATES: ClientBundleTemplateDefinition[] = [
       "gold.exceptions",
       "gold.audit-trail",
       "gold.payouts",
-      // The gold and scrap settlement surface. A bureau paying salaries has no
-      // commodity to settle, and the screens would be empty tabs.
-      "hr.settlements",
+      // A bureau paying salaries has no commodity to settle, and the screens
+      // would be empty tabs.
+      "settlements.core",
+      "settlements.gold",
+      "settlements.scrap",
       "schools.core",
       "retail.core",
       "retail.pos",

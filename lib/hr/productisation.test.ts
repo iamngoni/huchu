@@ -248,12 +248,17 @@ describe("the addon path", () => {
   });
 
   it("still blocks the settlement surface a school has no use for", () => {
-    // `hr.settlements` is the gold and scrap payout screens. Unblocking it along
-    // with the rest would give a school empty tabs for commodities it does not
-    // handle.
-    expect(getClientTemplateDisabledFeatureKeys("TEMPLATE_SCHOOLS")).toContain(
-      "hr.settlements",
-    );
+    // The settlement keys are the gold and scrap payout screens. Unblocking them
+    // along with the rest of HR would give a school empty tabs for commodities it
+    // does not handle.
+    //
+    // These used to be one key, `hr.settlements` — a mining concept in the HR
+    // namespace, which is why `/scrap-metal/settlements` was gated on an HR key
+    // and why every Advanced Payroll customer was sold a gold payout screen.
+    const disabled = getClientTemplateDisabledFeatureKeys("TEMPLATE_SCHOOLS");
+    expect(disabled).toContain("settlements.core");
+    expect(disabled).toContain("settlements.gold");
+    expect(disabled).toContain("settlements.scrap");
   });
 });
 

@@ -17,6 +17,7 @@ export type FeatureDomain =
   | "crm"
   | "portal"
   | "reports"
+  | "settlements"
   | "admin";
 
 export interface FeatureCatalogEntry {
@@ -118,7 +119,6 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
   f({ key: "hr.payroll", name: "Payroll", description: "Payroll periods and runs.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 5 }),
   f({ key: "hr.disbursements", name: "Disbursements", description: "Cash disbursement batch operations.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 3 }),
   f({ key: "hr.approvals-history", name: "Approvals History", description: "Approval history and audit approvals.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 2 }),
-  f({ key: "hr.settlements", name: "HR Settlements", description: "Settlement workflows in HR for gold, scrap, retail, commission, dividends, and other variable settlements.", domain: "hr", defaultEnabled: false, isBillable: true, monthlyPrice: 2 }),
   // Zimbabwe statutory payroll. Separate keys because they are separately
   // sellable: a company outside Zimbabwe wants the payroll engine without the
   // ZIMRA returns, and a company that keeps its own books wants the payslips
@@ -177,6 +177,14 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
   f({ key: "schools.portal.parent", name: "Parent Portal", description: "Parent portal access for student progress and finance visibility.", domain: "schools", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "schools.portal.student", name: "Student Portal", description: "Student portal access for own timetable, attendance, and results.", domain: "schools", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "schools.portal.teacher", name: "Teacher Portal", description: "Teacher portal access for registers, marks, and moderation tasks.", domain: "schools", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
+
+  // Commodity and variable settlements: paying somebody for a quantity of
+  // something rather than for a period of employment. Its own domain, not HR's,
+  // because a payroll module has to be sellable without it and a mine's site
+  // manager who approves a settlement has no business in the salary bill.
+  f({ key: "settlements.core", name: "Settlements", description: "Settlement intakes, runs and payouts for quantity-based pay.", domain: "settlements", defaultEnabled: false, isBillable: true, monthlyPrice: 3 }),
+  f({ key: "settlements.gold", name: "Gold Settlements", description: "Settling gold shift allocations by weight, valued at the price agreed upstream.", domain: "settlements", defaultEnabled: false, isBillable: true, monthlyPrice: 2 }),
+  f({ key: "settlements.scrap", name: "Scrap Settlements", description: "Settling scrap balances by weight.", domain: "settlements", defaultEnabled: false, isBillable: true, monthlyPrice: 2 }),
 
   f({ key: "autos.core", name: "Auto Sales Core", description: "Auto sales module landing and shared setup.", domain: "autos", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
   f({ key: "autos.inventory", name: "Vehicle Inventory", description: "Vehicle stock catalog and inventory lifecycle.", domain: "autos", defaultEnabled: false, isBillable: true, monthlyPrice: 0 }),
@@ -343,7 +351,9 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
       "hr.disciplinary-actions",
       "hr.salaries",
       "hr.approvals-history",
-      "hr.settlements",
+      // `hr.settlements` used to ride in here, so every payroll customer was sold
+      // a gold-and-scrap settlement surface whether or not they had a commodity.
+      // Settlements are their own addon now.
       "admin.payroll-config",
     ],
   },
@@ -368,6 +378,19 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
       "hr.payslips",
       "hr.employee-self-service",
     ],
+  },
+  {
+    // Paying for a quantity rather than a period. Sold separately from payroll
+    // because most payroll customers have no commodity to settle, and sold as one
+    // addon covering every source because the intake, the run and the payout are
+    // the same machinery whether the quantity is grams or kilos.
+    code: "ADDON_COMMODITY_SETTLEMENTS",
+    name: "Commodity Settlements",
+    description:
+      "Settling gold, scrap, commission and other quantity-based pay, with its own approval chain and payouts.",
+    monthlyPrice: 29,
+    additionalSiteMonthlyPrice: 5,
+    features: ["settlements.core", "settlements.gold", "settlements.scrap"],
   },
   {
     code: "ADDON_GOLD_ADVANCED",
