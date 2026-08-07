@@ -383,3 +383,121 @@ describe("bookMeeting", () => {
     ).rejects.toThrow(/already free/);
   });
 });
+
+describe("meetingSchedule", () => {
+  let secondTeacherProfileId: string;
+
+  beforeAll(async () => {
+    const user = await prisma.user.create({
+      data: {
+        companyId,
+        email: `goals-teacher-2-${Date.now()}@test.test`,
+        name: "Mr Moyo",
+        role: "TEACHER",
+      },
+    });
+    secondTeacherProfileId = (
+      await prisma.schoolTeacherProfile.create({
+        data: { companyId, userId: user.id, employeeCode: "T002" },
+      })
+    ).id;
+  });
+
+  it("returns every teacher's evening when no teacher is named", async () => {
+    // The office runs a parents' evening across the whole staff room. A
+    // schedule that could only be asked for one teacher at a time would make
+    // "who still has free slots on Thursday" a question nobody can answer
+    // without opening thirty screens.
+    await openMeetingSlots({
+      companyId,
+      teacherProfileId,
+      from: at("2026-03-12T17:00"),
+      to: at("2026-03-12T17:30"),
+      minutesEach: 10,
+    });
+    await openMeetingSlots({
+      companyId,
+      teacherProfileId: secondTeacherProfileId,
+      from: at("2026-03-12T17:00"),
+      to: at("2026-03-12T17:20"),
+      minutesEach: 10,
+    });
+
+    const schedule = await meetingSchedule({
+      companyId,
+      from: at("2026-03-12T00:00"),
+      to: at("2026-03-13T00:00"),
+    });
+    expect(schedule).toHaveLength(5);
+    expect(new Set(schedule.map((slot) => slot.teacherProfile.id))).toEqual(
+      new Set([teacherProfileId, secondTeacherProfileId]),
+    );
+
+    // Naming one teacher still narrows to theirs, so the teacher's own screen
+    // is unaffected by the office being able to see everybody's.
+    const mine = await meetingSchedule({
+      companyId,
+      teacherProfileId: secondTeacherProfileId,
+      from: at("2026-03-12T00:00"),
+      to: at("2026-03-13T00:00"),
+    });
+    expect(mine).toHaveLength(2);
+  });
+
+  it("names the guardian on a booked slot, not only the pupil", async () => {
+    // A cancellation is chased by ringing an adult. The child's name and
+    // student number cannot be dialled, so a schedule that carried only the
+    // pupil left the office looking the guardian up by hand for every row.
+    counter += 1;
+    const guardian = await prisma.schoolGuardian.create({
+      data: {
+        companyId,
+        guardianNo: `PG${String(counter).padStart(4, "0")}`,
+        firstName: "Rudo",
+        lastName: "Chikafu",
+        phone: "0772000111",
+      },
+      select: { id: true },
+    });
+
+    await openMeetingSlots({
+      companyId,
+      teacherProfileId,
+      from: at("2026-03-13T17:00"),
+      to: at("2026-03-13T17:20"),
+      minutesEach: 10,
+    });
+    const slots = await prisma.schoolParentMeeting.findMany({
+      where: { companyId, startsAt: { gte: at("2026-03-13T00:00") } },
+      orderBy: { startsAt: "asc" },
+      select: { id: true },
+    });
+    await bookMeeting({
+      companyId,
+      meetingId: slots[0]!.id,
+      studentId: studentAId,
+      guardianId: guardian.id,
+    });
+
+    const schedule = await meetingSchedule({
+      companyId,
+      from: at("2026-03-13T00:00"),
+      to: at("2026-03-14T00:00"),
+    });
+    const booked = schedule.find((slot) => slot.bookedAt !== null);
+    expect(booked?.guardian).toMatchObject({
+      firstName: "Rudo",
+      lastName: "Chikafu",
+      phone: "0772000111",
+    });
+    // The pupil still carries their class, which is what lets the office
+    // filter an evening down to one year group.
+    expect(booked?.student?.currentClass?.id).toBe(classId);
+
+    // And the free slot alongside it names nobody at all — that is the row a
+    // parent can still take.
+    const free = schedule.find((slot) => slot.bookedAt === null);
+    expect(free?.guardian).toBeNull();
+    expect(free?.student).toBeNull();
+  });
+});

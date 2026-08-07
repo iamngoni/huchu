@@ -8,6 +8,7 @@ import {
   Camera,
   ChartLine,
   Checklist,
+  ClipboardList,
   Coins,
   Dashboard,
   Dataset,
@@ -26,6 +27,7 @@ import {
   ReceiptLong,
   ReportProblem,
   TableRows,
+  TrendingUp,
   Home,
   Package,
   PackageCheck,
@@ -292,6 +294,9 @@ export const navSections: NavSection[] = [
       { href: "/schools/academics/identity", icon: UserRound, label: "Identity and records", group: "academics" },
 
       { href: "/schools/timetable", icon: Calendar, label: "Timetable" },
+      { href: "/schools/homework", icon: ClipboardList, label: "Homework" },
+      { href: "/schools/goals", icon: TrendingUp, label: "Subject targets" },
+      { href: "/schools/meetings", icon: CalendarCheck, label: "Parent meetings" },
 
       { href: "/schools/results", icon: FileCheck, label: "Results overview", group: "results" },
       { href: "/schools/results/sheets", icon: Checklist, label: "Result sheets", group: "results" },

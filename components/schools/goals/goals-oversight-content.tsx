@@ -1,0 +1,334 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useQuery } from "@tanstack/react-query";
+import { Badge, StatCard } from "@corelithzw/react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DataTable } from "@/components/ui/data-table";
+import { NumericCell } from "@/components/ui/numeric-cell";
+import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
+import { PersonAvatar } from "@/components/schools/common/person-avatar";
+import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import {
+  fetchSchoolsClasses,
+  fetchSchoolsSubjects,
+  fetchSchoolsTerms,
+} from "@/lib/schools/admin-v2";
+
+type GoalRow = {
+  studentId: string;
+  studentNo: string;
+  firstName: string;
+  lastName: string;
+  classId: string | null;
+  className: string | null;
+  streamName: string | null;
+  subject: { id: string; code: string; name: string } | null;
+  /** Null means nobody has set this child a target — the row that matters. */
+  goalId: string | null;
+  targetMark: number | null;
+  baselineMark: number | null;
+  currentMark: number | null;
+  onTrack: boolean | null;
+  achievedAt: string | null;
+  plan: string | null;
+  teacherNote: string | null;
+};
+
+type GoalsOversightResponse = {
+  termId: string;
+  rows: GoalRow[];
+  summary: {
+    onRoll: number;
+    withGoal: number;
+    withoutGoal: number;
+    onTrack: number;
+    goals: number;
+  };
+};
+
+const STANDING_OPTIONS = [
+  { value: "MISSING", label: "No target set" },
+  { value: "ON_TRACK", label: "At or above target" },
+  { value: "BEHIND", label: "Below target" },
+  { value: "NO_MARK", label: "Target set, no mark yet" },
+];
+
+function percent(value: number | null) {
+  return value === null ? "—" : `${Math.round(value)}%`;
+}
+
+/** Where one row stands, drawn only from what the data actually supports. */
+function standingOf(row: GoalRow) {
+  if (row.goalId === null) return "MISSING";
+  if (row.onTrack === true) return "ON_TRACK";
+  if (row.onTrack === false) return "BEHIND";
+  return "NO_MARK";
+}
+
+function standingBadge(row: GoalRow) {
+  const standing = standingOf(row);
+  if (standing === "MISSING") return <Badge tone="danger">No target</Badge>;
+  if (standing === "ON_TRACK") return <Badge tone="success">At target</Badge>;
+  if (standing === "BEHIND") return <Badge tone="warn">Below target</Badge>;
+  // A missing mark says nothing about how the goal is going, so it is not a
+  // warning. Reading it as "behind" would put a child on a chase list over a
+  // test nobody has marked.
+  return <Badge tone="neutral">No mark yet</Badge>;
+}
+
+/**
+ * Who is aiming at what, and — the point of the screen — who has been missed.
+ *
+ * A goals list built from the goals table can only show the children somebody
+ * has already thought about. The head's question is the other one: which
+ * pupils have no target at all. So the rows start from the roll and a pupil
+ * with nothing set is a row saying so, in the same way the homework board
+ * counts against the class list rather than against the submissions.
+ *
+ * With a subject chosen the gap narrows honestly to pupils in classes that
+ * actually take it this term. A Form 1 pupil is not "missing" an A-level
+ * Biology target, and a to-do list with invented entries on it is one nobody
+ * will work through.
+ */
+export function GoalsOversightContent() {
+  const [termId, setTermId] = useState("");
+  const [classId, setClassId] = useState("");
+  const [subjectId, setSubjectId] = useState("");
+  const [standing, setStanding] = useState("");
+
+  const termsQuery = useQuery({
+    queryKey: ["schools", "terms", "goals-oversight"],
+    queryFn: () => fetchSchoolsTerms({ page: 1, limit: 100 }),
+  });
+  const classesQuery = useQuery({
+    queryKey: ["schools", "grades", "goals-oversight"],
+    queryFn: () => fetchSchoolsClasses({ page: 1, limit: 200 }),
+  });
+  const subjectsQuery = useQuery({
+    queryKey: ["schools", "subjects", "goals-oversight"],
+    queryFn: () => fetchSchoolsSubjects({ page: 1, limit: 200 }),
+  });
+
+  const query = useQuery({
+    queryKey: ["schools", "goals", "oversight", termId, classId, subjectId],
+    queryFn: () =>
+      fetchJson<GoalsOversightResponse>(
+        `/api/v2/schools/goals/oversight?${new URLSearchParams({
+          ...(termId ? { termId } : {}),
+          ...(classId ? { classId } : {}),
+          ...(subjectId ? { subjectId } : {}),
+        }).toString()}`,
+      ),
+  });
+
+  const termOptions = useMemo(
+    () =>
+      (termsQuery.data?.data ?? []).map((term) => ({
+        value: term.id,
+        label: `${term.name} · ${term.academicYear.name}`,
+      })),
+    [termsQuery.data],
+  );
+  const classOptions = useMemo(
+    () =>
+      (classesQuery.data?.data ?? []).map((row) => ({
+        value: row.id,
+        label: row.name,
+      })),
+    [classesQuery.data],
+  );
+  const subjectOptions = useMemo(
+    () =>
+      (subjectsQuery.data?.data ?? []).map((row) => ({
+        value: row.id,
+        label: row.name,
+      })),
+    [subjectsQuery.data],
+  );
+
+  const summary = query.data?.summary;
+  const rows = useMemo(() => {
+    const all = query.data?.rows ?? [];
+    if (!standing) return all;
+    return all.filter((row) => standingOf(row) === standing);
+  }, [query.data, standing]);
+
+  const columns = useMemo<ColumnDef<GoalRow>[]>(
+    () => [
+      {
+        id: "pupil",
+        header: "Pupil",
+        cell: ({ row }) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <PersonAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+            />
+            <div className="min-w-0">
+              <div className="font-medium">
+                {row.original.firstName} {row.original.lastName}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {row.original.studentNo}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "class",
+        header: "Class",
+        cell: ({ row }) => (
+          <span className="text-sm">
+            {row.original.className ?? "Not placed"}
+            {row.original.streamName ? ` · ${row.original.streamName}` : ""}
+          </span>
+        ),
+      },
+      {
+        id: "subject",
+        header: "Subject",
+        cell: ({ row }) => (
+          <span className="text-sm">
+            {row.original.subject?.name ?? "Every subject"}
+          </span>
+        ),
+      },
+      {
+        id: "target",
+        header: "Target",
+        cell: ({ row }) =>
+          row.original.goalId === null ? (
+            <NumericCell className="text-[color:var(--tone-danger)]">
+              Not set
+            </NumericCell>
+          ) : (
+            <NumericCell>{percent(row.original.targetMark)}</NumericCell>
+          ),
+      },
+      {
+        id: "standing",
+        header: "Now",
+        cell: ({ row }) => (
+          <NumericCell
+            className={
+              row.original.onTrack === true
+                ? "text-[color:var(--tone-success)]"
+                : row.original.onTrack === false
+                  ? "text-[color:var(--tone-warn)]"
+                  : undefined
+            }
+          >
+            {percent(row.original.currentMark)}
+          </NumericCell>
+        ),
+      },
+      {
+        id: "plan",
+        header: "How they will get there",
+        cell: ({ row }) => (
+          <span className="line-clamp-1 text-xs text-muted-foreground">
+            {row.original.plan ?? row.original.teacherNote ?? "—"}
+          </span>
+        ),
+      },
+      {
+        id: "state",
+        header: "State",
+        cell: ({ row }) => standingBadge(row.original),
+      },
+    ],
+    [],
+  );
+
+  return (
+    <div className="space-y-4">
+      {query.error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Unable to load the targets</AlertTitle>
+          <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard
+          label="Pupils with a target"
+          value={query.isPending ? "—" : (summary?.withGoal ?? 0)}
+          footer={
+            query.isPending ? "Counting…" : `of ${summary?.onRoll ?? 0} on the roll`
+          }
+        />
+        <StatCard
+          label="Pupils with none"
+          value={query.isPending ? "—" : (summary?.withoutGoal ?? 0)}
+          tone="danger"
+          footer="Nobody has set these children anything"
+        />
+        <StatCard
+          label="At or above target"
+          value={query.isPending ? "—" : (summary?.onTrack ?? 0)}
+          tone="success"
+          footer="Counted only where there is a mark to compare"
+        />
+      </div>
+
+      <FilterBar>
+        <FilterSelect
+          label="Term"
+          allLabel="This term"
+          value={termId}
+          options={termOptions}
+          onChange={setTermId}
+        />
+        <FilterSelect
+          label="Year group"
+          allLabel="Every year"
+          value={classId}
+          options={classOptions}
+          onChange={setClassId}
+        />
+        <FilterSelect
+          label="Subject"
+          allLabel="Every subject"
+          value={subjectId}
+          options={subjectOptions}
+          onChange={setSubjectId}
+        />
+        <FilterSelect
+          label="Standing"
+          allLabel="Everyone"
+          value={standing}
+          options={STANDING_OPTIONS}
+          onChange={setStanding}
+        />
+      </FilterBar>
+
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Search pupil, class or subject"
+        searchSubmitLabel="Search"
+        pagination={{ enabled: true }}
+        rowGroup={(row) =>
+          row.className
+            ? { key: row.className, label: row.className }
+            : { key: "unplaced", label: "Not placed in a class" }
+        }
+        emptyState={
+          query.isPending
+            ? "Reading the roll…"
+            : query.error
+              ? "Nothing to show while the targets cannot be loaded."
+              : standing
+                ? "Nobody in that state. Widen the filters to see the rest of the roll."
+                : subjectId
+                  ? "No class takes that subject this term, so there is nobody to have a target in it."
+                  : "Nobody is on the roll this term, so there is nobody to set a target for."
+        }
+      />
+    </div>
+  );
+}

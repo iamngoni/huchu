@@ -479,6 +479,21 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
         refs: [{ moduleId: "schools", href: "/schools/timetable" }],
       },
       {
+        id: "schools-homework",
+        title: "Homework",
+        refs: [{ moduleId: "schools", href: "/schools/homework" }],
+      },
+      {
+        id: "schools-goals",
+        title: "Subject targets",
+        refs: [{ moduleId: "schools", href: "/schools/goals" }],
+      },
+      {
+        id: "schools-meetings",
+        title: "Parent meetings",
+        refs: [{ moduleId: "schools", href: "/schools/meetings" }],
+      },
+      {
         id: "schools-results",
         title: "Results",
         refs: [

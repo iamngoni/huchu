@@ -35,6 +35,7 @@ const TITLES: Record<string, string> = {
   "/portal/parent/attendance": "Attendance",
   "/portal/parent/marks": "Marks",
   "/portal/parent/notices": "School news",
+  "/portal/parent/messages": "Messages",
   "/portal/parent/profile": "Your details",
   "/portal/parent/help": "Help",
 };

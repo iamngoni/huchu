@@ -277,3 +277,210 @@ export async function assignmentBoard(input: {
     },
   };
 }
+
+/** Where one piece of homework stands, from the office's point of view. */
+export type AssignmentState = "DRAFT" | "SET" | "DUE_WEEK" | "OVERDUE";
+
+export type AssignmentOversightRow = {
+  id: string;
+  title: string;
+  dueAt: Date | null;
+  setOn: Date;
+  isPublished: boolean;
+  classSubjectId: string;
+  classId: string;
+  className: string;
+  streamName: string | null;
+  subjectId: string;
+  subjectName: string;
+  teacherName: string | null;
+  /** Everybody the work was set to, handed in or not. */
+  onRoll: number;
+  handedIn: number;
+  late: number;
+  marked: number;
+  state: AssignmentState;
+};
+
+/** Monday 00:00 of the week containing `now`, in UTC. */
+function weekStart(now: Date) {
+  const start = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  const day = start.getUTCDay();
+  // Sunday is 0 and a school week starts on Monday.
+  start.setUTCDate(start.getUTCDate() - (day === 0 ? 6 : day - 1));
+  return start;
+}
+
+/**
+ * Every piece of homework in the term, across every class, with what came back.
+ *
+ * `/api/v2/schools/assignments` counts submissions; the teacher portal counts
+ * them against one teacher's roll. Neither answers the head's question, which
+ * is asked about the whole school at once: what has been set, what is due, and
+ * which class is drowning. "Nobody handed this in" and "nobody is in the class"
+ * are the same zero in a submission count, so the roll travels with every row —
+ * that is the number that makes 4 of 32 read differently from 4 of 5.
+ *
+ * State is derived here rather than stored, because it is a fact about today,
+ * not about the homework: yesterday's "due this week" is today's "overdue"
+ * without anybody editing anything.
+ */
+export async function assignmentOversight(input: {
+  companyId: string;
+  termId: string;
+  classId?: string;
+  subjectId?: string;
+  /** Injectable so the tests are not hostage to the day they run on. */
+  now?: Date;
+}) {
+  const now = input.now ?? new Date();
+  const from = weekStart(now);
+  const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const assignments = await prisma.schoolAssignment.findMany({
+    where: {
+      companyId: input.companyId,
+      termId: input.termId,
+      classSubject: {
+        ...(input.classId ? { classId: input.classId } : {}),
+        ...(input.subjectId ? { subjectId: input.subjectId } : {}),
+      },
+    },
+    select: {
+      id: true,
+      title: true,
+      dueAt: true,
+      createdAt: true,
+      isPublished: true,
+      classSubjectId: true,
+      classSubject: {
+        select: {
+          classId: true,
+          streamId: true,
+          class: { select: { id: true, name: true, level: true } },
+          stream: { select: { id: true, name: true } },
+          subject: { select: { id: true, name: true } },
+          teacherProfile: { select: { user: { select: { name: true } } } },
+        },
+      },
+    },
+    // Soonest deadline first: the question is "what is due". Postgres sorts
+    // nulls last on ascending, so reading set over the holidays sits at the
+    // bottom where it belongs.
+    orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+    take: 500,
+  });
+
+  if (assignments.length === 0) {
+    return {
+      rows: [] as AssignmentOversightRow[],
+      summary: { open: 0, dueThisWeek: 0, overdue: 0, onRoll: 0, handedIn: 0 },
+      week: { from, to },
+    };
+  }
+
+  const [counts, sizes] = await Promise.all([
+    prisma.schoolAssignmentSubmission.groupBy({
+      by: ["assignmentId", "status"],
+      where: {
+        companyId: input.companyId,
+        assignmentId: { in: assignments.map((row) => row.id) },
+      },
+      _count: { _all: true },
+    }),
+    prisma.schoolStudent.groupBy({
+      by: ["currentClassId", "currentStreamId"],
+      where: {
+        companyId: input.companyId,
+        status: "ACTIVE",
+        currentClassId: {
+          in: [...new Set(assignments.map((row) => row.classSubject.classId))],
+        },
+      },
+      _count: { _all: true },
+    }),
+  ]);
+
+  // A subject taught to a whole form counts the form; taught to one stream, it
+  // counts that stream. Same rule as the register and the teacher's rail, so
+  // three screens cannot disagree about how many children are in Form 2A.
+  const rollFor = (classId: string, streamId: string | null) =>
+    streamId
+      ? (sizes.find(
+          (row) => row.currentClassId === classId && row.currentStreamId === streamId,
+        )?._count._all ?? 0)
+      : sizes
+          .filter((row) => row.currentClassId === classId)
+          .reduce((total, row) => total + row._count._all, 0);
+
+  const rows: AssignmentOversightRow[] = assignments.map((assignment) => {
+    const mine = counts.filter((row) => row.assignmentId === assignment.id);
+    const handedIn = mine.reduce((total, row) => total + row._count._all, 0);
+    const countOf = (status: SubmissionStatus) =>
+      mine.find((row) => row.status === status)?._count._all ?? 0;
+    const onRoll = rollFor(
+      assignment.classSubject.classId,
+      assignment.classSubject.streamId,
+    );
+
+    const due = assignment.dueAt;
+    let state: AssignmentState;
+    if (!assignment.isPublished) {
+      // A draft has not been set. Counting it as open would tell a head the
+      // class has work it cannot see.
+      state = "DRAFT";
+    } else if (due && due.getTime() < now.getTime() && handedIn < onRoll) {
+      // Overdue means the deadline has passed *and* work is still missing.
+      // A class that all handed in on Friday is finished, not in trouble.
+      state = "OVERDUE";
+    } else if (due && due.getTime() >= from.getTime() && due.getTime() < to.getTime()) {
+      state = "DUE_WEEK";
+    } else {
+      state = "SET";
+    }
+
+    return {
+      id: assignment.id,
+      title: assignment.title,
+      dueAt: assignment.dueAt,
+      setOn: assignment.createdAt,
+      isPublished: assignment.isPublished,
+      classSubjectId: assignment.classSubjectId,
+      classId: assignment.classSubject.class.id,
+      className: assignment.classSubject.class.name,
+      streamName: assignment.classSubject.stream?.name ?? null,
+      subjectId: assignment.classSubject.subject.id,
+      subjectName: assignment.classSubject.subject.name,
+      teacherName: assignment.classSubject.teacherProfile.user.name,
+      onRoll,
+      handedIn,
+      late: countOf("LATE"),
+      // `RETURNED` only, matching `assignmentBoard`: work sent back to be done
+      // again has been read, but it is not finished with.
+      marked: countOf("RETURNED"),
+      state,
+    };
+  });
+
+  const published = rows.filter((row) => row.state !== "DRAFT");
+
+  return {
+    rows,
+    summary: {
+      /** Set and not yet past its deadline — the work currently running. */
+      open: published.filter((row) => row.state !== "OVERDUE").length,
+      dueThisWeek: published.filter(
+        (row) =>
+          row.dueAt !== null &&
+          row.dueAt.getTime() >= from.getTime() &&
+          row.dueAt.getTime() < to.getTime(),
+      ).length,
+      overdue: published.filter((row) => row.state === "OVERDUE").length,
+      onRoll: published.reduce((total, row) => total + row.onRoll, 0),
+      handedIn: published.reduce((total, row) => total + row.handedIn, 0),
+    },
+    week: { from, to },
+  };
+}
