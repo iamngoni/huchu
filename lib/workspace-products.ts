@@ -6,6 +6,10 @@ export const WORKSPACE_PROFILES = [
   "SCHOOLS",
   "AUTOS",
   "RETAIL",
+  // A client who bought nothing but payroll. Without its own profile they land
+  // on the general dashboard, which for them is eight dead tiles and no way to
+  // reach the thing they paid for.
+  "PAYROLL",
   "GENERAL",
 ] as const;
 
@@ -35,6 +39,7 @@ export type VerticalProductId =
   | "crm-sales"
   | "service-workshop"
   | "multi-site-operations"
+  | "payroll-services"
   | "general-business";
 
 type ModuleCopyOverride = {
@@ -349,6 +354,27 @@ export const VERTICAL_PRODUCT_BUNDLES: VerticalProductBundleDefinition[] = [
     },
   },
   {
+    // Payroll on its own. The whole product for a client who wants nothing else:
+    // HR is primary, accounting and management are foundational — and
+    // `foundationalModules` is not the same as required. A payroll-only tenant
+    // that never buys `accounting.core` still runs payroll; the run completes,
+    // posts nothing, and says so.
+    id: "payroll-services",
+    label: "Payroll Services",
+    workspaceLabel: "Payroll",
+    description: "",
+    customerExamples: [
+      "Payroll bureaux",
+      "Accounting practices running client payrolls",
+      "Companies that want payroll only",
+    ],
+    templateCodes: ["TEMPLATE_PAYROLL_BUREAU"],
+    // Without this a payroll-only client lands on a dashboard of dead tiles.
+    preferredHomeHref: "/human-resources",
+    primaryModules: ["hr"],
+    foundationalModules: ["accounting", "management"],
+  },
+  {
     id: "general-business",
     label: "General Business",
     workspaceLabel: "General Business",
@@ -375,6 +401,14 @@ export function normalizeWorkspaceProfileInput(
   if (normalized === "GOLD" || normalized === "GOLD-MINE" || normalized === "GOLDMINE") return "GOLD_MINE";
   if (normalized === "SCHOOL" || normalized === "SCHOOLS") return "SCHOOLS";
   if (normalized === "THRIFT") return "RETAIL";
+  if (
+    normalized === "PAYROLL_BUREAU" ||
+    normalized === "PAYROLL-BUREAU" ||
+    normalized === "BUREAU" ||
+    normalized === "HR"
+  ) {
+    return "PAYROLL";
+  }
   if (
     normalized === "AUTO" ||
     normalized === "CAR_SALES" ||
@@ -434,6 +468,19 @@ export function inferWorkspaceProfileFromEnabledFeatures(
     return "GOLD_MINE";
   }
 
+  // 6. Payroll only. Checked last on purpose: HR is foundational to every
+  // vertical above, so `hr.payroll` alone is a payroll-only workspace but
+  // `hr.payroll` beside `schools.core` is a school that also runs payroll — and
+  // the ordering here is what tells them apart. Requires the statutory keys, so
+  // an ordinary tenant that merely has payroll switched on is not misread as a
+  // bureau.
+  if (
+    hasTokenFeature(enabledFeatures, "hr.payroll") &&
+    hasTokenFeature(enabledFeatures, "hr.statutory-tables")
+  ) {
+    return "PAYROLL";
+  }
+
   return null;
 }
 
@@ -484,6 +531,8 @@ export function resolveWorkspaceVerticalProductBundle(
       return getBundleById("auto-sales");
     case "RETAIL":
       return getBundleById("retail-operations");
+    case "PAYROLL":
+      return getBundleById("payroll-services");
     case "GENERAL":
     default:
       return getBundleById(resolveGeneralVerticalProduct(args.enabledFeatures));

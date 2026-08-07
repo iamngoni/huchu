@@ -112,6 +112,9 @@ const PROFILE_OWNER_MODULES: Record<Exclude<WorkspaceProfile, "GENERAL">, Worksp
   SCHOOLS: "schools",
   AUTOS: "car-sales",
   RETAIL: "retail",
+  // The only profile whose owning module is one every other profile treats as
+  // foundational. For a bureau, HR is not a supporting module — it is the product.
+  PAYROLL: "hr",
 };
 const WORKSPACE_PROFILE_ICONS: Record<WorkspaceProfile, LucideIcon> = {
   GOLD_MINE: Gem,
@@ -119,6 +122,7 @@ const WORKSPACE_PROFILE_ICONS: Record<WorkspaceProfile, LucideIcon> = {
   SCHOOLS: MedusaAcademicCapIcon,
   AUTOS: MedusaDirectionsIcon,
   RETAIL: MedusaBuildingStorefrontIcon,
+  PAYROLL: Payments,
   GENERAL: Dashboard,
 };
 const WORKSPACE_MODULE_ORDER: readonly WorkspaceModuleId[] = [
@@ -613,6 +617,39 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
       },
     ],
   },
+  PAYROLL: {
+    label: "Payroll",
+    // Somewhere real to land. A bureau sent to the general dashboard sees eight
+    // tiles for modules it does not have.
+    preferredHomeHref: "/human-resources",
+    nativeModules: ["hr", "accounting", "management"],
+    sections: [
+      {
+        id: "payroll-month-end",
+        title: "Month end",
+        refs: [
+          { moduleId: "hr", href: "/human-resources/payroll" },
+          { moduleId: "hr", href: "/human-resources/disbursements" },
+        ],
+      },
+      {
+        id: "payroll-statutory",
+        title: "Statutory",
+        refs: [
+          { moduleId: "hr", href: "/human-resources/statutory" },
+          { moduleId: "hr", href: "/human-resources/statutory/returns" },
+        ],
+      },
+      {
+        id: "payroll-people",
+        title: "People",
+        refs: [
+          { moduleId: "hr", href: "/human-resources" },
+          { moduleId: "hr", href: "/human-resources/compensation" },
+        ],
+      },
+    ],
+  },
   GENERAL: {
     label: "General Business",
     preferredHomeHref: null,
@@ -636,6 +673,7 @@ export function getWorkspaceProfileForTemplate(code: string | null | undefined):
   if (normalized.includes("SCHOOL")) return "SCHOOLS";
   if (normalized.includes("AUTO") || normalized.includes("CAR_SALES") || normalized.includes("CAR-SALES")) return "AUTOS";
   if (normalized.includes("THRIFT") || normalized.includes("RETAIL")) return "RETAIL";
+  if (normalized.includes("PAYROLL") || normalized.includes("BUREAU")) return "PAYROLL";
   if (normalized.includes("CORE") || normalized.includes("ALL_FEATURES")) return "GENERAL";
   return null;
 }

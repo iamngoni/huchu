@@ -101,6 +101,14 @@ const PRODUCT_PRIMARY_ACTIONS: Record<VerticalProductId, NavItem[]> = {
     { href: "/cctv/live", icon: Video, label: "Live Monitor", roles: ["SUPERADMIN", "MANAGER"] },
     { href: "/human-resources", icon: Users, label: "Employees" },
   ],
+  // The four things a payroll bureau actually starts from. Nothing about stock,
+  // customers or reports, because none of those modules are provisioned.
+  "payroll-services": [
+    { href: "/human-resources", icon: Users, label: "Employees" },
+    { href: "/human-resources/payroll", icon: Coins, label: "Payroll Run" },
+    { href: "/human-resources/statutory/returns", icon: ReceiptLong, label: "Statutory Returns" },
+    { href: "/human-resources/disbursements", icon: Payments, label: "Disbursements" },
+  ],
   "general-business": [
     { href: "/stores/receive", icon: ArrowDownward, label: "Receive Stock" },
     { href: "/stores/issue", icon: ArrowUpward, label: "Issue Stock" },

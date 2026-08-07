@@ -348,6 +348,28 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
     ],
   },
   {
+    // The bolt-on. Everything Zimbabwe-specific, addable to any existing
+    // workspace — including a school, which is the concrete case: a school that
+    // buys this pays its teachers from the same `Employee` rows the timetable
+    // already uses, with no bridging code.
+    //
+    // Separate from ADDON_ADVANCED_PAYROLL rather than folded into it, because a
+    // company outside Zimbabwe wants the payroll engine without the ZIMRA
+    // returns.
+    code: "ADDON_ZIMBABWE_PAYROLL",
+    name: "Zimbabwe Statutory Payroll",
+    description:
+      "PAYE, NSSA, AIDS levy, ZIMDEF and NEC handling with the monthly P2 and NSSA returns.",
+    monthlyPrice: 39,
+    additionalSiteMonthlyPrice: 5,
+    features: [
+      "hr.statutory-tables",
+      "hr.statutory-returns",
+      "hr.payslips",
+      "hr.employee-self-service",
+    ],
+  },
+  {
     code: "ADDON_GOLD_ADVANCED",
     name: "Gold Advanced Controls",
     description: "Advanced gold controls and audit/reconciliation.",

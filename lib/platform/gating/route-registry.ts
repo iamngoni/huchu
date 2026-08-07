@@ -25,6 +25,10 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/cctv/overview", featureKey: "cctv.overview" },
   { scope: "page", prefix: "/cctv", featureKey: "cctv.overview" },
 
+  // Longest prefix wins, so the returns page must precede the tables page it
+  // sits under.
+  { scope: "page", prefix: "/human-resources/statutory/returns", featureKey: "hr.statutory-returns" },
+  { scope: "page", prefix: "/human-resources/statutory", featureKey: "hr.statutory-tables" },
   { scope: "page", prefix: "/human-resources/payroll", featureKey: "hr.payroll" },
   { scope: "page", prefix: "/human-resources/disbursements", featureKey: "hr.disbursements" },
   { scope: "page", prefix: "/human-resources/compensation", featureKey: "hr.compensation-rules" },
