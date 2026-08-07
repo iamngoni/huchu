@@ -19,6 +19,7 @@ export type ReservableIdEntity =
   | "SCHOOL_GUARDIAN"
   | "SCHOOL_FEE_INVOICE"
   | "SCHOOL_FEE_RECEIPT"
+  | "SCHOOL_FEE_REFUND"
   | "CAR_SALES_LEAD"
   | "CAR_SALES_VEHICLE"
   | "CAR_SALES_DEAL"
@@ -79,6 +80,8 @@ export const ID_ENTITY_CONFIG: Record<ReservableIdEntity, EntityConfig> = {
   SCHOOL_GUARDIAN: { prefix: "GDN", requiresSiteId: false },
   SCHOOL_FEE_INVOICE: { prefix: "SFI", requiresSiteId: false },
   SCHOOL_FEE_RECEIPT: { prefix: "SFR", requiresSiteId: false },
+  // SFR is taken by the receipt, so a refund reads SFRF.
+  SCHOOL_FEE_REFUND: { prefix: "SFRF", requiresSiteId: false },
   CAR_SALES_LEAD: { prefix: "LEAD", requiresSiteId: false },
   CAR_SALES_VEHICLE: { prefix: "CAR", requiresSiteId: false },
   CAR_SALES_DEAL: { prefix: "DEAL", requiresSiteId: false },
@@ -113,8 +116,62 @@ export const ID_ENTITY_CONFIG: Record<ReservableIdEntity, EntityConfig> = {
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
-function buildCode(prefix: string, number: number) {
-  return `${prefix}-${String(number).padStart(PAD, "0")}`;
+function buildCode(prefix: string, number: number, separator = "-", padWidth = PAD) {
+  return `${prefix}${separator}${String(number).padStart(padWidth, "0")}`;
+}
+
+/**
+ * The numbering a school is already using.
+ *
+ * A school does not adopt our numbering when it adopts the module — it arrives
+ * with four hundred pupils numbered `S1000` upwards, in a register, on a wall, and
+ * in a parent's phone. The configured prefix for `SCHOOL_STUDENT` is `STU`, and
+ * `extractMaxFromCodes` only recognises `PREFIX-digits`, so the first pupil
+ * admitted through the product was handed `STU-0001` and sat in a register beside
+ * `S1002`. Two schemes in one school, and the second one starting at 1 — which
+ * looks like a brand new school to anybody reading a list.
+ *
+ * So the existing codes decide. If the school's numbers agree on a prefix and a
+ * separator — `S1000` or `CHS/0142` as readily as `STU-0001` — the next number
+ * continues them. If they disagree, or there are none, the configured default
+ * stands. Nothing here renumbers anything: a school's existing numbers are its
+ * own, and the only question this answers is what the NEXT one looks like.
+ *
+ * Applied to the school entities only. The other modules' codes are all
+ * product-issued from the first row, so there is nothing to continue.
+ */
+const SCHOOL_NUMBERING_PATTERN = /^([A-Za-z]{1,8})([-/ ]?)(\d{1,10})$/;
+
+export function inferNumbering(
+  codes: Array<string | null | undefined>,
+  fallbackPrefix: string,
+): { prefix: string; separator: string; max: number } {
+  const tallies = new Map<string, { prefix: string; separator: string; count: number; max: number }>();
+
+  for (const code of codes) {
+    const match = code?.trim().match(SCHOOL_NUMBERING_PATTERN);
+    if (!match) continue;
+    const [, prefix, separator, digits] = match;
+    const key = `${prefix.toUpperCase()}|${separator}`;
+    const parsed = Number.parseInt(digits, 10);
+    const entry = tallies.get(key) ?? { prefix, separator, count: 0, max: 0 };
+    entry.count += 1;
+    if (Number.isFinite(parsed)) entry.max = Math.max(entry.max, parsed);
+    tallies.set(key, entry);
+  }
+
+  if (tallies.size === 0) {
+    return { prefix: fallbackPrefix, separator: "-", max: 0 };
+  }
+
+  // The commonest scheme wins, and ties break on the higher number — a school that
+  // renamed its prefix last year should continue the one it is using now, not the
+  // one it used to.
+  const winner = [...tallies.values()].sort(
+    (left, right) => right.count - left.count || right.max - left.max,
+  )[0];
+
+  return { prefix: winner.prefix, separator: winner.separator, max: winner.max };
 }
 
 function extractMaxFromCodes(codes: Array<string | null | undefined>, prefix: string) {
@@ -285,6 +342,13 @@ async function findEntityMaxExistingCode(
         select: { receiptNo: true },
       });
       return extractMaxFromCodes(records.map((record) => record.receiptNo), prefix);
+    }
+    case "SCHOOL_FEE_REFUND": {
+      const records = await db.schoolFeeRefund.findMany({
+        where: { companyId },
+        select: { refundNo: true },
+      });
+      return extractMaxFromCodes(records.map((record) => record.refundNo), prefix);
     }
     case "CAR_SALES_LEAD": {
       const records = await db.carSalesLead.findMany({
@@ -507,6 +571,47 @@ async function findEntityMaxExistingCode(
   }
 }
 
+
+/** The school entities whose existing numbering is continued rather than replaced. */
+const SCHOOL_NUMBERED_ENTITIES = new Set<ReservableIdEntity>([
+  "SCHOOL_STUDENT",
+  "SCHOOL_GUARDIAN",
+  "SCHOOL_FEE_INVOICE",
+  "SCHOOL_FEE_RECEIPT",
+  "SCHOOL_FEE_REFUND",
+]);
+
+async function readSchoolCodes(
+  db: Prisma.TransactionClient,
+  companyId: string,
+  entity: ReservableIdEntity,
+): Promise<Array<string | null>> {
+  switch (entity) {
+    case "SCHOOL_STUDENT":
+      return (
+        await db.schoolStudent.findMany({ where: { companyId }, select: { studentNo: true } })
+      ).map((row) => row.studentNo);
+    case "SCHOOL_GUARDIAN":
+      return (
+        await db.schoolGuardian.findMany({ where: { companyId }, select: { guardianNo: true } })
+      ).map((row) => row.guardianNo);
+    case "SCHOOL_FEE_INVOICE":
+      return (
+        await db.schoolFeeInvoice.findMany({ where: { companyId }, select: { invoiceNo: true } })
+      ).map((row) => row.invoiceNo);
+    case "SCHOOL_FEE_RECEIPT":
+      return (
+        await db.schoolFeeReceipt.findMany({ where: { companyId }, select: { receiptNo: true } })
+      ).map((row) => row.receiptNo);
+    case "SCHOOL_FEE_REFUND":
+      return (
+        await db.schoolFeeRefund.findMany({ where: { companyId }, select: { refundNo: true } })
+      ).map((row) => row.refundNo);
+    default:
+      return [];
+  }
+}
+
 export async function reserveIdentifier(
   db: PrismaClient | Prisma.TransactionClient,
   input: {
@@ -572,8 +677,45 @@ export async function reserveIdentifier(
       select: { id: true },
     });
 
+    // A school arrives with its own numbering. See `inferNumbering`: the existing
+    // codes decide what the next one looks like, so a pupil admitted through the
+    // product continues `S1000` rather than starting a second scheme at `STU-0001`.
+    //
+    // Unless the office has said otherwise. An explicit format in
+    // `SchoolIdentitySettings` is the school's own answer, and it beats the
+    // inferred one — that is the whole point of writing it down.
+    const declared =
+      input.entity === "SCHOOL_STUDENT"
+        ? await tx.schoolIdentitySettings.findUnique({
+            where: { companyId: input.companyId },
+            select: { studentPrefix: true, studentSeparator: true, studentPadWidth: true },
+          })
+        : null;
+    const numbering =
+      declared?.studentPrefix != null
+        ? {
+            prefix: declared.studentPrefix,
+            separator: declared.studentSeparator ?? "-",
+            max: inferNumbering(
+              await readSchoolCodes(tx, input.companyId, input.entity),
+              declared.studentPrefix,
+            ).max,
+            padWidth: declared.studentPadWidth ?? PAD,
+          }
+        : SCHOOL_NUMBERED_ENTITIES.has(input.entity)
+          ? {
+              ...inferNumbering(
+                await readSchoolCodes(tx, input.companyId, input.entity),
+                config.prefix,
+              ),
+              padWidth: PAD,
+            }
+          : { prefix: config.prefix, separator: "-", max: 0, padWidth: PAD };
+
     if (!existing) {
-      const maxExisting = await findEntityMaxExistingCode(tx, input);
+      const maxExisting = SCHOOL_NUMBERED_ENTITIES.has(input.entity)
+        ? numbering.max
+        : await findEntityMaxExistingCode(tx, input);
       // Use createMany with skipDuplicates instead of create + P2002 catch.
       // Catching P2002 and continuing inside a transaction causes PostgreSQL to enter
       // an "aborted" state, making every subsequent query fail with
@@ -598,7 +740,7 @@ export async function reserveIdentifier(
       select: { lastNumber: true },
     });
 
-    return buildCode(config.prefix, next.lastNumber);
+    return buildCode(numbering.prefix, next.lastNumber, numbering.separator, numbering.padWidth);
   };
 
   // When already inside a transaction (no $transaction method), run directly.

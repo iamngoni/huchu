@@ -15,13 +15,13 @@ import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 
-import { customFieldAttributes } from "./custom-field-attributes";
+import { customFieldAttributes } from "@/components/records/custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
-import { RecordMark } from "./record-mark";
+import { RecordMark } from "@/components/records/record-mark";
 import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
-import { RecordAttributes } from "./record-attributes";
-import { useAttributeEditor } from "./use-attribute-editor";
-import { EntityLink } from "./entity-link";
+import { RecordAttributes } from "@/components/records/record-attributes";
+import { useAttributeEditor } from "@/components/records/use-attribute-editor";
+import { EntityLink } from "@/components/records/entity-link";
 import {
   AddressBook,
   Building2,
@@ -31,7 +31,7 @@ import {
   Users,
 } from "@/lib/icons";
 
-import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
+import { RailSection, RecordPageShell, RelatedList } from "@/components/records/record-page-shell";
 import { PersonFormSheet } from "./person-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";

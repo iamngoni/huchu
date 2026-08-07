@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   findOpenPublishWindow,
   isPrivilegedRole,
@@ -15,6 +16,9 @@ export async function POST(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.results", "publish");
+    if (denied) return errorResponse(denied, 403);
     const { id } = await params;
     if (!isPrivilegedRole(session.user.role)) {
       return errorResponse("Only privileged roles can publish results", 403);

@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-utils";
 import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   isUniqueConstraintError,
   normalizeOptionalNullableString,
@@ -84,6 +85,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "view");
+    if (denied) return errorResponse(denied, 403);
     const { searchParams } = new URL(request.url);
     const { page, limit, skip } = getPaginationParams(request);
 
@@ -116,7 +120,18 @@ export async function GET(request: NextRequest) {
       prisma.schoolStudent.findMany({
         where,
         include: studentInclude,
-        orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { createdAt: "desc" }],
+        // Class first, then surname — a register, which is the order a school
+        // reads a student list in. `level` rather than `name` so the ladder
+        // runs ECD, Grade 1…7, Form 1…6 instead of alphabetically by label.
+        // Postgres sorts NULLs last on ASC, so students with no class land at
+        // the end under their own heading rather than at the top.
+        orderBy: [
+          { currentClass: { level: "asc" } },
+          { currentClass: { name: "asc" } },
+          { currentStream: { name: "asc" } },
+          { lastName: "asc" },
+          { firstName: "asc" },
+        ],
         skip,
         take: limit,
       }),
@@ -138,6 +153,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "create");
+    if (denied) return errorResponse(denied, 403);
 
     const body = await request.json();
     const validated = createStudentSchema.parse(body);

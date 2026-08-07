@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { isPrivilegedRole } from "@/lib/schools/governance-v2";
+import { clampAtZero, sumMoney } from "@/lib/schools/money";
+import {
+  canViewAnyPortalSubject,
+  consentDeniedMessage,
+  getGuardianChildLink,
+  guardianMaySee,
+  resolvePortalGuardian,
+} from "@/lib/schools/portal-identity";
 
 type RouteParams = { params: Promise<{ studentId: string }> };
 
@@ -15,51 +22,40 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { searchParams } = new URL(request.url);
     const guardianId = searchParams.get("guardianId");
 
-    const isPrivileged = isPrivilegedRole(session.user.role);
-    let hasFinanceAccess = false;
-
-    if (isPrivileged) {
-      hasFinanceAccess = true;
-    } else {
-      const guardian = await prisma.schoolGuardian.findFirst({
-        where: {
+    if (!canViewAnyPortalSubject(session.user.role)) {
+      // A parent's own account is the only guardian context they get. The
+      // previous code looked the guardian up by whatever `guardianId` was
+      // passed and only compared it afterwards, so the comparison could never
+      // fail — any parent could read another family's fees by guessing an id.
+      const resolution = await resolvePortalGuardian(
+        {
           companyId,
-          ...(guardianId
-            ? { id: guardianId }
-            : session.user.email
-              ? { email: { equals: session.user.email, mode: "insensitive" } }
-              : { id: "__none__" }),
+          userId: session.user.id,
+          role: session.user.role,
+          requestedId: guardianId,
         },
-        select: { id: true },
-      });
+        { select: { id: true } },
+      );
 
-      if (!guardian) {
-        return errorResponse("Guardian context not found", 404);
-      }
-      if (guardianId && guardianId !== guardian.id) {
+      if (resolution.kind === "forbidden") {
         return errorResponse("Cannot query fees for a different guardian context", 403);
       }
+      if (!resolution.subject) {
+        return errorResponse("Guardian context not found", 404);
+      }
 
-      const link = await prisma.schoolStudentGuardian.findFirst({
-        where: {
-          companyId,
-          studentId,
-          guardianId: guardian.id,
-        },
-        select: { id: true, canReceiveFinancials: true },
+      const link = await getGuardianChildLink({
+        companyId,
+        guardianId: resolution.subject.id,
+        studentId,
       });
 
       if (!link) {
         return errorResponse("Student is not linked to this parent account", 403);
       }
-      if (!link.canReceiveFinancials) {
-        return errorResponse("Financial visibility is disabled for this parent link", 403);
+      if (!guardianMaySee(link, "financials")) {
+        return errorResponse(consentDeniedMessage("financials"), 403);
       }
-      hasFinanceAccess = true;
-    }
-
-    if (!hasFinanceAccess) {
-      return errorResponse("Insufficient access to student fees", 403);
     }
 
     const student = await prisma.schoolStudent.findFirst({
@@ -112,15 +108,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         student,
         invoices,
         receipts,
+        // Post S-2.1 Float→Decimal: `0 + Decimal` in JavaScript is string
+        // concatenation, so these four reductions would have put a silent
+        // string in front of a parent. They sum in Decimal now.
+        //
+        // The figures are stated in each invoice's own currency and a school
+        // billing in two would produce a total in neither — S-2.2 gives every
+        // invoice a `currency`, so the sums are grouped by it.
         summary: {
           invoices: invoices.length,
           receipts: receipts.length,
-          totalBilled: invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0),
-          totalPaid: invoices.reduce((sum, invoice) => sum + invoice.paidAmount, 0),
-          totalWaived: invoices.reduce((sum, invoice) => sum + invoice.waivedAmount, 0),
-          totalOutstanding: invoices.reduce(
-            (sum, invoice) => sum + Math.max(invoice.balanceAmount, 0),
-            0,
+          currencies: [...new Set(invoices.map((invoice) => invoice.currency))],
+          totalBilled: sumMoney(invoices.map((invoice) => invoice.totalAmount)),
+          totalPaid: sumMoney(invoices.map((invoice) => invoice.paidAmount)),
+          totalWaived: sumMoney(invoices.map((invoice) => invoice.waivedAmount)),
+          totalOutstanding: sumMoney(
+            invoices.map((invoice) => clampAtZero(invoice.balanceAmount)),
           ),
         },
       },

@@ -60,7 +60,7 @@ function ReportCardPreview({ student }: { student: SchoolsStudentRecord | null }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Report Card Preview</h3>
         <Button size="sm" onClick={handlePrint}>
           Print / Save PDF
@@ -127,7 +127,7 @@ function FeeInvoicePreview({ student }: { student: SchoolsStudentRecord | null }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Fee Invoice Preview</h3>
         <Button size="sm" onClick={handlePrint}>
           Print / Save PDF
@@ -180,7 +180,7 @@ function ClassListPreview({ students }: { students: SchoolsStudentRecord[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Class List Preview</h3>
         <Button size="sm" onClick={handlePrint}>
           Print / Save PDF
@@ -240,7 +240,7 @@ function AttendanceRegisterPreview({ students }: { students: SchoolsStudentRecor
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Attendance Register Preview</h3>
         <Button size="sm" onClick={handlePrint}>
           Print / Save PDF

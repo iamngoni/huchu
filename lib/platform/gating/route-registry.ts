@@ -78,12 +78,17 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/schools/documents", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/academics", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/timetable", featureKey: "schools.core" },
-  { scope: "page", prefix: "/schools/assessments", featureKey: "schools.results" },
+  { scope: "page", prefix: "/schools/homework", featureKey: "schools.core" },
+  { scope: "page", prefix: "/schools/goals", featureKey: "schools.core" },
+  { scope: "page", prefix: "/schools/meetings", featureKey: "schools.core" },
+  { scope: "page", prefix: "/schools/library", featureKey: "schools.core" },
+  { scope: "page", prefix: "/schools/transport", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/finance", featureKey: "schools.fees" },
   { scope: "page", prefix: "/schools/notices", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/reports", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/admissions", featureKey: "schools.admissions" },
   { scope: "page", prefix: "/schools/students", featureKey: "schools.students" },
+  { scope: "page", prefix: "/schools/imports", featureKey: "schools.students" },
   { scope: "page", prefix: "/schools/classes", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/subjects", featureKey: "schools.core" },
   { scope: "page", prefix: "/schools/attendance", featureKey: "schools.attendance" },
@@ -350,6 +355,25 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/schools/portal/teacher", featureKey: "schools.portal.teacher" },
   { scope: "api", prefix: "/api/schools", featureKey: "schools.core" },
   { scope: "api", prefix: "/api/v2/schools/admissions", featureKey: "schools.admissions" },
+  // S-3.3 — importing a school that is switching systems. Gated on
+  // `schools.students` because that is the smallest thing an import always
+  // writes; the fee and opening-balance entity types additionally need
+  // `schools.fees`, which `importPermissionDenial` enforces per request.
+  // S-4.2 — `/api/v2/records/**` is DELIBERATELY ABSENT from this registry.
+  //
+  // Those routes serve subjects from more than one module, and an entry here can
+  // name only one feature — which is the exact trap they exist to escape:
+  // /api/v2/crm/files is gated on `crm.core` and so refused every school before
+  // its handler ran, however well the storage supported a student. An
+  // unregistered path is allowed through by `canAccessRouteWithToken`, and
+  // `app/api/v2/records/_guard.ts` then checks the feature AND the role per
+  // subject type. Do not "fix" this by adding a prefix entry; that would put one
+  // module's gate back in front of every module's records.
+  { scope: "api", prefix: "/api/v2/schools/imports", featureKey: "schools.students" },
+  // S-4.4 — a school's own fields on a pupil or a parent. The same engine as
+  // /api/v2/crm/field-definitions, behind a gate a school can actually pass:
+  // that route is registered against `crm.settings`, which no school has.
+  { scope: "api", prefix: "/api/v2/schools/field-definitions", featureKey: "schools.students" },
   { scope: "api", prefix: "/api/v2/schools/students", featureKey: "schools.students" },
   { scope: "api", prefix: "/api/v2/schools/guardians", featureKey: "schools.students" },
   { scope: "api", prefix: "/api/v2/schools/enrollments", featureKey: "schools.admissions" },
@@ -361,8 +385,26 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/v2/schools/boarding", featureKey: "schools.boarding" },
   { scope: "api", prefix: "/api/v2/schools/teachers", featureKey: "schools.teachers" },
   { scope: "api", prefix: "/api/v2/schools/results", featureKey: "schools.results" },
+  { scope: "api", prefix: "/api/v2/schools/assessments", featureKey: "schools.results" },
+  { scope: "api", prefix: "/api/v2/schools/assignments", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/library", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/lesson-plans", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/messages", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/syllabus", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/teaching-resources", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/transport", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/meetings", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/goals", featureKey: "schools.core" },
+  { scope: "api", prefix: "/api/v2/schools/health", featureKey: "schools.boarding" },
+  { scope: "api", prefix: "/api/v2/schools/applications", featureKey: "schools.admissions" },
+  { scope: "api", prefix: "/api/v2/schools/year-rollup", featureKey: "schools.students" },
+  { scope: "api", prefix: "/api/v2/schools/grading-schemes", featureKey: "schools.results" },
   { scope: "api", prefix: "/api/v2/schools/portal/parent/children", featureKey: "schools.portal.parent" },
+  { scope: "api", prefix: "/api/v2/schools/portal/student/me/homework", featureKey: "schools.portal.student" },
+  { scope: "api", prefix: "/api/v2/schools/portal/student/me/library", featureKey: "schools.portal.student" },
+  { scope: "api", prefix: "/api/v2/schools/portal/student/me/subjects", featureKey: "schools.portal.student" },
   { scope: "api", prefix: "/api/v2/schools/portal/student/me", featureKey: "schools.portal.student" },
+  { scope: "api", prefix: "/api/v2/schools/portal/teacher/me/reports", featureKey: "schools.portal.teacher" },
   { scope: "api", prefix: "/api/v2/schools/portal/teacher/me", featureKey: "schools.portal.teacher" },
   { scope: "api", prefix: "/api/v2/schools/portal/parent", featureKey: "schools.portal.parent" },
   { scope: "api", prefix: "/api/v2/schools/portal/student", featureKey: "schools.portal.student" },

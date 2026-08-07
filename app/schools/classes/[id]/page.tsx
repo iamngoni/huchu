@@ -1,10 +1,11 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
-import { SchoolsClassDetailContent } from "@/components/schools/classes/schools-class-detail-content";
+
+import { ClassRecordPage } from "@/components/schools/records/class-record-page";
 import { authOptions } from "@/lib/auth";
 
-export default async function SchoolsClassDetailPage({
+/** S-4.3 — a class is a record page. See the student route for why no heading. */
+export default async function ClassRecordRoute({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -16,10 +17,5 @@ export default async function SchoolsClassDetailPage({
 
   const { id } = await params;
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading title="Class Details" />
-      <SchoolsClassDetailContent classId={id} />
-    </div>
-  );
+  return <ClassRecordPage classId={id} />;
 }

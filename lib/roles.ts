@@ -6,6 +6,8 @@ export const ROLES = [
   "SCHOOL_ADMIN",
   "REGISTRAR",
   "BURSAR",
+  "HOD",
+  "WARDEN",
   "TEACHER",
   "PARENT",
   "STUDENT",

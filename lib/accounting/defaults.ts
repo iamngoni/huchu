@@ -184,6 +184,66 @@ const GOLD_CHART_OF_ACCOUNTS: DefaultAccount[] = [
   { code: "5320", name: "Gold Inventory Adjustments", type: "EXPENSE", category: "Mining", systemManaged: true },
 ];
 
+/**
+ * S-2.3 — the accounts a school's fee money actually belongs in.
+ *
+ * Named in `docs/expansion-plan/schools-production-readiness.md` and defined
+ * nowhere until now, which is why tuition was being credited to "Retail Sales
+ * Revenue" and a bursary charged to "Bad Debt Expense".
+ *
+ * Codes are chosen to sit beside their retail siblings without colliding:
+ * receivables next to 1100, deferred income in the 2xxx liabilities, fee
+ * revenue above the 42xx other income, and the bursary expense immediately
+ * after 5600 Bad Debt — adjacent because they are constantly confused, and
+ * separate because a scholarship the school chose to give is not a debt it
+ * failed to collect.
+ */
+const SCHOOL_CHART_OF_ACCOUNTS: DefaultAccount[] = [
+  {
+    code: "1110",
+    name: "School Fees Receivable",
+    type: "ASSET",
+    category: "Receivables",
+    description: "Fees billed to families and not yet settled.",
+    systemManaged: true,
+  },
+  {
+    code: "2400",
+    name: "Fees Received In Advance",
+    type: "LIABILITY",
+    category: "Deferred Income",
+    description:
+      "Money taken from a family that no invoice has claimed yet. It is owed back until a bill exists to spend it on.",
+    systemManaged: true,
+  },
+  {
+    code: "4300",
+    name: "Tuition Fee Revenue",
+    type: "INCOME",
+    category: "Revenue",
+    description: "Fee income recognised when an invoice is issued.",
+    systemManaged: true,
+  },
+  {
+    code: "4310",
+    name: "Boarding Fee Revenue",
+    type: "INCOME",
+    category: "Revenue",
+    description:
+      "Boarding income. Seeded for manual and reporting use — no seeded posting rule reaches it, because the rule engine cannot yet split one invoice's revenue by fee line.",
+    systemManaged: true,
+  },
+  {
+    code: "5610",
+    name: "Bursary & Scholarship Expense",
+    type: "EXPENSE",
+    category: "Bursaries",
+    description:
+      "Fees the school chose to forgo. Distinct from 5600 Bad Debt Expense, which is fees it failed to collect.",
+    systemManaged: true,
+  },
+];
+
 export const DEFAULT_CHART_OF_ACCOUNTS = BASE_CHART_OF_ACCOUNTS;
 
 export const DEFAULT_CURRENCY_DEFINITIONS: DefaultCurrencyDefinition[] = [
@@ -681,6 +741,130 @@ export const RETAIL_POSTING_RULES: DefaultPostingRule[] = [
   },
 ];
 
+/**
+ * S-2.3 — one rule per school fee document, and every one of them balances.
+ *
+ * Three of these split a single amount across two credit (or debit) lines using
+ * `valuePath` into the posting payload. Two properties make that safe:
+ *
+ *   * `emitSchoolFeeAccountingEvent` derives the two parts from one figure —
+ *     the second is always `amount − first` — so they sum to the amount by
+ *     construction and cannot drift a cent apart through two separate currency
+ *     conversions;
+ *   * the `basis` on those lines is `TAX`, not `AMOUNT`. A `valuePath` that
+ *     resolves to nothing falls back to the basis, and every school caller
+ *     passes `taxAmount: 0` on these events, so a missing key yields a zero
+ *     line — which `simulatePosting` drops — rather than silently doubling the
+ *     entry.
+ *
+ * `isFallback` matches the retail rules: these are the defaults a school
+ * overrides with its own rule, not rules that beat one it wrote.
+ */
+export const SCHOOLS_POSTING_RULES: DefaultPostingRule[] = [
+  {
+    name: "School fee invoice",
+    sourceType: "SCHOOL_FEE_INVOICE",
+    description:
+      "Bill a family. DR School Fees Receivable, CR Tuition Fee Revenue for the net and output VAT for the tax.",
+    priority: 10,
+    scopeType: "COMPANY",
+    ruleMode: "GUIDED",
+    isFallback: true,
+    lines: [
+      { accountCode: "1110", direction: "DEBIT", basis: "AMOUNT", memoTemplate: "{description} / fees receivable", sortOrder: 10 },
+      { accountCode: "4300", direction: "CREDIT", basis: "NET", memoTemplate: "{description} / fee revenue", sortOrder: 20 },
+      { accountCode: "2200", direction: "CREDIT", basis: "TAX", memoTemplate: "{description} / output VAT", sortOrder: 30 },
+    ],
+  },
+  {
+    name: "School fee receipt",
+    sourceType: "SCHOOL_FEE_RECEIPT",
+    description:
+      "Take money from a family. DR bank; CR School Fees Receivable for the part that settles a bill, CR Fees Received In Advance for the surplus that does not.",
+    priority: 10,
+    scopeType: "COMPANY",
+    ruleMode: "GUIDED",
+    isFallback: true,
+    lines: [
+      { accountCode: "1010", direction: "DEBIT", basis: "AMOUNT", memoTemplate: "{description} / bank", sortOrder: 10 },
+      { accountCode: "1110", direction: "CREDIT", basis: "TAX", valuePath: "allocatedBaseAmount", memoTemplate: "{description} / fees receivable", sortOrder: 20 },
+      { accountCode: "2400", direction: "CREDIT", basis: "TAX", valuePath: "unallocatedBaseAmount", memoTemplate: "{description} / credit on account", sortOrder: 30 },
+    ],
+  },
+  {
+    name: "School fee receipt void",
+    sourceType: "SCHOOL_FEE_RECEIPT_VOID",
+    description:
+      "Reverse a fee receipt. Same lines as the receipt; the void call inverts every direction, which is how retail reverses a sale too.",
+    priority: 10,
+    scopeType: "COMPANY",
+    ruleMode: "GUIDED",
+    isFallback: true,
+    lines: [
+      { accountCode: "1010", direction: "DEBIT", basis: "AMOUNT", memoTemplate: "{description} / bank", sortOrder: 10 },
+      { accountCode: "1110", direction: "CREDIT", basis: "TAX", valuePath: "allocatedBaseAmount", memoTemplate: "{description} / fees receivable", sortOrder: 20 },
+      { accountCode: "2400", direction: "CREDIT", basis: "TAX", valuePath: "unallocatedBaseAmount", memoTemplate: "{description} / credit on account", sortOrder: 30 },
+    ],
+  },
+  {
+    name: "School fee credit applied",
+    sourceType: "SCHOOL_FEE_CREDIT_APPLIED",
+    description:
+      "Spend a family's credit on a later bill. DR Fees Received In Advance, CR School Fees Receivable — no cash moves, the obligation simply changes shape.",
+    priority: 10,
+    scopeType: "COMPANY",
+    ruleMode: "GUIDED",
+    isFallback: true,
+    lines: [
+      { accountCode: "2400", direction: "DEBIT", basis: "AMOUNT", memoTemplate: "{description} / credit on account", sortOrder: 10 },
+      { accountCode: "1110", direction: "CREDIT", basis: "AMOUNT", memoTemplate: "{description} / fees receivable", sortOrder: 20 },
+    ],
+  },
+  {
+    name: "School fee waiver",
+    sourceType: "SCHOOL_FEE_WAIVER",
+    description:
+      "A bursary, scholarship or discount. DR Bursary & Scholarship Expense, CR School Fees Receivable. Deliberately not Bad Debt — the school chose this.",
+    priority: 10,
+    scopeType: "COMPANY",
+    ruleMode: "GUIDED",
+    isFallback: true,
+    lines: [
+      { accountCode: "5610", direction: "DEBIT", basis: "AMOUNT", memoTemplate: "{description} / bursary", sortOrder: 10 },
+      { accountCode: "1110", direction: "CREDIT", basis: "AMOUNT", memoTemplate: "{description} / fees receivable", sortOrder: 20 },
+    ],
+  },
+  {
+    name: "School fee write-off",
+    sourceType: "SCHOOL_FEE_WRITE_OFF",
+    description:
+      "A fee given up as uncollectable. DR Bad Debt Expense, CR School Fees Receivable.",
+    priority: 10,
+    scopeType: "COMPANY",
+    ruleMode: "GUIDED",
+    isFallback: true,
+    lines: [
+      { accountCode: "5600", direction: "DEBIT", basis: "AMOUNT", memoTemplate: "{description} / bad debt", sortOrder: 10 },
+      { accountCode: "1110", direction: "CREDIT", basis: "AMOUNT", memoTemplate: "{description} / fees receivable", sortOrder: 20 },
+    ],
+  },
+  {
+    name: "School fee refund",
+    sourceType: "SCHOOL_FEE_REFUND",
+    description:
+      "Hand credit back. CR bank; DR whichever account was holding the credit — Fees Received In Advance for a receipt surplus, School Fees Receivable for an over-settled invoice.",
+    priority: 10,
+    scopeType: "COMPANY",
+    ruleMode: "GUIDED",
+    isFallback: true,
+    lines: [
+      { accountCode: "2400", direction: "DEBIT", basis: "TAX", valuePath: "refundFromAdvanceBaseAmount", memoTemplate: "{description} / credit on account", sortOrder: 10 },
+      { accountCode: "1110", direction: "DEBIT", basis: "TAX", valuePath: "refundFromReceivableBaseAmount", memoTemplate: "{description} / fees receivable", sortOrder: 20 },
+      { accountCode: "1010", direction: "CREDIT", basis: "AMOUNT", memoTemplate: "{description} / bank", sortOrder: 30 },
+    ],
+  },
+];
+
 export const DEFAULT_POSTING_RULES = BASE_POSTING_RULES;
 
 export const RETAIL_TENDER_ACCOUNT_MAPPINGS: DefaultTenderAccountMapping[] = [
@@ -704,6 +888,22 @@ function includeRetailFlows(args: AccountingDefaultArgs): boolean {
   return (args.workspaceProfile ?? "").toUpperCase() === "RETAIL";
 }
 
+/**
+ * S-2.3 — does this tenant get the school chart and the `SCHOOL_FEE_*` rules?
+ *
+ * Two ways in, because a tenant can be a school by profile or by purchase. The
+ * vertical answers for a `SCHOOLS` workspace (and for a `GENERAL` one whose
+ * enabled features infer it); the feature-prefix check catches the mixed tenant
+ * — a school that also runs a tuck shop — where `RETAIL` wins the inference and
+ * would otherwise leave the bursar with no posting rules at all.
+ */
+export function includeSchoolFlows(args: AccountingDefaultArgs): boolean {
+  if (resolveVerticalDefaults(args).accounting.includeSchoolFlows) return true;
+  return (args.enabledFeatures ?? []).some((feature) =>
+    feature.trim().toLowerCase().startsWith("schools."),
+  );
+}
+
 export function getDefaultChartOfAccounts(args: AccountingDefaultArgs): DefaultAccount[] {
   const defaults = [...BASE_CHART_OF_ACCOUNTS];
   if (includeGoldFlows(args)) {
@@ -724,17 +924,30 @@ export function getDefaultPostingRules(args: AccountingDefaultArgs): DefaultPost
 }
 
 export function getZimbabweRetailFoundationPack(args: AccountingDefaultArgs): AccountingFoundationPack {
+  // The retail baseline is seeded for every tenant — that is long-standing
+  // behaviour and this override is what produces it. School flows are decided
+  // from the tenant's *real* profile and features, which the override would
+  // otherwise hide.
+  const retailArgs: AccountingDefaultArgs = { ...args, workspaceProfile: "RETAIL" };
+  const schools = includeSchoolFlows(args);
+
   return {
     code: ZIMBABWE_RETAIL_FOUNDATION_PACK_CODE,
     name: "Zimbabwe Retail Foundation",
-    accounts: getDefaultChartOfAccounts({ ...args, workspaceProfile: "RETAIL" }),
+    accounts: [
+      ...getDefaultChartOfAccounts(retailArgs),
+      ...(schools ? SCHOOL_CHART_OF_ACCOUNTS : []),
+    ],
     currencies: DEFAULT_CURRENCY_DEFINITIONS,
     taxCodes: DEFAULT_TAX_CODES,
     taxCategories: DEFAULT_TAX_CATEGORIES,
     taxTemplates: DEFAULT_TAX_TEMPLATES,
     taxRules: DEFAULT_TAX_RULES,
     tenderMappings: RETAIL_TENDER_ACCOUNT_MAPPINGS,
-    postingRules: getDefaultPostingRules({ ...args, workspaceProfile: "RETAIL" }),
+    postingRules: [
+      ...getDefaultPostingRules(retailArgs),
+      ...(schools ? SCHOOLS_POSTING_RULES : []),
+    ],
     defaultBankAccount: {
       name: "Operating Bank",
       bankName: "Seeded Foundation Bank",

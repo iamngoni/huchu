@@ -419,35 +419,122 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
     label: "School Operations",
     preferredHomeHref: "/schools",
     nativeModules: ["schools"],
+    // One section per record, matching the module nav's own grouping: the
+    // registrar opens Students, the bursar opens Fees, the boarding master
+    // opens Boarding — nobody opens "Administration" to find attendance.
+    // A section with one ref renders as a plain top-level link.
     sections: [
       {
-        id: "schools-campus",
-        title: "Campus Operations",
+        id: "schools-overview",
+        title: "School Overview",
+        refs: [{ moduleId: "schools", href: "/schools" }],
+      },
+      {
+        id: "schools-students",
+        title: "Students",
         refs: [
-          { moduleId: "schools", href: "/schools" },
           { moduleId: "schools", href: "/schools/students" },
-          { moduleId: "schools", href: "/schools/teachers" },
-          { moduleId: "schools", href: "/schools/boarding" },
+          { moduleId: "schools", href: "/schools/admissions" },
+          { moduleId: "schools", href: "/schools/students/roll-up" },
+          { moduleId: "schools", href: "/schools/imports" },
         ],
       },
       {
-        id: "schools-academics",
-        title: "Academics",
+        id: "schools-guardians",
+        title: "Guardians",
+        refs: [{ moduleId: "schools", href: "/schools/guardians" }],
+      },
+      {
+        id: "schools-teachers",
+        title: "Teachers",
+        refs: [{ moduleId: "schools", href: "/schools/teachers" }],
+      },
+      {
+        id: "schools-attendance",
+        title: "Attendance",
+        refs: [{ moduleId: "schools", href: "/schools/attendance" }],
+      },
+      {
+        id: "schools-boarding",
+        title: "Boarding",
+        refs: [
+          { moduleId: "schools", href: "/schools/boarding" },
+          { moduleId: "schools", href: "/schools/boarding/welfare" },
+        ],
+      },
+      {
+        id: "schools-academic-setup",
+        title: "Academic setup",
         refs: [
           { moduleId: "schools", href: "/schools/academics" },
-          { moduleId: "schools", href: "/schools/timetable" },
-          { moduleId: "schools", href: "/schools/assessments" },
+          { moduleId: "schools", href: "/schools/classes" },
+          { moduleId: "schools", href: "/schools/subjects" },
+          { moduleId: "schools", href: "/schools/academics/syllabus" },
+          { moduleId: "schools", href: "/schools/academics/identity" },
+        ],
+      },
+      {
+        id: "schools-timetable",
+        title: "Timetable",
+        refs: [{ moduleId: "schools", href: "/schools/timetable" }],
+      },
+      {
+        id: "schools-homework",
+        title: "Homework",
+        refs: [{ moduleId: "schools", href: "/schools/homework" }],
+      },
+      {
+        id: "schools-goals",
+        title: "Subject targets",
+        refs: [{ moduleId: "schools", href: "/schools/goals" }],
+      },
+      {
+        id: "schools-meetings",
+        title: "Parent meetings",
+        refs: [{ moduleId: "schools", href: "/schools/meetings" }],
+      },
+      {
+        id: "schools-results",
+        title: "Results",
+        refs: [
+          { moduleId: "schools", href: "/schools/results" },
+          { moduleId: "schools", href: "/schools/results/sheets" },
+          { moduleId: "schools", href: "/schools/results/moderation" },
           { moduleId: "schools", href: "/schools/results/publish" },
         ],
       },
       {
-        id: "schools-admin",
-        title: "Administration",
+        id: "schools-fees",
+        title: "Fees",
         refs: [
-          { moduleId: "schools", href: "/schools/admissions" },
-          { moduleId: "schools", href: "/schools/attendance" },
           { moduleId: "schools", href: "/schools/finance" },
+          { moduleId: "schools", href: "/schools/finance/ledger" },
+          { moduleId: "schools", href: "/schools/finance/receipts" },
+          { moduleId: "schools", href: "/schools/finance/refunds" },
+          { moduleId: "schools", href: "/schools/finance/waivers" },
+        ],
+      },
+      {
+        id: "schools-library",
+        title: "Library",
+        refs: [{ moduleId: "schools", href: "/schools/library" }],
+      },
+      {
+        id: "schools-transport",
+        title: "Transport",
+        refs: [{ moduleId: "schools", href: "/schools/transport" }],
+      },
+      {
+        id: "schools-notices",
+        title: "Notices",
+        refs: [{ moduleId: "schools", href: "/schools/notices" }],
+      },
+      {
+        id: "schools-paperwork",
+        title: "Reports and documents",
+        refs: [
           { moduleId: "schools", href: "/schools/reports" },
+          { moduleId: "schools", href: "/schools/documents" },
         ],
       },
     ],

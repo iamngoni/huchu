@@ -205,6 +205,17 @@ export type DataTableProps<TData, TValue> = {
     rows: Array<{ row: TData; rowIndex: number }>;
   }) => React.ReactNode;
   mobileCardListClassName?: string;
+  /**
+   * Break the body into labelled runs — students by class, staff by
+   * department. Return the same `key` for rows that belong together and a
+   * header row is drawn wherever the key changes.
+   *
+   * It groups what is already adjacent; it does not reorder. The query has to
+   * sort by the same thing, or one class appears under several headings.
+   * Returning `null` leaves a row ungrouped, which is what a student with no
+   * class should do.
+   */
+  rowGroup?: (row: TData) => { key: string; label: React.ReactNode } | null;
 };
 
 function toPageIndex(page: number) {
@@ -489,6 +500,7 @@ export function DataTable<TData, TValue>({
   mobileCardRenderer,
   mobileListRenderer,
   mobileCardListClassName,
+  rowGroup,
 }: DataTableProps<TData, TValue>) {
   const sortingEnabled = features?.sorting ?? true;
   const globalFilterEnabled = features?.globalFilter ?? true;
@@ -1374,14 +1386,36 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {renderedRows.length > 0 ? (
-              renderedRows.map((row) => {
+              renderedRows.map((row, renderedIndex) => {
                 const { rowId, canExpand, isExpanded } =
                   getRowExpansionMeta(row);
                 const isLoading = loadingRowIdsSet.has(rowId);
                 const error = expansion?.errorByRowId?.[rowId];
 
+                // Compare against the row above rather than tracking a running
+                // key: the same group can legitimately appear twice if the sort
+                // separates it, and a header at each break is the honest
+                // rendering of what the reader is actually looking at.
+                const group = rowGroup?.(row.original) ?? null;
+                const previousGroup =
+                  renderedIndex > 0
+                    ? (rowGroup?.(renderedRows[renderedIndex - 1].original) ?? null)
+                    : null;
+                const startsGroup =
+                  group !== null && group.key !== previousGroup?.key;
+
                 return (
                   <React.Fragment key={row.id}>
+                    {startsGroup ? (
+                      <TableRow className="data-table-group-row">
+                        <TableCell
+                          colSpan={totalColumnCount}
+                          className="bg-[var(--surface-muted)] py-2 text-sm font-semibold text-muted-foreground"
+                        >
+                          {group.label}
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
                     <TableRow
                       data-state={row.getIsSelected() ? "selected" : undefined}
                       className={cn(

@@ -21,15 +21,41 @@ describe("ownerColumn", () => {
     expect(ownerColumn("company")).toBe("clientId");
   });
 
-  it("names a column for every owner it accepts", () => {
-    for (const owner of FILE_OWNERS) {
+  /**
+   * S-4.2 changed what this function promises. It used to name a column for
+   * every owner, because every owner HAD one — that was the design, and it was
+   * also the reason a student could not own a file. The subject now lives in
+   * `(subjectType, subjectId)`, and the school kinds have no legacy column at
+   * all, so `ownerColumn` returns null for them.
+   */
+  const KINDS_WITH_A_LEGACY_COLUMN = ["lead", "deal", "company", "person", "site", "rep"] as const;
+
+  it("names a column for every owner that has one", () => {
+    for (const owner of KINDS_WITH_A_LEGACY_COLUMN) {
       expect(ownerColumn(owner)).toMatch(/Id$/);
     }
   });
 
-  it("gives every owner a distinct column", () => {
-    const columns = FILE_OWNERS.map(ownerColumn);
+  it("names no column for a school owner, which is the point of S-4.2", () => {
+    for (const owner of ["student", "guardian", "teacher", "class", "subject", "hostel"] as const) {
+      expect(ownerColumn(owner)).toBeNull();
+    }
+  });
+
+  it("gives every owner that has a column a distinct one", () => {
+    const columns = KINDS_WITH_A_LEGACY_COLUMN.map(ownerColumn);
     expect(new Set(columns).size).toBe(columns.length);
+  });
+
+  it("still accounts for every accepted owner one way or the other", () => {
+    // A kind that is neither in the legacy list nor a school type would fall
+    // through `ownerColumn`'s default and silently get no column — which for a
+    // CRM kind would mean files that vanish from the page they were filed on.
+    const schoolKinds = new Set(["student", "guardian", "teacher", "class", "subject", "hostel"]);
+    const legacy = new Set<string>(KINDS_WITH_A_LEGACY_COLUMN);
+    for (const owner of FILE_OWNERS) {
+      expect(legacy.has(owner) || schoolKinds.has(owner), `${owner} is unaccounted for`).toBe(true);
+    }
   });
 });
 

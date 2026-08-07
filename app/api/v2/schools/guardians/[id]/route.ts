@@ -8,7 +8,9 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { normalizeProvidedId } from "@/lib/id-generator";
+import { buildCustomFieldValues, mergeCustomFields } from "@/lib/crm/custom-fields";
 import { prisma } from "@/lib/prisma";
+import { isSchoolAdmin, schoolPermissionDenial } from "@/lib/schools/permissions";
 import {
   isUniqueConstraintError,
   normalizeOptionalNullableString,
@@ -23,6 +25,12 @@ const updateGuardianSchema = z
     email: z.string().trim().email().nullable().optional(),
     address: z.string().trim().min(1).max(500).nullable().optional(),
     nationalId: z.string().trim().min(1).max(80).nullable().optional(),
+    // S-4.3 — the record page's identity strip.
+    avatarUrl: z.string().trim().url().max(2000).nullable().optional(),
+    accent: z.string().trim().min(1).max(40).nullable().optional(),
+    // S-4.4 — the school's own fields. Partial: only the keys sent are touched.
+    customFields: z.record(z.string(), z.unknown()).optional(),
+    clearCustomFields: z.array(z.string()).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
@@ -62,6 +70,9 @@ export async function GET(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "view");
+    if (denied) return errorResponse(denied, 403);
     const { id } = await params;
 
     if (!isValidUUID(id)) {
@@ -95,6 +106,9 @@ export async function PATCH(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "edit");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 
@@ -103,11 +117,21 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    // How a record is presented — its picture, emoji, accent — is an
+    // administrator's act; see `isSchoolAdmin`. Everything else on this
+    // route stays with the resource's own edit grant.
+    if (
+      ("avatarUrl" in body || "emoji" in body || "accent" in body) &&
+      !isSchoolAdmin(session.user.role)
+    ) {
+      return errorResponse("Only an administrator can change a record's display image", 403);
+    }
+
     const validated = updateGuardianSchema.parse(body);
 
     const existing = await prisma.schoolGuardian.findFirst({
       where: { id, companyId },
-      select: { id: true },
+      select: { id: true, customFields: true },
     });
     if (!existing) {
       return errorResponse("Guardian not found", 404);
@@ -127,9 +151,33 @@ export async function PATCH(
       }
     }
 
+    // S-4.4 — validated and merged by the same code the CRM records use, so a
+    // school's SINGLE_SELECT rejects an unlisted option here exactly as it does
+    // there. Partial, so patching a phone number leaves the custom fields alone.
+    let nextCustomFields: Prisma.InputJsonValue | undefined;
+    if (validated.customFields !== undefined || validated.clearCustomFields !== undefined) {
+      const definitions = await prisma.crmFieldDefinition.findMany({
+        where: { companyId, entity: "GUARDIAN", archivedAt: null },
+      });
+      const built = buildCustomFieldValues(definitions, validated.customFields ?? {}, {
+        partial: true,
+      });
+      if (built.errors.length > 0) {
+        return errorResponse("Validation failed", 400, built.errors);
+      }
+      nextCustomFields = mergeCustomFields(
+        existing.customFields,
+        built.values,
+        validated.clearCustomFields ?? [],
+      ) as Prisma.InputJsonValue;
+    }
+
     const updated = await prisma.schoolGuardian.update({
       where: { id: existing.id },
       data: {
+        ...(nextCustomFields !== undefined ? { customFields: nextCustomFields } : {}),
+        ...(validated.avatarUrl !== undefined ? { avatarUrl: validated.avatarUrl } : {}),
+        ...(validated.accent !== undefined ? { accent: validated.accent } : {}),
         ...(normalizedGuardianNo !== undefined
           ? { guardianNo: normalizedGuardianNo }
           : {}),
@@ -170,6 +218,9 @@ export async function DELETE(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "archive");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 

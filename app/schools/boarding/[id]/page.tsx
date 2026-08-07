@@ -1,10 +1,11 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
-import { SchoolsHostelDetailContent } from "@/components/schools/boarding/schools-hostel-detail-content";
+
+import { HostelRecordPage } from "@/components/schools/records/hostel-record-page";
 import { authOptions } from "@/lib/auth";
 
-export default async function HostelDetailPage({
+/** S-4.3 — a hostel is a record page. See the student route for why no heading. */
+export default async function HostelRecordRoute({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -16,12 +17,5 @@ export default async function HostelDetailPage({
 
   const { id } = await params;
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading
-        title="Hostel Details"
-      />
-      <SchoolsHostelDetailContent hostelId={id} />
-    </div>
-  );
+  return <HostelRecordPage hostelId={id} />;
 }

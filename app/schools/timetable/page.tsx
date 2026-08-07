@@ -12,11 +12,8 @@ export default async function SchoolsTimetablePage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading
-        title="Timetable"
-      />
+      <PageHeading title="Timetable" />
       <SchoolsTimetableContent />
     </div>
   );
 }
-

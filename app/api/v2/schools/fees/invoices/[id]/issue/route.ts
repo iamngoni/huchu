@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import {
+  apportionBase,
+  isZeroOrLess,
+  resolveBaseCurrency,
+  toNumberOrZero,
+} from "@/lib/schools/money";
 import { emitSchoolFeeAccountingEvent, refreshFeeInvoiceBalance } from "../../../_helpers";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -19,6 +27,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "issue");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
@@ -47,15 +58,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         invoiceId: existing.id,
       });
       if (!refreshed) throw new Error("Failed to refresh fee invoice totals");
-      if (refreshed.totalAmount <= 0) {
+      // Post S-2.1 Float→Decimal: `<= 0` on a Prisma.Decimal is a string
+      // comparison, which is quietly wrong rather than a type error.
+      if (isZeroOrLess(refreshed.totalAmount)) {
         throw new Error("Cannot issue an invoice with zero amount");
       }
 
-      return tx.schoolFeeInvoice.update({
+      const issued = await tx.schoolFeeInvoice.update({
         where: { id: existing.id },
         data: {
           issueDate,
-          status: refreshed.balanceAmount <= 0 ? "PAID" : "ISSUED",
+          status: isZeroOrLess(refreshed.balanceAmount) ? "PAID" : "ISSUED",
           issuedById: session.user.id,
           issuedAt: new Date(),
         },
@@ -63,11 +76,42 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           feeStructure: { select: { currency: true } },
         },
       });
+
+      // S-2.8. Inside the transaction that issued it. A draft is a school
+      // talking to itself; an issued invoice is a demand on a family, and the
+      // moment it becomes one is the thing an auditor asks about.
+      await writeSchoolAuditEvent(tx, {
+        companyId,
+        actorId: session.user.id,
+        eventType: "schools.fee.invoice.issued",
+        entityType: "SchoolFeeInvoice",
+        entityId: issued.id,
+        payload: {
+          invoiceNo: issued.invoiceNo,
+          studentId: issued.studentId,
+          termId: issued.termId,
+          currency: issued.currency,
+          // Money is `Decimal`. Coerced here rather than left to whatever
+          // `JSON.stringify` makes of a Decimal on its way into `payloadJson`.
+          totalAmount: toNumberOrZero(issued.totalAmount),
+          balanceAmount: toNumberOrZero(issued.balanceAmount),
+          issueDate: issued.issueDate.toISOString(),
+          status: issued.status,
+        },
+      });
+
+      return issued;
     });
 
     if (!updated) return errorResponse("Fee invoice not found", 404);
 
     if (updated.status === "ISSUED") {
+      const baseCurrency = await resolveBaseCurrency(companyId);
+      const issuedInBase = apportionBase({
+        amount: updated.totalAmount,
+        part: updated.taxTotal,
+        exchangeRate: updated.exchangeRate,
+      });
       await emitSchoolFeeAccountingEvent({
         companyId,
         actorId: session.user.id,
@@ -75,11 +119,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         sourceId: updated.id,
         sourceRef: updated.invoiceNo,
         entryDate: updated.issueDate,
-        amount: updated.totalAmount,
-        netAmount: updated.subTotal,
-        taxAmount: updated.taxTotal,
-        grossAmount: updated.totalAmount,
-        currency: updated.feeStructure?.currency ?? "USD",
+        // S-2.2: the ledger takes the base-currency figures, derived from the
+        // rate stamped on the invoice when it was raised.
+        amount: issuedInBase.base,
+        // S-2.3: the tax is converted and the net is the remainder, so
+        // net + tax is the amount to the cent and the entry balances. Two
+        // separate conversions differ by one on a non-base currency, and the
+        // posting engine refuses an entry whose sides do not agree.
+        netAmount: issuedInBase.baseRest,
+        taxAmount: issuedInBase.basePart,
+        grossAmount: issuedInBase.base,
+        currency: baseCurrency,
+        documentCurrency: updated.currency,
+        documentAmount: updated.totalAmount,
+        exchangeRate: updated.exchangeRate,
         payload: {
           invoiceNo: updated.invoiceNo,
           studentId: updated.studentId,

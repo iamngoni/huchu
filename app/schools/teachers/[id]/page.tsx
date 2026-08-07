@@ -1,10 +1,11 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
-import { TeacherProfileContent } from "@/components/schools/teachers/teacher-profile-content";
+
+import { TeacherRecordPage } from "@/components/schools/records/teacher-record-page";
 import { authOptions } from "@/lib/auth";
 
-export default async function TeacherProfilePage({
+/** S-4.3 — a teacher is a record page. See the student route for why no heading. */
+export default async function TeacherRecordRoute({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -16,10 +17,5 @@ export default async function TeacherProfilePage({
 
   const { id } = await params;
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading title="Teacher Profile" />
-      <TeacherProfileContent teacherId={id} />
-    </div>
-  );
+  return <TeacherRecordPage teacherId={id} />;
 }

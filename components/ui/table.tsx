@@ -369,7 +369,16 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(
 
           <div
             className={cn(
-              "table-rail table-scroll overflow-hidden ",
+              // No `overflow-hidden` here. Both `.table-rail` (globals.css)
+              // and the design system's `.table-scroll` set `overflow-x: auto`
+              // precisely so a table wider than its container can be swiped,
+              // and the Tailwind utility overrode both. Between `md` and `lg`
+              // the table is deliberately given `w-max`, so with the scroll
+              // disabled every column past the container edge became
+              // unreachable — a 1232px table clipped dead at 768px on every
+              // DataTable in the app. There is no radius to protect: the rail
+              // sets `border-radius: 0`.
+              "table-rail table-scroll",
               edgeToEdge && "table-edge-to-edge",
             )}
             data-tablet-scrollable={tabletScrollable ? "true" : "false"}

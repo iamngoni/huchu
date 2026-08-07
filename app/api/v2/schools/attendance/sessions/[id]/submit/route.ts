@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { getTeacherProfile, isPrivilegedRole } from "@/lib/schools/governance-v2";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -10,6 +11,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.attendance", "submit");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 

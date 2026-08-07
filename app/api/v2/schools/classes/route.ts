@@ -8,6 +8,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { isUniqueConstraintError } from "../_helpers";
 
 const classQuerySchema = z.object({
@@ -27,6 +28,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.academics", "view");
+    if (denied) return errorResponse(denied, 403);
     const { searchParams } = new URL(request.url);
     const { page, limit, skip } = getPaginationParams(request);
 
@@ -82,6 +86,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.academics", "create");
+    if (denied) return errorResponse(denied, 403);
 
     const body = await request.json();
     const validated = createClassSchema.parse(body);

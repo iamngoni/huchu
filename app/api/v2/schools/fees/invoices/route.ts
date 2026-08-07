@@ -10,14 +10,36 @@ import {
 } from "@/lib/api-utils";
 import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import {
+  apportionBase,
+  money,
+  multiplyMoney,
+  percent,
+  rate,
+  resolveDocumentCurrency,
+  taxOn,
+  toNumberOrZero,
+  UnknownExchangeRateError,
+} from "@/lib/schools/money";
 import {
   emitSchoolFeeAccountingEvent,
+  isDuplicateLiveInvoice,
   refreshFeeInvoiceBalance,
 } from "../_helpers";
 
 const querySchema = z.object({
   search: z.string().trim().min(1).optional(),
   studentId: z.string().uuid().optional(),
+  /**
+   * The year group a bursar is chasing. Filtered through the student's current
+   * class rather than stored on the invoice: an invoice belongs to a student
+   * and a term, and the class is the student's, so copying it here would give
+   * two answers the moment a child moves up.
+   */
+  classId: z.string().uuid().optional(),
+  streamId: z.string().uuid().optional(),
   termId: z.string().uuid().optional(),
   status: z
     .enum(["DRAFT", "ISSUED", "PART_PAID", "PAID", "VOIDED", "WRITEOFF"])
@@ -50,14 +72,16 @@ const createSchema = z.object({
   dueDate: dateInputSchema.optional(),
   description: z.string().trim().max(240).optional(),
   amount: z.number().finite().optional(),
+  /**
+   * S-2.2. Omitted means the school's own currency, so an existing tenant sees
+   * no change. A fee structure's currency wins over this, because the price
+   * sheet is what the family was quoted.
+   */
+  currency: z.string().trim().min(3).max(10).optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
   issueNow: z.boolean().optional(),
   lines: z.array(createLineSchema).optional(),
 });
-
-function toMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 
 function parseDate(input: string) {
   return new Date(input);
@@ -68,12 +92,17 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "view");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
     const query = querySchema.parse({
       search: searchParams.get("search") ?? undefined,
       studentId: searchParams.get("studentId") ?? undefined,
+      classId: searchParams.get("classId") ?? undefined,
+      streamId: searchParams.get("streamId") ?? undefined,
       termId: searchParams.get("termId") ?? undefined,
       status: searchParams.get("status") ?? undefined,
       includeLines: searchParams.get("includeLines") ?? undefined,
@@ -81,6 +110,12 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.SchoolFeeInvoiceWhereInput = { companyId };
     if (query.studentId) where.studentId = query.studentId;
+    if (query.classId || query.streamId) {
+      where.student = {
+        ...(query.classId ? { currentClassId: query.classId } : {}),
+        ...(query.streamId ? { currentStreamId: query.streamId } : {}),
+      };
+    }
     if (query.termId) where.termId = query.termId;
     if (query.status) where.status = query.status;
     if (query.search) {
@@ -167,6 +202,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "create");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
     const body = await request.json();
@@ -284,6 +322,22 @@ export async function POST(request: NextRequest) {
       return errorResponse("Duplicate fee codes in invoice lines are not allowed", 400);
     }
 
+    // S-2.2. A structure's own currency is what the family was quoted, so it
+    // beats anything the request asks for.
+    let documentCurrency;
+    try {
+      documentCurrency = await resolveDocumentCurrency({
+        companyId,
+        currency: feeStructure?.currency ?? validated.currency,
+        on: issueDate,
+      });
+    } catch (error) {
+      if (error instanceof UnknownExchangeRateError) {
+        return errorResponse(error.message, 400);
+      }
+      throw error;
+    }
+
     let invoiceNo: string;
     try {
       invoiceNo = validated.invoiceNo
@@ -309,26 +363,28 @@ export async function POST(request: NextRequest) {
           issueDate,
           dueDate,
           status: validated.issueNow ? "ISSUED" : "DRAFT",
+          currency: documentCurrency.currency,
+          exchangeRate: documentCurrency.exchangeRate,
           notes: validated.notes ?? null,
           createdById: session.user.id,
           issuedById: validated.issueNow ? session.user.id : null,
           issuedAt: validated.issueNow ? new Date() : null,
           lines: {
             create: sourceLines.map((line) => {
-              const quantity = toMoney(line.quantity);
-              const unitAmount = toMoney(line.unitAmount);
-              const net = toMoney(quantity * unitAmount);
-              const taxAmount = toMoney((net * line.taxRate) / 100);
-              const lineTotal = toMoney(net + taxAmount);
+              const quantity = rate(line.quantity);
+              const unitAmount = money(line.unitAmount);
+              const taxRate = percent(line.taxRate);
+              const net = multiplyMoney(quantity, unitAmount);
+              const taxAmount = taxOn(net, taxRate);
               return {
                 companyId,
                 feeCode: line.feeCode,
                 description: line.description,
                 quantity,
                 unitAmount,
-                taxRate: toMoney(line.taxRate),
+                taxRate,
                 taxAmount,
-                lineTotal,
+                lineTotal: net.plus(taxAmount),
               };
             }),
           },
@@ -340,6 +396,32 @@ export async function POST(request: NextRequest) {
         invoiceId: invoice.id,
       });
       if (!refreshed) throw new Error("Failed to refresh invoice balances");
+
+      // S-2.8. Raising a bill is where a family's debt begins, so it is the
+      // first thing "why does this family owe this" has to be traceable to.
+      // Written on `tx`, so a bill and the record of who raised it cannot
+      // disagree about whether they happened.
+      await writeSchoolAuditEvent(tx, {
+        companyId,
+        actorId: session.user.id,
+        eventType: "schools.fee.invoice.created",
+        entityType: "SchoolFeeInvoice",
+        entityId: invoice.id,
+        payload: {
+          invoiceNo,
+          studentId: validated.studentId,
+          termId: validated.termId,
+          feeStructureId: validated.feeStructureId ?? null,
+          currency: refreshed.currency,
+          // `Decimal` in, `number` out — deliberately, at the JSON boundary.
+          totalAmount: toNumberOrZero(refreshed.totalAmount),
+          balanceAmount: toNumberOrZero(refreshed.balanceAmount),
+          lineCount: sourceLines.length,
+          status: refreshed.status,
+          issueDate: issueDate.toISOString(),
+          dueDate: dueDate.toISOString(),
+        },
+      });
 
       return tx.schoolFeeInvoice.findUnique({
         where: { id: invoice.id },
@@ -363,6 +445,11 @@ export async function POST(request: NextRequest) {
     if (!created) return errorResponse("Failed to create fee invoice", 500);
 
     if (created.status === "ISSUED") {
+      const issuedInBase = apportionBase({
+        amount: created.totalAmount,
+        part: created.taxTotal,
+        exchangeRate: created.exchangeRate,
+      });
       await emitSchoolFeeAccountingEvent({
         companyId,
         actorId: session.user.id,
@@ -370,11 +457,18 @@ export async function POST(request: NextRequest) {
         sourceId: created.id,
         sourceRef: created.invoiceNo,
         entryDate: created.issueDate,
-        amount: created.totalAmount,
-        netAmount: created.subTotal,
-        taxAmount: created.taxTotal,
-        grossAmount: created.totalAmount,
-        currency: created.feeStructure?.currency ?? "USD",
+        // S-2.2: the ledger is kept in the school's base currency, so the
+        // base-currency figures are what post. The billed amounts ride along in
+        // the payload.
+        amount: issuedInBase.base,
+        // S-2.3: convert the tax, derive the net. See the issue route.
+        netAmount: issuedInBase.baseRest,
+        taxAmount: issuedInBase.basePart,
+        grossAmount: issuedInBase.base,
+        currency: documentCurrency.baseCurrency,
+        documentCurrency: created.currency,
+        documentAmount: created.totalAmount,
+        exchangeRate: created.exchangeRate,
         payload: {
           invoiceNo: created.invoiceNo,
           studentId: created.studentId,
@@ -395,6 +489,14 @@ export async function POST(request: NextRequest) {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      // S-2.4. The partial unique index reports itself by name, and a bursar
+      // needs to be told which of the two collisions they hit.
+      if (isDuplicateLiveInvoice(error)) {
+        return errorResponse(
+          "This student already has an invoice for this term and fee structure",
+          409,
+        );
+      }
       return errorResponse("Fee invoice number already exists", 409);
     }
     console.error("[API] POST /api/v2/schools/fees/invoices error:", error);

@@ -1,0 +1,362 @@
+/* ============================================================
+   Huchu DS — Portal shells
+   Self-contained shell systems for product portals (POS,
+   Parent, Student, Teacher, Staff, Admin). Each shell is a
+   chrome around the screen body — independent of the dashboard.
+   ============================================================ */
+
+/* ── Universal portal screen body ───────────────────────── */
+.ps-screen {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  background: var(--canvas);
+  color: var(--text-body);
+  font: var(--type-body);
+}
+.ps-scroll { flex: 1; overflow-y: auto; }
+.ps-scroll::-webkit-scrollbar { width: 0; }
+
+/* ── Mobile status bar ──────────────────────────────────── */
+.ps-statusbar {
+  height: 36px; padding: 6px 22px 0;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  font: 600 13px/1 var(--font-sans);
+  color: var(--text-strong);
+  flex: none;
+}
+.ps-statusbar .right { display: inline-flex; align-items: center; gap: 5px; }
+.ps-statusbar .right svg { width: 14px; height: 14px; }
+.ps-statusbar.invert { color: #fff; }
+.ps-statusbar.invert .right svg { color: #fff; }
+
+/* ── Mobile top app bar ─────────────────────────────────── */
+.ps-appbar {
+  height: 52px; padding: 0 16px;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.ps-appbar .nav-btn {
+  width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 8px; color: var(--text-strong);
+}
+.ps-appbar .nav-btn:hover { background: var(--surface-muted); }
+.ps-appbar h1 {
+  font: 600 16px/1 var(--font-sans);
+  letter-spacing: -0.01em; color: var(--text-strong); margin: 0; flex: 1;
+}
+.ps-appbar .right { display: inline-flex; align-items: center; gap: 8px; }
+.ps-appbar.compact { height: 44px; }
+.ps-appbar.transparent { background: transparent; border-bottom: 0; }
+.ps-appbar.dark { background: var(--ink); border-bottom-color: transparent; color: #fff; }
+.ps-appbar.dark h1 { color: #fff; }
+.ps-appbar.dark .nav-btn { color: rgba(255,255,255,.85); }
+.ps-appbar.dark .nav-btn:hover { background: rgba(255,255,255,.08); }
+
+/* ── Mobile bottom tab bar ──────────────────────────────── */
+.ps-tabbar {
+  height: 72px; padding: 8px 8px 18px;
+  display: flex; align-items: stretch;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  flex: none;
+}
+.ps-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border-radius: 8px; padding: 4px 0;
+  color: var(--text-subtle); text-decoration: none;
+  font: 500 11px/1 var(--font-sans);
+}
+.ps-tab svg { width: 22px; height: 22px; }
+.ps-tab.active { color: var(--brand); }
+.ps-tab.active svg { color: var(--brand); }
+
+/* ── Tablet/desktop side nav (portal) ───────────────────── */
+.ps-side {
+  width: 220px; flex: none;
+  background: var(--canvas); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 16px 12px;
+}
+.ps-side .brand { display: inline-flex; align-items: center; gap: 10px; padding: 6px 8px; font: 600 15px/1 var(--font-sans); color: var(--text-strong); margin-bottom: 16px; }
+.ps-side .brand .mark { width: 22px; height: 22px; color: var(--brand); }
+.ps-side nav { display: grid; gap: 2px; }
+.ps-side nav a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 7px;
+  font: 500 13.5px/1 var(--font-sans); color: var(--text-body); text-decoration: none;
+}
+.ps-side nav a:hover { background: var(--surface-muted); color: var(--text-strong); }
+.ps-side nav a.active { background: var(--brand-soft); color: var(--brand-strong); }
+.ps-side nav a svg { width: 16px; height: 16px; color: var(--text-muted); flex: none; }
+.ps-side nav a.active svg { color: var(--brand); }
+.ps-side .ps-section-h { font: 500 11px/1 var(--font-sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-subtle); padding: 14px 10px 8px; }
+.ps-side .ps-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; padding: 12px 10px 4px; }
+.ps-side .ps-foot .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-strong); display: grid; place-items: center; font: 600 12px/1 var(--font-sans); }
+.ps-side .ps-foot .nm { font: 500 13px/1.3 var(--font-sans); color: var(--text-strong); }
+.ps-side .ps-foot .sb { font: 11px/1.2 var(--font-sans); color: var(--text-muted); }
+
+/* Layout helpers */
+.ps-row { display: flex; min-height: 100%; }
+
+/* ── Reusable cards inside portal pages ─────────────────── */
+.pc {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 18px;
+}
+.pc.compact { padding: 12px 14px; }
+.pc.tonal-brand { background: var(--brand-soft); border-color: var(--brand-100); }
+.pc.tonal-ink { background: var(--ink); color: #fff; border-color: transparent; }
+.pc.tonal-ink .pc-h { color: #fff; }
+
+.pc-h { font: 600 14px/1.3 var(--font-sans); color: var(--text-strong); margin: 0 0 4px; }
+.pc-sb { font: var(--type-caption); color: var(--text-muted); margin: 0 0 12px; }
+
+/* List rows (mobile-friendly) */
+.pl {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: clip;
+}
+.pl-row {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.pl-row:last-child { border-bottom: 0; }
+.pl-row .nm { font: 500 14px/1.3 var(--font-sans); color: var(--text-strong); }
+.pl-row .sb { font: 12px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 2px; }
+.pl-row .val { font: 500 14px/1.3 var(--font-mono); color: var(--text-strong); }
+.pl-row .ic-tile { width: 36px; height: 36px; display: grid; place-items: center; background: var(--surface-muted); border-radius: 8px; color: var(--text-strong); }
+.pl-row .ic-tile.brand { background: var(--brand-soft); color: var(--brand-strong); }
+.pl-row .ic-tile.success { background: var(--tone-success-bg); color: var(--tone-success); }
+.pl-row .ic-tile.warn { background: var(--tone-warn-bg); color: var(--tone-warn); }
+.pl-row .ic-tile.danger { background: var(--tone-danger-bg); color: var(--tone-danger); }
+
+/* Greeting block, hero banner */
+.pgreet { padding: 20px 18px 8px; }
+.pgreet .hi { font: 500 13px/1.3 var(--font-sans); color: var(--text-muted); }
+.pgreet h2 { font: 700 24px/1.15 var(--font-sans); letter-spacing: -0.02em; color: var(--text-strong); margin: 4px 0 0; }
+
+/* Hero card with brand background — used as a focal block */
+.phero {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deeper) 100%);
+  color: #fff;
+  border-radius: 14px;
+  padding: 18px 18px 20px;
+  position: relative;
+  overflow: clip;
+}
+.phero::before {
+  content: ""; position: absolute; right: -40px; top: -40px;
+  width: 160px; height: 160px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%);
+}
+.phero .lbl { font: 500 12px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+.phero .val { font: 700 36px/1.05 var(--font-sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 10px; }
+.phero .ds { font: 13.5px/1.4 var(--font-sans); opacity: 0.85; margin-top: 6px; max-width: 28ch; }
+.phero .actions { display: flex; gap: 8px; margin-top: 16px; }
+.phero .pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; border-radius: 9999px;
+  background: rgba(255,255,255,0.15); color: #fff;
+  font: 500 13px/1 var(--font-sans); text-decoration: none;
+}
+.phero .pill:hover { background: rgba(255,255,255,0.25); }
+.phero .pill.solid { background: #fff; color: var(--brand-strong); }
+.phero .pill.solid:hover { background: rgba(255,255,255,0.9); }
+
+/* Mobile section heading */
+.psh { padding: 16px 4px 8px; font: 500 12px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-subtle); display: flex; align-items: center; justify-content: space-between; }
+.psh a { font: 500 12.5px/1 var(--font-sans); color: var(--brand-strong); text-decoration: none; letter-spacing: 0; text-transform: none; }
+
+/* FAB */
+.pfab {
+  position: absolute; right: 16px; bottom: 88px;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--brand); color: #fff;
+  display: grid; place-items: center;
+  box-shadow: 0 10px 24px -6px rgba(11,93,240,0.4);
+  z-index: 30;
+}
+.pfab:hover { background: var(--brand-strong); }
+.pfab svg { width: 22px; height: 22px; }
+
+/* Sale-specific (POS) */
+.pos-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; background: var(--surface); border-radius: 12px; }
+.pos-keypad button {
+  height: 50px; border-radius: 10px; background: var(--surface-muted); color: var(--text-strong);
+  font: 600 20px/1 var(--font-sans);
+}
+.pos-keypad button:hover { background: var(--surface-sunken); }
+.pos-keypad button.primary { background: var(--brand); color: #fff; }
+.pos-keypad button.brand { background: var(--brand-soft); color: var(--brand-strong); }
+
+/* Sale line items */
+.sale-line { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); }
+.sale-line:last-child { border-bottom: 0; }
+.sale-line .nm { font: 500 14px/1.3 var(--font-sans); color: var(--text-strong); }
+.sale-line .qty { font: 500 13px/1 var(--font-mono); color: var(--text-muted); padding: 4px 8px; background: var(--surface-muted); border-radius: 9999px; }
+.sale-line .price { font: 600 14px/1 var(--font-mono); color: var(--text-strong); font-variant-numeric: tabular-nums; }
+
+/* Big-button grid (Sale categories) */
+.pos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; }
+.pos-tile { aspect-ratio: 1; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 500 12px/1.2 var(--font-sans); color: var(--text-strong); text-align: center; padding: 8px; }
+.pos-tile svg { color: var(--brand); width: 22px; height: 22px; }
+.pos-tile .ct { font: 11px/1 var(--font-mono); color: var(--text-muted); margin-top: 2px; }
+.pos-tile:hover { border-color: var(--brand-200); background: var(--brand-50); }
+
+/* Bottom action bar (variant for screens needing a "pay" button) */
+.ps-bottombar {
+  padding: 12px 16px 22px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex; gap: 8px; align-items: center;
+  flex: none;
+}
+
+/* Tablet/desktop padded content */
+.ps-content { padding: 24px 28px; min-width: 0; flex: 1; overflow-y: auto; }
+.ps-content h2 { font: 700 24px/1.15 var(--font-sans); letter-spacing: -0.02em; margin: 0 0 12px; color: var(--text-strong); }
+.ps-content .lede { font: 15px/1.55 var(--font-sans); color: var(--text-muted); margin: 0 0 18px; }
+
+/* ── In-portal kit nav (injected by portal-kit-nav.js) ──── */
+.pk-nav {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  font: 500 13px/1 var(--font-sans);
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pk-nav::-webkit-scrollbar { display: none; }
+.pk-nav .pk-home {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--text-strong); text-decoration: none;
+  padding: 5px 9px; border-radius: 7px;
+  flex: none;
+}
+.pk-nav .pk-home:hover { background: var(--surface-muted); }
+.pk-nav .pk-home-label { white-space: nowrap; }
+.pk-nav .pk-sep { color: var(--text-subtle); flex: none; }
+.pk-nav .pk-screens {
+  display: inline-flex; gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pk-nav .pk-screens::-webkit-scrollbar { display: none; }
+.pk-nav .pk-screen {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 9px; border-radius: 7px;
+  color: var(--text-muted); text-decoration: none;
+  white-space: nowrap; flex: none;
+}
+.pk-nav .pk-screen:hover { color: var(--text-strong); background: var(--surface-muted); }
+.pk-nav .pk-screen.current {
+  color: var(--brand-strong); background: var(--brand-soft);
+}
+.pk-nav .pk-screen-device {
+  font: 500 10px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-subtle);
+  padding: 2px 5px; border-radius: 4px;
+  background: var(--surface-muted);
+}
+.pk-nav .pk-screen.current .pk-screen-device {
+  background: var(--brand-100); color: var(--brand-strong);
+}
+.pk-nav .pk-out {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 6px;
+  color: var(--text-muted); text-decoration: none;
+  flex: none; margin-left: auto;
+}
+.pk-nav .pk-out:hover { background: var(--surface-muted); color: var(--text-strong); }
+
+@media (max-width: 720px) {
+  .pk-nav { padding: 6px 8px; gap: 6px; }
+  .pk-nav .pk-home-label { display: none; }
+  .pk-nav .pk-sep { display: none; }
+  .pk-nav .pk-screen-device { display: none; }
+  .pk-nav .pk-out { display: none; }
+}
+
+/* ── Device frame wrappers (for standalone screen pages) ── */
+.kit-stage {
+  background: var(--gray-100);
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+}
+.kit-stage.phone-bg { padding: 56px 24px; }
+.kit-stage.desk-bg { padding: 0; align-items: stretch; }
+
+.device-phone {
+  width: 390px; height: 844px; border-radius: 48px;
+  background: #0F1115; padding: 12px;
+  box-shadow: 0 30px 60px -20px rgba(22,24,29,0.25), 0 0 0 1px rgba(22,24,29,0.08);
+  position: relative; flex: none;
+}
+.device-phone::before {
+  content: ""; position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  width: 110px; height: 30px; background: #0F1115; border-radius: 0 0 18px 18px; z-index: 20;
+}
+.device-phone .screen {
+  width: 100%; height: 100%; border-radius: 36px;
+  overflow: hidden; background: var(--canvas);
+  position: relative; display: flex; flex-direction: column;
+}
+
+.device-tablet {
+  width: 820px; max-width: 100%; height: 620px; border-radius: 24px;
+  background: #0F1115; padding: 10px;
+  box-shadow: 0 30px 60px -20px rgba(22,24,29,0.25), 0 0 0 1px rgba(22,24,29,0.08);
+  position: relative; flex: none;
+}
+.device-tablet .screen {
+  width: 100%; height: 100%; border-radius: 16px;
+  overflow: hidden; background: var(--canvas);
+  display: flex; flex-direction: column;
+}
+
+.device-desktop {
+  width: 1280px; height: 760px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  box-shadow: 0 30px 60px -20px rgba(22,24,29,0.18);
+  overflow: hidden; display: flex; flex-direction: column;
+  flex: none;
+}
+.device-desktop .chrome {
+  height: 32px; background: #1A1D24;
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 12px; flex: none;
+}
+.device-desktop .chrome .d { width: 9px; height: 9px; border-radius: 50%; background: #444; flex: none; }
+.device-desktop .chrome .url {
+  margin-left: 14px; padding: 4px 10px;
+  background: rgba(255,255,255,0.06); border-radius: 6px;
+  color: rgba(255,255,255,0.6);
+  font: 500 11px/1 var(--font-mono);
+}
+.device-desktop .screen {
+  flex: 1; background: var(--canvas);
+  display: flex; overflow: hidden; min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .kit-stage { padding: 8px; }
+  .kit-stage.phone-bg { padding: 16px 8px; }
+  .device-phone {
+    width: 100%; max-width: 390px; height: 80vh; max-height: 760px;
+    padding: 8px; border-radius: 36px;
+  }
+  .device-phone .screen { border-radius: 28px; }
+  .device-phone::before { width: 90px; height: 22px; top: 14px; }
+}
+
+/* On phone, device-scale.js takes over: it measures each frame's intrinsic
+   size and scales/sizes the kit-stage to match. See device-scale.js. */

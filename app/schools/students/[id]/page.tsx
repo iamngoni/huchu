@@ -1,10 +1,18 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
-import { StudentProfileContent } from "@/components/schools/students/student-profile-content";
+
+import { StudentRecordPage } from "@/components/schools/records/student-record-page";
 import { authOptions } from "@/lib/auth";
 
-export default async function StudentProfilePage({
+/**
+ * S-4.3 — a student is a record page.
+ *
+ * No `PageHeading` and no `max-w-7xl` wrapper any more: `RecordPageShell` puts
+ * the pupil's name and the actions in the top app bar through `PageChrome`, the
+ * same as every other record in the product, so a heading here would print the
+ * name twice and a narrower column would fight the shell's own layout.
+ */
+export default async function StudentRecordRoute({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -16,10 +24,5 @@ export default async function StudentProfilePage({
 
   const { id } = await params;
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading title="Student Profile" />
-      <StudentProfileContent studentId={id} />
-    </div>
-  );
+  return <StudentRecordPage studentId={id} />;
 }

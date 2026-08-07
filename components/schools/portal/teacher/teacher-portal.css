@@ -1,0 +1,511 @@
+/* ============================================================
+   Teacher portal — chrome and screen styles ported from the
+   design-system prototype (docs/design-system/portals/teacher.html).
+
+   Selectors keep the prototype's names (prefixed `te-`) so the two
+   stay diffable. Colour comes from @corelithzw tokens only — no hex
+   literals. The prototype's `--te-brand*` violet family maps onto
+   the shipped violet accent scale, and the portal re-points the
+   brand channel at it inside `.te-portal` so every design-system
+   component in the portal — buttons, badges, focus rings, brand
+   cards — comes out violet without a per-screen override.
+
+   System blocks (`.card`, `.b-row-card`, `.rail-item`, `.badge`)
+   come from the shipped design-system CSS and are only extended
+   here, never redefined.
+   ============================================================ */
+
+.te-portal {
+  /* The prototype's violet, expressed in the accent scale the design
+     system ships. `solid`/`fg`/`bg`/`bd` are the same four roles the
+     demo's --te-brand / -strong / -soft / -mid stood for. */
+  --te-brand: var(--accent-violet-solid);
+  --te-brand-strong: var(--accent-violet-fg);
+  --te-brand-soft: var(--accent-violet-bg);
+  --te-brand-bd: var(--accent-violet-bd);
+  --te-grad: linear-gradient(
+    135deg,
+    var(--accent-violet-solid) 0%,
+    var(--accent-violet-fg) 100%
+  );
+
+  /* Re-point the brand channel for everything inside the portal. This
+     is what makes the accent violet on screens this file never names:
+     `Button variant="primary"`, `Badge tone="info"`, `Card tone="brand"`
+     and every `var(--brand*)` a screen already reaches for. */
+  --brand: var(--accent-violet-solid);
+  --brand-strong: var(--accent-violet-fg);
+  --brand-deeper: var(--accent-violet-fg);
+  --brand-soft: var(--accent-violet-bg);
+  --brand-100: var(--accent-violet-bd);
+  --brand-300: var(--accent-violet-bd);
+  --brand-tint: var(--accent-violet-bg);
+  --action-primary-bg: var(--accent-violet-solid);
+  --action-primary-hover: var(--accent-violet-fg);
+  --action-primary-pressed: var(--accent-violet-fg);
+  --tone-info: var(--accent-violet-fg);
+  --tone-info-bg: var(--accent-violet-bg);
+  --tone-info-bd: var(--accent-violet-bd);
+  --text-link: var(--accent-violet-fg);
+  --focus-ring: 0 0 0 3px var(--accent-violet-bd);
+}
+
+/* ── Shell frame ───────────────────────────────────────────────
+   `AppShell` carries its geometry inline, so the two rules that have
+   to beat an inline style say so. Everything else is plain cascade. */
+.te-portal .app-shell-side {
+  background: var(--canvas);
+  border-right: 1px solid var(--border);
+  padding: 16px 12px 12px;
+  min-width: 0;
+  overflow-y: auto;
+}
+.te-portal .app-shell-topbar {
+  display: block;
+  padding: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.te-portal .app-shell-content {
+  /* Demo body rhythm: 20/24 padding, 16px between blocks. Inline
+     styles on the element are why these two carry !important. */
+  padding: 20px 24px 24px !important;
+  gap: 16px !important;
+  align-content: start;
+}
+
+/* ── Side rail ─────────────────────────────────────────────────── */
+.te-portal .te-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+.te-portal .te-who:hover { background: var(--surface-muted); }
+.te-portal .te-who .nm {
+  display: block;
+  font: 600 13px/1.3 var(--font-sans);
+  color: var(--text-strong);
+}
+.te-portal .te-who .sb {
+  display: block;
+  font: 11px/1.3 var(--font-sans);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.te-portal .nav-rail .group-label {
+  font: 500 11px/1 var(--font-sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  padding: 12px 10px 8px;
+}
+.te-portal .rail-item {
+  height: auto;
+  min-height: 34px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  font: 500 13px/1 var(--font-sans);
+  gap: 9px;
+}
+.te-portal .rail-item .rail-item-icon { color: var(--text-muted); }
+.te-portal .rail-item:hover {
+  background: var(--surface-muted);
+  color: var(--text-strong);
+}
+.te-portal .rail-item.active {
+  background: var(--te-brand-soft);
+  color: var(--te-brand-strong);
+}
+.te-portal .rail-item.active .rail-item-icon,
+.te-portal .rail-item.active .rail-item-count {
+  color: var(--te-brand-strong);
+}
+.te-portal .rail-item .rail-item-count {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--text-subtle);
+}
+
+/* Class rail — a colour bar per class, the two-line label the demo
+   carries, and the roll size on the right. */
+.te-portal .te-class-row { padding: 8px 10px; }
+.te-portal .te-class-row .rail-item-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  flex: 1;
+}
+.te-portal .te-class-row .swatch {
+  width: 6px;
+  height: 22px;
+  border-radius: 3px;
+  flex: none;
+  background: var(--accent-gray-solid);
+}
+.te-portal .te-class-row .cb {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.te-portal .te-class-row .cn {
+  font: 600 12.5px/1.2 var(--font-sans);
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.te-portal .te-class-row.active .cn { color: var(--te-brand-strong); }
+.te-portal .te-class-row .cs {
+  font: 10.5px/1 var(--font-mono);
+  color: var(--text-muted);
+}
+
+/* ── Top bar ───────────────────────────────────────────────────── */
+.te-portal .te-bar {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.te-portal .te-bar .meta { flex: 1; min-width: 0; }
+.te-portal .te-bar .crumbs {
+  font: 500 11.5px/1 var(--font-sans);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.te-portal .te-bar h1 {
+  font: 700 16px/1.2 var(--font-sans);
+  letter-spacing: -0.015em;
+  color: var(--text-strong);
+  margin: 3px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.te-portal .te-bar .te-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font: 600 11px/1 var(--font-sans);
+  background: var(--tone-success-bg);
+  color: var(--tone-success);
+  flex: none;
+}
+.te-portal .te-bar .te-chip.off {
+  background: var(--tone-warn-bg);
+  color: var(--tone-warn);
+}
+.te-portal .te-bar .te-chip .pdot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.te-portal .te-bar .te-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: var(--surface-muted);
+  color: var(--text-strong);
+  flex: none;
+}
+.te-portal .te-bar .te-bell:hover { background: var(--surface-sunken); }
+.te-portal .te-bar .te-bell .ndot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: var(--radius-pill);
+  background: var(--te-brand);
+  color: var(--accent-violet-on);
+  font: 600 9px/14px var(--font-mono);
+  text-align: center;
+}
+
+/* ── Tab strip ─────────────────────────────────────────────────── */
+.te-portal .te-tabs {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding: 0 22px;
+  min-width: 0;
+  overflow-x: auto;
+}
+.te-portal .te-tabs .tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 14px;
+  font: 500 13px/1 var(--font-sans);
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.te-portal .te-tabs .tab:hover { color: var(--text-strong); }
+.te-portal .te-tabs .tab.active {
+  color: var(--te-brand-strong);
+  border-bottom-color: var(--te-brand);
+}
+.te-portal .te-tabs .tab .bdg {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font: 500 11px/1.4 var(--font-mono);
+}
+.te-portal .te-tabs .tab.active .bdg {
+  background: var(--te-brand-soft);
+  color: var(--te-brand-strong);
+}
+
+/* ── Today: greeting ───────────────────────────────────────────── */
+.te-portal .te-greet {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.te-portal .te-greet .left { flex: 1; min-width: 0; }
+.te-portal .te-greet h2 {
+  font: 700 22px/1.2 var(--font-sans);
+  letter-spacing: -0.015em;
+  color: var(--text-strong);
+  margin: 0;
+}
+.te-portal .te-greet .sb {
+  font: 13px/1.5 var(--font-sans);
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Today: the day's periods ──────────────────────────────────── */
+.te-portal .te-sched-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.te-portal .te-sched-h .ds {
+  font: 12px/1 var(--font-sans);
+  color: var(--text-muted);
+}
+.te-portal .te-now {
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--tone-success-bg);
+  color: var(--tone-success);
+  font: 600 11px/1 var(--font-sans);
+}
+.te-portal .te-now.next {
+  background: var(--te-brand-soft);
+  color: var(--te-brand-strong);
+}
+.te-portal .te-sched-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 8px;
+}
+.te-portal .te-cell {
+  padding: 10px 11px;
+  border-radius: 9px;
+  background: var(--surface-muted);
+  border: 1px solid transparent;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  text-decoration: none;
+}
+.te-portal .te-cell .pd {
+  font: 500 10px/1 var(--font-mono);
+  color: var(--text-subtle);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.te-portal .te-cell .cls {
+  font: 600 13px/1.2 var(--font-sans);
+  color: var(--text-strong);
+  margin-top: 2px;
+}
+.te-portal .te-cell .rm {
+  font: 11px/1.3 var(--font-mono);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.te-portal a.te-cell:hover { background: var(--surface-sunken); }
+.te-portal .te-cell .tag { margin-top: auto; padding-top: 4px; }
+.te-portal .te-cell.current {
+  background: var(--te-brand-soft);
+  border-color: var(--te-brand-bd);
+}
+.te-portal .te-cell.current .pd,
+.te-portal .te-cell.current .rm { color: var(--te-brand); }
+.te-portal .te-cell.current .cls { color: var(--te-brand-strong); }
+.te-portal .te-cell.free { opacity: 0.55; }
+.te-portal .te-cell.free .cls {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Today: the up-next banner ─────────────────────────────────── */
+.te-portal .te-att-card {
+  background: var(--te-grad);
+  color: var(--accent-violet-on);
+  border-radius: var(--card-radius);
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.te-portal .te-att-card .left { flex: 1; min-width: 0; }
+.te-portal .te-att-card .lbl {
+  font: 500 11px/1 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.te-portal .te-att-card h3 {
+  font: 700 18px/1.25 var(--font-sans);
+  margin: 6px 0 4px;
+}
+.te-portal .te-att-card .ds {
+  font: 13px/1.4 var(--font-sans);
+  opacity: 0.92;
+}
+.te-portal .te-att-card .go {
+  padding: 10px 14px;
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--te-brand-strong);
+  font: 600 13px/1 var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  text-decoration: none;
+}
+.te-portal .te-att-card .go:hover { background: var(--te-brand-soft); }
+
+/* ── Two-column card row ───────────────────────────────────────── */
+.te-portal .te-grid-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 60rem) {
+  .te-portal .te-grid-cards { grid-template-columns: 1fr 1fr; }
+}
+.te-portal .te-rows { display: flex; flex-direction: column; gap: 8px; }
+.te-portal a.b-row-card { text-decoration: none; }
+.te-portal a.b-row-card:hover { border-color: var(--te-brand-bd); }
+.te-portal .te-rows .b-rc-val { text-align: right; }
+.te-portal .te-rows .b-rc-delta { text-align: right; }
+
+/* Small-caps section labels — the demo's stat tile heading tier. */
+.te-portal .te-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 10px;
+}
+.te-portal .te-tile {
+  padding: 12px 14px;
+  background: var(--surface-muted);
+  border-radius: 10px;
+}
+.te-portal .te-tile .lbl {
+  font: 500 10.5px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.te-portal .te-tile .v {
+  font: 700 22px/1 var(--font-sans);
+  color: var(--text-strong);
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.te-portal .te-tile .v.warn { color: var(--tone-warn); }
+.te-portal .te-tile .ds {
+  font: 11px/1.3 var(--font-sans);
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Register: the counter row ─────────────────────────────────── */
+.te-portal .te-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 10px;
+}
+.te-portal .te-count {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+.te-portal .te-count .v {
+  font: 700 26px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+  margin: 0;
+}
+.te-portal .te-count .lbl {
+  font: 500 11px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 5px 0 0;
+}
+.te-portal .te-count.success { background: var(--tone-success-bg); }
+.te-portal .te-count.success .v { color: var(--tone-success); }
+.te-portal .te-count.danger { background: var(--tone-danger-bg); }
+.te-portal .te-count.danger .v { color: var(--tone-danger); }
+.te-portal .te-count.warn { background: var(--tone-warn-bg); }
+.te-portal .te-count.warn .v { color: var(--tone-warn); }
+
+/* ── Screen sweep ──────────────────────────────────────────────
+   The demo's visual language across the other screens: section
+   titles at the same tier, a violet-tinted table head, and the
+   selected/active states in the accent rather than in grey. */
+.te-portal .card-title { font: var(--type-section-title); }
+.te-portal .card-head .badge.tone-info { border-color: var(--te-brand-bd); }
+.te-portal table thead th {
+  font: 500 11px/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  background: var(--surface-muted);
+}
+/* The design system's own tab strips already draw their underline from
+   `--brand`, which is violet in here; the label follows it. */
+.te-portal .tabs > .active,
+.te-portal .tabs > [aria-selected="true"],
+.te-portal .tabstrip > .active,
+.te-portal .tabstrip > [aria-selected="true"] {
+  color: var(--te-brand-strong);
+}

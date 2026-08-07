@@ -1,0 +1,220 @@
+"use client";
+
+import { useState } from "react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RecordDialog } from "@/components/crm/records/record-dialog";
+import { DAY_NAMES, formatMinute } from "@/lib/schools/timetable-format";
+import type {
+  SchoolsPeriodRecord,
+  SchoolsRoomRecord,
+  TeacherAssignmentRecord,
+} from "@/lib/schools/admin-v2";
+
+export type LessonFormValues = {
+  classSubjectId: string;
+  periodId: string;
+  dayOfWeek: number;
+  roomId: string;
+};
+
+function emptyValues(dayOfWeek: number, periodId: string): LessonFormValues {
+  return { classSubjectId: "", periodId, dayOfWeek, roomId: "" };
+}
+
+/**
+ * Putting a lesson on the timetable.
+ *
+ * The lesson is chosen from the term's existing class-subject assignments
+ * rather than by picking a class, a subject and a teacher separately. Those
+ * three together *are* an assignment, and offering them as free choices here
+ * would let a timetabler schedule a combination the school has not agreed —
+ * and give the timetable a second opinion on who teaches what.
+ *
+ * Non-teaching periods are not offered. Break is on the timetable so it prints,
+ * not so lessons can be put in it.
+ */
+export function LessonFormSheet({
+  open,
+  onOpenChange,
+  assignments,
+  periods,
+  rooms,
+  defaultDayOfWeek,
+  defaultPeriodId,
+  isSubmitting,
+  error,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  assignments: TeacherAssignmentRecord[];
+  periods: SchoolsPeriodRecord[];
+  rooms: SchoolsRoomRecord[];
+  defaultDayOfWeek: number;
+  defaultPeriodId: string;
+  isSubmitting: boolean;
+  /** The clash sentences from the API, already joined. */
+  error: string | null;
+  onSubmit: (values: LessonFormValues) => void;
+}) {
+  const [values, setValues] = useState<LessonFormValues>(
+    emptyValues(defaultDayOfWeek, defaultPeriodId),
+  );
+
+  // Reset during render rather than in an effect: the form is a fresh sheet
+  // each time it opens, and an effect would render the previous lesson's
+  // choices for one frame first.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setValues(emptyValues(defaultDayOfWeek, defaultPeriodId));
+  }
+
+  const teachingPeriods = periods.filter((period) => period.isTeaching);
+  const canSubmit = Boolean(values.classSubjectId && values.periodId);
+
+  return (
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Add a lesson"
+      description="Choose an existing class-subject assignment and where it sits in the week."
+      footer={
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!canSubmit || isSubmitting}
+            onClick={() => onSubmit(values)}
+          >
+            {isSubmitting ? "Adding…" : "Add lesson"}
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>That slot is taken</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="lesson-assignment">Lesson</Label>
+          <Select
+            value={values.classSubjectId}
+            onValueChange={(value) =>
+              setValues((current) => ({ ...current, classSubjectId: value }))
+            }
+          >
+            <SelectTrigger id="lesson-assignment" className="w-full">
+              <SelectValue placeholder="Choose a class and subject" />
+            </SelectTrigger>
+            <SelectContent>
+              {assignments.map((assignment) => (
+                <SelectItem key={assignment.id} value={assignment.id}>
+                  {[assignment.class.name, assignment.stream?.name]
+                    .filter(Boolean)
+                    .join(" ")}{" "}
+                  · {assignment.subject.name} · {assignment.teacherProfile.user.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {assignments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No class-subject assignments exist for this term yet. Create them under
+              Teachers before building the timetable.
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="lesson-day">Day</Label>
+            <Select
+              value={String(values.dayOfWeek)}
+              onValueChange={(value) =>
+                setValues((current) => ({ ...current, dayOfWeek: Number(value) }))
+              }
+            >
+              <SelectTrigger id="lesson-day" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+                  <SelectItem key={day} value={String(day)}>
+                    {DAY_NAMES[day]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="lesson-period">Period</Label>
+            <Select
+              value={values.periodId}
+              onValueChange={(value) =>
+                setValues((current) => ({ ...current, periodId: value }))
+              }
+            >
+              <SelectTrigger id="lesson-period" className="w-full">
+                <SelectValue placeholder="Choose a period" />
+              </SelectTrigger>
+              <SelectContent>
+                {teachingPeriods.map((period) => (
+                  <SelectItem key={period.id} value={period.id}>
+                    {period.name} · {formatMinute(period.startMinute)}–
+                    {formatMinute(period.endMinute)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="lesson-room">Room</Label>
+          <Select
+            value={values.roomId || "none"}
+            onValueChange={(value) =>
+              setValues((current) => ({
+                ...current,
+                roomId: value === "none" ? "" : value,
+              }))
+            }
+          >
+            <SelectTrigger id="lesson-room" className="w-full">
+              <SelectValue placeholder="No room" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No room</SelectItem>
+              {rooms.map((room) => (
+                <SelectItem key={room.id} value={room.id}>
+                  {room.name}
+                  {room.capacity ? ` · seats ${room.capacity}` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            A school that does not track rooms can leave this empty.
+          </p>
+        </div>
+      </div>
+    </RecordDialog>
+  );
+}

@@ -10,10 +10,23 @@ import {
 } from "./collaboration";
 
 describe("comment record mapping", () => {
-  it("sets exactly one column per record type", () => {
-    for (const entity of COLLAB_ENTITIES) {
+  /**
+   * S-4.2: the five CRM types still map to their column, and the school types
+   * map to nothing, because no column was ever added for them. Their subject is
+   * carried by `(subjectType, subjectId)` — see `lib/records/subject.ts`.
+   */
+  const ENTITIES_WITH_A_LEGACY_COLUMN = ["LEAD", "DEAL", "COMPANY", "PERSON", "SITE"] as const;
+
+  it("sets exactly one column for a CRM record type", () => {
+    for (const entity of ENTITIES_WITH_A_LEGACY_COLUMN) {
       const columns = commentRecordColumns({ entity, recordId: "r-1" });
       expect(Object.values(columns).filter(Boolean)).toEqual(["r-1"]);
+    }
+  });
+
+  it("sets no column for a school record type", () => {
+    for (const entity of ["STUDENT", "GUARDIAN", "TEACHER", "CLASS", "SUBJECT", "HOSTEL"] as const) {
+      expect(commentRecordColumns({ entity, recordId: "r-1" })).toEqual({});
     }
   });
 
@@ -29,8 +42,13 @@ describe("comment record mapping", () => {
   });
 
   it("links every record type somewhere real", () => {
+    // Now delegated to the record-type registry, so a school record links into
+    // /schools/... rather than a /crm/... page it does not have. The assertion is
+    // that EVERY type resolves, which is what a notification deep link needs.
     for (const entity of COLLAB_ENTITIES) {
-      expect(collabRecordPath({ entity, recordId: "r-1" })).toMatch(/^\/crm\/[a-z-]+\/r-1$/);
+      expect(collabRecordPath({ entity, recordId: "r-1" })).toMatch(
+        /^\/(crm|schools)\/[a-z/-]+\/r-1$/,
+      );
     }
   });
 });

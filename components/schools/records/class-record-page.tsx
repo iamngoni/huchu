@@ -1,0 +1,309 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import { RecordAttributes, type RecordAttribute } from "@/components/records/record-attributes";
+import { RecordMark } from "@/components/records/record-mark";
+import {
+  RailSection,
+  RecordPageShell,
+  RelatedList,
+  type RecordTab,
+} from "@/components/records/record-page-shell";
+import {
+  SubjectFiles,
+  SubjectNotes,
+  type SubjectFile,
+  type SubjectNote,
+} from "@/components/records/subject-tabs";
+import { useAttributeEditor } from "@/components/records/use-attribute-editor";
+import { PrintDocumentButton } from "@/components/schools/common/print-document-button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
+import { recordType } from "@/lib/records/registry";
+
+/**
+ * A class, as a record.
+ *
+ * The fourth type and the first that is not a person, so this is where the mark
+ * changes shape: `RecordMark` gives a class a coloured tile with its emoji or its
+ * entity icon rather than initials, because nobody is looking for a *who*.
+ *
+ * The roll is the landing tab and it is fetched rather than counted. The class
+ * endpoint returns `_count.students` and no names, which is enough for a list of
+ * classes and not enough for the page you open to answer "who is in Form 1 Blue".
+ */
+
+type Stream = { id: string; code: string; name: string; capacity: number | null };
+
+type ClassSubject = {
+  id: string;
+  subject: { id: string; code: string; name: string; isCore: boolean } | null;
+  stream: { id: string; code: string; name: string } | null;
+  teacherProfile: {
+    id: string;
+    employeeCode: string;
+    user: { id: string; name: string | null; email: string } | null;
+  } | null;
+};
+
+type ClassRecord = {
+  id: string;
+  code: string;
+  name: string;
+  level: number | null;
+  capacity: number | null;
+  avatarUrl: string | null;
+  emoji: string | null;
+  accent: string | null;
+  term: { id: string; code: string; name: string } | null;
+  streams: Stream[];
+  classSubjects: ClassSubject[];
+  _count?: { students?: number; streams?: number };
+};
+
+type RollStudent = {
+  id: string;
+  studentNo: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  currentStream: { id: string; name: string } | null;
+};
+
+export function ClassRecordPage({ classId }: { classId: string }) {
+  const config = recordType("CLASS");
+  const [activeTab, setActiveTab] = useState("roll");
+
+  const query = useQuery({
+    queryKey: config.queryKey(classId),
+    queryFn: () => fetchJson<ClassRecord>(config.apiPath(classId)),
+  });
+
+  // The roll, by name. `_count.students` answers "how many" and this answers
+  // "who", which is what somebody opening a class actually wants.
+  const roll = useQuery({
+    queryKey: ["schools", "students", { classId }],
+    queryFn: () =>
+      fetchJson<{ data: RollStudent[] }>(
+        `/api/v2/schools/students?classId=${classId}&limit=200`,
+      ),
+  });
+
+  const edit = useAttributeEditor({
+    path: config.apiPath(classId),
+    invalidate: [config.queryKey(classId), ["schools", "classes"]],
+  });
+
+  const notes = useQuery({
+    queryKey: ["records", "comments", "CLASS", classId],
+    queryFn: () =>
+      fetchJson<{ data: SubjectNote[] }>(
+        `/api/v2/records/comments?subjectType=CLASS&subjectId=${classId}`,
+      ),
+  });
+
+  const files = useQuery({
+    queryKey: ["records", "files", "CLASS", classId],
+    queryFn: () =>
+      fetchJson<{ data: SubjectFile[] }>(
+        `/api/v2/records/files?subjectType=CLASS&subjectId=${classId}`,
+      ),
+  });
+
+  const record = query.data ?? null;
+
+  const attributes = useMemo<RecordAttribute[]>(() => {
+    if (!record) return [];
+    return [
+      { id: "name", label: "Name", ...edit.required("name", record.name) },
+      { id: "code", label: "Code", mono: true, ...edit.required("code", record.code) },
+      {
+        id: "level",
+        label: "Year group",
+        ...edit.numeric("level", record.level),
+      },
+      {
+        id: "capacity",
+        label: "Places",
+        ...edit.numeric("capacity", record.capacity),
+      },
+      { id: "term", label: "Term", display: record.term?.name ?? "—" },
+    ];
+  }, [record, edit]);
+
+  if (query.isPending) {
+    return (
+      <div className="space-y-4" data-testid="class-record-loading">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (query.isError || !record) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>This class could not be loaded</AlertTitle>
+        <AlertDescription>{getApiErrorMessage(query.error)}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  const students = roll.data?.data ?? [];
+  const onRoll = record._count?.students ?? students.length;
+  const streams = record.streams ?? [];
+  const subjects = record.classSubjects ?? [];
+
+  const tabs: RecordTab[] = [
+    {
+      value: "roll",
+      label: "Roll",
+      count: onRoll,
+      content: roll.isPending ? (
+        <Skeleton className="h-32 w-full" />
+      ) : (
+        <RelatedList
+          items={students}
+          emptyMessage="Nobody is in this class yet."
+          renderItem={(student) => ({
+            href: recordType("STUDENT").href(student.id),
+            title: `${student.firstName} ${student.lastName}`,
+            subtitle: student.studentNo,
+            meta: student.currentStream?.name,
+          })}
+        />
+      ),
+    },
+    {
+      value: "subjects",
+      label: "Subjects",
+      count: subjects.length,
+      content: (
+        <RelatedList
+          items={subjects}
+          emptyMessage="No subjects are timetabled to this class."
+          renderItem={(entry) => ({
+            href: entry.subject ? recordType("SUBJECT").href(entry.subject.id) : "/schools/subjects",
+            title: entry.subject?.name ?? "Subject",
+            // Who teaches it is the thing an office is asked about a class's
+            // subject, so it leads rather than sitting in a count.
+            subtitle: entry.teacherProfile?.user?.name ?? "No teacher assigned",
+            meta: entry.subject?.isCore ? "Core" : undefined,
+          })}
+        />
+      ),
+    },
+    ...(streams.length
+      ? [
+          {
+            value: "streams",
+            label: "Streams",
+            count: streams.length,
+            content: (
+              <RelatedList
+                items={streams}
+                emptyMessage="This class is not streamed."
+                renderItem={(stream) => ({
+                  href: `/schools/classes/${classId}`,
+                  title: stream.name,
+                  subtitle: stream.code,
+                  meta: stream.capacity == null ? undefined : `${stream.capacity} places`,
+                })}
+              />
+            ),
+          } satisfies RecordTab,
+        ]
+      : []),
+    {
+      value: "notes",
+      label: "Notes",
+      count: notes.data?.data?.length ?? 0,
+      content: (
+        <SubjectNotes
+          subject={{ type: "CLASS", id: classId }}
+          notes={notes.data?.data ?? []}
+          isPending={notes.isPending}
+        />
+      ),
+    },
+    {
+      value: "files",
+      label: "Files",
+      count: files.data?.data?.length ?? 0,
+      content: <SubjectFiles files={files.data?.data ?? []} isPending={files.isPending} />,
+    },
+  ];
+
+  return (
+    <RecordPageShell
+      backHref={config.indexHref}
+      backLabel={config.labelPlural}
+      title={record.name}
+      reference={record.code}
+      primaryAction={
+        // The two things a school prints most. The register is deliberately blank
+        // — it is what a teacher takes to a lesson when the line is down.
+        <span className="flex items-center gap-2">
+          <PrintDocumentButton
+            sourceKey="schools.class-list"
+            filters={{ classId }}
+            label="Class list"
+          />
+          <PrintDocumentButton
+            sourceKey="schools.attendance-register"
+            filters={{ classId }}
+            label="Blank register"
+          />
+        </span>
+      }
+      subtitle={
+        [
+          record.term?.name,
+          // Against the roll, not on its own: "28 of 30" is the number a
+          // registrar is deciding an admission on.
+          record.capacity == null ? `${onRoll} on the roll` : `${onRoll} of ${record.capacity}`,
+        ]
+          .filter(Boolean)
+          .join(" · ") || null
+      }
+      leading={
+        <RecordMark
+          kind={config.kind}
+          name={record.name}
+          avatarUrl={record.avatarUrl}
+          emoji={record.emoji}
+          accent={record.accent}
+          size="lg"
+        />
+      }
+      attributes={<RecordAttributes attributes={attributes} />}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      rail={
+        <RailSection title="At a glance">
+          <dl className="space-y-2 text-sm">
+            <Glance label="On the roll" value={String(onRoll)} />
+            <Glance
+              label="Places left"
+              value={record.capacity == null ? "—" : String(Math.max(0, record.capacity - onRoll))}
+            />
+            <Glance label="Subjects" value={String(subjects.length)} />
+          </dl>
+        </RailSection>
+      }
+    />
+  );
+}
+
+function Glance({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-[var(--text-muted)]">{label}</dt>
+      <dd className="font-medium text-[var(--text-strong)]">{value}</dd>
+    </div>
+  );
+}

@@ -100,18 +100,189 @@ async function getBundleFeatureSet(bundleCodes: string[]): Promise<Set<string>> 
   return set;
 }
 
+/**
+ * Write the code-side catalogue into the tables that need to be pointed at.
+ *
+ * Feature and bundle *definitions* live in `feature-catalog.ts`, and the read
+ * paths here prefer them: `getCompanyFeatureMap` merges `FEATURE_CATALOG` over
+ * whatever is in `PlatformFeature`, and `getBundleFeatureSet` resolves a system
+ * bundle from `FEATURE_BUNDLES` without touching the database at all. So the
+ * rows are not the source of truth.
+ *
+ * They are still load-bearing, because two things hang foreign keys off them:
+ * `CompanyFeatureFlag.featureId` and `CompanySubscriptionAddon.bundleId`. With
+ * the tables empty a tenant cannot be granted a paid bundle — there is no row
+ * to reference — and every billable feature stays off no matter what else is
+ * configured. `getCompanyFeatureMap` gates billable features on subscription
+ * entitlement, so an un-grantable bundle means an unusable module.
+ *
+ * This function previously returned the *sizes of the in-memory catalogue* and
+ * wrote nothing, so `pnpm platform` reported "135 features, 24 bundles" over an
+ * empty database and provisioning silently produced tenants whose paid modules
+ * could never be switched on. That is what made a freshly provisioned school
+ * answer `403 FEATURE_DISABLED` on every one of its own pages.
+ *
+ * Upsert by natural key, and never deactivate: a key that has disappeared from
+ * the catalogue may still be referenced by a company's flags, and cascading a
+ * delete through `CompanyFeatureFlag` would silently change what a tenant has
+ * bought. Stale rows are harmless — the read paths ignore anything the
+ * catalogue does not name.
+ */
 export async function syncEntitlementCatalog(): Promise<{
   features: number;
   bundles: number;
   bundleItems: number;
   tiers: number;
 }> {
+  const featureIdByKey = new Map<string, string>();
+
+  for (const feature of FEATURE_CATALOG) {
+    const key = normalizeFeatureKey(feature.key);
+    const row = await prisma.platformFeature.upsert({
+      where: { key },
+      update: {
+        name: feature.name,
+        description: feature.description ?? null,
+        domain: feature.domain ?? null,
+        defaultEnabled: Boolean(feature.defaultEnabled),
+        isBillable: Boolean(feature.isBillable),
+        monthlyPrice: feature.monthlyPrice ?? null,
+        isActive: true,
+      },
+      create: {
+        key,
+        name: feature.name,
+        description: feature.description ?? null,
+        domain: feature.domain ?? null,
+        defaultEnabled: Boolean(feature.defaultEnabled),
+        isBillable: Boolean(feature.isBillable),
+        monthlyPrice: feature.monthlyPrice ?? null,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    featureIdByKey.set(key, row.id);
+  }
+
+  let bundleItems = 0;
+
+  for (const bundle of FEATURE_BUNDLES) {
+    const bundleRow = await prisma.featureBundle.upsert({
+      where: { code: bundle.code },
+      update: {
+        name: bundle.name,
+        description: bundle.description ?? null,
+        monthlyPrice: bundle.monthlyPrice ?? 0,
+        additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice ?? 0,
+        isActive: true,
+      },
+      create: {
+        code: bundle.code,
+        name: bundle.name,
+        description: bundle.description ?? null,
+        monthlyPrice: bundle.monthlyPrice ?? 0,
+        additionalSiteMonthlyPrice: bundle.additionalSiteMonthlyPrice ?? 0,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    // A bundle naming a feature the catalogue does not define is a typo in
+    // `feature-catalog.ts`, not a runtime condition to absorb quietly.
+    const featureIds = bundle.features.map((featureKey) => {
+      const id = featureIdByKey.get(normalizeFeatureKey(featureKey));
+      if (!id) {
+        throw new Error(
+          `Bundle ${bundle.code} names unknown feature "${featureKey}". ` +
+            "Add it to FEATURE_CATALOG or correct the bundle.",
+        );
+      }
+      return id;
+    });
+
+    await prisma.featureBundleItem.createMany({
+      data: featureIds.map((featureId) => ({ bundleId: bundleRow.id, featureId })),
+      skipDuplicates: true,
+    });
+    // What is now in place, not what this run happened to insert — a second run
+    // writes nothing and should still report the catalogue as present.
+    bundleItems += featureIds.length;
+  }
+
   return {
-    features: FEATURE_CATALOG.length,
+    features: featureIdByKey.size,
     bundles: FEATURE_BUNDLES.length,
-    bundleItems: FEATURE_BUNDLES.reduce((sum, bundle) => sum + bundle.features.length, 0),
+    bundleItems,
     tiers: TIERS.length,
   };
+}
+
+/**
+ * Switch a paid bundle on for one company.
+ *
+ * Two records are needed and neither implies the other. The addon row is what
+ * `getCompanyFeatureMap` consults to decide a billable feature is *entitled*;
+ * the per-feature flags are what say it is *on*. A tenant with the addon and no
+ * flags gets nothing, because a billable feature defaults to off — see the
+ * `map[key] = feature.isBillable ? false : …` line below.
+ *
+ * The bundle definition is code-side, so the `FeatureBundle` row may not exist
+ * yet on a database that has never been synced. Sync rather than fail: the
+ * caller asked for a commercial outcome, and "no row to point at" is a state of
+ * this database, not an answer to the question.
+ */
+export async function grantBundleToCompany(input: {
+  companyId: string;
+  bundleCode: string;
+  reason?: string;
+}): Promise<{ bundleCode: string; featuresEnabled: number }> {
+  const companyId = input.companyId.trim();
+  const bundleCode = input.bundleCode.trim().toUpperCase();
+  if (!companyId) throw new Error("companyId is required.");
+
+  const definition = getBundleDefinition(bundleCode);
+  if (!definition) {
+    throw new Error(`Unknown feature bundle "${bundleCode}".`);
+  }
+
+  let bundle = await prisma.featureBundle.findUnique({
+    where: { code: bundleCode },
+    select: { id: true },
+  });
+  if (!bundle) {
+    await syncEntitlementCatalog();
+    bundle = await prisma.featureBundle.findUnique({
+      where: { code: bundleCode },
+      select: { id: true },
+    });
+  }
+  if (!bundle) {
+    throw new Error(`Feature bundle "${bundleCode}" is defined in code but could not be written.`);
+  }
+
+  const reason = input.reason ?? `Granted bundle ${bundleCode}`;
+
+  await prisma.companySubscriptionAddon.upsert({
+    where: { companyId_bundleId: { companyId, bundleId: bundle.id } },
+    update: { isEnabled: true, reason },
+    create: { companyId, bundleId: bundle.id, isEnabled: true, reason },
+  });
+
+  const featureKeys = definition.features.map((key) => normalizeFeatureKey(key));
+  const features = await prisma.platformFeature.findMany({
+    where: { key: { in: featureKeys } },
+    select: { id: true },
+  });
+
+  for (const feature of features) {
+    await prisma.companyFeatureFlag.upsert({
+      where: { companyId_featureId: { companyId, featureId: feature.id } },
+      update: { isEnabled: true, reason, expiresAt: null },
+      create: { companyId, featureId: feature.id, isEnabled: true, reason },
+    });
+  }
+
+  return { bundleCode, featuresEnabled: features.length };
 }
 
 export async function getCompanyFeatureMap(companyId: string): Promise<FeatureMap> {

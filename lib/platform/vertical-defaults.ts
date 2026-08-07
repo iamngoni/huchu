@@ -53,6 +53,11 @@ type VerticalDefaultConfig = {
   };
   accounting: {
     includeGoldFlows: boolean;
+    /**
+     * S-2.3. Whether the accounting foundation pack seeds the school chart of
+     * accounts and the seven `SCHOOL_FEE_*` posting rules for this vertical.
+     */
+    includeSchoolFlows: boolean;
   };
 };
 
@@ -108,6 +113,7 @@ const VERTICAL_DEFAULTS: Record<WorkspaceProfile, VerticalDefaultConfig> = {
     },
     accounting: {
       includeGoldFlows: true,
+      includeSchoolFlows: false,
     },
   },
   SCRAP_METAL: {
@@ -132,6 +138,7 @@ const VERTICAL_DEFAULTS: Record<WorkspaceProfile, VerticalDefaultConfig> = {
     },
     accounting: {
       includeGoldFlows: false,
+      includeSchoolFlows: false,
     },
   },
   SCHOOLS: {
@@ -156,6 +163,7 @@ const VERTICAL_DEFAULTS: Record<WorkspaceProfile, VerticalDefaultConfig> = {
     },
     accounting: {
       includeGoldFlows: false,
+      includeSchoolFlows: true,
     },
   },
   AUTOS: {
@@ -180,6 +188,7 @@ const VERTICAL_DEFAULTS: Record<WorkspaceProfile, VerticalDefaultConfig> = {
     },
     accounting: {
       includeGoldFlows: false,
+      includeSchoolFlows: false,
     },
   },
   RETAIL: {
@@ -204,6 +213,7 @@ const VERTICAL_DEFAULTS: Record<WorkspaceProfile, VerticalDefaultConfig> = {
     },
     accounting: {
       includeGoldFlows: false,
+      includeSchoolFlows: false,
     },
   },
   GENERAL: {
@@ -228,6 +238,7 @@ const VERTICAL_DEFAULTS: Record<WorkspaceProfile, VerticalDefaultConfig> = {
     },
     accounting: {
       includeGoldFlows: false,
+      includeSchoolFlows: false,
     },
   },
 };

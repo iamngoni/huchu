@@ -4,13 +4,37 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { SessionProvider } from "next-auth/react"
+import type { Session } from "next-auth"
 
 import { OfflineChrome } from "@/components/offline"
 import { AppearanceProvider } from "@/components/providers/appearance-provider"
 import { OfflineProvider } from "@/components/providers/offline-provider"
 import { Toaster } from "@/components/ui/toaster"
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+/**
+ * Whether the browser has told us it is offline.
+ *
+ * Guarded on `onLine` rather than on `navigator`, because Node defines a
+ * global `navigator` without it and `!undefined` reads as "offline" anywhere
+ * this runs outside a browser.
+ */
+function browserIsOffline() {
+  return typeof navigator !== "undefined" && navigator.onLine === false
+}
+
+export function AppProviders({
+  children,
+  /**
+   * Resolved by the root layout on the server. Passed through so the session is
+   * present during SSR — see the comment there for the hydration mismatch this
+   * exists to prevent. `null` means signed out; `undefined` (nobody passing it)
+   * would put the provider back in its fetch-on-mount behaviour.
+   */
+  session,
+}: {
+  children: React.ReactNode
+  session?: Session | null
+}) {
   const pathname = usePathname()
   const [queryClient] = React.useState(
     () =>
@@ -22,7 +46,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             staleTime: 60_000,
             refetchOnWindowFocus: false,
             retry: (failureCount) => {
-              if (typeof navigator !== "undefined" && !navigator.onLine) {
+              if (browserIsOffline()) {
                 return false
               }
               return failureCount < 2
@@ -31,7 +55,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           mutations: {
             networkMode: "offlineFirst",
             retry: (failureCount) => {
-              if (typeof navigator !== "undefined" && !navigator.onLine) {
+              if (browserIsOffline()) {
                 return false
               }
               return failureCount < 1
@@ -50,6 +74,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionProvider
+      session={session}
       refetchInterval={disableAdminSessionRefetchInDev ? 0 : 5 * 60}
       refetchOnWindowFocus={!disableAdminSessionRefetchInDev}
       refetchWhenOffline={false}

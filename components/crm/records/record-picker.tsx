@@ -9,7 +9,7 @@ import { fetchJson } from "@/lib/api-client";
 import { Search, X } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
-import { RecordMark, type RecordKind } from "./record-mark";
+import { RecordMark, type RecordKind } from "@/components/records/record-mark";
 
 /**
  * "What is this about?"
@@ -111,7 +111,7 @@ export function RecordPicker({
     queryKey: ["crm-record-picker", query],
     queryFn: () =>
       fetchJson<SearchResponse>(
-        `/api/v2/crm/search?q=${encodeURIComponent(query.trim())}&limit=5`,
+        `/api/v2/records/search?q=${encodeURIComponent(query.trim())}&limit=5`,
       ),
     enabled: open && query.trim().length >= 2,
     staleTime: 30_000,

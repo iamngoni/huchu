@@ -46,7 +46,7 @@ import { isOverdue } from "@/components/crm/leads/stage-config";
 
 import { BoardColumnHeader } from "./board-column-header";
 import { MobileBoard } from "./board-mobile";
-import { RecordMark } from "./record-mark";
+import { RecordMark } from "@/components/records/record-mark";
 import { useBoardField } from "./board-fields";
 
 /**

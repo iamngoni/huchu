@@ -1,6 +1,6 @@
 import { accentFor } from "@corelithzw/react";
 
-import { isAccent, type Accent } from "@/lib/crm/accents";
+import { isAccent, type Accent } from "@/lib/ui/accents";
 
 /**
  * What a record should be drawn in: the hue somebody picked for it, else one

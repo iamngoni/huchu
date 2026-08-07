@@ -7,6 +7,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { isSchoolAdmin, schoolPermissionDenial } from "@/lib/schools/permissions";
 import { isUniqueConstraintError } from "../../_helpers";
 
 const updateClassSchema = z
@@ -16,6 +17,12 @@ const updateClassSchema = z
     level: z.number().int().nullable().optional(),
     capacity: z.number().int().positive().nullable().optional(),
     termId: z.string().uuid().nullable().optional(),
+    // S-4.3 — the record page's identity strip. A class is a thing, so it may
+    // carry an emoji as well as a picture: a form room reads faster as 🔵 in a
+    // list than as a repeated generic icon.
+    avatarUrl: z.string().trim().url().max(2000).nullable().optional(),
+    emoji: z.string().trim().min(1).max(16).nullable().optional(),
+    accent: z.string().trim().min(1).max(40).nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
@@ -73,6 +80,9 @@ export async function GET(
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
 
+    const denied = schoolPermissionDenial(session, "schools.academics", "view");
+    if (denied) return errorResponse(denied, 403);
+
     const { id } = await params;
     if (!isValidUUID(id)) {
       return errorResponse("Invalid class ID", 400);
@@ -102,6 +112,9 @@ export async function PATCH(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.academics", "edit");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 
@@ -110,6 +123,16 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    // How a record is presented — its picture, emoji, accent — is an
+    // administrator's act; see `isSchoolAdmin`. Everything else on this
+    // route stays with the resource's own edit grant.
+    if (
+      ("avatarUrl" in body || "emoji" in body || "accent" in body) &&
+      !isSchoolAdmin(session.user.role)
+    ) {
+      return errorResponse("Only an administrator can change a record's display image", 403);
+    }
+
     const validated = updateClassSchema.parse(body);
 
     const existing = await prisma.schoolClass.findFirst({
@@ -133,6 +156,9 @@ export async function PATCH(
     const updated = await prisma.schoolClass.update({
       where: { id: existing.id },
       data: {
+        ...(validated.avatarUrl !== undefined ? { avatarUrl: validated.avatarUrl } : {}),
+        ...(validated.emoji !== undefined ? { emoji: validated.emoji } : {}),
+        ...(validated.accent !== undefined ? { accent: validated.accent } : {}),
         ...(validated.code !== undefined ? { code: validated.code } : {}),
         ...(validated.name !== undefined ? { name: validated.name } : {}),
         ...(validated.level !== undefined ? { level: validated.level } : {}),
@@ -163,6 +189,9 @@ export async function DELETE(
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.academics", "archive");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { id } = await params;
 

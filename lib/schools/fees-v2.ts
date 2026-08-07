@@ -40,8 +40,12 @@ export type SchoolsFeesSummary = {
     issuedInvoices: number;
     overdueInvoices: number;
     receiptsPosted: number;
+    /** The currency the money figures below are stated in (S-2.2). */
+    currency: string;
     waivedAmount: number;
     outstandingBalance: number;
+    /** S-2.5. Overpayments and over-settled invoices, net of refunds held. */
+    creditOnAccount: number;
   };
 };
 
@@ -70,11 +74,16 @@ export type SchoolFeeInvoiceRecord = {
   status: "DRAFT" | "ISSUED" | "PART_PAID" | "PAID" | "VOIDED" | "WRITEOFF";
   issueDate: string;
   dueDate: string;
+  currency: string;
+  exchangeRate: number;
+  baseAmount: number;
   totalAmount: number;
   paidAmount: number;
   waivedAmount: number;
   writeOffAmount: number;
   balanceAmount: number;
+  /** S-2.5. Settled beyond the total — the mirror of `balanceAmount`. */
+  creditAmount: number;
   student: {
     id: string;
     studentNo: string;
@@ -92,9 +101,14 @@ export type SchoolFeeReceiptRecord = {
   receiptDate: string;
   paymentMethod: "CASH" | "BANK_TRANSFER" | "CARD" | "MOBILE_MONEY";
   reference: string | null;
+  currency: string;
+  exchangeRate: number;
+  baseAmount: number;
   amountReceived: number;
   amountAllocated: number;
   amountUnallocated: number;
+  /** S-2.6. The part of the surplus a refund is already holding. */
+  refundedAmount: number;
   status: "DRAFT" | "POSTED" | "VOIDED";
   student: {
     id: string;
@@ -108,6 +122,9 @@ export type SchoolFeeReceiptRecord = {
 export type SchoolFeeWaiverRecord = {
   id: string;
   waiverType: "SCHOLARSHIP" | "DISCOUNT" | "HARDSHIP" | "OTHER";
+  currency: string;
+  exchangeRate: number;
+  baseAmount: number;
   amount: number;
   status: "DRAFT" | "APPROVED" | "APPLIED" | "REJECTED" | "REVERSED";
   reason: string | null;
@@ -152,6 +169,9 @@ export async function fetchSchoolFeeInvoices(params: {
   limit?: number;
   search?: string;
   studentId?: string;
+  /** Filtered through the student's current class — see the route's note. */
+  classId?: string;
+  streamId?: string;
   termId?: string;
   status?: "DRAFT" | "ISSUED" | "PART_PAID" | "PAID" | "VOIDED" | "WRITEOFF";
 } = {}) {
@@ -170,6 +190,7 @@ export async function bulkGenerateInvoices(params: {
   dueDate: string;
   issueNow?: boolean;
   notes?: string;
+  /** S-2.4. Defaults to true server-side; pass false to be told about clashes. */
   skipExisting?: boolean;
 }) {
   return fetchJson<{
@@ -220,5 +241,126 @@ export async function fetchSchoolFeeWaivers(params: {
   const query = buildQuery(params);
   return fetchJson<PaginationResponse<SchoolFeeWaiverRecord>>(
     `/api/v2/schools/fees/waivers${query}`,
+  );
+}
+
+/**
+ * S-2.5 — a credit the school is holding for a family.
+ *
+ * Two kinds, and the distinction matters when you go to spend it: a `RECEIPT`
+ * credit is a payment larger than what it settled, an `INVOICE` credit is a
+ * bill settled beyond its total.
+ */
+export type SchoolFeeCreditRecord = {
+  kind: "RECEIPT" | "INVOICE";
+  sourceId: string;
+  reference: string;
+  date: string;
+  currency: string;
+  credit: number;
+  heldForRefund: number;
+  available: number;
+  student: {
+    id: string;
+    studentNo: string;
+    firstName: string;
+    lastName: string;
+  };
+};
+
+export type SchoolFeeRefundRecord = {
+  id: string;
+  refundNo: string;
+  refundDate: string;
+  method: "CASH" | "BANK_TRANSFER" | "CARD" | "MOBILE_MONEY";
+  reference: string | null;
+  reason: string;
+  amount: number;
+  currency: string;
+  exchangeRate: number;
+  baseAmount: number;
+  status: "REQUESTED" | "PAID" | "CANCELLED";
+  paidAt: string | null;
+  student: {
+    id: string;
+    studentNo: string;
+    firstName: string;
+    lastName: string;
+  };
+  receipt: { id: string; receiptNo: string } | null;
+  invoice: { id: string; invoiceNo: string } | null;
+};
+
+export async function fetchSchoolFeeCredits(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  studentId?: string;
+} = {}) {
+  const query = buildQuery(params);
+  return fetchJson<PaginationResponse<SchoolFeeCreditRecord>>(
+    `/api/v2/schools/fees/credits${query}`,
+  );
+}
+
+export async function fetchSchoolFeeRefunds(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  studentId?: string;
+  status?: "REQUESTED" | "PAID" | "CANCELLED";
+} = {}) {
+  const query = buildQuery(params);
+  return fetchJson<PaginationResponse<SchoolFeeRefundRecord>>(
+    `/api/v2/schools/finance/refunds${query}`,
+  );
+}
+
+/**
+ * Spend a receipt's credit on invoices.
+ *
+ * Omit `allocatedAmount` on every line to let the credit settle them oldest
+ * first until it runs out; give it on every line to split deliberately. Mixing
+ * the two is refused.
+ */
+export async function allocateReceiptCredit(
+  receiptId: string,
+  allocations: Array<{ invoiceId: string; allocatedAmount?: number }>,
+) {
+  return fetchJson<SchoolFeeReceiptRecord>(
+    `/api/v2/schools/fees/receipts/${receiptId}/allocate`,
+    { method: "POST", body: JSON.stringify({ allocations }) },
+  );
+}
+
+export async function requestSchoolFeeRefund(params: {
+  receiptId?: string;
+  invoiceId?: string;
+  amount: number;
+  method: "CASH" | "BANK_TRANSFER" | "CARD" | "MOBILE_MONEY";
+  reason: string;
+  reference?: string;
+  refundDate?: string;
+}) {
+  return fetchJson<SchoolFeeRefundRecord>("/api/v2/schools/finance/refunds", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}
+
+export async function paySchoolFeeRefund(
+  refundId: string,
+  params: { reference?: string } = {},
+) {
+  return fetchJson<SchoolFeeRefundRecord>(
+    `/api/v2/schools/finance/refunds/${refundId}/pay`,
+    { method: "POST", body: JSON.stringify(params) },
+  );
+}
+
+export async function cancelSchoolFeeRefund(refundId: string, reason: string) {
+  return fetchJson<SchoolFeeRefundRecord>(
+    `/api/v2/schools/finance/refunds/${refundId}/cancel`,
+    { method: "POST", body: JSON.stringify({ reason }) },
   );
 }

@@ -13,7 +13,7 @@ import type { FileOwnerKind } from "@/lib/crm/record-files";
 import type { CollabEntity } from "@/lib/crm/collaboration";
 import type { CrmTaskRecordRef } from "@/lib/crm/crm-v2";
 
-import type { RecordTab } from "./record-page-shell";
+import type { RecordTab } from "@/components/records/record-page-shell";
 
 /**
  * The tabs every record has, written once.

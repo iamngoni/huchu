@@ -1,21 +1,10 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { PageHeading } from "@/components/layout/page-heading";
-import { SchoolsFeesContent } from "@/components/schools/fees/schools-fees-content";
-import { authOptions } from "@/lib/auth";
 
-export default async function SchoolsFeesPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <PageHeading
-        title="School Fees"
-      />
-      <SchoolsFeesContent />
-    </div>
-  );
+/**
+ * Two doors onto the same screen is how they drift. `/schools/finance` is the one
+ * the navigation points at and the one S-4.6 turned into the year-group picker;
+ * this was a byte-for-byte copy of the page it used to render.
+ */
+export default function SchoolsFeesPage() {
+  redirect("/schools/finance");
 }

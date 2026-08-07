@@ -10,11 +10,21 @@ import {
 } from "@/lib/api-utils";
 import { normalizeProvidedId, reserveIdentifier } from "@/lib/id-generator";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { isUniqueConstraintError, normalizeOptionalNullableString } from "../_helpers";
 
 const guardianQuerySchema = z.object({
   search: z.string().trim().min(1).optional(),
   studentId: z.string().uuid().optional(),
+  /**
+   * Whether the guardian has claimed a portal account. The list is where
+   * invitations are issued from, so "who is still not on the portal" is the
+   * question it is asked most often and there was no way to ask it.
+   */
+  hasPortalAccount: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
 });
 
 const guardianStudentLinkSchema = z.object({
@@ -62,12 +72,16 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "view");
+    if (denied) return errorResponse(denied, 403);
     const { searchParams } = new URL(request.url);
     const { page, limit, skip } = getPaginationParams(request);
 
     const query = guardianQuerySchema.parse({
       search: searchParams.get("search") ?? undefined,
       studentId: searchParams.get("studentId") ?? undefined,
+      hasPortalAccount: searchParams.get("hasPortalAccount") ?? undefined,
     });
 
     const where: Prisma.SchoolGuardianWhereInput = {
@@ -83,6 +97,9 @@ export async function GET(request: NextRequest) {
         { email: { contains: query.search, mode: "insensitive" } },
         { nationalId: { contains: query.search, mode: "insensitive" } },
       ];
+    }
+    if (query.hasPortalAccount !== undefined) {
+      where.userId = query.hasPortalAccount ? { not: null } : null;
     }
     if (query.studentId) {
       where.studentLinks = {
@@ -118,6 +135,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.students", "create");
+    if (denied) return errorResponse(denied, 403);
 
     const body = await request.json();
     const validated = createGuardianSchema.parse(body);

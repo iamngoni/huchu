@@ -1,0 +1,686 @@
+/* ============================================================
+   Huchu DS — Unified navigation chrome
+   - .hx-main-nav   : primary top nav (every page that opts in)
+   - .hx-kit-nav    : secondary nav shown on kit / demo pages
+   - .hx-sidebar    : drawer; pinnable on desktop ≥1280
+   ============================================================ */
+
+:root {
+  --hx-main-nav-h: 56px;
+  --hx-kit-nav-h:  0px;
+  --hx-nav-h:      56px;
+  --hx-sidebar-w:  280px;
+}
+
+/* When the unified nav is mounted, content gets offset by nav height + an
+   optional left padding when the sidebar is pinned. */
+body.hx-nav-mounted {
+  padding-top: var(--hx-nav-h);
+  transition: padding-left 240ms cubic-bezier(0.2, 0, 0.1, 1);
+}
+@media (min-width: 1280px) {
+  body.hx-nav-mounted.sidebar-pinned {
+    padding-left: var(--hx-sidebar-w);
+  }
+}
+
+/* ─── Main nav ─────────────────────────────────────────────── */
+.hx-main-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 60;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+.hx-main-nav-l,
+.hx-main-nav-r {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.hx-main-nav-c {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+.hx-main-nav-r { margin-left: auto; }
+
+.hx-main-nav .hx-brand {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 600 15px/1 var(--font-sans);
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.hx-main-nav .hx-brand .mark { width: 22px; height: 22px; color: var(--brand); flex: none; }
+.hx-main-nav .hx-brand .badge {
+  margin-left: 4px;
+  padding: 3px 7px;
+  background: var(--surface-muted);
+  border-radius: 9999px;
+  font: 500 10px/1 var(--font-mono);
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hx-main-nav-c a {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: 500 13.5px/1 var(--font-sans);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 120ms ease, background-color 120ms ease;
+  white-space: nowrap;
+}
+.hx-main-nav-c a:hover { color: var(--text-strong); background: var(--surface-muted); }
+.hx-main-nav-c a.current { color: var(--brand-strong); background: var(--brand-soft); }
+
+/* Toggle / icon button look */
+.hx-nav-toggle,
+.hx-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-strong);
+  cursor: pointer;
+  text-decoration: none;
+}
+.hx-nav-toggle:hover,
+.hx-icon-btn:hover { background: var(--surface-muted); }
+.hx-nav-toggle:focus-visible,
+.hx-icon-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.hx-icon-btn[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-strong); }
+
+/* Search field */
+.hx-search {
+  position: relative;
+  width: 240px;
+  max-width: 30vw;
+}
+.hx-search input {
+  width: 100%; height: 32px;
+  padding: 0 12px 0 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font: var(--type-body-sm);
+  color: var(--text-body);
+  outline: none;
+}
+.hx-search input::placeholder { color: var(--text-subtle); }
+.hx-search input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--focus-ring-soft); }
+.hx-search > [data-icon] {
+  position: absolute; left: 9px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+.hx-search .kbd-hint {
+  position: absolute; right: 6px; top: 50%;
+  transform: translateY(-50%);
+  font: 500 11px/1 var(--font-mono);
+  color: var(--text-subtle);
+  background: var(--surface-muted);
+  padding: 3px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* ─── Kit nav (secondary) ──────────────────────────────────── */
+.hx-kit-nav {
+  position: fixed;
+  top: var(--hx-main-nav-h);
+  left: 0; right: 0;
+  z-index: 59;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.hx-kit-nav-l,
+.hx-kit-nav-r {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.hx-kit-nav-c {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hx-kit-nav-c::-webkit-scrollbar { display: none; }
+.hx-kit-nav-r { margin-left: auto; }
+
+.hx-crumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 12.5px/1 var(--font-sans);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.hx-crumbs a { color: var(--text-muted); text-decoration: none; }
+.hx-crumbs a:hover { color: var(--text-strong); }
+.hx-crumbs .sep { color: var(--text-subtle); }
+.hx-crumbs .cur { color: var(--text-strong); font-weight: 600; }
+
+.hx-kit-tab {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: 500 12.5px/1 var(--font-sans);
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+.hx-kit-tab:hover { color: var(--text-strong); background: var(--surface-muted); }
+.hx-kit-tab.current { color: var(--brand-strong); background: var(--brand-soft); }
+
+/* ─── Sidebar drawer ───────────────────────────────────────── */
+.hx-sidebar {
+  position: fixed;
+  top: var(--hx-nav-h);
+  left: 0; bottom: 0;
+  width: var(--hx-sidebar-w);
+  /* below the main nav so the hamburger toggle remains clickable */
+  z-index: 55;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 240ms cubic-bezier(0.2, 0, 0.1, 1);
+  box-shadow: 4px 0 24px rgba(22, 24, 29, 0.06);
+}
+.hx-sidebar.open { transform: translateX(0); }
+
+/* Pinned-rail mode (desktop ≥1280) — sidebar stays visible, no scrim */
+@media (min-width: 1280px) {
+  .hx-sidebar.pinned {
+    transform: translateX(0);
+    box-shadow: none;
+    border-right: 1px solid var(--border);
+    z-index: 55; /* below the main nav */
+    top: var(--hx-nav-h); /* slip under the kit nav too if present */
+  }
+}
+
+.hx-sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.hx-sidebar-head .hx-brand {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 600 14.5px/1 var(--font-sans);
+  color: var(--text-strong);
+  text-decoration: none;
+  margin-right: auto;
+}
+.hx-sidebar-head .hx-brand .mark { width: 20px; height: 20px; color: var(--brand); }
+.hx-sidebar-head .hx-brand .badge {
+  padding: 3px 7px;
+  background: var(--surface-muted);
+  border-radius: 9999px;
+  font: 500 10px/1 var(--font-mono);
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hx-sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  /* Long item labels must never trigger a horizontal scrollbar — rows
+     truncate via ellipsis instead (see .hx-side-link below). */
+  overflow-x: hidden;
+  padding: 12px 10px 32px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.hx-sidebar-body::-webkit-scrollbar { width: 8px; }
+.hx-sidebar-body::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+/* Contextual breadcrumb — shows "Group › Item" for the active page. */
+.hx-side-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 8px;
+  font: 500 11.5px/1.2 var(--font-sans);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hx-side-crumbs-g { color: var(--text-subtle); }
+.hx-side-crumbs-sep { color: var(--text-subtle); font-size: 12px; }
+.hx-side-crumbs-i {
+  color: var(--text-strong);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Sidebar filter search */
+.hx-side-search {
+  position: relative;
+  margin: 0 4px 8px;
+}
+.hx-side-search input {
+  width: 100%;
+  height: 32px;
+  padding: 0 28px 0 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font: var(--type-body-sm);
+  color: var(--text-body);
+  outline: none;
+}
+.hx-side-search input::placeholder { color: var(--text-subtle); }
+.hx-side-search input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--focus-ring-soft);
+}
+.hx-side-search > [data-icon] {
+  position: absolute; left: 8px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+.hx-side-search-kbd {
+  position: absolute; right: 6px; top: 50%;
+  transform: translateY(-50%);
+  font: 500 11px/1 var(--font-mono);
+  color: var(--text-subtle);
+  background: var(--surface-muted);
+  padding: 3px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.hx-side-count {
+  margin: -2px 10px 8px;
+  font: 500 11px/1.4 var(--font-sans);
+  color: var(--text-subtle);
+}
+.hx-side-empty {
+  margin: 4px 10px 12px;
+  padding: 12px 10px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  font: 500 12.5px/1.4 var(--font-sans);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.hx-side-empty-clear {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-strong);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font: 500 11.5px/1 var(--font-sans);
+  cursor: pointer;
+}
+.hx-side-empty-clear:hover { background: var(--surface); }
+
+/* Collapsible group (uses <details>/<summary>) — chevron rotates when open. */
+.hx-side-group {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 2px 0;
+}
+.hx-side-group:last-of-type { border-bottom: 0; }
+.hx-side-group > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  font: 600 12px/1 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  user-select: none;
+  transition: color 120ms ease, background-color 120ms ease;
+  /* Sticky group headers — they stay at the top while you scroll through
+     the group's items. The sidebar body is the scroll container. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+}
+.hx-side-group > summary::-webkit-details-marker { display: none; }
+.hx-side-group > summary:hover { color: var(--text-strong); background: var(--surface-muted); }
+.hx-side-group > summary:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+.hx-side-group.active > summary { color: var(--brand-strong); }
+.hx-side-group > summary .lb { flex: 1; }
+.hx-side-group > summary .hx-side-chev {
+  color: var(--text-subtle);
+  transition: transform 180ms cubic-bezier(0.2, 0, 0.1, 1);
+}
+.hx-side-group[open] > summary .hx-side-chev { transform: rotate(180deg); }
+
+/* Smooth height animation on expand/collapse via the CSS grid 0fr/1fr trick.
+   We can't transition a <details> directly, but we can transition the
+   .hx-side-items wrapper inside it. The wrapper is grid-rows: 0fr by default
+   and 1fr when the group is open. The inner needs min-height: 0 so it can
+   collapse. Honour reduced motion. */
+.hx-side-items {
+  display: grid;
+  grid-template-rows: 1fr;
+  padding: 4px 0 8px;
+}
+.hx-side-group:not([open]) > .hx-side-items { display: none; }
+
+/* Pinned + Recent (dynamic) sections — visually slightly distinct. */
+.hx-side-group--dyn > summary { color: var(--text-muted); }
+.hx-side-group--dyn > summary .hx-side-count-pill {
+  font: 600 10px/1 var(--font-mono);
+  padding: 3px 6px;
+  border-radius: 9999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* Item rows — a row hosts both the link AND its pin button as separate hit
+   targets. Min height 36px on the row for touch. */
+.hx-side-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  border-radius: 6px;
+  position: relative;
+  min-height: 36px;
+}
+.hx-side-row:hover { background: var(--surface-muted); }
+.hx-side-row.is-current { background: var(--brand-soft); }
+/* Active item gets a 4px brand-coloured left edge bar. */
+.hx-side-row.is-current::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 6px; bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--brand);
+}
+
+.hx-sidebar a.hx-side-link,
+.hx-sidebar .hx-side-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px 8px 14px;
+  border-radius: 6px;
+  font: 500 13px/1.4 var(--font-sans);
+  color: var(--text-body);
+  text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease;
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  /* Truncate any long label cleanly inside the row — never force the row
+     wider than the drawer (which would cause horizontal scroll). */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hx-side-link .hx-side-ic {
+  width: 18px; height: 18px;
+  display: inline-grid; place-items: center;
+  color: var(--text-subtle);
+  flex: none;
+}
+.hx-side-link .hx-side-lb { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hx-side-link:hover { color: var(--text-strong); }
+.hx-side-link:hover .hx-side-ic { color: var(--text-strong); }
+.hx-side-link.current { color: var(--brand-strong); font-weight: 600; background: transparent; }
+.hx-side-link.current .hx-side-ic { color: var(--brand-strong); }
+.hx-side-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+/* Pin button — separate min-32px hit area sitting alongside the link.
+   Outline by default; solid (filled) when pinned. */
+.hx-side-pin {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  width: 32px;
+  min-height: 32px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-subtle);
+  cursor: pointer;
+  opacity: 0;
+  /* When invisible, the pin button must NOT eat pointer events — otherwise
+     clicks on the right edge of a row hit the invisible button instead of
+     the link, and the link doesn't navigate (the 2-click bug). */
+  pointer-events: none;
+  transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease;
+  flex: none;
+  align-self: center;
+  margin-right: 2px;
+}
+.hx-side-row:hover .hx-side-pin,
+.hx-side-row:focus-within .hx-side-pin,
+.hx-side-row.is-pinned .hx-side-pin { opacity: 1; pointer-events: auto; }
+.hx-side-pin:hover { background: var(--surface); color: var(--text-strong); }
+.hx-side-pin:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+  opacity: 1;
+}
+.hx-side-pin[aria-pressed="true"] {
+  color: var(--brand-strong);
+}
+.hx-side-pin[aria-pressed="true"] [data-icon] svg path,
+.hx-side-pin[aria-pressed="true"] [data-icon] svg circle {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.hx-side-tag {
+  margin-left: auto;
+  font: 500 10px/1 var(--font-mono);
+  padding: 3px 6px;
+  border-radius: 9999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex: none;
+}
+
+.hx-sidebar-foot {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  font: 12px/1.4 var(--font-sans);
+  color: var(--text-muted);
+  flex: none;
+}
+.hx-sidebar-foot a { color: var(--brand-strong); text-decoration: none; }
+.hx-sidebar-foot a:hover { text-decoration: underline; }
+
+/* Drawer scrim */
+.hx-sidebar-scrim {
+  display: block;
+  position: fixed;
+  /* sits below the main nav so the toggle button stays clickable */
+  top: var(--hx-nav-h);
+  left: 0; right: 0; bottom: 0;
+  background: rgba(22, 24, 29, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms cubic-bezier(0.2, 0, 0.1, 1);
+}
+.hx-sidebar-scrim.open { opacity: 1; pointer-events: auto; }
+@media (min-width: 1280px) {
+  body.sidebar-pinned .hx-sidebar-scrim { display: none !important; }
+}
+
+/* ─── Responsive: hide center nav links on small viewports ─── */
+@media (max-width: 980px) {
+  .hx-main-nav-c { display: none; }
+  .hx-search { width: 180px; max-width: 40vw; }
+}
+@media (max-width: 720px) {
+  .hx-main-nav { padding: 0 12px; gap: 8px; }
+  .hx-main-nav .hx-brand .badge { display: none; }
+  .hx-search { display: none; }
+  .hx-theme-toggle { display: none; }
+}
+@media (max-width: 720px) {
+  /* Top kit row keeps only crumbs + icons — the screen tab strip goes
+     to a fixed bottom nav (see below) so portals match the mobile-app
+     pattern they emulate. */
+  .hx-kit-nav { padding: 0 12px; gap: 8px; }
+  .hx-kit-nav-l { max-width: 50%; overflow: hidden; }
+  .hx-crumbs { font-size: 12px; }
+
+  /* Detach the screen tab list from the inline header and pin it to
+     the bottom edge as a real bottom tab bar. Horizontally scrollable
+     so portals with 8-10 screens still work. */
+  .hx-kit-nav-c {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 60;
+    margin: 0;
+    padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, 0.94);
+    -webkit-backdrop-filter: saturate(1.4) blur(10px);
+    backdrop-filter: saturate(1.4) blur(10px);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -6px 16px -8px rgba(22, 24, 29, 0.18);
+    scroll-snap-type: x mandatory;
+    animation: hx-bottomnav-in 280ms cubic-bezier(0.2, 0, 0.1, 1) both;
+  }
+  @keyframes hx-bottomnav-in {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+  .hx-kit-nav-c::-webkit-scrollbar { display: none; }
+  .hx-kit-nav-c { scrollbar-width: none; }
+
+  .hx-kit-tab {
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    border-radius: 9999px;
+    scroll-snap-align: center;
+    font-weight: 500;
+    transition:
+      color 180ms var(--ease-out, cubic-bezier(0.2, 0, 0.1, 1)),
+      background-color 180ms var(--ease-out, cubic-bezier(0.2, 0, 0.1, 1)),
+      transform 180ms var(--ease-out, cubic-bezier(0.2, 0, 0.1, 1));
+  }
+  .hx-kit-tab:active { transform: scale(0.96); }
+  .hx-kit-tab.current {
+    background: var(--brand);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Reserve room at the bottom of every kit/catalog page so the fixed nav
+     never sits over the last bit of content. Live demo apps opt out via
+     .hx-no-kit-nav — they own their bottom-tab pattern. */
+  body[data-kit-nav]:not(.hx-no-kit-nav) {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+  body[data-kit-nav].is-fullscreen { padding-bottom: 0; }
+}
+
+/* Honor reduced-motion: drop the slide-up entrance + tab transitions. */
+@media (prefers-reduced-motion: reduce) {
+  .hx-kit-nav-c { animation: none; }
+  .hx-kit-tab { transition: none; }
+  .hx-side-group > summary .hx-side-chev,
+  .hx-sidebar,
+  .hx-sidebar-scrim,
+  .hx-side-pin { transition: none; }
+}
+
+/* Suppress nav for fullscreen pages */
+body.is-fullscreen .hx-main-nav,
+body.is-fullscreen .hx-kit-nav,
+body.is-fullscreen .hx-sidebar,
+body.is-fullscreen .hx-sidebar-scrim {
+  display: none !important;
+}
+body.is-fullscreen.hx-nav-mounted { padding-top: 0 !important; padding-left: 0 !important; }
+
+/* Live demo apps: shrink the main nav to a hamburger + brand only. The app's
+   own bottom tabs are the primary nav; the hamburger opens the expanded
+   drawer. Keeps the chrome out of the way on phones.
+   The !important on padding-top is intentional — demo files set inline body
+   padding for the device-frame stage; without it their content slips under
+   the fixed main nav. */
+body.hx-no-kit-nav.hx-nav-mounted { padding-top: var(--hx-main-nav-h, 56px) !important; }
+body.hx-no-kit-nav .hx-main-nav-c { display: none !important; }
+@media (max-width: 720px) {
+  body.hx-no-kit-nav .hx-search,
+  body.hx-no-kit-nav .hx-theme-toggle { display: none !important; }
+  /* Phones: the inline body padding becomes 0 anyway in most demos, so the
+     device-frame still spans 100vw. We just need top reservation to avoid
+     stacking under the nav. */
+  body.hx-no-kit-nav.hx-nav-mounted .device-desktop {
+    height: calc(100vh - var(--hx-main-nav-h, 56px)) !important;
+    height: calc(100dvh - var(--hx-main-nav-h, 56px)) !important;
+  }
+}
+
+/* ─── Legacy hide rules: keep old chrome hidden on pages that
+   still have inline markup we couldn't strip cleanly. The script
+   removes .ds-slim-nav and .hx-topbar at runtime, but include
+   CSS-level safety so they never flash. ─── */
+body.hx-nav-mounted .ds-slim-nav,
+body.hx-nav-mounted .hx-topbar,
+body.hx-nav-mounted .hx-float-btn,
+body.hx-nav-mounted .hx-drawer,
+body.hx-nav-mounted .hx-drawer-scrim,
+body.hx-nav-mounted .pk-nav,
+body.hx-nav-mounted .__kitnav {
+  display: none !important;
+}

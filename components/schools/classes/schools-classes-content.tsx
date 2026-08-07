@@ -193,7 +193,7 @@ export function SchoolsClassesContent() {
         railLabel="Class Views"
       >
         <div className={activeView === "classes" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Classes</h2>
             <Button size="sm" onClick={() => setClassDialogOpen(true)}>
               Add Class
@@ -212,7 +212,7 @@ export function SchoolsClassesContent() {
         </div>
 
         <div className={activeView === "streams" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Streams</h2>
           </div>
           <DataTable

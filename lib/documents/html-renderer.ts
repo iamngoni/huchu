@@ -14,11 +14,16 @@ function esc(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-const BADGE_TONES: Record<DocumentBadgeTone, { bg: string; fg: string; border: string }> = {
-  positive: { bg: "#ecfdf5", fg: "#047857", border: "#a7f3d0" },
-  warning: { bg: "#fffbeb", fg: "#b45309", border: "#fde68a" },
-  negative: { bg: "#fef2f2", fg: "#b91c1c", border: "#fecaca" },
-  neutral: { bg: "#f4f4f5", fg: "#3f3f46", border: "#e4e4e7" },
+/**
+ * Badge tones, restrained. A paid stamp on an invoice is set in ink, not in a
+ * pastel pill: coloured text with a fine border, no fill, so it prints well on
+ * a mono laser and reads as part of the document rather than of a web app.
+ */
+const BADGE_TONES: Record<DocumentBadgeTone, { fg: string; border: string }> = {
+  positive: { fg: "#166534", border: "#166534" },
+  warning: { fg: "#92400e", border: "#92400e" },
+  negative: { fg: "#991b1b", border: "#991b1b" },
+  neutral: { fg: "#525252", border: "#a3a3a3" },
 };
 
 function buildTable(payload: UniversalDocumentPayload, schema: DocumentTemplateSchema): string {
@@ -214,7 +219,9 @@ function buildFooter(branding: CompanyBrandingSnapshot, schema: DocumentTemplate
   if (schema.footer.showFooterText && branding.defaultFooterText) {
     textBits.push(`<div class="footer-text">${esc(branding.defaultFooterText)}</div>`);
   }
-  if (branding.paymentTerms) {
+  // Payment terms are payment language; they follow the bank block's switch so
+  // a report card is not asked to quote a student number "on all payments".
+  if (schema.footer.showPaymentDetails && branding.paymentTerms) {
     textBits.push(`<div class="footer-text muted">${esc(branding.paymentTerms)}</div>`);
   }
   if (schema.footer.showDisclaimer && branding.legalDisclaimer) {
@@ -238,7 +245,7 @@ export function renderDocumentHtml(input: {
   const badge = payload.badge
     ? (() => {
         const tone = BADGE_TONES[payload.badge.tone] ?? BADGE_TONES.neutral;
-        return `<span class="badge" style="background:${tone.bg};color:${tone.fg};border-color:${tone.border}">${esc(payload.badge.label)}</span>`;
+        return `<span class="badge" style="color:${tone.fg};border-color:${tone.border}">${esc(payload.badge.label)}</span>`;
       })()
     : "";
 
@@ -265,95 +272,105 @@ export function renderDocumentHtml(input: {
 <head>
   <meta charset="utf-8" />
   <style>
+    /*
+     * A document, not a web page. The old sheet borrowed app chrome — filled
+     * table headers, pastel pills, boxed strips — which is what made every
+     * export look like a screenshot. This one is set like print: one accent
+     * used twice (title, grand total rule), hairlines for structure, small
+     * caps for labels, and whitespace doing the grouping that borders did.
+     */
     @page { size: ${template.page.size} ${template.page.orientation}; margin: ${margin}mm; }
     * { box-sizing: border-box; }
-    body { margin: 0; color: #1a1a1a; font-family: ${fontFamily}; font-size: 11.5px; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.95em; }
-    .muted { color: #6b7280; }
+    body { margin: 0; color: #18181b; font-family: ${fontFamily}; font-size: 11px; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-feature-settings: "kern", "liga"; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.95em; font-variant-numeric: tabular-nums; }
+    .muted { color: #737373; }
+    .caps { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.14em; color: #737373; font-weight: 600; }
 
-    /* ── Header ─────────────────────────────────────────────── */
-    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
-    .logos { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
-    .logos img { max-height: 52px; max-width: 170px; object-fit: contain; }
-    .doc-title-row { display: flex; align-items: baseline; gap: 10px; }
-    .doc-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${esc(primary)}; }
-    .doc-subtitle { margin-top: 2px; color: #4b5563; font-size: 13px; }
-    .badge { display: inline-block; border: 1px solid; border-radius: 999px; padding: 2px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; vertical-align: middle; }
-    .company-block { text-align: right; line-height: 1.5; max-width: 46%; }
-    .company-name { font-weight: 700; font-size: 13px; }
-    .company-line { font-size: 11px; }
-    .brand-rule { height: 3px; background: ${esc(primary)}; border-radius: 2px; margin: 12px 0 0; }
+    /* ── Header: title left, identity right, one hairline below ── */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; padding-bottom: 14px; border-bottom: 2px solid ${esc(primary)}; }
+    .logos { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+    .logos img { max-height: 44px; max-width: 150px; object-fit: contain; }
+    .doc-title-row { display: flex; align-items: baseline; gap: 12px; }
+    .doc-title { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #18181b; }
+    .doc-subtitle { margin-top: 4px; color: #525252; font-size: 11.5px; letter-spacing: 0.02em; }
+    .badge { display: inline-block; border: 1px solid; padding: 1px 8px; font-size: 8.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; vertical-align: 2px; }
+    .company-block { text-align: right; line-height: 1.55; max-width: 46%; }
+    .company-name { font-weight: 700; font-size: 12px; letter-spacing: 0.01em; }
+    .company-line { font-size: 10px; color: #525252; }
+    .brand-rule { display: none; }
 
-    /* ── Meta strip ─────────────────────────────────────────── */
-    .meta-grid { display: flex; flex-wrap: wrap; gap: 0; margin-top: 12px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
-    .meta-item { flex: 1 1 0; min-width: 110px; padding: 8px 12px; border-right: 1px solid #e5e7eb; }
-    .meta-item:last-child { border-right: none; }
-    .meta-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; }
-    .meta-value { margin-top: 3px; font-weight: 600; font-size: 12px; }
+    /* ── Meta: an open row, ruled below, no boxes ───────────── */
+    .meta-grid { display: flex; flex-wrap: wrap; gap: 0 36px; padding: 10px 0; border-bottom: 1px solid #e4e4e7; }
+    .meta-item { padding: 2px 0; }
+    .meta-label { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.14em; color: #737373; font-weight: 600; }
+    .meta-value { margin-top: 2px; font-weight: 600; font-size: 11.5px; font-variant-numeric: tabular-nums; }
 
     /* ── Parties ────────────────────────────────────────────── */
-    .parties { display: flex; gap: 16px; margin-top: 14px; }
-    .party { flex: 1 1 0; }
-    .party-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: ${esc(primary)}; font-weight: 700; margin-bottom: 5px; }
-    .party-line { line-height: 1.5; }
-    .party-line:first-of-type { font-weight: 600; font-size: 12.5px; }
+    .parties { display: flex; gap: 40px; margin-top: 16px; }
+    .party { flex: 0 1 auto; min-width: 180px; }
+    .party-title { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.14em; color: #737373; font-weight: 600; margin-bottom: 5px; }
+    .party-line { line-height: 1.55; color: #3f3f46; }
+    .party-line:first-of-type { font-weight: 600; font-size: 12px; color: #18181b; }
 
     /* ── Key/value sections (record exports) ────────────────── */
-    .kv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
-    .kv-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; }
-    .kv-card h3 { margin: 0 0 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; }
-    .kv-row { display: grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 2px 0; }
-    .kv-label { color: #6b7280; }
-    .kv-value { font-weight: 600; }
+    .kv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 40px; margin-top: 16px; }
+    .kv-card { padding: 8px 0; border-top: 1px solid #e4e4e7; }
+    .kv-card h3 { margin: 0 0 6px; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.14em; color: #737373; font-weight: 600; }
+    .kv-row { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 1.5px 0; }
+    .kv-label { color: #737373; }
+    .kv-value { font-weight: 500; color: #18181b; }
 
     /* ── Dashboard metrics ──────────────────────────────────── */
-    .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
-    .metric { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; }
-    .metric-label { color: #6b7280; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
-    .metric-value { margin-top: 4px; font-size: 17px; font-weight: 700; }
-    .metric-detail { margin-top: 3px; color: #6b7280; }
-    .dashboard-notes { margin: 10px 0 0 18px; color: #374151; }
+    .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 28px; margin-top: 16px; }
+    .metric { padding: 8px 0; border-top: 1px solid #e4e4e7; }
+    .metric-label { color: #737373; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600; }
+    .metric-value { margin-top: 4px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .metric-detail { margin-top: 2px; color: #737373; font-size: 10px; }
+    .dashboard-notes { margin: 10px 0 0 16px; color: #3f3f46; }
 
-    /* ── Line items ─────────────────────────────────────────── */
-    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-    th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #ffffff; background: ${esc(primary)}; padding: 8px 10px; }
-    th:first-child { border-radius: 5px 0 0 0; }
-    th:last-child { border-radius: 0 5px 0 0; }
-    td { border-bottom: 1px solid #eceff1; padding: 8px 10px; vertical-align: top; }
-    table.compact th, table.compact td { padding: 5px 8px; }
-    .zebra td { background: #fafafa; }
+    /* ── Line items: ink on paper, no filled header ─────────── */
+    table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+    th { text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.14em; color: #52525b; font-weight: 600; padding: 0 8px 6px; border-bottom: 1.5px solid #18181b; }
+    th:first-child { padding-left: 0; }
+    th:last-child { padding-right: 0; }
+    td { border-bottom: 1px solid #e9e9ec; padding: 7px 8px; vertical-align: top; color: #27272a; }
+    td:first-child { padding-left: 0; }
+    td:last-child { padding-right: 0; }
+    tbody tr:last-child td { border-bottom: none; }
+    table.compact td { padding-top: 4px; padding-bottom: 4px; }
+    .zebra td { background: transparent; }
     .align-left { text-align: left; }
     .align-center { text-align: center; }
     .align-right { text-align: right; }
 
-    /* ── Totals ─────────────────────────────────────────────── */
-    .totals-wrap { display: flex; justify-content: flex-end; margin-top: 10px; }
-    .totals { width: 260px; }
-    .totals-row { display: flex; justify-content: space-between; gap: 20px; padding: 4px 10px; }
-    .totals-label { color: #4b5563; }
-    .totals-value { font-weight: 600; }
-    .totals-emphasis { background: ${esc(primary)}; color: #ffffff; border-radius: 5px; margin-top: 4px; padding: 7px 10px; }
-    .totals-emphasis .totals-label { color: #ffffff; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 10.5px; }
-    .totals-emphasis .totals-value { color: #ffffff; font-size: 13px; font-weight: 700; }
+    /* ── Totals: ruled column, double rule at the answer ────── */
+    .totals-wrap { display: flex; justify-content: flex-end; margin-top: 4px; }
+    .totals { width: 280px; border-top: 1.5px solid #18181b; padding-top: 4px; }
+    .totals-row { display: flex; justify-content: space-between; gap: 24px; padding: 3px 0; }
+    .totals-label { color: #52525b; }
+    .totals-value { font-weight: 500; font-variant-numeric: tabular-nums; }
+    .totals-emphasis { border-top: 1px solid #18181b; border-bottom: 3px double ${esc(primary)}; margin-top: 4px; padding: 6px 0; }
+    .totals-emphasis .totals-label { color: #18181b; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; font-size: 9.5px; align-self: center; }
+    .totals-emphasis .totals-value { color: #18181b; font-size: 14px; font-weight: 700; }
 
     /* ── Notes ──────────────────────────────────────────────── */
-    .notes-block { margin-top: 16px; border-left: 3px solid ${esc(primary)}; padding: 6px 12px; background: #fafafa; border-radius: 0 5px 5px 0; }
-    .notes-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; font-weight: 700; margin-bottom: 3px; }
-    .notes-line { color: #374151; }
+    .notes-block { margin-top: 18px; padding-top: 8px; border-top: 1px solid #e4e4e7; }
+    .notes-title { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.14em; color: #737373; font-weight: 600; margin-bottom: 3px; }
+    .notes-line { color: #3f3f46; font-size: 10.5px; }
 
-    /* ── Footer ─────────────────────────────────────────────── */
-    .footer { margin-top: 22px; border-top: 1px solid #e5e7eb; padding-top: 12px; color: #374151; }
-    .footer-grid { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 8px; }
-    .footer-col { min-width: 200px; }
-    .footer-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; font-weight: 700; margin-bottom: 4px; }
-    .footer-kv { display: flex; justify-content: space-between; gap: 16px; padding: 1px 0; font-size: 10.5px; }
-    .footer-kv span:first-child { color: #6b7280; }
+    /* ── Footer: fine print ─────────────────────────────────── */
+    .footer { margin-top: 26px; border-top: 1px solid #e4e4e7; padding-top: 10px; color: #52525b; }
+    .footer-grid { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 8px; }
+    .footer-col { min-width: 190px; }
+    .footer-title { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.14em; color: #737373; font-weight: 600; margin-bottom: 4px; }
+    .footer-kv { display: flex; justify-content: space-between; gap: 16px; padding: 1px 0; font-size: 10px; }
+    .footer-kv span:first-child { color: #737373; }
     .footer-sign { display: flex; align-items: flex-end; gap: 14px; }
-    .signature { max-height: 44px; max-width: 160px; object-fit: contain; }
-    .sig-caption { border-top: 1px solid #9ca3af; margin-top: 4px; padding-top: 2px; font-size: 9px; color: #6b7280; text-align: center; }
-    .stamp { max-height: 64px; max-width: 110px; object-fit: contain; opacity: 0.9; }
-    .footer-text { font-size: 10.5px; margin-top: 4px; }
-    .footer-disclaimer { font-size: 9.5px; color: #9ca3af; margin-top: 6px; }
+    .signature { max-height: 40px; max-width: 150px; object-fit: contain; }
+    .sig-caption { border-top: 1px solid #a1a1aa; margin-top: 4px; padding-top: 2px; font-size: 8.5px; color: #737373; text-align: center; letter-spacing: 0.06em; }
+    .stamp { max-height: 60px; max-width: 100px; object-fit: contain; opacity: 0.85; }
+    .footer-text { font-size: 10px; margin-top: 4px; }
+    .footer-disclaimer { font-size: 8.5px; color: #a1a1aa; margin-top: 6px; }
   </style>
 </head>
 <body>

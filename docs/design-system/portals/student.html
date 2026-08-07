@@ -1,0 +1,3068 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Student portal demo · Huchu</title>
+<link rel="stylesheet" href="../../tokens.css" />
+<link rel="stylesheet" href="../../components.css" />
+<link rel="stylesheet" href="../../shared.css" />
+<link rel="stylesheet" href="../../portal-shell.css" />
+<script src="../../icons.js" defer></script>
+<link rel="stylesheet" href="../../huchu-nav.css" />
+<script src="../../huchu-nav.js" defer></script>
+<style>
+  body { background: var(--gray-100); margin: 0; }
+
+  /* === Outer stage (desktop wraps in a phone device frame) === */
+  .sd-stage {
+    min-height: calc(100vh - 47px); /* minus pk-nav */
+    display: grid; place-items: center;
+    padding: 32px 24px;
+  }
+  .sd-frame {
+    width: 390px; height: 780px; border-radius: 48px;
+    background: #0F1115; padding: 12px;
+    box-shadow: 0 30px 60px -20px rgba(22,24,29,0.25), 0 0 0 1px rgba(22,24,29,0.08);
+    position: relative; flex: none;
+  }
+  .sd-frame::before {
+    content: ""; position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+    width: 110px; height: 30px; background: #0F1115; border-radius: 0 0 18px 18px; z-index: 20;
+  }
+  .sd-frame .screen {
+    width: 100%; height: 100%; border-radius: 36px;
+    overflow: hidden; background: var(--canvas);
+    position: relative; display: flex; flex-direction: column;
+  }
+
+  /* Fullscreen mode — drop the chrome and the device frame, fill viewport */
+  body.is-fullscreen { background: var(--ink); }
+  body.is-fullscreen .pk-nav { display: none !important; }
+  body.is-fullscreen .sd-stage { padding: 0; min-height: 100vh; min-height: 100dvh; }
+  body.is-fullscreen .sd-frame { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; padding: 0; }
+  body.is-fullscreen .sd-frame::before { display: none; }
+  body.is-fullscreen .sd-frame .screen { border-radius: 0; }
+
+  /* On true phones, also drop the device frame */
+  @media (max-width: 720px) {
+    .sd-stage { padding: 0; min-height: calc(100dvh - 47px); }
+    .sd-frame { width: 100%; height: calc(100dvh - 47px); border-radius: 0; padding: 0; }
+    .sd-frame::before { display: none; }
+    .sd-frame .screen { border-radius: 0; }
+  }
+
+  /* Floating fullscreen toggle (sits on top of frame) */
+  .fs-toggle {
+    position: fixed; top: 60px; right: 16px; z-index: 80;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 11px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text-strong); cursor: pointer;
+    font: 500 12px/1 var(--font-sans);
+    box-shadow: 0 6px 14px -4px rgba(0,0,0,0.16);
+  }
+  .fs-toggle:hover { background: var(--surface-muted); }
+  body.is-fullscreen .fs-toggle {
+    top: 12px; right: 12px;
+    background: rgba(255,255,255,0.95);
+  }
+
+  /* Pin .b-bottom-tabs into the flex flow inside the device frame rather
+     than the fixed positioning the system block uses by default. */
+  .ps-screen .b-bottom-tabs { position: static; z-index: auto; display: flex; box-shadow: none; }
+
+  /* === Reusable in-screen widgets === */
+  .greet { padding: 18px 16px 6px; }
+  .greet .hi { font: 500 13px/1.3 var(--font-sans); color: var(--text-muted); }
+  .greet h1 { font: 700 24px/1.15 var(--font-sans); letter-spacing: -0.02em; color: var(--text-strong); margin: 4px 0 0; }
+  .greet .meta { font: 500 12px/1.3 var(--font-sans); color: var(--text-subtle); margin-top: 6px; }
+
+  .next-class { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; cursor: pointer; transition: border-color 120ms; }
+  .next-class:active { border-color: var(--brand-200); }
+  .next-class .badge { width: 56px; height: 56px; border-radius: 12px; background: #DDEAFE; color: #0B5DF0; display: grid; place-items: center; }
+  .next-class .badge .col { display: grid; gap: 3px; place-items: center; }
+  .next-class .badge .t { font: 700 14px/1 var(--font-mono); }
+  .next-class .badge .d { font: 500 9px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+  .next-class .nm { font: 600 15px/1.3 var(--font-sans); color: var(--text-strong); }
+  .next-class .sb { font: 12px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+  .next-class .meta { font: 500 11px/1 var(--font-mono); color: var(--text-subtle); margin-top: 6px; display: inline-flex; gap: 10px; }
+
+  .week-glance { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+  .week-glance .h { font: 600 13px/1 var(--font-sans); color: var(--text-strong); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+  .week-glance .h .sb { font: 500 11px/1 var(--font-mono); color: var(--text-muted); }
+  .week-glance .days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .week-glance .day { padding: 6px 2px; border-radius: 6px; text-align: center; background: var(--surface-muted); display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .week-glance .day.today { background: var(--brand-soft); }
+  .week-glance .day .lbl { font: 600 10px/1 var(--font-sans); color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .week-glance .day.today .lbl { color: var(--brand-strong); }
+  .week-glance .day .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-strong); }
+  .week-glance .day .dots { display: inline-flex; gap: 2px; }
+
+  .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+  .kpi .l { font: 500 10.5px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-subtle); }
+  .kpi .v { font: 700 22px/1 var(--font-sans); color: var(--text-strong); margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .kpi .sb { font: 11.5px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 4px; }
+  .kpi.brand { background: var(--ink); color: #fff; border-color: transparent; }
+  .kpi.brand .l { color: rgba(255,255,255,0.65); }
+  .kpi.brand .v { color: #fff; }
+  .kpi.brand .sb { color: rgba(255,255,255,0.75); }
+  .kpi .delta { font: 500 11px/1 var(--font-sans); color: var(--tone-success); margin-left: 6px; }
+  .kpi .delta.down { color: var(--tone-danger); }
+
+  .grade-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .grade-card .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .grade-card .top .lbl { font: 600 13px/1 var(--font-sans); color: var(--text-strong); }
+  .grade-card .top .delta { font: 500 12px/1 var(--font-sans); color: var(--tone-success); }
+  .spark { display: block; width: 100%; height: 52px; }
+  .grade-card .legend { display: flex; justify-content: space-between; font: 500 10.5px/1 var(--font-mono); color: var(--text-muted); margin-top: 6px; }
+  .grade-card .recent { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .grade-card .recent .pill { font: 500 11px/1 var(--font-sans); padding: 5px 9px; border-radius: 9999px; background: var(--surface-muted); color: var(--text-strong); }
+  .grade-card .recent .pill b { font-weight: 700; margin-left: 4px; color: var(--brand-strong); }
+
+  /* === Timetable === */
+  .tt-wk-nav { display: flex; align-items: center; gap: 8px; padding: 12px 16px 4px; }
+  .tt-wk-nav .arr { width: 32px; height: 32px; border-radius: 8px; background: var(--surface-muted); color: var(--text-strong); display: grid; place-items: center; cursor: pointer; }
+  .tt-wk-nav .arr:hover { background: var(--surface-sunken); }
+  .tt-wk-nav .lbl { flex: 1; text-align: center; font: 600 13px/1.3 var(--font-sans); color: var(--text-strong); }
+  .tt-wk-nav .lbl .sb { font: 11px/1.3 var(--font-mono); color: var(--text-muted); margin-top: 2px; display: block; }
+
+  .tt-grid { padding: 4px 12px 12px; }
+  .tt-grid .ttbl { display: grid; grid-template-columns: 36px repeat(5, 1fr); gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
+  .tt-grid .hd { font: 600 10px/1 var(--font-sans); color: var(--text-strong); text-align: center; padding: 6px 0 4px; }
+  .tt-grid .hd.today { color: var(--brand-strong); }
+  .tt-grid .tm { font: 500 9px/1.2 var(--font-mono); color: var(--text-subtle); text-align: right; padding: 6px 4px 0 0; }
+  .tt-grid .cell { padding: 0; min-height: 42px; }
+  .tt-grid .pd { background: var(--surface-muted); border-radius: 6px; padding: 5px 5px; height: 100%; min-height: 42px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; transition: transform 100ms; border-left: 3px solid var(--brand); }
+  .tt-grid .pd:active { transform: scale(0.97); }
+  .tt-grid .pd .nm { font: 600 10px/1.1 var(--font-sans); color: var(--text-strong); }
+  .tt-grid .pd .rm { font: 500 9px/1 var(--font-mono); color: var(--text-muted); margin-top: auto; }
+  .tt-grid .pd.s-maths   { background: #DDEAFE; border-color: #0B5DF0; }
+  .tt-grid .pd.s-english { background: #FAE8FF; border-color: #C026D3; }
+  .tt-grid .pd.s-shona   { background: #FEE2E2; border-color: #DC2626; }
+  .tt-grid .pd.s-history { background: #FFEDD5; border-color: #EA580C; }
+  .tt-grid .pd.s-science { background: #DCFCE7; border-color: #16A34A; }
+  .tt-grid .pd.s-rs      { background: #ECFCCB; border-color: #65A30D; }
+  .tt-grid .pd.s-geo     { background: #CFFAFE; border-color: #0891B2; }
+  .tt-grid .pd.brk { background: transparent; border: 1px dashed var(--border-strong); justify-content: center; }
+  .tt-grid .pd.brk .nm { color: var(--text-subtle); font-weight: 500; }
+  .tt-grid .pd .test { width: 5px; height: 5px; border-radius: 50%; background: var(--tone-danger); position: absolute; }
+
+  .tt-grid .cell.today .pd { box-shadow: 0 0 0 2px rgba(11,93,240,0.18); }
+
+  .tt-summary { padding: 0 16px; }
+  .tt-summary .h { font: 500 11px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-subtle); padding: 14px 4px 8px; }
+
+  /* === Marks === */
+  .term-tabs { display: inline-flex; padding: 4px; background: var(--surface-muted); border-radius: 10px; gap: 2px; }
+  .term-tabs button { padding: 7px 14px; border-radius: 8px; font: 500 13px/1 var(--font-sans); color: var(--text-muted); background: transparent; border: 0; cursor: pointer; }
+  .term-tabs button.on { background: var(--surface); color: var(--text-strong); box-shadow: 0 1px 2px rgba(0,0,0,0.06); font-weight: 600; }
+
+  /* Marks subject bar — sits inside .b-row-card .b-rc-top */
+  .subj-bar { height: 6px; background: var(--surface-muted); border-radius: 9999px; margin: 10px 0 0 20px; overflow: hidden; }
+  .subj-bar > span { display: block; height: 100%; border-radius: inherit; }
+
+  /* Marks hero — extra inner bits the system block doesn't provide */
+  .marks-hero-pos { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: rgba(255,255,255,0.22); color: #fff; border-radius: 9999px; font: 600 11px/1 var(--font-sans); margin-top: 8px; }
+  .b-stat-hero .b-sh-v .u { font-size: 14px; opacity: 0.7; margin-left: 4px; font-weight: 500; }
+
+  /* Sheet: marks subject detail */
+  .ca-list { display: grid; gap: 4px; margin-top: 8px; }
+  .ca-list .row { display: grid; grid-template-columns: 1fr auto; padding: 8px 12px; background: var(--surface-muted); border-radius: 8px; font: 500 13px var(--font-sans); color: var(--text-body); }
+  .ca-list .row .v { font-family: var(--font-mono); color: var(--text-strong); font-weight: 600; }
+  .histogram { display: flex; align-items: flex-end; gap: 4px; height: 80px; padding: 8px 0; }
+  .histogram .b { flex: 1; background: var(--surface-muted); border-radius: 4px 4px 0 0; position: relative; }
+  .histogram .b.me { background: var(--brand); }
+  .histogram .b .lbl { position: absolute; left: 0; right: 0; bottom: -16px; text-align: center; font: 500 9px/1 var(--font-mono); color: var(--text-subtle); }
+
+  /* === Assignments — subject tag and due pill (live inside .b-row-card) === */
+  .as-tag { width: 6px; border-radius: 3px; align-self: stretch; flex: none; }
+  .as-subj { font: 500 10.5px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle); }
+  .as-meta { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .as-due { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 9999px; background: var(--surface-muted); color: var(--text-strong); font: 500 11px/1 var(--font-sans); }
+  .as-due.upcoming { background: var(--tone-warn-bg); color: var(--tone-warn); }
+  .as-due.overdue { background: var(--tone-danger); color: #fff; }
+  .as-due.submitted { background: var(--tone-success-bg); color: var(--tone-success); }
+  .as-due.graded { background: var(--brand-soft); color: var(--brand-strong); }
+
+  /* === Library === */
+  .lib-search { display: flex; align-items: center; gap: 8px; margin: 12px 16px 6px; padding: 10px 12px; background: var(--surface-muted); border-radius: 12px; }
+  .lib-search input { flex: 1; border: 0; background: transparent; outline: 0; font: 500 14px/1 var(--font-sans); color: var(--text-strong); }
+  .lib-search input::placeholder { color: var(--text-subtle); }
+  .lib-search .ic { color: var(--text-muted); cursor: pointer; }
+
+  .fines-pill { display: flex; align-items: center; gap: 10px; margin: 8px 16px; padding: 10px 12px; background: #FEE2E2; border: 1px solid #FCA5A5; border-radius: 12px; }
+  .fines-pill .ic { width: 32px; height: 32px; border-radius: 8px; background: #fff; color: var(--tone-danger); display: grid; place-items: center; }
+  .fines-pill .nm { font: 600 13.5px/1.3 var(--font-sans); color: #7F1D1D; }
+  .fines-pill .sb { font: 11.5px/1.3 var(--font-sans); color: #991B1B; margin-top: 2px; }
+  .fines-pill .val { margin-left: auto; font: 700 14px/1 var(--font-mono); color: #7F1D1D; }
+  .fines-pill button { font: 600 11px var(--font-sans); padding: 6px 10px; border-radius: 8px; background: #fff; color: #7F1D1D; cursor: pointer; }
+
+  .borrow-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 0 16px 10px; display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; }
+  .book-cover { width: 56px; height: 78px; border-radius: 6px; background: linear-gradient(135deg, #C2410C, #7C2D12); color: #fff; display: flex; flex-direction: column; justify-content: flex-end; padding: 6px 5px; font: 700 8.5px/1.1 var(--font-sans); position: relative; overflow: hidden; }
+  .book-cover::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: rgba(0,0,0,0.2); }
+  .book-cover.green { background: linear-gradient(135deg, #166534, #14532D); }
+  .book-cover.blue { background: linear-gradient(135deg, #0B5DF0, #1E40AF); }
+  .book-cover.purple { background: linear-gradient(135deg, #6B21A8, #4C1D95); }
+  .book-cover.pink { background: linear-gradient(135deg, #DB2777, #831843); }
+  .book-cover.amber { background: linear-gradient(135deg, #D97706, #78350F); }
+  .borrow-card .nm { font: 600 13.5px/1.3 var(--font-sans); color: var(--text-strong); }
+  .borrow-card .sb { font: 11.5px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+  .borrow-card .due { font: 500 11px/1 var(--font-mono); color: var(--text-muted); margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; }
+  .borrow-card .due.urgent { color: var(--tone-warn); }
+  .borrow-card .due.overdue { color: var(--tone-danger); font-weight: 700; }
+  .borrow-card .renew { padding: 6px 10px; border-radius: 8px; background: var(--surface-muted); font: 600 11px/1 var(--font-sans); color: var(--text-strong); border: 0; cursor: pointer; }
+  .borrow-card .renew:hover { background: var(--surface-sunken); }
+
+  .scan-cta { margin: 8px 16px 10px; padding: 14px 16px; background: var(--ink); color: #fff; border-radius: 14px; display: flex; align-items: center; gap: 14px; position: relative; overflow: clip; cursor: pointer; }
+  .scan-cta::before { content: ""; position: absolute; right: -30px; top: -30px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(251,146,60,0.32), transparent 70%); }
+  .scan-cta .qr { width: 44px; height: 44px; border-radius: 10px; background: rgba(255,255,255,0.12); color: #FCD34D; display: grid; place-items: center; flex: none; }
+  .scan-cta .nm { font: 600 14px/1.3 var(--font-sans); }
+  .scan-cta .sb { font: 12px/1.4 var(--font-sans); opacity: 0.78; margin-top: 3px; }
+  .scan-cta .arrow { margin-left: auto; opacity: 0.7; }
+
+  .catalog-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: 0 16px 8px; display: grid; grid-template-columns: 42px 1fr auto; gap: 10px; align-items: center; cursor: pointer; }
+  .catalog-card .cv { width: 42px; height: 58px; }
+  .catalog-card .nm { font: 600 13px/1.3 var(--font-sans); color: var(--text-strong); }
+  .catalog-card .sb { font: 11px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 2px; }
+  .catalog-card .borrow { font: 600 11px var(--font-sans); padding: 6px 10px; border-radius: 8px; background: var(--brand-soft); color: var(--brand-strong); cursor: pointer; border: 0; }
+  .catalog-card .out { font: 500 11px var(--font-sans); padding: 6px 10px; border-radius: 8px; background: var(--surface-muted); color: var(--text-muted); }
+
+  /* === Profile === */
+  .id-card { background: linear-gradient(135deg, #7C2D12, #C2410C); color: #fff; border-radius: 16px; padding: 16px; margin: 12px 16px 8px; position: relative; overflow: clip; }
+  .id-card::before { content: ""; position: absolute; right: -50px; bottom: -50px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%); }
+  .id-card .top { display: flex; align-items: center; gap: 14px; }
+  .id-card .avatar { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #FFE4D3, #FB923C); color: #7C2D12; display: grid; place-items: center; font: 700 22px/1 var(--font-sans); flex: none; }
+  .id-card .nm { font: 700 17px/1.2 var(--font-sans); letter-spacing: -0.01em; }
+  .id-card .sb { font: 12.5px/1.4 var(--font-sans); opacity: 0.85; margin-top: 3px; }
+  .id-card .ids { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+  .id-card .ids .pill { font: 500 11px/1 var(--font-mono); padding: 4px 9px; border-radius: 9999px; background: rgba(255,255,255,0.18); }
+  .id-card .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.18); }
+  .id-card .stats .s .l { font: 500 10px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; }
+  .id-card .stats .s .v { font: 700 17px/1 var(--font-sans); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .id-card .stats .s .v .u { font: 500 11px/1 var(--font-sans); opacity: 0.7; margin-left: 2px; }
+
+  .toggle { width: 38px; height: 22px; background: var(--brand); border-radius: 9999px; padding: 2px; position: relative; cursor: pointer; transition: background 120ms; }
+  .toggle::after { content: ""; width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: all 120ms; }
+  .toggle.off { background: var(--surface-sunken); }
+  .toggle.off::after { right: auto; left: 2px; }
+
+  .seg { display: inline-flex; padding: 2px; background: var(--surface-muted); border-radius: 8px; }
+  .seg button { padding: 6px 12px; border-radius: 6px; font: 500 12px var(--font-sans); color: var(--text-muted); background: transparent; cursor: pointer; border: 0; }
+  .seg button.on { background: var(--surface); color: var(--text-strong); box-shadow: 0 1px 2px rgba(0,0,0,0.06); font-weight: 600; }
+
+  .sign-out { margin: 14px 16px 0; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; font: 600 14px/1 var(--font-sans); color: var(--tone-danger); cursor: pointer; }
+  .sign-out:hover { background: var(--tone-danger-bg); }
+
+  /* === Modals, toasts === */
+  @keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Inside sheet contents */
+  .key-fact { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+  .key-fact .kf { padding: 10px 12px; background: var(--surface-muted); border-radius: 8px; }
+  .key-fact .kf .l { font: 500 10.5px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle); }
+  .key-fact .kf .v { font: 600 14px/1.2 var(--font-mono); color: var(--text-strong); margin-top: 5px; }
+  .desc { font: 13.5px/1.55 var(--font-sans); color: var(--text-body); margin: 10px 0; }
+  .file-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface-muted); border-radius: 8px; margin-bottom: 6px; }
+  .file-row .ic { width: 32px; height: 32px; border-radius: 6px; background: var(--surface); color: var(--text-strong); display: grid; place-items: center; }
+  .file-row .nm { font: 500 13px/1.3 var(--font-sans); color: var(--text-strong); }
+  .file-row .sz { font: 11px/1.3 var(--font-mono); color: var(--text-muted); margin-top: 2px; }
+  .ssh { font: 500 11px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-subtle); margin: 14px 0 8px; }
+
+  /* Confirm modal (centered) */
+  .modal-scrim {
+    position: fixed; inset: 0; background: rgba(22,24,29,0.6);
+    z-index: 120; display: grid; place-items: center; padding: 24px;
+    animation: scrimIn 160ms ease;
+  }
+  .modal {
+    background: var(--surface); border-radius: 14px; padding: 20px;
+    width: 100%; max-width: 340px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.4);
+    animation: modalIn 220ms cubic-bezier(0.2, 0, 0.1, 1);
+  }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .modal h3 { font: 600 16px/1.2 var(--font-sans); color: var(--text-strong); margin: 0 0 6px; }
+  .modal .sub { font: 13px/1.4 var(--font-sans); color: var(--text-muted); margin: 0 0 14px; }
+  .modal .acts { display: flex; gap: 6px; }
+  .modal .acts button { flex: 1; padding: 11px; border-radius: 8px; font: 600 13px var(--font-sans); cursor: pointer; border: 0; }
+  .modal .acts .ok { background: var(--tone-danger); color: #fff; }
+  .modal .acts .ok.brand { background: var(--brand); color: #fff; }
+  .modal .acts .alt { background: var(--surface-muted); color: var(--text-strong); }
+
+  /* Toast */
+  .toast-host { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast {
+    background: var(--ink); color: #fff; padding: 10px 16px;
+    border-radius: 9999px; font: 500 13px/1.3 var(--font-sans);
+    box-shadow: 0 8px 20px -6px rgba(0,0,0,0.3);
+    display: inline-flex; align-items: center; gap: 8px;
+    animation: toastIn 240ms ease; pointer-events: auto;
+  }
+  .toast.success { background: var(--tone-success); }
+  .toast.danger { background: var(--tone-danger); }
+  .toast.warn { background: var(--tone-warn); }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  .toast.out { animation: toastOut 240ms ease forwards; }
+  @keyframes toastOut { to { opacity: 0; transform: translate(-50%, -10px); } }
+
+  /* Sign-out confirmation success splash */
+  .signed-out { display: grid; place-items: center; height: 100%; text-align: center; padding: 40px 24px; }
+  .signed-out .ico { width: 60px; height: 60px; border-radius: 50%; background: var(--tone-success-bg); color: var(--tone-success); display: grid; place-items: center; margin-bottom: 16px; }
+  .signed-out h2 { font: 700 22px/1.2 var(--font-sans); color: var(--text-strong); margin: 0 0 6px; }
+  .signed-out p { font: 13.5px/1.55 var(--font-sans); color: var(--text-muted); margin: 0 0 20px; max-width: 280px; }
+  .signed-out button { padding: 11px 18px; border-radius: 9px; background: var(--brand); color: #fff; font: 600 13.5px var(--font-sans); cursor: pointer; border: 0; }
+
+  /* Lightweight psh inside the demo */
+  .demo-psh { padding: 14px 4px 8px; font: 500 11.5px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-subtle); display: flex; align-items: center; justify-content: space-between; }
+  .demo-psh a { font: 500 12px/1 var(--font-sans); color: var(--brand-strong); text-decoration: none; letter-spacing: 0; text-transform: none; cursor: pointer; }
+
+  /* Empty state */
+  .empty-state { padding: 40px 24px; text-align: center; color: var(--text-muted); font: 13px/1.5 var(--font-sans); }
+  .empty-state .lg { color: var(--text-subtle); margin-bottom: 10px; display: inline-block; }
+
+  /* === Sign-in === */
+  .signin { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 22px 22px 14px; background: linear-gradient(180deg, var(--surface) 0%, var(--surface) 50%, var(--brand-soft) 100%); position: relative; overflow-y: auto; }
+  .signin .logo { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #FB923C, #C2410C); color: #fff; display: grid; place-items: center; font: 800 22px var(--font-sans); margin-bottom: 18px; box-shadow: 0 8px 20px -6px rgba(194,65,12,0.4); }
+  .signin h1 { font: 700 24px/1.2 var(--font-sans); color: var(--text-strong); margin: 0; letter-spacing: -0.02em; }
+  .signin .lede { font: 14px/1.45 var(--font-sans); color: var(--text-muted); margin: 6px 0 22px; }
+  .signin .field { margin-bottom: 12px; }
+  .signin .field label { font: 500 11.5px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle); display: block; margin-bottom: 6px; }
+  .signin .field input { width: 100%; box-sizing: border-box; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font: 500 15px/1 var(--font-sans); color: var(--text-strong); outline: 0; }
+  .signin .field input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .signin .field .err { font: 500 11.5px/1.3 var(--font-sans); color: var(--tone-danger); margin-top: 5px; min-height: 14px; }
+  .signin .otp { display: flex; gap: 8px; justify-content: space-between; }
+  .signin .otp input { flex: 1; padding: 0; box-sizing: border-box; }
+  .signin .row-act { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 18px; }
+  .signin .row-act .remember { display: inline-flex; align-items: center; gap: 6px; font: 500 12.5px var(--font-sans); color: var(--text-muted); cursor: pointer; }
+  .signin .row-act .remember .cb { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border-strong); background: var(--surface); display: grid; place-items: center; color: transparent; }
+  .signin .row-act .remember.on .cb { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .signin .row-act .forgot { font: 500 12.5px var(--font-sans); color: var(--brand-strong); cursor: pointer; }
+  .signin button.primary { width: 100%; padding: 14px; border-radius: 10px; background: var(--ink); color: #fff; font: 600 14.5px var(--font-sans); cursor: pointer; border: 0; box-shadow: 0 8px 18px -6px rgba(22,24,29,0.3); }
+  .signin button.primary:hover { background: #0b0d11; }
+  .signin button.primary[disabled] { opacity: 0.55; cursor: not-allowed; }
+  .signin .or { display: flex; align-items: center; gap: 10px; margin: 18px 0; font: 500 11px var(--font-sans); color: var(--text-subtle); letter-spacing: 0.1em; }
+  .signin .or::before, .signin .or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .signin .biometric { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 13px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text-strong); font: 600 14px var(--font-sans); cursor: pointer; }
+  .signin .biometric:hover { background: var(--surface-muted); }
+  .signin .biometric .ic { width: 28px; height: 28px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-strong); display: grid; place-items: center; }
+  .signin .foot { margin-top: 18px; padding-top: 14px; text-align: center; font: 500 11.5px/1.5 var(--font-sans); color: var(--text-subtle); border-top: 1px dashed var(--border); }
+  .signin .foot strong { color: var(--text-muted); font-weight: 600; }
+
+  /* === Onboarding tour === */
+  .tour-scrim { position: fixed; inset: 0; background: rgba(11,13,16,0.78); z-index: 130; display: flex; flex-direction: column; justify-content: flex-end; padding: 24px; animation: scrimIn 200ms ease; }
+  .tour-card { background: var(--surface); border-radius: 16px; padding: 22px; max-width: 360px; margin: 0 auto; box-shadow: 0 30px 60px -20px rgba(0,0,0,0.5); }
+  .tour-card .step { font: 500 11px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--brand-strong); }
+  .tour-card h3 { font: 700 18px/1.25 var(--font-sans); color: var(--text-strong); margin: 6px 0 8px; letter-spacing: -0.01em; }
+  .tour-card p { font: 13.5px/1.55 var(--font-sans); color: var(--text-muted); margin: 0 0 14px; }
+  .tour-card .dots { display: flex; gap: 4px; margin: 0 0 14px; }
+  .tour-card .dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-sunken); }
+  .tour-card .dots span.on { width: 22px; background: var(--brand); border-radius: 9999px; }
+  .tour-card .acts { display: flex; gap: 8px; }
+  .tour-card .acts button { flex: 1; padding: 11px; border-radius: 9px; font: 600 13px var(--font-sans); cursor: pointer; border: 0; }
+  .tour-card .acts .skip { background: transparent; color: var(--text-muted); flex: 0 0 auto; padding: 11px 14px; }
+  .tour-card .acts .next { background: var(--brand); color: #fff; }
+
+  /* === Offline banner === */
+  .offline-banner { background: #FEF3C7; color: #78350F; padding: 7px 14px; font: 500 12px/1.3 var(--font-sans); display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #FCD34D; flex: none; }
+  .offline-banner .dot { width: 7px; height: 7px; border-radius: 50%; background: #B45309; animation: blink 1.4s infinite; }
+  @keyframes blink { 0%, 60% { opacity: 1; } 30% { opacity: 0.35; } }
+
+  /* === Notifications === */
+  .notif-row { display: flex; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); cursor: pointer; background: var(--surface); }
+  .notif-row.unread { background: var(--brand-soft); }
+  .notif-row.unread::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); align-self: center; flex: none; margin-right: -4px; }
+  .notif-row .ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex: none; }
+  .notif-row .ic.grade { background: #DCFCE7; color: #16A34A; }
+  .notif-row .ic.assign { background: #FFEDD5; color: #EA580C; }
+  .notif-row .ic.broadcast { background: #DDEAFE; color: #0B5DF0; }
+  .notif-row .ic.fee { background: #F3E8FF; color: #7E22CE; }
+  .notif-row .ic.library { background: #FEE2E2; color: #DC2626; }
+  .notif-row .nm { font: 600 13.5px/1.3 var(--font-sans); color: var(--text-strong); }
+  .notif-row .sb { font: 12.5px/1.45 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+  .notif-row .tm { font: 500 11px/1 var(--font-mono); color: var(--text-subtle); margin-top: 5px; }
+  .notif-row .body { flex: 1; min-width: 0; }
+
+  /* === Goals === */
+  .goal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 8px; }
+  .goal-card .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .goal-card .tag { width: 8px; height: 26px; border-radius: 4px; flex: none; }
+  .goal-card .nm { font: 600 14px/1.3 var(--font-sans); color: var(--text-strong); }
+  .goal-card .sb { font: 11.5px/1.4 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+  .goal-card .target { font: 600 12.5px/1 var(--font-mono); color: var(--text-strong); }
+  .goal-card .target .of { color: var(--text-subtle); font-weight: 500; }
+  .goal-card .bar { height: 8px; background: var(--surface-muted); border-radius: 9999px; margin: 12px 0 4px; overflow: hidden; position: relative; }
+  .goal-card .bar > span { display: block; height: 100%; border-radius: inherit; }
+  .goal-card .bar .marker { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); }
+  .goal-card .delta { font: 500 11.5px/1 var(--font-sans); color: var(--tone-success); display: inline-flex; align-items: center; gap: 4px; }
+  .goal-card .delta.down { color: var(--tone-danger); }
+
+  .week-progress { background: linear-gradient(135deg, #C2410C, #7C2D12); color: #fff; border-radius: 14px; padding: 16px; margin-bottom: 14px; position: relative; overflow: clip; }
+  .week-progress::before { content: ""; position: absolute; right: -40px; top: -40px; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%); }
+  .week-progress .lbl { font: 500 11px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.78; }
+  .week-progress .val { font: 700 28px/1.05 var(--font-sans); margin-top: 6px; }
+  .week-progress .sb { font: 12.5px/1.45 var(--font-sans); opacity: 0.86; margin-top: 4px; }
+  .week-progress .bars { display: flex; gap: 4px; margin-top: 12px; height: 32px; align-items: flex-end; }
+  .week-progress .bars .b { flex: 1; background: rgba(255,255,255,0.22); border-radius: 4px 4px 0 0; position: relative; }
+  .week-progress .bars .b.fill { background: #FCD34D; }
+  .week-progress .bars .lbl-row { display: flex; gap: 4px; margin-top: 4px; }
+  .week-progress .bars .lbl-row span { flex: 1; text-align: center; font: 500 9px/1 var(--font-mono); opacity: 0.7; }
+
+  /* === Help & how-to === */
+  .help-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; }
+  .help-card .h { display: flex; align-items: center; gap: 10px; }
+  .help-card .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--brand-soft); color: var(--brand-strong); display: grid; place-items: center; flex: none; }
+  .help-card .nm { font: 600 14px/1.3 var(--font-sans); color: var(--text-strong); }
+  .help-card .sb { font: 12px/1.4 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+
+  /* === Settings rows === */
+  .setting-row { display: flex; gap: 12px; padding: 12px 14px; align-items: center; background: var(--surface); border-bottom: 1px solid var(--border-subtle); }
+  .setting-row:first-child { border-radius: 12px 12px 0 0; }
+  .setting-row:last-child { border-bottom: 0; border-radius: 0 0 12px 12px; }
+  .setting-row:only-child { border-radius: 12px; }
+  .setting-row .ic-tile { width: 34px; height: 34px; border-radius: 9px; background: var(--surface-muted); color: var(--text-strong); display: grid; place-items: center; flex: none; }
+  .setting-row .nm { font: 500 14px/1.3 var(--font-sans); color: var(--text-strong); }
+  .setting-row .sb { font: 12px/1.4 var(--font-sans); color: var(--text-muted); margin-top: 2px; }
+  .setting-row .body { flex: 1; min-width: 0; }
+  .setting-group { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+
+  /* === Plagiarism notice === */
+  .plagiarism { display: flex; gap: 10px; padding: 10px 12px; background: #FEF3C7; border: 1px solid #FCD34D; color: #78350F; border-radius: 10px; font: 500 12px/1.45 var(--font-sans); margin: 10px 0; }
+  .plagiarism .ic { color: #B45309; flex: none; }
+
+  /* === Submit progress / receipt === */
+  .submit-progress { padding: 16px; text-align: center; }
+  .submit-progress .ring { width: 80px; height: 80px; border-radius: 50%; border: 6px solid var(--brand-soft); border-top-color: var(--brand); margin: 0 auto 14px; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .submit-progress .nm { font: 600 14px var(--font-sans); color: var(--text-strong); }
+  .submit-progress .sb { font: 12.5px/1.45 var(--font-sans); color: var(--text-muted); margin-top: 5px; }
+  .submit-progress .barwrap { height: 6px; background: var(--surface-muted); border-radius: 9999px; overflow: hidden; margin: 14px auto 0; max-width: 220px; }
+  .submit-progress .barwrap > span { display: block; height: 100%; background: var(--brand); width: 0%; transition: width 200ms linear; border-radius: inherit; }
+  .submit-receipt { padding: 6px 0 0; text-align: center; }
+  .submit-receipt .check { width: 64px; height: 64px; border-radius: 50%; background: var(--tone-success-bg); color: var(--tone-success); display: grid; place-items: center; margin: 0 auto 14px; }
+  .submit-receipt h3 { font: 700 18px var(--font-sans); color: var(--text-strong); margin: 0 0 4px; }
+  .submit-receipt .sb { font: 13px/1.5 var(--font-sans); color: var(--text-muted); margin: 0 0 14px; }
+  .submit-receipt .id { display: inline-block; padding: 7px 14px; border-radius: 9999px; background: var(--surface-muted); color: var(--text-strong); font: 600 12.5px/1 var(--font-mono); }
+
+  /* === Comments === */
+  .comment { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); }
+  .comment:last-child { border-bottom: 0; }
+  .comment .av { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-muted); color: var(--text-strong); display: grid; place-items: center; font: 600 12px var(--font-sans); flex: none; }
+  .comment .nm { font: 600 13px var(--font-sans); color: var(--text-strong); }
+  .comment .tm { font: 500 11px var(--font-mono); color: var(--text-subtle); margin-left: 6px; }
+  .comment .txt { font: 13px/1.5 var(--font-sans); color: var(--text-body); margin-top: 3px; }
+  .comment-compose { display: flex; gap: 8px; margin-top: 12px; padding: 10px; background: var(--surface-muted); border-radius: 10px; }
+  .comment-compose input { flex: 1; border: 0; background: transparent; outline: 0; font: 500 13px var(--font-sans); color: var(--text-strong); }
+  .comment-compose button { padding: 6px 10px; border-radius: 7px; background: var(--brand); color: #fff; border: 0; font: 600 12px var(--font-sans); cursor: pointer; }
+
+  /* === Loading skeleton === */
+  .skel { background: linear-gradient(90deg, var(--surface-muted), var(--surface-sunken), var(--surface-muted)); background-size: 200% 100%; border-radius: 8px; animation: shimmer 1.6s linear infinite; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* === Error state === */
+  .err-state { padding: 40px 24px; text-align: center; color: var(--text-muted); font: 13px/1.5 var(--font-sans); }
+  .err-state .ic { width: 56px; height: 56px; border-radius: 50%; background: var(--tone-danger-bg); color: var(--tone-danger); display: grid; place-items: center; margin: 0 auto 14px; }
+  .err-state h3 { font: 700 16px var(--font-sans); color: var(--text-strong); margin: 0 0 6px; }
+  .err-state button { padding: 10px 16px; border-radius: 8px; background: var(--brand); color: #fff; font: 600 12.5px var(--font-sans); border: 0; cursor: pointer; margin-top: 12px; }
+
+  /* === Histogram improvements (mark distribution + me) === */
+
+  /* === Lang seg === */
+
+  /* === DARK MODE === */
+  body.is-dark, .screen.is-dark {
+    --surface: #1B1D22;
+    --surface-muted: #24272E;
+    --surface-sunken: #16181D;
+    --canvas: #16181D;
+    --text-strong: #F3F4F6;
+    --text-body: #D1D5DB;
+    --text-muted: #9CA3AF;
+    --text-subtle: #6B7280;
+    --border: #2A2D34;
+    --border-subtle: #232529;
+    --border-strong: #353841;
+    --brand-soft: rgba(11, 93, 240, 0.18);
+    --tone-success-bg: rgba(22, 163, 74, 0.16);
+    --tone-warn-bg: rgba(217, 119, 6, 0.16);
+    --tone-danger-bg: rgba(220, 38, 38, 0.16);
+    --ink: #0B0D11;
+  }
+  .screen.is-dark { background: var(--canvas); }
+  body.is-dark .sd-frame { background: #050608; }
+
+  /* === Demo PSH header link === */
+
+  /* === Histogram numbers === */
+  .histogram .b .n { position: absolute; top: -14px; left: 0; right: 0; text-align: center; font: 600 9px/1 var(--font-mono); color: var(--text-strong); }
+
+  /* ===========================================================
+     PHONE (≤ 720px) — aggressive density pass (Student)
+     Tighter spacing, smaller typography, full-height sheets,
+     safe-area insets, no horizontal overflow at 320–430 px.
+     Scoped under body[data-kit-nav="student"].
+     =========================================================== */
+  @media (max-width: 720px) {
+    /* === Status bar safe area === */
+    body[data-kit-nav="student"] .ps-statusbar { padding-top: env(safe-area-inset-top, 0px); }
+
+    /* === Page gutters (16→12) === */
+    body[data-kit-nav="student"] .greet { padding: 14px 12px 4px; }
+    body[data-kit-nav="student"] .next-class { margin: 8px 12px 0; padding: 12px; gap: 10px; }
+    body[data-kit-nav="student"] .week-glance { margin: 8px 12px 0; padding: 12px; }
+    body[data-kit-nav="student"] .kpi-row { margin: 0 12px; gap: 8px; }
+    body[data-kit-nav="student"] .grade-card { margin: 8px 12px; padding: 12px; }
+    body[data-kit-nav="student"] .tt-wk-nav { padding: 10px 12px 4px; gap: 6px; }
+    body[data-kit-nav="student"] .tt-grid { padding: 4px 10px 12px; }
+    body[data-kit-nav="student"] .tt-summary { padding: 0 12px; }
+    body[data-kit-nav="student"] .lib-search { margin: 10px 12px 6px; padding: 10px 12px; }
+    body[data-kit-nav="student"] .fines-pill { margin: 8px 12px; padding: 10px 12px; }
+    body[data-kit-nav="student"] .borrow-card { margin: 0 12px 10px; padding: 10px; gap: 10px; }
+    body[data-kit-nav="student"] .scan-cta { margin: 8px 12px 10px; padding: 12px; }
+    body[data-kit-nav="student"] .catalog-card { margin: 0 12px 8px; padding: 10px; }
+    body[data-kit-nav="student"] .ps-scroll { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+
+    /* === Heading sizes h1→20, h2→16, h3→14 === */
+    body[data-kit-nav="student"] .greet h2,
+    body[data-kit-nav="student"] .greet h1 { font-size: 20px; line-height: 1.2; }
+    body[data-kit-nav="student"] h2 { font-size: 16px; line-height: 1.2; }
+    body[data-kit-nav="student"] h3 { font-size: 14px; line-height: 1.2; }
+
+    /* === Stat values cap at 22px === */
+    body[data-kit-nav="student"] .kpi .v,
+    body[data-kit-nav="student"] .kpi .val { font-size: 22px !important; line-height: 1.05; }
+    body[data-kit-nav="student"] .b-stat-hero .b-sh-lead { padding: 14px; border-radius: 12px; }
+    body[data-kit-nav="student"] .b-stat-hero .b-sh-lead .b-sh-v { font-size: 22px !important; line-height: 1.05; margin-top: 4px; }
+    body[data-kit-nav="student"] .b-stat-hero .b-sh-lead .b-sh-d { font-size: 12.5px; margin-top: 4px; }
+    body[data-kit-nav="student"] .b-stat-hero .b-sh-s { padding: 10px 12px; border-radius: 10px; }
+    body[data-kit-nav="student"] .b-stat-hero .b-sh-s .b-sh-v { font-size: 18px !important; line-height: 1; }
+    body[data-kit-nav="student"] .b-stat-hero { gap: 8px; }
+    body[data-kit-nav="student"] .b-stat-hero .b-sh-row { gap: 6px; }
+    body[data-kit-nav="student"] .b-stat-hero .b-sh-v .u { font-size: 12px; }
+
+    /* === Bottom-tabs safe area === */
+    body[data-kit-nav="student"] .b-bottom-tabs { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+    /* === x-bottom-sheet (DS modals) — 95vh, scrollable, sticky foot === */
+    body[data-kit-nav="student"] .x-bottom-sheet { max-height: 95vh; }
+    body[data-kit-nav="student"] .x-bottom-sheet .x-bs-foot {
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+
+    /* === Sign-in screen === */
+    body[data-kit-nav="student"] .signin { padding: 22px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+    body[data-kit-nav="student"] .signin h1 { font-size: 20px; }
+    body[data-kit-nav="student"] .signin .otp { gap: 6px; }
+    body[data-kit-nav="student"] .signin .otp input { min-height: 48px; font-size: 18px; min-width: 0; }
+
+    /* === Hard overflow guard: top frame containers === */
+    body[data-kit-nav="student"] .sd-stage,
+    body[data-kit-nav="student"] .sd-frame,
+    body[data-kit-nav="student"] .ps-screen,
+    body[data-kit-nav="student"] .ps-scroll { max-width: 100vw; overflow-x: hidden; }
+    body[data-kit-nav="student"] .ps-scroll { overflow-x: hidden; overflow-y: auto; }
+  }
+
+  /* Even tighter at the smallest phones (≤ 360px) */
+  @media (max-width: 360px) {
+    body[data-kit-nav="student"] .kpi .v { font-size: 20px !important; }
+    body[data-kit-nav="student"] .b-stat-hero .b-sh-lead .b-sh-v { font-size: 20px !important; }
+    body[data-kit-nav="student"] .greet h2 { font-size: 18px; }
+    body[data-kit-nav="student"] .signin .otp input { min-height: 44px; font-size: 17px; }
+    body[data-kit-nav="student"] .signin .otp { gap: 4px; }
+  }
+</style>
+</head>
+<body class="hx-no-kit-nav" data-kit-nav="student">
+
+<button class="fs-toggle" id="fs-toggle" title="Fullscreen preview">
+  <span data-icon="grid" data-icon-size="14"></span><span id="fs-label">Fullscreen</span>
+</button>
+
+<div class="sd-stage">
+  <div class="sd-frame">
+    <div class="screen" id="app"></div>
+  </div>
+</div>
+
+<div id="sheet-host"></div>
+<div id="modal-host"></div>
+<div id="tour-host"></div>
+<div class="toast-host" id="toast-host"></div>
+
+<script>
+/* ============================================================
+   Student portal interactive demo — single-file vanilla JS.
+   Hash routes: #/home, #/timetable, #/marks, #/assignments,
+                #/library, #/profile
+   ============================================================ */
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* === Student identity === */
+const STUDENT = {
+  name: 'Anesu Moyo',
+  short: 'Anesu',
+  initials: 'AM',
+  form: 'Form 3 Bohlale',
+  formShort: 'Form 3B',
+  school: 'St Faith\'s Park',
+  id: 'SFP-2026-0418',
+  status: 'Boarder',
+  email: 'anesu.moyo@stfaiths.ac.zw',
+  phone: '+263 77 412 8806',
+  guardian: 'Mrs Tendai Moyo',
+  address: 'House 14, Greendale · Harare',
+  attendance: 96,
+  position: 7,
+  formSize: 42,
+  gpa: 3.42,
+};
+
+/* === Seed: subjects === */
+const SUBJECTS = [
+  { id: 'maths',   name: 'Mathematics',       short: 'Maths',  teacher: 'Ms Sibanda',   colour: '#0B5DF0', cls: 's-maths',   room: 'Room A12' },
+  { id: 'english', name: 'English Language',  short: 'English',teacher: 'Mrs Mlilo',    colour: '#C026D3', cls: 's-english', room: 'Room B04' },
+  { id: 'shona',   name: 'ChiShona',          short: 'Shona',  teacher: 'Mrs Mlilo',    colour: '#DC2626', cls: 's-shona',   room: 'Room A07' },
+  { id: 'history', name: 'History',           short: 'History',teacher: 'Mr Chari',     colour: '#EA580C', cls: 's-history', room: 'Room A04' },
+  { id: 'science', name: 'Combined Science',  short: 'Science',teacher: 'Mr Chari',     colour: '#16A34A', cls: 's-science', room: 'Lab 2' },
+  { id: 'rs',      name: 'Religious Studies', short: 'R.S.',   teacher: 'Mrs Mlilo',    colour: '#65A30D', cls: 's-rs',      room: 'Room C01' },
+  { id: 'geo',     name: 'Geography',         short: 'Geog',   teacher: 'Ms Sibanda',   colour: '#0891B2', cls: 's-geo',     room: 'Room B11' },
+];
+const SUBJ = Object.fromEntries(SUBJECTS.map(s => [s.id, s]));
+
+/* === Seed: timetable (5 days × 6 periods incl. break) === */
+const PERIODS = [
+  { id: 'p1', time: '07:30', range: '07:30 – 08:25' },
+  { id: 'p2', time: '08:30', range: '08:30 – 09:25' },
+  { id: 'br', time: '09:25', range: '09:25 – 09:45', brk: 'Break' },
+  { id: 'p3', time: '09:45', range: '09:45 – 10:40' },
+  { id: 'p4', time: '10:45', range: '10:45 – 11:40' },
+  { id: 'p5', time: '12:30', range: '12:30 – 13:25' },
+];
+// classByDay[day][periodIdx] = subjectId or 'break'
+const CLASS_GRID = [
+  /* Mon */ ['maths', 'english', 'break', 'science', 'shona',   'rs'],
+  /* Tue */ ['english','maths',  'break', 'history', 'science', 'geo'],
+  /* Wed */ ['science','shona',  'break', 'maths',   'english', 'history'],
+  /* Thu */ ['history','geo',    'break', 'maths',   'english', 'shona'],
+  /* Fri */ ['maths',  'shona',  'break', 'english', 'rs',      'science'],
+];
+const DAYS = [
+  { lbl: 'Mon', date: '01 Jun' },
+  { lbl: 'Tue', date: '02 Jun' },
+  { lbl: 'Wed', date: '03 Jun' },
+  { lbl: 'Thu', date: '04 Jun' },
+  { lbl: 'Fri', date: '05 Jun' },
+];
+const TODAY_IDX = 2; // Wednesday
+
+/* === Seed: marks per term === */
+const TERM_MARKS = {
+  T1: { gpa: 3.18, pos: 9, subjects: { maths: 76, english: 70, shona: 84, history: 65, science: 64, rs: 75, geo: 70 } },
+  T2: { gpa: 3.42, pos: 7, subjects: { maths: 82, english: 76, shona: 88, history: 71, science: 68, rs: 79, geo: 74 } },
+  T3: { gpa: 3.55, pos: 5, subjects: { maths: 85, english: 79, shona: 90, history: 74, science: 72, rs: 81, geo: 77 } },
+};
+// per-subject CA/exam breakdown for T2 (the showcase term)
+const MARK_DETAILS = {
+  maths:   { ca: [{ n:'Quiz 1', s:8, m:10 },{ n:'Quiz 2', s:9, m:10 },{ n:'Mid-term test', s:9, m:10 }], examScore: 56, examMax: 70, rank: 4, comment: 'Excellent grasp of quadratics. Continue practising worded problems — that will lift you above 90%.', dist: [2, 3, 6, 11, 12, 8, 0] },
+  english: { ca: [{ n:'Comprehension', s:7, m:10 },{ n:'Composition', s:8, m:10 },{ n:'Oral', s:8, m:10 }], examScore: 53, examMax: 70, rank: 11, comment: 'Strong arguments. Vary your sentence openings to reach the next band.', dist: [1, 4, 9, 14, 9, 4, 1] },
+  shona:   { ca: [{ n:'Tsumo na madimikira', s:9, m:10 },{ n:'Upangiri', s:9, m:10 },{ n:'Rondedzero', s:9, m:10 }], examScore: 61, examMax: 70, rank: 2, comment: 'Mufundi anonyora chiShona zvakanaka. Wedzera kushandisa mienzaniso yakajeka.', dist: [0, 1, 4, 9, 12, 13, 3] },
+  history: { ca: [{ n:'Source quiz', s:7, m:10 },{ n:'Essay', s:7, m:10 },{ n:'Mid-term test', s:7, m:10 }], examScore: 50, examMax: 70, rank: 14, comment: 'Good chronology. Use more direct quotes from your sources.', dist: [3, 6, 11, 12, 8, 2, 0] },
+  science: { ca: [{ n:'Lab 1', s:6, m:10 },{ n:'Lab 2', s:7, m:10 },{ n:'Quiz', s:7, m:10 }], examScore: 48, examMax: 70, rank: 17, comment: 'Practical work is steady; revise multiple-choice technique for paper 1.', dist: [4, 7, 13, 11, 5, 2, 0] },
+  rs:      { ca: [{ n:'Reflection', s:8, m:10 },{ n:'Mid-term', s:8, m:10 }], examScore: 55, examMax: 70, rank: 8, comment: 'Thoughtful reflections. Cite scripture references precisely.', dist: [1, 3, 7, 13, 11, 5, 2] },
+  geo:     { ca: [{ n:'Map work', s:7, m:10 },{ n:'Fieldwork', s:8, m:10 },{ n:'Quiz', s:7, m:10 }], examScore: 52, examMax: 70, rank: 12, comment: 'Map work is improving. Practise drawing climate graphs from raw data.', dist: [2, 5, 10, 12, 8, 4, 1] },
+};
+
+/* === Seed: assignments === */
+const ASSIGNMENTS = [
+  { id: 'a-shona-rond', subject: 'shona', title: 'Tsika dzedu — rondedzero', sub: '800 words minimum',
+    desc: 'Nyora rondedzero ine mazwi anosvika 800 pamusoro pe tsika dzedu dzechiShona dzava kushaikwa muzvizvarwa zveuno. Shandisa mienzaniso miviri kana mitatu yakajeka.',
+    due: 'Today · 14:00', dueLabel: 'Overdue · 4 hours ago', status: 'overdue',
+    files: [{ n: 'rondedzero-brief.pdf', s: 'PDF · 184 KB' }, { n: 'rubric-marking.pdf', s: 'PDF · 92 KB' }] },
+  { id: 'a-maths-12b', subject: 'maths', title: 'Exercise 12B — Quadratic factorisation', sub: 'Textbook pp. 188–190 · show working',
+    desc: 'Complete every question in Exercise 12B. Show full working — answers without method earn no marks. Bring the book to class tomorrow.',
+    due: 'Today · 17:00', dueLabel: 'Hand in today', status: 'upcoming',
+    files: [{ n: 'ex-12b-questions.pdf', s: 'PDF · 211 KB' }] },
+  { id: 'a-sci-lab', subject: 'science', title: 'Photosynthesis lab report', sub: 'Use template · graph required',
+    desc: 'Submit a full lab report on the starch-test practical conducted on Friday. Use the school report template; include a labelled graph of light intensity vs starch concentration.',
+    due: 'Wed 03 Jun', dueLabel: 'Hand in in 2 days', status: 'upcoming',
+    files: [{ n: 'lab-template.docx', s: 'DOCX · 64 KB' }, { n: 'reading-photosynthesis.pdf', s: 'PDF · 1.1 MB' }] },
+  { id: 'a-hist-wwi', subject: 'history', title: 'WWI primary source analysis', sub: 'Two sources · context · content · conclusion',
+    desc: 'Pick two of the three provided primary sources from the WWI archive. For each, write 250 words on context, content and reliability.',
+    due: 'Thu 04 Jun', dueLabel: 'Hand in in 3 days', status: 'upcoming',
+    files: [{ n: 'wwi-sources-pack.pdf', s: 'PDF · 2.4 MB' }] },
+  { id: 'a-eng-review', subject: 'english', title: '"Nervous Conditions" book review', sub: '500 words · cite at least 3 passages',
+    desc: 'Write a 500-word review of Tsitsi Dangarembga\'s "Nervous Conditions". Discuss theme and voice; cite three specific passages with page numbers.',
+    due: 'Fri 05 Jun', dueLabel: 'Hand in in 4 days', status: 'upcoming',
+    files: [{ n: 'review-rubric.pdf', s: 'PDF · 76 KB' }] },
+  { id: 'a-rs-reflect', subject: 'rs', title: 'Parable of the talents — reflection', sub: '1 page · personal application',
+    desc: 'A one-page reflection on the parable of the talents (Matthew 25:14-30). Apply it to a real situation from your life this term.',
+    due: 'Handed in 02 Jun · 16:42', dueLabel: 'Handed in', status: 'submitted',
+    files: [{ n: 'my-reflection.docx', s: 'DOCX · 18 KB · uploaded' }] },
+  { id: 'a-geo-map', subject: 'geo', title: 'Zimbabwe physical map sketch', sub: 'Hand-drawn · scanned',
+    desc: 'Sketch a physical map of Zimbabwe showing the main rivers, highveld, middleveld and lowveld. Scan or photograph the final sketch.',
+    due: 'Marked · 78/100', dueLabel: 'Marked', status: 'graded',
+    grade: '78%', files: [{ n: 'map-sketch.jpg', s: 'JPG · 2.0 MB · marked' }] },
+  { id: 'a-maths-mt', subject: 'maths', title: 'Mid-term mental maths', sub: '20 questions · 25 minutes',
+    desc: 'Twenty-question mental maths test under timed conditions. No calculators.',
+    due: 'Marked · 18/20', dueLabel: 'Marked', status: 'graded',
+    grade: '90%', files: [] },
+  { id: 'a-eng-poetry', subject: 'english', title: 'Poetry recital recording', sub: 'Audio file · 2-3 minutes',
+    desc: 'Record yourself reciting one of the prescribed poems. Upload the audio file. Mark for clarity, pace and feeling.',
+    due: 'Handed in 28 May', dueLabel: 'Handed in', status: 'submitted',
+    files: [{ n: 'recital.m4a', s: 'Audio · 1.4 MB · uploaded' }] },
+];
+
+/* === Seed: library catalog === */
+const BOOKS = [
+  { id: 'b1', title: 'Nervous Conditions', author: 'Tsitsi Dangarembga', series: 'African Writers Series', cls: '',       avail: 0,  borrowed: true, dueIn: 2,  due: '24 May', urgent: true },
+  { id: 'b2', title: 'Feso',               author: 'Solomon Mutswairo',  series: 'ChiShona literature',    cls: 'green',  avail: 0,  borrowed: true, dueIn: 11, due: '31 May' },
+  { id: 'b3', title: 'New General Mathematics · Book 4', author: 'JB Channon', series: 'ZIMSEC textbook loan', cls: 'blue', avail: 0, borrowed: true, dueIn: -4, due: 'Overdue · 4 days late', overdue: true },
+  { id: 'b4', title: 'House of Hunger',    author: 'Dambudzo Marechera', series: 'African Writers Series', cls: 'purple', avail: 3 },
+  { id: 'b5', title: 'Things Fall Apart',  author: 'Chinua Achebe',      series: 'African Writers Series', cls: 'amber',  avail: 2 },
+  { id: 'b6', title: 'Waiting for the Rain',author:'Charles Mungoshi',   series: 'African Writers Series', cls: 'green',  avail: 1 },
+  { id: 'b7', title: 'Bones',              author: 'Chenjerai Hove',     series: 'African Writers Series', cls: 'pink',   avail: 4 },
+  { id: 'b8', title: 'Harvest of Thorns',  author: 'Shimmer Chinodya',   series: 'ZIMSEC set book',        cls: 'amber',  avail: 0 },
+  { id: 'b9', title: 'Mhuri Yamutemai',    author: 'Patrick Chakaipa',   series: 'ZIMSEC ChiShona set',    cls: '',       avail: 2 },
+  { id: 'b10',title: 'Tsumo Namadimikira', author: 'Aaron C Hodza',      series: 'ChiShona reference',     cls: 'green',  avail: 5 },
+  { id: 'b11',title: 'A Grain of Wheat',   author: 'Ngũgĩ wa Thiong\'o', series: 'African Writers Series', cls: 'pink',   avail: 1 },
+  { id: 'b12',title: 'Pawns',              author: 'Edmund Chipamaunga', series: 'Historical novel',       cls: 'blue',   avail: 2 },
+];
+const READING_LIST = ['b4', 'b8', 'b9', 'b11', 'b12']; // wishlist book ids
+
+/* === Notifications seed === */
+const NOTIFS_SEED = [
+  { id: 'n1', kind: 'grade',     icon: 'chart',    title: 'You got a new mark',          body: 'Maths mid-term test · 82% (B+). Ms Sibanda wrote you a comment.', time: '14 min ago', unread: true },
+  { id: 'n2', kind: 'assign',    icon: 'book',     title: 'Your homework was marked',         body: '"Photosynthesis lab report" · 78/100 from Mr Chari.',         time: '2 hours ago',    unread: true },
+  { id: 'n3', kind: 'broadcast', icon: 'bell',     title: 'School news',          body: 'Founders Day practice is now Thursday at 2:30pm · Main hall.',         time: 'Today',      unread: true },
+  { id: 'n4', kind: 'fee',       kind2: 'fee',     icon: 'wallet',   title: 'Fees paid',          body: 'Term 2 boarding fee · $ 1 240.00 paid. Receipt #SFP-44102.', time: 'Yesterday',  unread: false },
+  { id: 'n5', kind: 'library',   icon: 'book',     title: 'Library — bring back tomorrow',    body: '"Nervous Conditions" needs to be back on 24 May. Keep it longer in the app to skip a fine.', time: 'Yesterday',  unread: false },
+  { id: 'n6', kind: 'assign',    icon: 'clock',    title: 'New homework set',     body: 'Mrs Mlilo set "Tsika dzedu — rondedzero" · hand in 1 June at 2:00pm.',     time: '2 days ago', unread: false },
+  { id: 'n7', kind: 'broadcast', icon: 'info',     title: 'Hostel news',             body: 'Lights-out check on Saturday. Form 3 prefects meet Mr Chari at 6:00pm.', time: '3 days ago', unread: false },
+];
+
+/* === Goals seed === */
+const GOALS_SEED = {
+  maths:   { target: 85, current: 82 },
+  english: { target: 80, current: 76 },
+  shona:   { target: 90, current: 88 },
+  history: { target: 75, current: 71 },
+  science: { target: 75, current: 68 },
+  rs:      { target: 80, current: 79 },
+  geo:     { target: 75, current: 74 },
+};
+/* % of weekly study targets met (Mon–Sun) */
+const WEEK_PROGRESS = [80, 60, 100, 75, 40, 0, 0];
+
+/* === Comment seed for assignments === */
+const COMMENTS_SEED = {
+  'a-shona-rond': [
+    { who: 'Mrs Mlilo',  init: 'TM', tm: '2 days ago', txt: 'Remember to use at least two tsumo namadimikira from the term reading list.' },
+    { who: 'Anesu Moyo', init: 'AM', tm: 'Yesterday',  txt: 'Mai mwana, can we use mienzaniso kubva muzvinhu zvemumusha?' },
+    { who: 'Mrs Mlilo',  init: 'TM', tm: '4 h ago',    txt: 'Ehe — chero mienzaniso yakajeka inopa simba kurondedzero yenyu.' },
+  ],
+  'a-maths-12b': [
+    { who: 'Ms Sibanda', init: 'SS', tm: 'Yesterday', txt: 'Show every step — Q14 and Q19 are the ones most pupils slip on.' },
+  ],
+  'a-sci-lab': [
+    { who: 'Mr Chari',   init: 'TC', tm: '3 days ago', txt: 'Use the template — handwritten reports will not be marked this term.' },
+  ],
+};
+
+/* === Help articles === */
+const HELP_ARTICLES = [
+  { id: 'h-submit',   icon: 'upload',     nm: 'How to hand in homework',     sb: 'Pick the file, say yes, watch the bar. 2 minute read.' },
+  { id: 'h-reset',    icon: 'lock',       nm: 'Forgot your PIN?',                  sb: 'Your form teacher can give you a one-time code so you can choose a new one.' },
+  { id: 'h-offline',  icon: 'wifi',       nm: "What works when you're offline?",             sb: 'You can still see your timetable, marks and saved notes. Anything you hand in will send when you have internet again.' },
+  { id: 'h-library',  icon: 'book',       nm: 'Keep a book longer or bring it back',   sb: 'Keep a book for 14 more days once. Scan the barcode to bring it back fast.' },
+  { id: 'h-marks',    icon: 'chart',      nm: 'How to read your marks',     sb: 'Your class work marks, your test mark, your place in class, and what your teacher said.' },
+  { id: 'h-contact',  icon: 'phone',      nm: 'Talk to your form teacher',       sb: 'Open Profile · Contact · Class teacher. They reply within one school day.' },
+];
+
+/* === Live app state === */
+const DEFAULT_STATE = {
+  route: 'home',
+  term: 'T2',
+  weekOffset: 0,
+  // auth
+  signedIn: false,
+  signedOut: false,
+  tourSeen: false,
+  tourStep: 0,
+  // assignment filters & detail
+  asFilter: 'upcoming',
+  asOpen: null,
+  asSubmitted: {},
+  asUploadedFile: {},
+  asComments: {},      // id -> [extra comments]
+  // marks
+  marksOpen: null,
+  // timetable
+  ttOpen: null,
+  ttPrepared: {},
+  // library
+  libQuery: '',
+  libOpen: null,
+  libBorrowed: {},
+  libRenewed: {},
+  libReturned: {},
+  finePaid: false,
+  // goals (override)
+  goalsOverride: {},   // sid -> {target, current}
+  // notifications
+  notifs: NOTIFS_SEED.map(n => ({ ...n })),
+  // profile / settings
+  prefs: {
+    push: true, email: false, theme: 'auto', lang: 'en',
+    notifCadence: 'instant',  // instant | daily | weekly
+    markVisibility: 'class',  // private | class | school
+    biometric: false,
+  },
+  pin: '4218',
+  // offline simulated
+  offline: false,
+  // sheet/modal
+  sheet: null,
+  modal: null,
+};
+
+const STORAGE_KEY = 'huchu.student.demo.v1';
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_STATE };
+    const saved = JSON.parse(raw);
+    // Merge defensively
+    return { ...DEFAULT_STATE, ...saved,
+      prefs: { ...DEFAULT_STATE.prefs, ...(saved.prefs || {}) },
+      notifs: Array.isArray(saved.notifs) && saved.notifs.length ? saved.notifs : DEFAULT_STATE.notifs.map(n => ({ ...n })),
+    };
+  } catch (e) { return { ...DEFAULT_STATE }; }
+}
+function persistState() {
+  try {
+    const { sheet, modal, sheetWire, modalWire, ...persistable } = state;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable));
+  } catch (e) { /* ignore */ }
+}
+const state = loadState();
+
+/* === Toast === */
+function toast(msg, kind = 'default') {
+  const host = $('#toast-host');
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind !== 'default' ? ' ' + kind : '');
+  const icon = kind === 'success' ? 'check' : kind === 'danger' ? 'x' : kind === 'warn' ? 'info' : 'check';
+  el.innerHTML = `<span data-icon="${icon}" data-icon-size="14"></span>${esc(msg)}`;
+  host.appendChild(el);
+  if (window.Icons) window.Icons.render(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 240); }, 2200);
+}
+
+/* === Sheet === */
+function openSheet(html) { state.sheet = html; renderSheet(); }
+function closeSheet() { state.sheet = null; renderSheet(); }
+function renderSheet() {
+  const host = $('#sheet-host');
+  if (!state.sheet) { host.innerHTML = ''; return; }
+  host.innerHTML = `<div class="x-bs-scrim open" data-scrim>${state.sheet}</div>`;
+  if (window.Icons) window.Icons.render(host);
+  host.querySelector('[data-scrim]').addEventListener('click', (e) => {
+    if (e.target.dataset.scrim !== undefined) closeSheet();
+  });
+  host.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeSheet));
+  // Re-wire any in-sheet hooks the caller registered
+  if (state.sheetWire) state.sheetWire();
+}
+
+/* === Modal === */
+function openModal(html, wireFn) {
+  state.modal = html;
+  state.modalWire = wireFn || null;
+  renderModal();
+}
+function closeModal() { state.modal = null; state.modalWire = null; renderModal(); }
+function renderModal() {
+  const host = $('#modal-host');
+  if (!state.modal) { host.innerHTML = ''; return; }
+  host.innerHTML = `<div class="modal-scrim" data-mscrim>${state.modal}</div>`;
+  if (window.Icons) window.Icons.render(host);
+  host.querySelector('[data-mscrim]').addEventListener('click', (e) => {
+    if (e.target.dataset.mscrim !== undefined) closeModal();
+  });
+  if (state.modalWire) state.modalWire();
+}
+
+/* === Routing === */
+function go(route) {
+  state.route = route;
+  history.replaceState(null, '', '#/' + route);
+  render();
+  // Scroll the inner screen up
+  const scr = $('.ps-scroll');
+  if (scr) scr.scrollTop = 0;
+}
+window.addEventListener('hashchange', () => {
+  const r = (location.hash.replace(/^#\/?/, '') || 'home');
+  if (state.route !== r) { state.route = r; render(); }
+});
+
+/* === Top-level render === */
+function render() {
+  const isDark = state.prefs.theme === 'dark' || (state.prefs.theme === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.body.classList.toggle('is-dark', isDark);
+  const app = $('#app');
+  app.className = 'ps-screen' + (isDark ? ' is-dark' : '');
+  let body;
+  if (state.signedOut) {
+    body = renderSignedOut();
+  } else if (!state.signedIn) {
+    body = renderSignIn();
+  } else {
+    body = (state.offline ? renderOfflineBanner() : '') + renderRoute();
+  }
+  app.innerHTML = `<div class="ps-screen ${isDark ? 'is-dark' : ''}" style="position:relative; height:100%; display:flex; flex-direction:column;">${body}</div>`;
+  if (window.Icons) window.Icons.render($('#app'));
+  if (state.signedOut) wireSignedOut();
+  else if (!state.signedIn) wireSignIn();
+  else { wireRoute(); maybeShowTour(); }
+  persistState();
+}
+
+function renderOfflineBanner() {
+  return `<div class="offline-banner"><span class="dot"></span><span data-icon="wifi" data-icon-size="13"></span> You're offline — showing saved info. Anything you hand in will send when you're back online.</div>`;
+}
+
+function renderRoute() {
+  let body;
+  switch (state.route) {
+    case 'home':          body = renderHome(); break;
+    case 'timetable':     body = renderTimetable(); break;
+    case 'marks':         body = renderMarks(); break;
+    case 'assignments':   body = renderAssignments(); break;
+    case 'library':       body = renderLibrary(); break;
+    case 'profile':       body = renderProfile(); break;
+    case 'notifications': body = renderNotifications(); break;
+    case 'goals':         body = renderGoals(); break;
+    case 'help':          body = renderHelp(); break;
+    case 'settings':      body = renderSettings(); break;
+    default:              body = renderHome();
+  }
+  return body + renderTabbar();
+}
+
+function renderTabbar() {
+  const tabs = [
+    { route: 'home',        label: 'Home',      icon: 'home' },
+    { route: 'timetable',   label: 'Timetable', icon: 'calendar' },
+    { route: 'marks',       label: 'Marks',     icon: 'chart' },
+    { route: 'profile',     label: 'Profile',   icon: 'user' },
+  ];
+  return `
+    <nav class="b-bottom-tabs" aria-label="Primary">
+      ${tabs.map(t => `
+        <a class="${state.route === t.route ? 'active' : ''}" data-go="${t.route}">
+          <span class="b-bt-ic" data-icon="${t.icon}" data-icon-size="20"></span>${t.label}
+        </a>
+      `).join('')}
+    </nav>
+  `;
+}
+
+/* === Status bar (reusable) === */
+function renderStatusBar(opts = {}) {
+  return `<div class="ps-statusbar ${opts.invert ? 'invert' : ''}"><span>7:14</span><span class="right"><span data-icon="signal"></span><span data-icon="wifi"></span><span data-icon="battery"></span></span></div>`;
+}
+
+/* === Appbar === */
+function renderAppbar(title, opts = {}) {
+  const unread = (state.notifs || []).filter(n => n.unread).length;
+  return `
+    <div class="ps-appbar ${opts.transparent ? 'transparent' : ''}">
+      ${opts.back ? `<button class="nav-btn" data-back><span data-icon="back" data-icon-size="20"></span></button>` : ''}
+      <h1>${esc(title)}</h1>
+      <div class="right">
+        ${opts.actions || `
+          <button class="nav-btn" data-go="notifications" style="position:relative;">
+            <span data-icon="bell" data-icon-size="18"></span>
+            ${unread > 0 ? `<span style="position:absolute; top:5px; right:6px; min-width:14px; height:14px; padding:0 3px; border-radius:9999px; background:var(--tone-danger); color:#fff; font:700 9px/14px var(--font-sans); text-align:center; box-sizing:border-box;">${unread}</span>` : ''}
+          </button>
+          <button class="nav-btn" data-go="profile"><span data-icon="user" data-icon-size="18"></span></button>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   HOME / DASHBOARD
+   ============================================================ */
+function renderHome() {
+  const todayClasses = CLASS_GRID[TODAY_IDX];
+  // Find next non-break class (treat current period as p1)
+  const nextPerIdx = 0;
+  const nextSubject = SUBJ[todayClasses[nextPerIdx]];
+  const upcomingCount = ASSIGNMENTS.filter(a => a.status === 'upcoming' || a.status === 'overdue').length;
+  const overdueCount  = ASSIGNMENTS.filter(a => a.status === 'overdue').length;
+  const t = TERM_MARKS[state.term];
+  const lastSubject = SUBJ.shona;
+  const lastMark = t.subjects.shona;
+
+  // Compute weekly classes per day for the week glance
+  const dotCounts = DAYS.map((_, di) => CLASS_GRID[di].filter(s => s !== 'break').length);
+
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('Hi, ' + STUDENT.short, { transparent: true })}
+    <div class="ps-scroll">
+      <div class="greet">
+        <div class="hi">${STUDENT.school} · ${STUDENT.formShort} · Term 2 · Week 6</div>
+      </div>
+
+      <div style="padding: 0 16px;">
+        <div class="demo-psh">Your next class<a data-go="timetable">See timetable</a></div>
+        <div class="next-class" data-open-class="${TODAY_IDX}-${nextPerIdx}">
+          <div class="badge"><div class="col"><div class="t">${PERIODS[nextPerIdx].time}</div><div class="d">Per 1</div></div></div>
+          <div>
+            <div class="nm">${nextSubject.name}</div>
+            <div class="sb">${nextSubject.teacher} · ${nextSubject.id === 'maths' ? 'Quadratics (Algebra II)' : "today's topic"}</div>
+            <div class="meta"><span><span data-icon="pin" data-icon-size="11"></span> ${nextSubject.room}</span><span>starts in 16 min</span></div>
+          </div>
+          <span data-icon="chright" style="color: var(--text-subtle);"></span>
+        </div>
+
+        <div class="demo-psh">Your week<a data-go="timetable">Open</a></div>
+        <div class="week-glance">
+          <div class="h"><span>Mon – Fri · 1 – 5 June</span><span class="sb">${dotCounts.reduce((a,b)=>a+b,0)} lessons</span></div>
+          <div class="days">
+            ${DAYS.map((d, di) => `
+              <div class="day ${di === TODAY_IDX ? 'today' : ''}">
+                <div class="lbl">${d.lbl}</div>
+                <div class="dots">${Array.from({length: Math.min(dotCounts[di], 5)}).map(() => '<span class="dot"></span>').join('')}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="demo-psh">This week<a data-go="assignments">See all</a></div>
+        <div class="kpi-row">
+          <div class="kpi" data-go="assignments" style="cursor:pointer;">
+            <div class="l">Homework to hand in</div>
+            <div class="v">${upcomingCount}<span class="delta down">${overdueCount} overdue</span></div>
+            <div class="sb">3 before Friday · 2 today</div>
+          </div>
+          <div class="kpi brand" data-go="marks" style="cursor:pointer;">
+            <div class="l">Latest mark</div>
+            <div class="v">${lastMark}%<span class="delta">▲ 6%</span></div>
+            <div class="sb">${lastSubject.name} · going up</div>
+          </div>
+        </div>
+
+        <div class="demo-psh">Recent marks<a data-go="marks">My marks</a></div>
+        <div class="grade-card" data-go="marks" style="cursor:pointer;">
+          <div class="top">
+            <span class="lbl">Last 8 tests</span>
+            <span class="delta">▲ 6.4% better</span>
+          </div>
+          <svg class="spark" viewBox="0 0 200 56" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="sparkfill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#FB923C" stop-opacity="0.32"/>
+                <stop offset="100%" stop-color="#FB923C" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,42 L28,36 L56,40 L84,28 L112,32 L140,18 L168,22 L200,10 L200,56 L0,56 Z" fill="url(#sparkfill)"/>
+            <path d="M0,42 L28,36 L56,40 L84,28 L112,32 L140,18 L168,22 L200,10" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="200" cy="10" r="3" fill="#FB923C"/>
+          </svg>
+          <div class="legend"><span>62%</span><span>Average mark · 74%</span><span>88%</span></div>
+          <div class="recent">
+            <span class="pill">Maths <b>${t.subjects.maths}%</b></span>
+            <span class="pill">English <b>${t.subjects.english}%</b></span>
+            <span class="pill">Science <b>${t.subjects.science}%</b></span>
+            <span class="pill">Shona <b>${t.subjects.shona}%</b></span>
+          </div>
+        </div>
+
+        <div class="demo-psh">Quick links</div>
+        <div class="kpi-row">
+          <div class="kpi" data-go="library" style="cursor:pointer;">
+            <div class="l">Library</div>
+            <div class="v" style="font-size: 16px; font-weight: 600;">3 books out</div>
+            <div class="sb">1 overdue · $ 2.50 to pay</div>
+          </div>
+          <div class="kpi" data-go="assignments" style="cursor:pointer;">
+            <div class="l">Homework</div>
+            <div class="v" style="font-size: 16px; font-weight: 600;">${ASSIGNMENTS.length} in total</div>
+            <div class="sb">See all and hand in</div>
+          </div>
+        </div>
+        <div class="kpi-row" style="margin-top: 8px;">
+          <div class="kpi" data-go="goals" style="cursor:pointer;">
+            <div class="l">My goals</div>
+            <div class="v" style="font-size: 16px; font-weight: 600;">${SUBJECTS.filter(s => (TERM_MARKS[state.term].subjects[s.id]) >= ((state.goalsOverride[s.id]?.target) ?? GOALS_SEED[s.id].target)).length}/${SUBJECTS.length} on track</div>
+            <div class="sb">Tap to change your targets</div>
+          </div>
+          <div class="kpi" data-go="notifications" style="cursor:pointer;">
+            <div class="l">Messages</div>
+            <div class="v" style="font-size: 16px; font-weight: 600;">${state.notifs.filter(n => n.unread).length} new</div>
+            <div class="sb">School news · marks · fees</div>
+          </div>
+        </div>
+
+        ${state.offline ? '' : `
+          <div class="demo-psh">School news</div>
+          <div style="background: var(--ink); color: #fff; border-radius: 14px; padding: 14px; display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; cursor: pointer;" data-go="notifications">
+            <span style="width:40px; height:40px; border-radius:10px; background:rgba(252,211,77,0.2); color:#FCD34D; display:grid; place-items:center;"><span data-icon="bell" data-icon-size="18"></span></span>
+            <div>
+              <div style="font: 600 14px/1.3 var(--font-sans);">Founders Day practice</div>
+              <div style="font: 12.5px/1.4 var(--font-sans); opacity: 0.78; margin-top: 3px;">Now Thursday at 2:30pm · Main hall</div>
+            </div>
+            <span data-icon="chright" style="opacity:0.6;"></span>
+          </div>
+        `}
+      </div>
+
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   TIMETABLE
+   ============================================================ */
+function renderTimetable() {
+  const wkLabel = `Week 6 · 1 – 5 June`;
+  const wkSub = state.weekOffset === 0 ? 'This week' : (state.weekOffset > 0 ? `${state.weekOffset} week${state.weekOffset>1?'s':''} ahead` : `${Math.abs(state.weekOffset)} week${Math.abs(state.weekOffset)>1?'s':''} ago`);
+
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('My timetable', { actions: `
+      <button class="nav-btn" data-act="download"><span data-icon="download" data-icon-size="18"></span></button>
+    `})}
+    <div class="ps-scroll">
+      <div class="tt-wk-nav">
+        <button class="arr" data-week="-1"><span data-icon="chleft" data-icon-size="14"></span></button>
+        <div class="lbl">${wkLabel}<span class="sb">${wkSub}</span></div>
+        <button class="arr" data-week="1"><span data-icon="chright" data-icon-size="14"></span></button>
+      </div>
+
+      <div class="tt-grid" id="tt-grid">
+        <div class="ttbl">
+          <div class="hd"></div>
+          ${DAYS.map((d, di) => `<div class="hd ${di===TODAY_IDX?'today':''}">${d.lbl}</div>`).join('')}
+          ${PERIODS.map((p, pi) => `
+            <div class="tm">${p.time}</div>
+            ${DAYS.map((d, di) => {
+              const sid = CLASS_GRID[di][pi];
+              if (sid === 'break') {
+                return `<div class="cell ${di===TODAY_IDX?'today':''}"><div class="pd brk"><div class="nm">${p.brk || 'Break'}</div></div></div>`;
+              }
+              const sub = SUBJ[sid];
+              const prep = state.ttPrepared[`${di}-${pi}`];
+              return `<div class="cell ${di===TODAY_IDX?'today':''}">
+                <div class="pd ${sub.cls}" data-open-class="${di}-${pi}" title="${esc(sub.name)} · ${esc(sub.room)}">
+                  <div class="nm">${sub.short}</div>
+                  <div class="rm">${sub.room.replace('Room ', '')}</div>
+                  ${prep === 'prepared' ? '<span style="position:absolute; top:2px; right:2px; width:6px; height:6px; border-radius:50%; background: var(--tone-success);"></span>' : ''}
+                  ${prep === 'help' ? '<span style="position:absolute; top:2px; right:2px; width:6px; height:6px; border-radius:50%; background: var(--tone-warn);"></span>' : ''}
+                </div>
+              </div>`;
+            }).join('')}
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="tt-summary">
+        <div class="h">Today (Wednesday)</div>
+        <div class="pl">
+          ${CLASS_GRID[TODAY_IDX].map((sid, pi) => {
+            if (sid === 'break') return '';
+            const s = SUBJ[sid];
+            return `<div class="pl-row" data-open-class="${TODAY_IDX}-${pi}" style="cursor:pointer;">
+              <span class="ic-tile" style="background: ${s.colour}22; color: ${s.colour};"><span data-icon="book" data-icon-size="16"></span></span>
+              <div>
+                <div class="nm">${s.name}</div>
+                <div class="sb">${PERIODS[pi].range} · ${s.teacher} · ${s.room}</div>
+              </div>
+              <span data-icon="chright" style="color: var(--text-subtle);"></span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+function openClassSheet(dayIdx, perIdx) {
+  const sid = CLASS_GRID[dayIdx][perIdx];
+  if (sid === 'break') return;
+  const s = SUBJ[sid];
+  const p = PERIODS[perIdx];
+  const key = `${dayIdx}-${perIdx}`;
+  const prep = state.ttPrepared[key];
+  const topicsByDay = {
+    maths: 'Algebra II — factorising quadratics',
+    english: 'Reading "Things Fall Apart" chapter 4',
+    shona: 'Tsumo namadimikira — how to use them',
+    history: 'Causes of World War I — alliances and mobilisation',
+    science: 'Photosynthesis — light reactions',
+    rs: 'Parable of the talents — what it means for you',
+    geo: 'Climate of Zimbabwe — the three regions',
+  };
+  const materialsByDay = {
+    maths: ['Maths textbook (chapter 12)', 'Scientific calculator', 'Exercise book'],
+    english: ['"Things Fall Apart" book', 'Vocab notebook'],
+    shona: ['Tsumo namadimikira book', 'Pen and notebook'],
+    history: ['Printed sources pack', 'Highlighter', 'Notes'],
+    science: ['Lab coat', 'Practical book', 'Pencil and ruler'],
+    rs: ['Bible (NIV)', 'Reflection journal'],
+    geo: ['Atlas', 'Colouring pencils', 'Notebook'],
+  };
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <span class="ic-tile" style="background: ${s.colour}22; color: ${s.colour}; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px;"><span data-icon="book" data-icon-size="16"></span></span>
+        <h3>${esc(s.name)}</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <div class="key-fact">
+          <div class="kf"><div class="l">When</div><div class="v">${DAYS[dayIdx].lbl} · ${p.range}</div></div>
+          <div class="kf"><div class="l">Where</div><div class="v">${s.room}</div></div>
+          <div class="kf"><div class="l">Teacher</div><div class="v" style="font-family: var(--font-sans); font-size: 13px;">${s.teacher}</div></div>
+          <div class="kf"><div class="l">Lesson</div><div class="v">${perIdx + 1} of 6</div></div>
+        </div>
+        <div class="ssh">What you'll learn</div>
+        <div class="desc" style="margin-top: 4px;">${esc(topicsByDay[s.id] || 'Ask your teacher for today\'s topic.')}</div>
+        <div class="ssh">Bring with you</div>
+        ${(materialsByDay[s.id] || []).map(m => `
+          <div class="file-row">
+            <span class="ic"><span data-icon="check" data-icon-size="14"></span></span>
+            <div style="flex:1;"><div class="nm">${esc(m)}</div></div>
+          </div>
+        `).join('')}
+        ${prep ? `<div class="ssh">You said</div>
+          <div style="padding: 10px 12px; background: ${prep==='prepared' ? 'var(--tone-success-bg)' : 'var(--tone-warn-bg)'}; color: ${prep==='prepared' ? 'var(--tone-success)' : 'var(--tone-warn)'}; border-radius: 8px; font: 500 13px var(--font-sans);">
+            ${prep === 'prepared' ? '✓ You\'re ready for this class' : '⚠ You asked for help with this class'}
+          </div>` : ''}
+      </div>
+      <div class="x-bs-foot">
+        <button class="alt" data-prep="help">${prep === 'help' ? '✓ Help asked for' : 'I need help'}</button>
+        <button class="primary" data-prep="prepared">${prep === 'prepared' ? '✓ Ready' : "I'm ready"}</button>
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    $$('.x-bottom-sheet [data-prep]').forEach(b => b.addEventListener('click', () => {
+      const v = b.dataset.prep;
+      state.ttPrepared[key] = v;
+      closeSheet();
+      render();
+      toast(v === 'prepared' ? `You're ready for ${s.short}` : `Got it — ${s.teacher} will see you need help`, v === 'prepared' ? 'success' : 'warn');
+    }));
+  };
+  openSheet(html);
+}
+
+/* ============================================================
+   MARKS
+   ============================================================ */
+function renderMarks() {
+  const t = TERM_MARKS[state.term];
+  const prev = state.term === 'T2' ? TERM_MARKS.T1.gpa : (state.term === 'T3' ? TERM_MARKS.T2.gpa : null);
+  const delta = prev !== null ? (t.gpa - prev).toFixed(2) : null;
+
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('My marks', { actions: `
+      <button class="nav-btn" data-act="download"><span data-icon="download" data-icon-size="18"></span></button>
+    `})}
+    <div class="ps-scroll">
+      <div style="padding: 14px 16px 4px; display: flex; align-items: center; justify-content: space-between;">
+        <div class="term-tabs">
+          ${['T1','T2','T3'].map(tm => `<button class="${state.term===tm?'on':''}" data-term="${tm}">${tm}</button>`).join('')}
+        </div>
+        <span style="font: 500 12px/1 var(--font-sans); color: var(--text-muted);">2026</span>
+      </div>
+
+      <div style="padding: 10px 16px 4px;">
+        <div class="b-stat-hero">
+          <div class="b-sh-lead">
+            <div class="b-sh-l">Overall mark · Term ${state.term.slice(1)}</div>
+            <div class="b-sh-v">${t.gpa.toFixed(2)}<span class="u">/ 4.0</span></div>
+            <div class="b-sh-d">${delta !== null ? (delta >= 0 ? 'Up' : 'Down') + ' ' + Math.abs(delta) + ' from Term ' + (state.term === 'T2' ? '1' : '2') : 'First term'}</div>
+            <span class="marks-hero-pos"><span data-icon="trending" data-icon-size="11"></span> Place ${t.pos} of ${STUDENT.formSize} · Top ${Math.round(t.pos/STUDENT.formSize*100)}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 6px 16px 0;">
+        <div class="demo-psh">Your subjects · ${SUBJECTS.length}<a data-go="goals">Set goals</a></div>
+        ${SUBJECTS.map(s => {
+          const pct = t.subjects[s.id];
+          return `
+            <button class="b-row-card" data-marks="${s.id}">
+              <div class="b-rc-top">
+                <span class="as-tag" style="background: ${s.colour}; width: 8px; height: 36px;"></span>
+                <div class="b-rc-info">
+                  <div class="b-rc-nm">${esc(s.name)}</div>
+                  <div class="b-rc-sb">${esc(s.teacher)} · tap to see your marks</div>
+                </div>
+                <div class="b-rc-val">${pct}<span style="font: 500 11px/1 var(--font-sans); color: var(--text-subtle);">/100</span></div>
+              </div>
+              <div class="subj-bar"><span style="width: ${pct}%; background: ${s.colour};"></span></div>
+            </button>
+          `;
+        }).join('')}
+
+        <div style="margin-top: 14px; padding: 14px; background: var(--surface); border:1px solid var(--border); border-radius: 12px; display:flex; gap:12px; align-items:center; cursor:pointer;" data-act="download">
+          <span style="width:40px; height:40px; border-radius:10px; background: var(--brand-soft); color: var(--brand-strong); display:grid; place-items:center;"><span data-icon="download" data-icon-size="18"></span></span>
+          <div style="flex:1;">
+            <div style="font: 600 13.5px var(--font-sans); color: var(--text-strong);">Download your report card</div>
+            <div style="font: 12px var(--font-sans); color: var(--text-muted); margin-top: 2px;">PDF · Term ${state.term.slice(1)} 2026 · about 320 KB</div>
+          </div>
+          <span data-icon="chright" style="color: var(--text-subtle);"></span>
+        </div>
+
+        <div style="margin-top: 8px; padding: 9px 12px; background: var(--surface-muted); border-radius: 9px; font: 500 11.5px/1.4 var(--font-sans); color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+          <span data-icon="shield" data-icon-size="14" style="color: var(--text-subtle);"></span>
+          Your marks are seen by <strong style="color: var(--text-strong); font-weight: 600;">${state.prefs.markVisibility === 'private' ? 'only you' : state.prefs.markVisibility === 'class' ? 'your class' : 'the whole school'}</strong> · change in Settings
+        </div>
+      </div>
+
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+function openMarksSheet(sid) {
+  const s = SUBJ[sid];
+  const t = TERM_MARKS[state.term];
+  const pct = t.subjects[sid];
+  const d = MARK_DETAILS[sid];
+  const caTotal = d.ca.reduce((a, c) => a + c.s, 0);
+  const caMax = d.ca.reduce((a, c) => a + c.m, 0);
+  const maxBin = Math.max(...d.dist);
+  // Determine which band the student falls into
+  const bandIdx = Math.min(Math.floor(pct / 10) - 4, d.dist.length - 1);
+
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <span class="ic-tile" style="background: ${s.colour}22; color: ${s.colour}; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px;"><span data-icon="chart" data-icon-size="16"></span></span>
+        <h3>${esc(s.name)}</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <div class="key-fact">
+          <div class="kf"><div class="l">Total mark</div><div class="v">${pct}%</div></div>
+          <div class="kf"><div class="l">Your place in form</div><div class="v">${d.rank}/${STUDENT.formSize}</div></div>
+          <div class="kf"><div class="l">Class work · 30%</div><div class="v">${caTotal}/${caMax}</div></div>
+          <div class="kf"><div class="l">Term test · 70%</div><div class="v">${d.examScore}/${d.examMax}</div></div>
+        </div>
+
+        <div class="ssh">Your class work marks</div>
+        <div class="ca-list">
+          ${d.ca.map(c => `<div class="row"><span>${esc(c.n)}</span><span class="v">${c.s}/${c.m}</span></div>`).join('')}
+        </div>
+
+        <div class="ssh">How the class did</div>
+        <div style="background: var(--surface-muted); padding: 14px 12px 24px; border-radius: 10px;">
+          <div class="histogram">
+            ${d.dist.map((v, i) => {
+              const h = (v / maxBin * 100) || 4;
+              const lbl = ['<50','50s','60s','70s','80s','90s','100'][i];
+              return `<div class="b ${i === bandIdx ? 'me' : ''}" style="height: ${h}%;"><span class="lbl">${lbl}</span></div>`;
+            }).join('')}
+          </div>
+          <div style="font: 11px/1.3 var(--font-mono); color: var(--text-subtle); margin-top: 18px; text-align: center;">Your bar is highlighted · ${STUDENT.formSize} students in the class</div>
+        </div>
+
+        <div class="ssh">What your teacher said</div>
+        <div style="padding: 12px 14px; background: #FFF7ED; border-radius: 10px; font: 13px/1.5 var(--font-sans); color: #7C2D12; border-left: 3px solid #FB923C;">
+          ${esc(d.comment)}
+          <div style="font: 500 11px/1 var(--font-mono); color: #C2410C; margin-top: 8px;">— ${esc(s.teacher)}</div>
+        </div>
+      </div>
+      <div class="x-bs-foot">
+        <button class="alt" data-set-goal="${s.id}">Set my goal</button>
+        <button class="primary" data-act="ask">Ask ${s.teacher.split(' ').slice(-1)[0]}</button>
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    $$('.x-bottom-sheet [data-act="ask"]').forEach(b => b.addEventListener('click', () => {
+      closeSheet();
+      toast('New message ready to send to ' + s.teacher, 'success');
+    }));
+    $$('.x-bottom-sheet [data-set-goal]').forEach(b => b.addEventListener('click', () => {
+      closeSheet();
+      openGoalSheet(b.dataset.setGoal);
+    }));
+  };
+  openSheet(html);
+}
+
+/* ============================================================
+   ASSIGNMENTS
+   ============================================================ */
+function renderAssignments() {
+  const counts = {
+    upcoming: ASSIGNMENTS.filter(a => a.status === 'upcoming' && !state.asSubmitted[a.id]).length,
+    overdue:  ASSIGNMENTS.filter(a => a.status === 'overdue'  && !state.asSubmitted[a.id]).length,
+    submitted: ASSIGNMENTS.filter(a => a.status === 'submitted' || state.asSubmitted[a.id]).length,
+    graded:   ASSIGNMENTS.filter(a => a.status === 'graded').length,
+  };
+  const filt = state.asFilter;
+  const filtered = ASSIGNMENTS.filter(a => {
+    const submittedNow = state.asSubmitted[a.id];
+    if (filt === 'upcoming')  return a.status === 'upcoming' && !submittedNow;
+    if (filt === 'overdue')   return a.status === 'overdue' && !submittedNow;
+    if (filt === 'submitted') return a.status === 'submitted' || submittedNow;
+    if (filt === 'graded')    return a.status === 'graded';
+    return true;
+  });
+
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('Homework', { actions: `
+      <button class="nav-btn" data-act="search"><span data-icon="search" data-icon-size="18"></span></button>
+      <button class="nav-btn" data-act="filter"><span data-icon="filter" data-icon-size="18"></span></button>
+    `})}
+    <div class="ps-scroll">
+      <div class="b-filter-chips">
+        ${[
+          ['upcoming','To do', counts.upcoming],
+          ['overdue', 'Overdue',  counts.overdue],
+          ['submitted','Handed in',counts.submitted],
+          ['graded',  'Marked',   counts.graded],
+        ].map(([id, lbl, c]) => `
+          <button class="b-fc ${filt === id ? 'on' : ''}" data-filter="${id}">${lbl} <span class="b-fc-ct">${c}</span></button>
+        `).join('')}
+      </div>
+
+      <div style="padding: 8px 16px 0;">
+        ${filtered.length === 0 ? `
+          <div class="empty-state">
+            <span class="lg" data-icon="check" data-icon-size="32"></span>
+            <div>Nothing here yet.</div>
+            <div style="margin-top: 4px; font-size: 12px;">Try one of the other tabs above.</div>
+          </div>
+        ` : filtered.map(a => {
+          const s = SUBJ[a.subject];
+          const submittedNow = state.asSubmitted[a.id];
+          const status = submittedNow ? 'submitted' : a.status;
+          const dueLabel = submittedNow ? 'Just handed in' : a.dueLabel;
+          return `
+            <button class="b-row-card" data-as="${a.id}">
+              <div class="b-rc-top">
+                <span class="as-tag" style="background: ${s.colour};"></span>
+                <div class="b-rc-info">
+                  <div class="as-subj">${esc(s.name)}</div>
+                  <div class="b-rc-nm" style="margin-top: 4px;">${esc(a.title)}</div>
+                  <div class="b-rc-sb">${esc(s.teacher)} · ${esc(a.sub)}</div>
+                  <div class="as-meta">
+                    <span class="as-due ${status}">
+                      <span data-icon="${status === 'graded' ? 'check' : status === 'submitted' ? 'check' : 'clock'}" data-icon-size="11"></span>
+                      ${esc(dueLabel)}
+                    </span>
+                    ${a.grade ? `<span style="font: 600 12px var(--font-mono); color: var(--brand-strong);">${esc(a.grade)}</span>` : ''}
+                  </div>
+                </div>
+              </div>
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+function openAssignmentSheet(id) {
+  const a = ASSIGNMENTS.find(x => x.id === id);
+  if (!a) return;
+  const s = SUBJ[a.subject];
+  const submittedNow = state.asSubmitted[id];
+  const status = submittedNow ? 'submitted' : a.status;
+  const uploaded = state.asUploadedFile[id];
+
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <span class="ic-tile" style="background: ${s.colour}22; color: ${s.colour}; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px;"><span data-icon="book" data-icon-size="16"></span></span>
+        <h3>${esc(s.name)}</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <div style="font: 600 17px/1.3 var(--font-sans); color: var(--text-strong); letter-spacing: -0.01em;">${esc(a.title)}</div>
+        <div style="font: 13px/1.4 var(--font-sans); color: var(--text-muted); margin-top: 4px;">${esc(s.teacher)} · ${esc(a.sub)}</div>
+        <div style="display:inline-flex; align-items:center; gap: 6px; padding: 5px 10px; background: ${status==='overdue'?'var(--tone-danger)':status==='upcoming'?'var(--tone-warn-bg)':status==='submitted'?'var(--tone-success-bg)':'var(--brand-soft)'}; color: ${status==='overdue'?'#fff':status==='upcoming'?'var(--tone-warn)':status==='submitted'?'var(--tone-success)':'var(--brand-strong)'}; border-radius: 9999px; font: 600 12px/1 var(--font-sans); margin-top: 10px;">
+          <span data-icon="clock" data-icon-size="11"></span> ${esc(submittedNow ? 'Just handed in' : a.dueLabel)}
+        </div>
+
+        <div class="ssh">What to do</div>
+        <p class="desc" style="margin-top: 0;">${esc(a.desc)}</p>
+
+        ${a.files.length > 0 ? `
+          <div class="ssh">Files from teacher · ${a.files.length}</div>
+          ${a.files.map(f => `
+            <div class="file-row">
+              <span class="ic"><span data-icon="folder" data-icon-size="14"></span></span>
+              <div style="flex:1;"><div class="nm">${esc(f.n)}</div><div class="sz">${esc(f.s)}</div></div>
+              <span data-icon="download" data-icon-size="14" style="color: var(--text-subtle);"></span>
+            </div>
+          `).join('')}
+        ` : ''}
+
+        ${status !== 'graded' ? `
+          <div class="plagiarism">
+            <span class="ic" data-icon="shield" data-icon-size="14"></span>
+            <div><b>Do your own work:</b> when you hand in, the system checks for copying. If you use someone else's words, say where they come from. Your teacher will see the check.</div>
+          </div>
+        ` : ''}
+
+        <div class="ssh">Your work</div>
+        ${uploaded ? `
+          <div class="file-row" style="background: var(--tone-success-bg);">
+            <span class="ic" style="background: #fff; color: var(--tone-success);"><span data-icon="check" data-icon-size="14"></span></span>
+            <div style="flex:1;"><div class="nm">${esc(uploaded)}</div><div class="sz">Ready to hand in</div></div>
+            <button data-clear-upload style="background: transparent; color: var(--text-muted); padding: 4px 8px; font: 500 11px var(--font-sans); border-radius: 4px; cursor: pointer;">Remove</button>
+          </div>
+        ` : status === 'submitted' ? `
+          <div class="file-row" style="background: var(--tone-success-bg);">
+            <span class="ic" style="background: #fff; color: var(--tone-success);"><span data-icon="check" data-icon-size="14"></span></span>
+            <div style="flex:1;"><div class="nm">Handed in</div><div class="sz">Waiting for your teacher to mark it</div></div>
+          </div>
+        ` : status === 'graded' ? `
+          <div class="file-row" style="background: var(--brand-soft);">
+            <span class="ic" style="background: #fff; color: var(--brand-strong);"><span data-icon="chart" data-icon-size="14"></span></span>
+            <div style="flex:1;"><div class="nm">Marked · ${esc(a.grade || '')}</div><div class="sz">Marked by ${esc(s.teacher)}</div></div>
+          </div>
+        ` : `
+          <div style="padding: 14px; border: 2px dashed var(--border-strong); border-radius: 10px; text-align: center; color: var(--text-muted); font: 13px var(--font-sans);">
+            <div style="margin-bottom: 6px; color: var(--text-subtle);" data-icon="upload" data-icon-size="20"></div>
+            No file picked yet · tap below to pick yours
+          </div>
+        `}
+
+        ${(() => {
+          const allComments = [
+            ...(COMMENTS_SEED[id] || []),
+            ...((state.asComments && state.asComments[id]) || []),
+          ];
+          return `
+            <div class="ssh">Messages · ${allComments.length}</div>
+            ${allComments.length === 0 ? `<div style="font: 13px var(--font-sans); color: var(--text-muted); padding: 8px 0;">No messages yet. Got a question? Ask your teacher below.</div>` : allComments.map(c => `
+              <div class="comment">
+                <span class="av">${esc(c.init)}</span>
+                <div style="flex:1;">
+                  <div><span class="nm">${esc(c.who)}</span><span class="tm">${esc(c.tm)}</span></div>
+                  <div class="txt">${esc(c.txt)}</div>
+                </div>
+              </div>
+            `).join('')}
+            <div class="comment-compose">
+              <input id="cm-${id}" placeholder="Type a question…" />
+              <button data-comment-send="${id}">Send</button>
+            </div>
+          `;
+        })()}
+      </div>
+      <div class="x-bs-foot">
+        ${status === 'graded' || (status === 'submitted' && !uploaded) ? `
+          <button class="alt" data-close>Close</button>
+        ` : `
+          <button class="alt" data-pick>${uploaded ? 'Change file' : 'Pick file'}</button>
+          <button class="primary" data-submit ${uploaded ? '' : 'disabled style="opacity:0.55; cursor:not-allowed;"'}>${status === 'overdue' ? 'Hand in (late)' : 'Hand in'}</button>
+        `}
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    const pick = $('.x-bottom-sheet [data-pick]');
+    if (pick) pick.addEventListener('click', () => {
+      // Mock file picker: choose a plausible filename based on subject
+      const names = {
+        maths: ['ex-12b-anesu.pdf','workings-quad.jpg','quadratic-attempt.pdf'],
+        english: ['nervous-conditions-review.docx','book-review-draft.docx'],
+        shona: ['tsika-dzedu-anesu.docx','rondedzero-final.pdf'],
+        history: ['wwi-source-analysis.pdf','sources-essay.docx'],
+        science: ['photo-lab-report.pdf','graph-light.png','lab-anesu.docx'],
+        rs: ['talents-reflection.docx'],
+        geo: ['zw-map.jpg','map-sketch-final.jpg'],
+      }[a.subject] || ['my-submission.pdf'];
+      const fname = names[Math.floor(Math.random()*names.length)];
+      state.asUploadedFile[id] = fname;
+      openAssignmentSheet(id);
+      toast('Picked: ' + fname, 'success');
+    });
+    const submit = $('.x-bottom-sheet [data-submit]');
+    if (submit) submit.addEventListener('click', () => {
+      if (submit.hasAttribute('disabled')) return;
+      runSubmitSequence(id, a);
+    });
+    const clear = $('.x-bottom-sheet [data-clear-upload]');
+    if (clear) clear.addEventListener('click', () => {
+      delete state.asUploadedFile[id];
+      openAssignmentSheet(id);
+    });
+    const send = $('.x-bottom-sheet [data-comment-send]');
+    if (send) send.addEventListener('click', () => {
+      const inp = $('#cm-' + id);
+      const txt = (inp?.value || '').trim();
+      if (!txt) return;
+      state.asComments[id] = state.asComments[id] || [];
+      state.asComments[id].push({ who: STUDENT.name, init: STUDENT.initials, tm: 'just now', txt });
+      openAssignmentSheet(id);
+      toast('Message sent', 'success');
+    });
+  };
+  openSheet(html);
+}
+
+/* Submit flow with upload progress + receipt */
+function runSubmitSequence(id, a) {
+  if (state.offline) {
+    toast("You're offline — saved. We'll send it when you're back online.", 'warn');
+    return;
+  }
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <h3>Handing in…</h3>
+      </div>
+      <div class="x-bs-body">
+        <div class="submit-progress">
+          <div class="ring"></div>
+          <div class="nm">Sending ${esc(state.asUploadedFile[id] || 'your file')}</div>
+          <div class="sb" id="sp-stage">Locking your file…</div>
+          <div class="barwrap"><span id="sp-bar"></span></div>
+        </div>
+      </div>
+    </div>
+  `;
+  state.sheetWire = null;
+  openSheet(html);
+  let p = 0;
+  const stages = ['Locking your file…', 'Sending to school…', 'Checking for copying…', 'Telling your teacher…', 'Almost done…'];
+  const tick = () => {
+    p += 8 + Math.random() * 10;
+    if (p > 100) p = 100;
+    const bar = $('#sp-bar'); const stg = $('#sp-stage');
+    if (bar) bar.style.width = p + '%';
+    if (stg) stg.textContent = stages[Math.min(Math.floor(p / 22), stages.length - 1)];
+    if (p < 100) setTimeout(tick, 220);
+    else setTimeout(() => showSubmitReceipt(id, a), 320);
+  };
+  setTimeout(tick, 180);
+}
+
+function showSubmitReceipt(id, a) {
+  state.asSubmitted[id] = true;
+  delete state.asUploadedFile[id];
+  const subId = 'SUB-' + Date.now().toString(36).toUpperCase().slice(-6);
+  // Add notification
+  const s = SUBJ[a.subject];
+  state.notifs.unshift({
+    id: 'n-sub-' + Date.now(),
+    kind: 'assign',
+    icon: 'check',
+    title: 'Handed in · ' + a.title,
+    body: 'Receipt ' + subId + ' — ' + s.teacher + ' will know.',
+    time: 'just now',
+    unread: true,
+  });
+  persistState();
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head"><h3>Handed in</h3><button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button></div>
+      <div class="x-bs-body">
+        <div class="submit-receipt">
+          <div class="check"><span data-icon="check" data-icon-size="28"></span></div>
+          <h3>Nice one, ${esc(STUDENT.short)}!</h3>
+          <p class="sb">Your work for "${esc(a.title)}" is in. ${esc(s.teacher)} will mark it and send it back.</p>
+          <div class="id">Receipt · ${esc(subId)}</div>
+          <div style="font: 500 11.5px/1.4 var(--font-mono); color: var(--text-subtle); margin-top: 14px;">${new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}<br>St Faith's Park · ${esc(STUDENT.id)}</div>
+        </div>
+      </div>
+      <div class="x-bs-foot">
+        <button class="alt" data-close>Close</button>
+        <button class="primary" data-share-receipt>Share receipt</button>
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    $('[data-share-receipt]')?.addEventListener('click', () => { closeSheet(); render(); toast('Receipt copied to share', 'success'); });
+  };
+  openSheet(html);
+  render();
+}
+
+/* ============================================================
+   LIBRARY
+   ============================================================ */
+function renderLibrary() {
+  const q = state.libQuery.trim().toLowerCase();
+  const borrowedBooks = BOOKS.filter(b => b.borrowed && !state.libReturned[b.id]);
+  const catalogResults = q ? BOOKS.filter(b => !b.borrowed && (b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q) || b.series.toLowerCase().includes(q))) : [];
+  const readingList = READING_LIST.map(id => BOOKS.find(b => b.id === id)).filter(Boolean);
+  const finePaid = state.finePaid;
+
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('Library', { back: true, actions: `
+      <button class="nav-btn" data-act="heart"><span data-icon="heart" data-icon-size="18"></span></button>
+    `})}
+    <div class="ps-scroll">
+      <div class="lib-search">
+        <span class="ic" data-icon="search" data-icon-size="16"></span>
+        <input id="lib-search" placeholder="Search by title, author or ISBN…" value="${esc(state.libQuery)}" />
+        <span class="ic" data-icon="qr" data-icon-size="16" id="lib-scan-search" title="Scan a book"></span>
+      </div>
+
+      ${!finePaid ? `
+        <div class="fines-pill">
+          <span class="ic"><span data-icon="info" data-icon-size="16"></span></span>
+          <div>
+            <div class="nm">You owe a fine</div>
+            <div class="sb">1 book brought back late · "Tsumo na Madimikira"</div>
+          </div>
+          <span class="val">$ 2.50</span>
+          <button id="lib-pay">Pay</button>
+        </div>
+      ` : ''}
+
+      <div class="scan-cta" id="lib-scan">
+        <span class="qr"><span data-icon="qr" data-icon-size="22"></span></span>
+        <div>
+          <div class="nm">Scan to return a book</div>
+          <div class="sb">Point your camera at the barcode inside the front cover</div>
+        </div>
+        <span class="arrow" data-icon="chright"></span>
+      </div>
+
+      ${q && catalogResults.length > 0 ? `
+        <div style="padding: 0 16px;">
+          <div class="demo-psh">Found ${catalogResults.length} book${catalogResults.length===1?'':'s'}</div>
+        </div>
+        ${catalogResults.map(b => `
+          <div class="catalog-card" data-book="${b.id}">
+            <div class="book-cover ${b.cls} cv">${esc(b.title.split(' ').slice(0,2).join(' ').toUpperCase())}</div>
+            <div>
+              <div class="nm">${esc(b.title)}</div>
+              <div class="sb">${esc(b.author)} · ${esc(b.series)}</div>
+            </div>
+            ${b.avail > 0 ? `<button class="borrow" data-borrow="${b.id}">Take out</button>` : '<span class="out">None left</span>'}
+          </div>
+        `).join('')}
+      ` : ''}
+      ${q && catalogResults.length === 0 ? `
+        <div class="empty-state"><span class="lg" data-icon="search" data-icon-size="28"></span><div>No books found for "${esc(state.libQuery)}".</div></div>
+      ` : ''}
+
+      ${!q ? `
+        <div style="padding: 0 16px;">
+          <div class="demo-psh">Books you have out · ${borrowedBooks.length}<a data-act="history">Past loans</a></div>
+        </div>
+        ${borrowedBooks.map(b => `
+          <div class="borrow-card" data-book="${b.id}">
+            <div class="book-cover ${b.cls}">${esc(b.title.split(' ').slice(0,2).join(' ').toUpperCase())}</div>
+            <div>
+              <div class="nm">${esc(b.title)}</div>
+              <div class="sb">${esc(b.author)} · ${esc(b.series)}</div>
+              <div class="due ${b.overdue ? 'overdue' : b.urgent ? 'urgent' : ''}"><span data-icon="clock" data-icon-size="11"></span>
+                ${state.libRenewed[b.id] ? 'Kept for 14 more days' : esc(b.overdue ? b.due : (b.urgent ? 'Bring back in ' + b.dueIn + ' days · ' + b.due : 'Bring back ' + b.due + ' · ' + b.dueIn + ' days'))}
+              </div>
+            </div>
+            ${b.overdue && !state.libRenewed[b.id] ? `<button class="renew" data-return="${b.id}" style="background: var(--tone-danger-bg); color: var(--tone-danger);">Bring back</button>` :
+              `<button class="renew" data-renew="${b.id}">${state.libRenewed[b.id] ? '✓' : 'Keep longer'}</button>`}
+          </div>
+        `).join('')}
+
+        ${Object.keys(state.libBorrowed).length > 0 ? `
+          <div style="padding: 0 16px;">
+            <div class="demo-psh">Just taken out</div>
+          </div>
+          ${Object.keys(state.libBorrowed).map(bid => {
+            const b = BOOKS.find(x => x.id === bid);
+            return `
+              <div class="borrow-card">
+                <div class="book-cover ${b.cls}">${esc(b.title.split(' ').slice(0,2).join(' ').toUpperCase())}</div>
+                <div>
+                  <div class="nm">${esc(b.title)}</div>
+                  <div class="sb">${esc(b.author)}</div>
+                  <div class="due"><span data-icon="check" data-icon-size="11"></span> Just taken out · bring back in 14 days</div>
+                </div>
+                <span style="padding: 4px 10px; background: var(--tone-success-bg); color: var(--tone-success); border-radius: 9999px; font: 600 11px/1 var(--font-sans);">New</span>
+              </div>
+            `;
+          }).join('')}
+        ` : ''}
+
+        <div style="padding: 0 16px;">
+          <div class="demo-psh">Books I want to read · ${readingList.length}<a data-act="edit-list">Edit</a></div>
+          <div class="pl">
+            ${readingList.map(b => `
+              <div class="pl-row" data-book="${b.id}" style="cursor:pointer;">
+                <span class="ic-tile"><span data-icon="book" data-icon-size="16"></span></span>
+                <div><div class="nm">${esc(b.title)}</div><div class="sb">${esc(b.author)} · ${esc(b.series)}</div></div>
+                ${b.avail > 0 ? `<button class="renew" data-borrow="${b.id}" style="padding: 6px 10px;">Take out</button>` : `<span style="font: 11px var(--font-mono); color: var(--text-muted);">${b.avail === 0 ? 'Wait list' : ''}</span>`}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+function openBookSheet(bookId) {
+  const b = BOOKS.find(x => x.id === bookId);
+  if (!b) return;
+  const isBorrowed = (b.borrowed && !state.libReturned[b.id]) || state.libBorrowed[b.id];
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <h3>${esc(b.title)}</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <div style="display: flex; gap: 14px; align-items: flex-start;">
+          <div class="book-cover ${b.cls}" style="width: 76px; height: 110px; font-size: 12px;">${esc(b.title.split(' ').slice(0,2).join(' ').toUpperCase())}</div>
+          <div style="flex:1;">
+            <div style="font: 600 16px/1.25 var(--font-sans); color: var(--text-strong);">${esc(b.title)}</div>
+            <div style="font: 13px/1.4 var(--font-sans); color: var(--text-muted); margin-top: 3px;">${esc(b.author)}</div>
+            <div style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: var(--surface-muted); color: var(--text-strong); border-radius: 9999px; font: 500 11.5px/1 var(--font-sans); margin-top: 8px;">${esc(b.series)}</div>
+          </div>
+        </div>
+        <div class="key-fact">
+          <div class="kf"><div class="l">Available</div><div class="v">${isBorrowed ? 'You have this book' : (b.avail > 0 ? b.avail + ' copies' : 'None in the library')}</div></div>
+          <div class="kf"><div class="l">Keep for</div><div class="v">14 days</div></div>
+        </div>
+        <p class="desc">A ZIMSEC set book. You can take it out now. You can keep it for 14 more days once, if no one else is waiting for it.</p>
+      </div>
+      <div class="x-bs-foot">
+        <button class="alt" data-close>Close</button>
+        ${isBorrowed ? `
+          <button class="primary" data-return-now="${b.id}">Bring back now</button>
+        ` : b.avail > 0 ? `
+          <button class="primary" data-borrow-confirm="${b.id}">Take out ${esc(b.title.split(' ')[0])}</button>
+        ` : `
+          <button class="primary" data-reserve="${b.id}">Hold for me · join wait list</button>
+        `}
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    const br = $('.x-bottom-sheet [data-borrow-confirm]'); if (br) br.addEventListener('click', () => {
+      state.libBorrowed[b.id] = true;
+      closeSheet(); render();
+      toast('Taken out · ' + b.title.split(' ').slice(0,2).join(' '), 'success');
+    });
+    const rt = $('.x-bottom-sheet [data-return-now]'); if (rt) rt.addEventListener('click', () => {
+      state.libReturned[b.id] = true;
+      delete state.libBorrowed[b.id];
+      closeSheet(); render();
+      toast('Brought back · thanks', 'success');
+    });
+    const rsv = $('.x-bottom-sheet [data-reserve]'); if (rsv) rsv.addEventListener('click', () => {
+      closeSheet();
+      toast("You're on the wait list · we'll let you know", 'warn');
+    });
+  };
+  openSheet(html);
+}
+
+function openScanReturn() {
+  // Simulate a QR scan: pick the overdue borrowed book first if any
+  const borrowed = BOOKS.filter(b => b.borrowed && !state.libReturned[b.id]);
+  const target = borrowed.find(b => b.overdue) || borrowed[0];
+  if (!target) {
+    toast("You have no books to bring back", 'warn');
+    return;
+  }
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <h3>Scan to return a book</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <div style="background: var(--ink); border-radius: 14px; padding: 32px 16px; text-align: center; color: rgba(255,255,255,0.85); position: relative; overflow: hidden;">
+          <div style="display: inline-grid; place-items: center; width: 100px; height: 100px; border: 3px dashed rgba(252,211,77,0.5); border-radius: 14px; margin-bottom: 16px;">
+            <span data-icon="qr" data-icon-size="44" style="color: #FCD34D;"></span>
+          </div>
+          <div style="font: 600 14px var(--font-sans); color: #fff;">Point at the barcode inside the front cover</div>
+          <div style="font: 12px var(--font-sans); margin-top: 6px; opacity: 0.7;">Or tap below to pretend you scanned it</div>
+        </div>
+        <div style="text-align: center; padding: 18px 0 4px; font: 500 12px var(--font-sans); color: var(--text-muted);">Found:</div>
+        <div class="borrow-card" style="margin: 0;">
+          <div class="book-cover ${target.cls}">${esc(target.title.split(' ').slice(0,2).join(' ').toUpperCase())}</div>
+          <div>
+            <div class="nm">${esc(target.title)}</div>
+            <div class="sb">${esc(target.author)}</div>
+            <div class="due ${target.overdue ? 'overdue' : ''}"><span data-icon="clock" data-icon-size="11"></span> ${esc(target.overdue ? target.due : 'Bring back by ' + target.due)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="x-bs-foot">
+        <button class="alt" data-close>Cancel</button>
+        <button class="primary" data-do-return="${target.id}">Yes, bring it back</button>
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    const btn = $('.x-bottom-sheet [data-do-return]'); if (btn) btn.addEventListener('click', () => {
+      state.libReturned[target.id] = true;
+      closeSheet(); render();
+      toast('Brought back · ' + target.title.split(' ').slice(0,2).join(' '), 'success');
+    });
+  };
+  openSheet(html);
+}
+
+/* ============================================================
+   PROFILE
+   ============================================================ */
+function renderProfile() {
+  const themeOpts = [['light','Light'],['dark','Dark'],['auto','Auto']];
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('My profile', { back: true, actions: `
+      <button class="nav-btn" data-act="edit-profile"><span data-icon="edit" data-icon-size="18"></span></button>
+    `})}
+    <div class="ps-scroll">
+      <div class="id-card">
+        <div class="top">
+          <div class="avatar">${STUDENT.initials}</div>
+          <div>
+            <div class="nm">${esc(STUDENT.name)}</div>
+            <div class="sb">${esc(STUDENT.school)} · ${esc(STUDENT.form)}</div>
+            <div class="ids">
+              <span class="pill">${esc(STUDENT.id)}</span>
+              <span class="pill">${esc(STUDENT.status)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="s"><div class="l">Days at school</div><div class="v">${STUDENT.attendance}<span class="u">%</span></div></div>
+          <div class="s"><div class="l">Place in class</div><div class="v">${STUDENT.position}<span class="u">/${STUDENT.formSize}</span></div></div>
+          <div class="s"><div class="l">Overall · T2</div><div class="v">${STUDENT.gpa.toFixed(2)}</div></div>
+        </div>
+      </div>
+
+      <div style="padding: 0 16px;">
+        <div class="demo-psh">Contact</div>
+        <div class="pl">
+          <div class="pl-row">
+            <span class="ic-tile"><span data-icon="mail" data-icon-size="18"></span></span>
+            <div><div class="nm">${esc(STUDENT.email)}</div><div class="sb">School email · checked</div></div>
+            <span data-icon="check" style="color: var(--tone-success);"></span>
+          </div>
+          <div class="pl-row">
+            <span class="ic-tile"><span data-icon="phone" data-icon-size="18"></span></span>
+            <div><div class="nm">${esc(STUDENT.phone)}</div><div class="sb">Phone · WhatsApp</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="pl-row">
+            <span class="ic-tile"><span data-icon="user" data-icon-size="18"></span></span>
+            <div><div class="nm">${esc(STUDENT.guardian)}</div><div class="sb">Parent or guardian · first to call</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="pl-row">
+            <span class="ic-tile"><span data-icon="building" data-icon-size="18"></span></span>
+            <div><div class="nm">${esc(STUDENT.address)}</div><div class="sb">Harare · Zimbabwe</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+        </div>
+
+        <div class="demo-psh">How the app looks</div>
+        <div class="pl">
+          <div class="pl-row">
+            <span class="ic-tile"><span data-icon="settings" data-icon-size="18"></span></span>
+            <div><div class="nm">Theme</div><div class="sb">${state.prefs.theme === 'auto' ? 'Same as your phone' : 'You pick'}</div></div>
+            <div class="seg">
+              ${themeOpts.map(([id, lbl]) => `<button class="${state.prefs.theme === id ? 'on' : ''}" data-theme="${id}">${lbl}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-psh">Notifications</div>
+        <div class="pl">
+          <div class="pl-row" data-toggle="push" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="bell" data-icon-size="18"></span></span>
+            <div><div class="nm">Phone alerts</div><div class="sb">Marks, homework and school news</div></div>
+            <span class="toggle ${state.prefs.push ? '' : 'off'}"></span>
+          </div>
+          <div class="pl-row" data-toggle="email" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="mail" data-icon-size="18"></span></span>
+            <div><div class="nm">Weekly email</div><div class="sb">A summary every Friday</div></div>
+            <span class="toggle ${state.prefs.email ? '' : 'off'}"></span>
+          </div>
+        </div>
+
+        <div class="demo-psh">More</div>
+        <div class="pl">
+          <div class="pl-row" data-go="goals" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="trending" data-icon-size="18"></span></span>
+            <div><div class="nm">My goals</div><div class="sb">A goal for each subject · how your week is going</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="pl-row" data-go="notifications" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="bell" data-icon-size="18"></span></span>
+            <div><div class="nm">Messages</div><div class="sb">${state.notifs.filter(n=>n.unread).length} new</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="pl-row" data-go="library" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="book" data-icon-size="18"></span></span>
+            <div><div class="nm">Library</div><div class="sb">3 books out · scan to bring back</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="pl-row" data-go="help" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="info" data-icon-size="18"></span></span>
+            <div><div class="nm">Help</div><div class="sb">How-tos · talk to someone</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="pl-row" data-go="settings" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="settings" data-icon-size="18"></span></span>
+            <div><div class="nm">Settings</div><div class="sb">Alerts · privacy · PIN · theme</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+        </div>
+
+        <div class="demo-psh">Keep your account safe</div>
+        <div class="pl">
+          <div class="pl-row" data-act="change-pin" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="lock" data-icon-size="18"></span></span>
+            <div><div class="nm">Change my PIN</div><div class="sb">Last changed 4 March 2026</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="pl-row" data-go="settings" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="shield" data-icon-size="18"></span></span>
+            <div><div class="nm">Privacy and my info</div><div class="sb">Who sees marks · fingerprint · language</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+        </div>
+
+        <div class="sign-out" id="sign-out"><span data-icon="logout" data-icon-size="16"></span> Sign out</div>
+
+        <div style="text-align: center; padding: 14px 0 8px; font: 500 11px/1.4 var(--font-mono); color: var(--text-subtle);">
+          Huchu · Student portal demo · v0.5<br>build 2026.05.31
+        </div>
+      </div>
+
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+function renderSignedOut() {
+  return `
+    ${renderStatusBar()}
+    <div class="signed-out">
+      <div class="ico"><span data-icon="check" data-icon-size="28"></span></div>
+      <h2>You're signed out</h2>
+      <p>You're signed out of the Student app. Your info is safe — sign in again whenever you're ready.</p>
+      <button id="back-in">Sign back in</button>
+    </div>
+  `;
+}
+
+/* ============================================================
+   SIGN IN
+   ============================================================ */
+function renderSignIn() {
+  const err = state._signinErr;
+  return `
+    ${renderStatusBar()}
+    <div class="signin">
+      <div class="logo">A</div>
+      <h1>Welcome back</h1>
+      <p class="lede">Sign in to St Faith's Park · Student app</p>
+
+      <div class="field">
+        <label for="si-id">Your student number</label>
+        <input id="si-id" type="text" placeholder="SFP-2026-0418" value="${esc(state._signinId || '')}" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label>Your 4-digit PIN</label>
+        <div class="otp" role="group" aria-label="4-digit PIN">
+          ${[0,1,2,3].map(i => `<input data-pin="${i}" type="password" maxlength="1" inputmode="numeric" autocomplete="one-time-code" aria-label="Digit ${i+1}" />`).join('')}
+        </div>
+        <div class="err">${err ? esc(err) : ''}</div>
+      </div>
+
+      <div class="row-act">
+        <span class="remember ${state._signinRemember ? 'on' : ''}" id="si-remember">
+          <span class="cb"><span data-icon="check" data-icon-size="11"></span></span>
+          Remember me on this phone
+        </span>
+        <span class="forgot" id="si-forgot">Forgot your PIN?</span>
+      </div>
+
+      <button class="primary" id="si-submit">Sign in</button>
+
+      <div class="or">OR</div>
+      <button class="biometric" id="si-biometric">
+        <span class="ic"><span data-icon="user" data-icon-size="14"></span></span>
+        Use your fingerprint
+      </button>
+
+      <div class="foot">
+        Demo PIN <strong>4218</strong> · Demo number <strong>SFP-2026-0418</strong><br>
+        Huchu Student app · v0.5
+      </div>
+    </div>
+  `;
+}
+
+function wireSignIn() {
+  const pins = $$('[data-pin]');
+  // auto-advance
+  pins.forEach((inp, i) => {
+    inp.addEventListener('input', (e) => {
+      const v = e.target.value.replace(/\D/g,'');
+      e.target.value = v.slice(0,1);
+      if (v && i < pins.length - 1) pins[i+1].focus();
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && i > 0) pins[i-1].focus();
+      if (e.key === 'Enter') doSignIn();
+    });
+  });
+  if (pins[0]) setTimeout(() => pins[0].focus(), 60);
+  const idInp = $('#si-id');
+  if (idInp) idInp.addEventListener('input', (e) => { state._signinId = e.target.value; });
+
+  $('#si-remember')?.addEventListener('click', () => {
+    state._signinRemember = !state._signinRemember;
+    render();
+  });
+  $('#si-forgot')?.addEventListener('click', () => {
+    openModal(`
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3>Forgot your PIN?</h3>
+        <p class="sub">Go to your form teacher, Mrs Mlilo (Form 3B), with your student card. She'll give you a one-time code so you can pick a new PIN.</p>
+        <div class="acts">
+          <button class="alt" data-cancel>Close</button>
+          <button class="ok brand" data-ok>Open help</button>
+        </div>
+      </div>
+    `, () => {
+      $('[data-cancel]').addEventListener('click', closeModal);
+      $('[data-ok]').addEventListener('click', () => { closeModal(); state.signedIn = true; go('help'); });
+    });
+  });
+  $('#si-biometric')?.addEventListener('click', () => {
+    toast('Touch the sensor… (demo)', 'default');
+    setTimeout(() => {
+      state.signedIn = true;
+      state._signinErr = null;
+      toast('Welcome back, ' + STUDENT.short, 'success');
+      render();
+    }, 700);
+  });
+  $('#si-submit')?.addEventListener('click', doSignIn);
+
+  function doSignIn() {
+    const pin = pins.map(p => p.value).join('');
+    const id = ($('#si-id')?.value || '').trim();
+    if (!id) { state._signinErr = 'Type in your student number.'; render(); return; }
+    if (pin.length !== 4) { state._signinErr = 'Type in your 4-digit PIN.'; render(); return; }
+    if (pin !== state.pin) { state._signinErr = "That PIN isn't right. For the demo, try " + state.pin + '.'; render(); return; }
+    state.signedIn = true;
+    state._signinErr = null;
+    toast('Welcome back, ' + STUDENT.short, 'success');
+    render();
+  }
+}
+
+function wireSignedOut() {
+  const bi = $('#back-in'); if (bi) bi.addEventListener('click', () => {
+    state.signedOut = false;
+    state.signedIn = false;
+    render();
+  });
+}
+
+/* ============================================================
+   ONBOARDING TOUR
+   ============================================================ */
+const TOUR_STEPS = [
+  { step: '1 / 5', h: 'This is your Home screen', p: "See your next class, your week, homework that's due, and your latest marks — all in one place." },
+  { step: '2 / 5', h: 'Timetable for every week',  p: "Tap a lesson to see the topic, room, teacher and what to bring. Swipe to jump to other weeks." },
+  { step: '3 / 5', h: 'Marks: class work and tests',      p: 'For each subject, see your class work marks, term test mark, your place in class, and how the class did. You can set a goal for each one.' },
+  { step: '4 / 5', h: 'Hand in homework from your phone',       p: 'Pick the file, tap Hand in. You get a receipt with a number in your messages.' },
+  { step: '5 / 5', h: "You're all set!",                p: 'Scan books to bring them back, see fees, change your profile and pick dark mode — all one tap away. Have fun!' },
+];
+function maybeShowTour() {
+  if (state.tourSeen || state.sheet || state.modal) return;
+  if (state.route !== 'home') return;
+  renderTour();
+}
+function renderTour() {
+  if (state.tourSeen) { $('#tour-host').innerHTML = ''; return; }
+  const s = TOUR_STEPS[state.tourStep] || TOUR_STEPS[0];
+  const last = state.tourStep === TOUR_STEPS.length - 1;
+  const host = $('#tour-host');
+  host.innerHTML = `
+    <div class="tour-scrim">
+      <div class="tour-card">
+        <div class="step">${esc(s.step)}</div>
+        <h3>${esc(s.h)}</h3>
+        <p>${esc(s.p)}</p>
+        <div class="dots">${TOUR_STEPS.map((_, i) => `<span class="${i === state.tourStep ? 'on' : ''}"></span>`).join('')}</div>
+        <div class="acts">
+          <button class="skip" id="tour-skip">Skip</button>
+          <button class="next" id="tour-next">${last ? "Let's go" : 'Next'}</button>
+        </div>
+      </div>
+    </div>
+  `;
+  if (window.Icons) window.Icons.render(host);
+  $('#tour-skip').addEventListener('click', () => {
+    state.tourSeen = true; state.tourStep = 0;
+    persistState();
+    renderTour();
+  });
+  $('#tour-next').addEventListener('click', () => {
+    if (last) { state.tourSeen = true; state.tourStep = 0; renderTour(); toast('All done · have fun!', 'success'); }
+    else { state.tourStep += 1; renderTour(); }
+    persistState();
+  });
+}
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+function renderNotifications() {
+  const list = state.notifs || [];
+  const unread = list.filter(n => n.unread).length;
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('Messages', { back: true, actions: `
+      <button class="nav-btn" data-act="mark-all-read"><span data-icon="check" data-icon-size="18"></span></button>
+      <button class="nav-btn" data-go="settings"><span data-icon="settings" data-icon-size="18"></span></button>
+    ` })}
+    <div class="ps-scroll">
+      <div style="padding: 12px 16px 8px; display: flex; justify-content: space-between; align-items: baseline;">
+        <span style="font: 500 12px var(--font-sans); color: var(--text-muted);">${list.length} messages · ${unread} new</span>
+        <a data-act="clear-all" style="font: 500 12px var(--font-sans); color: var(--brand-strong); cursor: pointer;">Clear all</a>
+      </div>
+      ${list.length === 0 ? `
+        <div class="empty-state"><span class="lg" data-icon="bell" data-icon-size="32"></span><div>No messages.</div><div style="font-size: 12px; margin-top: 4px;">You're all caught up!</div></div>
+      ` : list.map(n => `
+        <div class="notif-row ${n.unread ? 'unread' : ''}" data-notif="${n.id}">
+          <span class="ic ${n.kind}"><span data-icon="${esc(n.icon)}" data-icon-size="16"></span></span>
+          <div class="body">
+            <div class="nm">${esc(n.title)}</div>
+            <div class="sb">${esc(n.body)}</div>
+            <div class="tm">${esc(n.time)}</div>
+          </div>
+        </div>
+      `).join('')}
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   GOALS / TARGETS (gamification light)
+   ============================================================ */
+function renderGoals() {
+  const t = TERM_MARKS[state.term];
+  const goals = SUBJECTS.map(s => {
+    const ovr = state.goalsOverride[s.id];
+    const base = GOALS_SEED[s.id];
+    return {
+      s,
+      target: ovr?.target ?? base.target,
+      current: t.subjects[s.id],
+    };
+  });
+  const met = goals.filter(g => g.current >= g.target).length;
+  const wdSum = WEEK_PROGRESS.reduce((a, b) => a + b, 0);
+  const wdAvg = Math.round(wdSum / 7);
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('My goals', { back: true, actions: `
+      <button class="nav-btn" data-act="goal-info"><span data-icon="info" data-icon-size="18"></span></button>
+    ` })}
+    <div class="ps-scroll">
+      <div style="padding: 14px 16px 0;">
+        <div class="week-progress">
+          <div class="lbl">This week · how much you studied</div>
+          <div class="val">${wdAvg}%<span style="font-size:13px; font-weight:500; opacity:0.8; margin-left:6px;">on average</span></div>
+          <div class="sb">${WEEK_PROGRESS.filter(d => d >= 100).length} days done · keep it going on Friday!</div>
+          <div class="bars">
+            ${WEEK_PROGRESS.map(d => `<div class="b ${d>=100?'fill':''}" style="height: ${Math.max(d, 8)}%"></div>`).join('')}
+          </div>
+          <div class="bars lbl-row">
+            ${['M','T','W','T','F','S','S'].map(d => `<span>${d}</span>`).join('')}
+          </div>
+        </div>
+        <div class="demo-psh">Each subject · ${met}/${goals.length} on track<a data-act="goal-reset">Start over</a></div>
+        ${goals.map(({s, target, current}) => {
+          const pct = Math.min(100, Math.round(current/target*100));
+          const on = current >= target;
+          return `
+            <div class="goal-card" data-goal="${s.id}">
+              <div class="head">
+                <span class="tag" style="background: ${s.colour};"></span>
+                <div style="flex:1;">
+                  <div class="nm">${esc(s.name)}</div>
+                  <div class="sb">${esc(s.teacher)} · goal ${target}%</div>
+                </div>
+                <div style="text-align:right;">
+                  <div class="target">${current}<span class="of">/${target}</span></div>
+                  <div class="delta ${on?'':'down'}">${on ? '✓ You did it!' : (target - current) + '% to go'}</div>
+                </div>
+              </div>
+              <div class="bar">
+                <span style="width: ${pct}%; background: ${s.colour};"></span>
+                <span class="marker" style="left: 100%;"></span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+function openGoalSheet(sid) {
+  const s = SUBJ[sid];
+  const base = GOALS_SEED[sid];
+  const ovr = state.goalsOverride[sid];
+  const target = ovr?.target ?? base.target;
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <span class="ic-tile" style="background:${s.colour}22; color:${s.colour}; width:36px; height:36px; display:grid; place-items:center; border-radius:8px;"><span data-icon="trending" data-icon-size="16"></span></span>
+        <h3>Set my goal · ${esc(s.name)}</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <p class="desc">Slide to pick your goal for this term. We'll cheer you on every week!</p>
+        <div style="text-align:center; padding: 8px 0;">
+          <div style="font: 700 48px var(--font-sans); color: var(--text-strong); letter-spacing: -0.02em;" id="goal-val">${target}<span style="font-size: 22px; color: var(--text-subtle);">%</span></div>
+        </div>
+        <input id="goal-range" type="range" min="50" max="100" step="1" value="${target}" style="width:100%;" />
+        <div style="display:flex; justify-content:space-between; font: 500 11px var(--font-mono); color: var(--text-subtle); margin-top: 4px;">
+          <span>50%</span><span>75%</span><span>100%</span>
+        </div>
+      </div>
+      <div class="x-bs-foot">
+        <button class="alt" data-close>Cancel</button>
+        <button class="primary" id="goal-save">Save my goal</button>
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    const r = $('#goal-range'); const v = $('#goal-val');
+    if (r) r.addEventListener('input', (e) => { v.firstChild.nodeValue = e.target.value; });
+    $('#goal-save')?.addEventListener('click', () => {
+      const val = parseInt(r.value, 10);
+      state.goalsOverride[sid] = { target: val, current: TERM_MARKS[state.term].subjects[sid] };
+      closeSheet(); render();
+      toast(`Goal set: ${val}% for ${s.short}`, 'success');
+    });
+  };
+  openSheet(html);
+}
+
+/* ============================================================
+   HELP / HOW-TO
+   ============================================================ */
+function renderHelp() {
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('Help', { back: true })}
+    <div class="ps-scroll">
+      <div style="padding: 16px;">
+        <div class="lib-search">
+          <span class="ic" data-icon="search" data-icon-size="16"></span>
+          <input placeholder="Search for help…" id="help-q" />
+        </div>
+        <div class="demo-psh">How to use the app</div>
+        ${HELP_ARTICLES.map(a => `
+          <div class="help-card" data-help="${a.id}">
+            <div class="h">
+              <span class="ic"><span data-icon="${esc(a.icon)}" data-icon-size="16"></span></span>
+              <div style="flex:1;">
+                <div class="nm">${esc(a.nm)}</div>
+                <div class="sb">${esc(a.sb)}</div>
+              </div>
+              <span data-icon="chright" style="color: var(--text-subtle);"></span>
+            </div>
+          </div>
+        `).join('')}
+        <div class="demo-psh">Talk to someone</div>
+        <div class="setting-group">
+          <div class="setting-row" data-act="help-call">
+            <span class="ic-tile"><span data-icon="phone" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Call form teacher</div><div class="sb">Mrs Mlilo · Form 3B · school hours only</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="setting-row" data-act="help-email">
+            <span class="ic-tile"><span data-icon="mail" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Email ICT support</div><div class="sb">ict@stfaiths.ac.zw · replies same day</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="setting-row" data-act="help-chat">
+            <span class="ic-tile"><span data-icon="chat" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Open live chat</div><div class="sb">Mon–Fri 07:30–17:00</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+        </div>
+      </div>
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+function openHelpArticle(id) {
+  const a = HELP_ARTICLES.find(x => x.id === id);
+  if (!a) return;
+  const bodyById = {
+    'h-submit':  'Open Assignments · pick the task · tap Pick file · select your file · tap Submit. Watch the progress bar. When it lands you\'ll see a green tick and a submission ID. Save the ID — your teacher uses it to find your work.',
+    'h-reset':   'Forgot your PIN? Visit your form teacher with your student card. She will give you a one-time reset code. Enter the code in the sign-in screen and choose a new PIN.',
+    'h-offline': 'When your phone goes offline you\'ll see the yellow banner up top. You can still view your timetable, marks and any notes already downloaded. New submissions and library actions queue up and send themselves when you\'re online again.',
+    'h-library': 'You can renew a borrowed book once if no one is waiting. Tap Renew next to the book in your library list — that gives you 14 more days. To return: scan the barcode inside the front cover, or tap the book and choose "Return now".',
+    'h-marks':   'Each subject shows your CA marks (continuous assessment), exam mark and overall %. Tap a subject to see the class distribution histogram — your bar is highlighted. Use the position pill to see where you sit in the class.',
+    'h-contact': 'Profile · Contact · Class teacher · tap to open a message. Your form teacher replies within one school day. For urgent things (illness, missed bus) WhatsApp or phone direct.',
+  };
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <span class="ic-tile" style="background:var(--brand-soft); color:var(--brand-strong); width:36px; height:36px; display:grid; place-items:center; border-radius:8px;"><span data-icon="${esc(a.icon)}" data-icon-size="16"></span></span>
+        <h3>${esc(a.nm)}</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <p class="desc">${esc(bodyById[id] || a.sb)}</p>
+        <div class="ssh">Was this helpful?</div>
+        <div style="display:flex; gap:8px;">
+          <button class="alt" data-helpful="yes" style="flex:1; padding:10px; border-radius:8px; background:var(--surface-muted); border:0; cursor:pointer; font:600 13px var(--font-sans);">👍 Yes</button>
+          <button class="alt" data-helpful="no"  style="flex:1; padding:10px; border-radius:8px; background:var(--surface-muted); border:0; cursor:pointer; font:600 13px var(--font-sans);">👎 No</button>
+        </div>
+      </div>
+      <div class="x-bs-foot">
+        <button class="primary" data-close>Close</button>
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    $$('.x-bottom-sheet [data-helpful]').forEach(b => b.addEventListener('click', () => {
+      toast('Thanks for the feedback', 'success');
+      closeSheet();
+    }));
+  };
+  openSheet(html);
+}
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function renderSettings() {
+  const p = state.prefs;
+  return `
+    ${renderStatusBar()}
+    ${renderAppbar('Settings', { back: true })}
+    <div class="ps-scroll">
+      <div style="padding: 14px 16px 0;">
+
+        <div class="demo-psh">Notifications</div>
+        <div class="setting-group">
+          <div class="setting-row" data-toggle="push">
+            <span class="ic-tile"><span data-icon="bell" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Push notifications</div><div class="sb">Grades, assignments, broadcasts</div></div>
+            <span class="toggle ${p.push?'':'off'}"></span>
+          </div>
+          <div class="setting-row" data-toggle="email">
+            <span class="ic-tile"><span data-icon="mail" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Email digests</div><div class="sb">Weekly · Friday morning</div></div>
+            <span class="toggle ${p.email?'':'off'}"></span>
+          </div>
+          <div class="setting-row">
+            <span class="ic-tile"><span data-icon="clock" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Cadence</div><div class="sb">How often we group notifications</div></div>
+            <div class="seg">
+              ${[['instant','Now'],['daily','Daily'],['weekly','Weekly']].map(([id, lbl]) => `<button class="${p.notifCadence===id?'on':''}" data-cadence="${id}">${lbl}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-psh">Privacy</div>
+        <div class="setting-group">
+          <div class="setting-row">
+            <span class="ic-tile"><span data-icon="shield" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Mark visibility</div><div class="sb">Who can see your marks</div></div>
+            <div class="seg">
+              ${[['private','Me'],['class','Class'],['school','School']].map(([id, lbl]) => `<button class="${p.markVisibility===id?'on':''}" data-mv="${id}">${lbl}</button>`).join('')}
+            </div>
+          </div>
+          <div class="setting-row" data-toggle="biometric">
+            <span class="ic-tile"><span data-icon="user" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Fingerprint sign-in</div><div class="sb">Skip the PIN on this device</div></div>
+            <span class="toggle ${p.biometric?'':'off'}"></span>
+          </div>
+        </div>
+
+        <div class="demo-psh">Appearance</div>
+        <div class="setting-group">
+          <div class="setting-row">
+            <span class="ic-tile"><span data-icon="settings" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Theme</div><div class="sb">Light, dark or match your phone</div></div>
+            <div class="seg">
+              ${[['light','Light'],['dark','Dark'],['auto','Auto']].map(([id, lbl]) => `<button class="${p.theme===id?'on':''}" data-theme="${id}">${lbl}</button>`).join('')}
+            </div>
+          </div>
+          <div class="setting-row">
+            <span class="ic-tile"><span data-icon="chat" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Language</div><div class="sb">App language · marks stay in English</div></div>
+            <div class="seg">
+              ${[['en','EN'],['sn','SN'],['nd','ND']].map(([id, lbl]) => `<button class="${p.lang===id?'on':''}" data-lang="${id}">${lbl}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-psh">Account</div>
+        <div class="setting-group">
+          <div class="setting-row" data-act="change-pin" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="lock" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Change PIN</div><div class="sb">Last changed 4 March 2026</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="setting-row" data-toggle="offline" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="wifi" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Simulate offline</div><div class="sb">Toggle to see how the app behaves offline</div></div>
+            <span class="toggle ${state.offline?'':'off'}"></span>
+          </div>
+          <div class="setting-row" data-act="reset-tour" style="cursor:pointer;">
+            <span class="ic-tile"><span data-icon="info" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm">Replay onboarding tour</div><div class="sb">See the welcome screens again</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+          <div class="setting-row" data-act="reset-app" style="cursor:pointer;">
+            <span class="ic-tile" style="color: var(--tone-danger);"><span data-icon="x" data-icon-size="16"></span></span>
+            <div class="body"><div class="nm" style="color: var(--tone-danger);">Reset demo data</div><div class="sb">Clears local progress and starts fresh</div></div>
+            <span data-icon="chright" style="color: var(--text-subtle);"></span>
+          </div>
+        </div>
+
+        <div style="text-align:center; padding: 14px 0 8px; font: 500 11px/1.4 var(--font-mono); color: var(--text-subtle);">
+          Huchu · Student portal · v0.5<br>build 2026.05.31
+        </div>
+      </div>
+      <div style="height: 24px;"></div>
+    </div>
+  `;
+}
+
+function openChangePinSheet() {
+  state._pinStep = 'current';
+  state._pinDigits = '';
+  state._pinNew = '';
+  state._pinErr = '';
+  function pinScreen() {
+    const headByStep = {
+      current: { h: 'Enter current PIN', sb: 'Confirm it\'s really you.' },
+      new:     { h: 'Choose a new PIN',  sb: '4 digits · not your birthday.' },
+      confirm: { h: 'Re-enter new PIN',   sb: 'Make sure you can remember it.' },
+    };
+    const cur = headByStep[state._pinStep];
+    const html = `
+      <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+        <div class="x-bs-grab"></div>
+        <div class="x-bs-head">
+          <span class="ic-tile" style="background:var(--brand-soft); color:var(--brand-strong); width:36px; height:36px; display:grid; place-items:center; border-radius:8px;"><span data-icon="lock" data-icon-size="16"></span></span>
+          <h3>Change PIN</h3>
+          <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+        </div>
+        <div class="x-bs-body">
+          <div style="font: 600 16px var(--font-sans); color: var(--text-strong);">${esc(cur.h)}</div>
+          <div style="font: 13px/1.45 var(--font-sans); color: var(--text-muted); margin-top: 4px;">${esc(cur.sb)}</div>
+          <div class="otp" role="group" aria-label="4-digit PIN" style="justify-content: center; margin: 22px 0 6px;">
+            ${[0,1,2,3].map(i => `<input type="password" inputmode="numeric" maxlength="1" autocomplete="one-time-code" data-pin-cell="${i}" value="${state._pinDigits[i] || ''}" aria-label="Digit ${i+1}" ${state._pinErr ? 'aria-invalid="true"' : ''} />`).join('')}
+          </div>
+          <div style="text-align:center; font: 500 12px var(--font-sans); color: var(--tone-danger); min-height: 16px;">${esc(state._pinErr || '')}</div>
+        </div>
+      </div>
+    `;
+    state.sheetWire = () => {
+      const cells = $$('.x-bottom-sheet [data-pin-cell]');
+      const sync = () => { state._pinDigits = cells.map(c => c.value).join('').replace(/\D/g, '').slice(0, 4); };
+      cells.forEach((cell, idx) => {
+        cell.addEventListener('input', (e) => {
+          const v = (e.target.value || '').replace(/\D/g, '').slice(-1);
+          e.target.value = v;
+          state._pinErr = '';
+          if (v && cells[idx + 1]) cells[idx + 1].focus();
+          sync();
+          if (state._pinDigits.length === 4) {
+            setTimeout(() => {
+              if (state._pinStep === 'current') {
+                if (state._pinDigits === state.pin) { state._pinStep = 'new'; state._pinDigits = ''; pinScreen(); }
+                else { state._pinErr = 'Wrong PIN — try ' + state.pin + ' (demo).'; state._pinDigits = ''; pinScreen(); }
+              } else if (state._pinStep === 'new') {
+                state._pinNew = state._pinDigits; state._pinStep = 'confirm'; state._pinDigits = ''; pinScreen();
+              } else if (state._pinStep === 'confirm') {
+                if (state._pinDigits === state._pinNew) {
+                  state.pin = state._pinNew;
+                  closeSheet(); toast('PIN updated', 'success'); persistState();
+                } else {
+                  state._pinErr = 'PINs did not match. Try again.';
+                  state._pinStep = 'new'; state._pinDigits = ''; pinScreen();
+                }
+              }
+            }, 180);
+          }
+        });
+        cell.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !cell.value && cells[idx - 1]) { cells[idx - 1].focus(); cells[idx - 1].value = ''; sync(); }
+        });
+      });
+      const focusCell = cells[Math.min(state._pinDigits.length, cells.length - 1)];
+      if (focusCell) setTimeout(() => focusCell.focus(), 50);
+    };
+    openSheet(html);
+  }
+  pinScreen();
+}
+
+
+
+/* ============================================================
+   WIRING
+   ============================================================ */
+function wireRoute() {
+  // Generic
+  $$('[data-go]').forEach(b => b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); go(b.dataset.go); }));
+  $$('[data-back]').forEach(b => b.addEventListener('click', () => {
+    const backRoutes = { notifications: 'home', goals: 'profile', help: 'profile', settings: 'profile', library: 'home', profile: 'home' };
+    go(backRoutes[state.route] || 'home');
+  }));
+  $$('[data-act]').forEach(b => b.addEventListener('click', () => {
+    const a = b.dataset.act;
+    if (a === 'download' && state.route === 'marks') return openReportCardSheet();
+    if (a === 'download' && state.route === 'timetable') return openTimetableExport();
+    if (a === 'search') return toast('Search · type in the search bar');
+    if (a === 'filter') return openAssignmentsFilterSheet();
+    if (a === 'mark-all-read') { state.notifs.forEach(n => n.unread = false); render(); toast('All marked as read', 'success'); return; }
+    if (a === 'clear-all') { state.notifs = []; render(); toast('Inbox cleared', 'success'); return; }
+    if (a === 'goal-reset') { state.goalsOverride = {}; render(); toast('Targets reset to defaults', 'warn'); return; }
+    if (a === 'goal-info') return toast('Targets help you focus per subject');
+    if (a === 'change-pin') return openChangePinSheet();
+    if (a === 'reset-tour') { state.tourSeen = false; state.tourStep = 0; go('home'); return; }
+    if (a === 'reset-app') return openResetConfirm();
+    if (a === 'edit-profile') return openEditProfileSheet();
+    if (a === 'password') return openChangePinSheet();
+    if (a === 'privacy') return go('settings');
+    if (a === 'help-call') return toast('Calling Mrs Mlilo… (demo)');
+    if (a === 'help-email') return toast('Mail draft opened');
+    if (a === 'help-chat') return toast('Live chat queued');
+    const messages = {
+      bell: 'No new notifications',
+      heart: 'Saved to favourites',
+      history: 'Loan history opens here',
+      'edit-list': 'Reading list editor opens here',
+    };
+    if (messages[a]) toast(messages[a]);
+  }));
+
+  switch (state.route) {
+    case 'home':          wireHome(); break;
+    case 'timetable':     wireTimetable(); break;
+    case 'marks':         wireMarks(); break;
+    case 'assignments':   wireAssignments(); break;
+    case 'library':       wireLibrary(); break;
+    case 'profile':       wireProfile(); break;
+    case 'notifications': wireNotifications(); break;
+    case 'goals':         wireGoals(); break;
+    case 'help':          wireHelp(); break;
+    case 'settings':      wireSettings(); break;
+  }
+}
+
+function wireNotifications() {
+  $$('[data-notif]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.notif;
+    const n = state.notifs.find(x => x.id === id);
+    if (!n) return;
+    n.unread = false;
+    // Route by type
+    if (n.kind === 'grade') go('marks');
+    else if (n.kind === 'assign') go('assignments');
+    else if (n.kind === 'library') go('library');
+    else { render(); toast(n.title); }
+  }));
+}
+
+function wireGoals() {
+  $$('[data-goal]').forEach(b => b.addEventListener('click', () => openGoalSheet(b.dataset.goal)));
+}
+
+function wireHelp() {
+  $$('[data-help]').forEach(b => b.addEventListener('click', () => openHelpArticle(b.dataset.help)));
+  const q = $('#help-q');
+  if (q) q.addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    $$('.help-card').forEach(c => {
+      const nm = c.querySelector('.nm')?.textContent.toLowerCase() || '';
+      const sb = c.querySelector('.sb')?.textContent.toLowerCase() || '';
+      c.style.display = (nm.includes(term) || sb.includes(term)) ? '' : 'none';
+    });
+  });
+}
+
+function wireSettings() {
+  $$('[data-toggle]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.toggle;
+    if (k === 'offline') { state.offline = !state.offline; render(); toast(state.offline ? 'Offline mode' : 'Back online', state.offline ? 'warn' : 'success'); return; }
+    if (k === 'biometric') { state.prefs.biometric = !state.prefs.biometric; render(); toast(state.prefs.biometric ? 'Fingerprint on' : 'Fingerprint off'); return; }
+    state.prefs[k] = !state.prefs[k];
+    render();
+    toast(state.prefs[k] ? 'Enabled' : 'Disabled');
+  }));
+  $$('[data-cadence]').forEach(b => b.addEventListener('click', () => { state.prefs.notifCadence = b.dataset.cadence; render(); toast('Cadence: ' + b.dataset.cadence); }));
+  $$('[data-mv]').forEach(b => b.addEventListener('click', () => { state.prefs.markVisibility = b.dataset.mv; render(); toast('Marks visible to: ' + b.dataset.mv); }));
+  $$('[data-theme]').forEach(b => b.addEventListener('click', () => { state.prefs.theme = b.dataset.theme; render(); toast('Theme: ' + b.dataset.theme); }));
+  $$('[data-lang]').forEach(b => b.addEventListener('click', () => { state.prefs.lang = b.dataset.lang; render(); toast('Language: ' + ({en:'English', sn:'ChiShona', nd:'isiNdebele'}[b.dataset.lang])); }));
+}
+
+function openResetConfirm() {
+  openModal(`
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Reset demo data?</h3>
+      <p class="sub">Clears all local progress: submissions, borrowed books, goals, theme, PIN. The app will start fresh on the sign-in screen.</p>
+      <div class="acts">
+        <button class="alt" data-cancel>Cancel</button>
+        <button class="ok" data-ok>Reset</button>
+      </div>
+    </div>
+  `, () => {
+    $('[data-cancel]').addEventListener('click', closeModal);
+    $('[data-ok]').addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY);
+      closeModal();
+      // Reset in-memory state
+      Object.keys(state).forEach(k => delete state[k]);
+      Object.assign(state, JSON.parse(JSON.stringify(DEFAULT_STATE)));
+      state.notifs = NOTIFS_SEED.map(n => ({ ...n }));
+      go('home'); render();
+      toast('Demo data reset', 'success');
+    });
+  });
+}
+
+function openEditProfileSheet() {
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <span class="ic-tile" style="background:var(--brand-soft); color:var(--brand-strong); width:36px; height:36px; display:grid; place-items:center; border-radius:8px;"><span data-icon="user" data-icon-size="16"></span></span>
+        <h3>Edit profile</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <p class="desc">Editable fields are limited — most details come from the school registry. Contact your form teacher to change your guardian or address.</p>
+        <div class="ssh">Display name</div>
+        <input style="width:100%; box-sizing:border-box; padding:11px 13px; border-radius:9px; border:1px solid var(--border); background:var(--surface); font:500 14px var(--font-sans); color:var(--text-strong); outline:0;" value="${esc(STUDENT.name)}" />
+        <div class="ssh">Phone</div>
+        <input style="width:100%; box-sizing:border-box; padding:11px 13px; border-radius:9px; border:1px solid var(--border); background:var(--surface); font:500 14px var(--font-sans); color:var(--text-strong); outline:0;" value="${esc(STUDENT.phone)}" />
+        <div class="ssh">Avatar colour</div>
+        <div style="display:flex; gap:8px;">
+          ${['#FB923C','#0B5DF0','#DC2626','#16A34A','#7E22CE','#0891B2'].map(c => `<div style="width:32px; height:32px; border-radius:50%; background:${c}; cursor:pointer; border:2px solid var(--surface);"></div>`).join('')}
+        </div>
+      </div>
+      <div class="x-bs-foot">
+        <button class="alt" data-close>Cancel</button>
+        <button class="primary" data-save-profile>Save changes</button>
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    $('[data-save-profile]')?.addEventListener('click', () => { closeSheet(); toast('Profile updated', 'success'); });
+  };
+  openSheet(html);
+}
+
+function openAssignmentsFilterSheet() {
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <h3>Filter assignments</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <div class="ssh">Subject</div>
+        <div class="b-filter-chips" style="padding: 0; flex-wrap: wrap; overflow: visible;">
+          ${SUBJECTS.map(s => `<button class="b-fc" style="border-color:${s.colour}; color:${s.colour};">${esc(s.short)}</button>`).join('')}
+        </div>
+        <div class="ssh">Time window</div>
+        <div class="b-filter-chips" style="padding: 0; flex-wrap: wrap; overflow: visible;">
+          ${['This week','Next 7 days','This term'].map(t => `<button class="b-fc">${t}</button>`).join('')}
+        </div>
+      </div>
+      <div class="x-bs-foot">
+        <button class="alt" data-close>Cancel</button>
+        <button class="primary" data-close>Apply</button>
+      </div>
+    </div>
+  `;
+  state.sheetWire = null;
+  openSheet(html);
+}
+
+function openReportCardSheet() {
+  const t = TERM_MARKS[state.term];
+  const html = `
+    <div class="x-bottom-sheet" onclick="event.stopPropagation()">
+      <div class="x-bs-grab"></div>
+      <div class="x-bs-head">
+        <span class="ic-tile" style="background:var(--brand-soft); color:var(--brand-strong); width:36px; height:36px; display:grid; place-items:center; border-radius:8px;"><span data-icon="download" data-icon-size="16"></span></span>
+        <h3>Report card · Term ${state.term.slice(1)}</h3>
+        <button class="x-bs-close" data-close type="button"><span data-icon="x" data-icon-size="16"></span></button>
+      </div>
+      <div class="x-bs-body">
+        <p class="desc">A PDF report card is generated from your CA, exam and attendance data for the term. Hand-signed copies are also delivered on the last week of term.</p>
+        <div class="key-fact">
+          <div class="kf"><div class="l">GPA</div><div class="v">${t.gpa.toFixed(2)}</div></div>
+          <div class="kf"><div class="l">Position</div><div class="v">${t.pos} / ${STUDENT.formSize}</div></div>
+          <div class="kf"><div class="l">Attendance</div><div class="v">${STUDENT.attendance}%</div></div>
+          <div class="kf"><div class="l">Subjects</div><div class="v">${SUBJECTS.length}</div></div>
+        </div>
+        <div class="file-row">
+          <span class="ic"><span data-icon="folder" data-icon-size="14"></span></span>
+          <div style="flex:1;"><div class="nm">anesu-moyo-T${state.term.slice(1)}-2026.pdf</div><div class="sz">PDF · ~ 320 KB · ready</div></div>
+          <span data-icon="check" data-icon-size="14" style="color: var(--tone-success);"></span>
+        </div>
+      </div>
+      <div class="x-bs-foot">
+        <button class="alt" data-close>Cancel</button>
+        <button class="primary" id="rc-download">Download PDF</button>
+      </div>
+    </div>
+  `;
+  state.sheetWire = () => {
+    $('#rc-download')?.addEventListener('click', () => {
+      closeSheet();
+      toast('Downloading report card · check your files', 'success');
+    });
+  };
+  openSheet(html);
+}
+
+function openTimetableExport() {
+  toast('Timetable exported to Calendar', 'success');
+}
+
+function wireHome() {
+  $$('[data-open-class]').forEach(b => b.addEventListener('click', () => {
+    const [d, p] = b.dataset.openClass.split('-').map(Number);
+    openClassSheet(d, p);
+  }));
+}
+
+let swipeStartX = null;
+function wireTimetable() {
+  $$('[data-open-class]').forEach(b => b.addEventListener('click', () => {
+    const [d, p] = b.dataset.openClass.split('-').map(Number);
+    openClassSheet(d, p);
+  }));
+  $$('[data-week]').forEach(b => b.addEventListener('click', () => {
+    state.weekOffset += parseInt(b.dataset.week, 10);
+    render();
+    toast(state.weekOffset === 0 ? 'This week' : (state.weekOffset > 0 ? `Week +${state.weekOffset}` : `Week ${state.weekOffset}`));
+  }));
+  // Swipe between weeks on the timetable grid
+  const grid = $('#tt-grid');
+  if (grid) {
+    grid.addEventListener('touchstart', (e) => { swipeStartX = e.touches[0].clientX; }, { passive: true });
+    grid.addEventListener('touchend', (e) => {
+      if (swipeStartX === null) return;
+      const dx = e.changedTouches[0].clientX - swipeStartX;
+      swipeStartX = null;
+      if (Math.abs(dx) > 60) {
+        state.weekOffset += dx < 0 ? 1 : -1;
+        render();
+        toast(state.weekOffset === 0 ? 'This week' : (state.weekOffset > 0 ? `Week +${state.weekOffset}` : `Week ${state.weekOffset}`));
+      }
+    });
+  }
+}
+
+function wireMarks() {
+  $$('[data-term]').forEach(b => b.addEventListener('click', () => { state.term = b.dataset.term; render(); }));
+  $$('[data-marks]').forEach(b => b.addEventListener('click', () => openMarksSheet(b.dataset.marks)));
+}
+
+function wireAssignments() {
+  $$('[data-filter]').forEach(b => b.addEventListener('click', () => { state.asFilter = b.dataset.filter; render(); }));
+  $$('[data-as]').forEach(b => b.addEventListener('click', () => openAssignmentSheet(b.dataset.as)));
+}
+
+function wireLibrary() {
+  const inp = $('#lib-search');
+  if (inp) inp.addEventListener('input', (e) => {
+    state.libQuery = e.target.value;
+    render();
+    setTimeout(() => { const i = $('#lib-search'); if (i) { i.focus(); i.setSelectionRange(state.libQuery.length, state.libQuery.length); } }, 0);
+  });
+  const scanS = $('#lib-scan-search'); if (scanS) scanS.addEventListener('click', () => {
+    // Simulate scan-to-find: pick a book and surface as search query
+    const b = BOOKS.filter(x => !x.borrowed)[Math.floor(Math.random() * BOOKS.filter(x => !x.borrowed).length)];
+    state.libQuery = b.title.split(' ')[0];
+    render(); toast('Scanned ISBN · ' + b.title, 'success');
+  });
+  const scan = $('#lib-scan'); if (scan) scan.addEventListener('click', openScanReturn);
+  $$('[data-book]').forEach(b => b.addEventListener('click', (e) => {
+    // Don't open sheet if a button was clicked (renew/borrow/return)
+    if (e.target.closest('button')) return;
+    openBookSheet(b.dataset.book);
+  }));
+  $$('[data-borrow]').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const id = b.dataset.borrow;
+    state.libBorrowed[id] = true;
+    render();
+    const bk = BOOKS.find(x => x.id === id);
+    toast('Borrowed · ' + bk.title.split(' ').slice(0,2).join(' '), 'success');
+  }));
+  $$('[data-renew]').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.libRenewed[b.dataset.renew] = true;
+    render();
+    toast('Renewed · 14 more days', 'success');
+  }));
+  $$('[data-return]').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.libReturned[b.dataset.return] = true;
+    render();
+    toast('Returned', 'success');
+  }));
+  const pay = $('#lib-pay'); if (pay) pay.addEventListener('click', () => {
+    openModal(`
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3>Pay library fine?</h3>
+        <p class="sub">$ 2.50 will be charged to your boarder account. This will clear your overdue notice.</p>
+        <div class="acts">
+          <button class="alt" data-cancel>Cancel</button>
+          <button class="ok brand" data-ok>Pay $ 2.50</button>
+        </div>
+      </div>
+    `, () => {
+      $('[data-cancel]').addEventListener('click', closeModal);
+      $('[data-ok]').addEventListener('click', () => {
+        state.finePaid = true;
+        closeModal(); render();
+        toast('Fine paid · receipt sent to email', 'success');
+      });
+    });
+  });
+}
+
+function wireProfile() {
+  $$('[data-toggle]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.toggle;
+    state.prefs[k] = !state.prefs[k];
+    render();
+    toast(state.prefs[k] ? 'Enabled' : 'Disabled');
+  }));
+  $$('[data-theme]').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.prefs.theme = b.dataset.theme;
+    render();
+    toast('Theme: ' + b.dataset.theme);
+  }));
+  const so = $('#sign-out'); if (so) so.addEventListener('click', () => {
+    openModal(`
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3>Sign out of Huchu?</h3>
+        <p class="sub">You will need to enter your password to sign back in. Local drafts will be saved.</p>
+        <div class="acts">
+          <button class="alt" data-cancel>Cancel</button>
+          <button class="ok" data-ok>Sign out</button>
+        </div>
+      </div>
+    `, () => {
+      $('[data-cancel]').addEventListener('click', closeModal);
+      $('[data-ok]').addEventListener('click', () => {
+        closeModal();
+        state.signedOut = true;
+        render();
+      });
+    });
+  });
+}
+
+/* ============================================================
+   FULLSCREEN
+   ============================================================ */
+function setFullscreen(on) {
+  document.body.classList.toggle('is-fullscreen', on);
+  const lbl = $('#fs-label');
+  if (lbl) lbl.textContent = on ? 'Exit' : 'Fullscreen';
+  const ic = $('#fs-toggle [data-icon]');
+  if (ic) {
+    ic.dataset.icon = on ? 'x' : 'grid';
+    if (window.Icons) window.Icons.render($('#fs-toggle'));
+  }
+}
+$('#fs-toggle').addEventListener('click', () => {
+  const on = !document.body.classList.contains('is-fullscreen');
+  setFullscreen(on);
+  if (on) {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  } else if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) setFullscreen(document.body.classList.contains('is-fullscreen'));
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.body.classList.contains('is-fullscreen') && !document.fullscreenElement) {
+    setFullscreen(false);
+  }
+});
+
+/* === Init === */
+function init() {
+  if (/[?&]fullscreen=1/.test(location.search)) setFullscreen(true);
+  const r = (location.hash.replace(/^#\/?/, '') || 'home');
+  state.route = r;
+  // Bypass sign-in via query param ?demo=1
+  if (/[?&]demo=1/.test(location.search)) state.signedIn = true;
+  render();
+}
+
+if (document.readyState !== 'loading') init();
+else document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>

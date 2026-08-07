@@ -1,102 +1,36 @@
 /**
- * Global CRM search.
+ * The CRM's arm of global search.
  *
- * One query across every record type a user might be looking for, including
+ * One query across every record type a CRM user might be looking for, including
  * document numbers — someone holding a printed quotation should be able to
  * type QTN-0042 and land on the deal.
  *
  * Results carry enough context to tell two similar records apart. "John Dube"
  * alone is useless when there are three; "John Dube — Finance Manager, Delta
  * Interiors, 2 active deals" is not.
+ *
+ * The result shape, the group labels and the order they appear in are
+ * module-neutral and live in `lib/records/search-result.ts` — S-4.5 gave the
+ * schools module an arm of its own, and two copies of the shape would be two
+ * search experiences one refactor apart from disagreeing. `searchCrm` is called
+ * by `lib/records/search.ts`, which decides which arms a tenant is entitled to.
  */
 import type { Prisma } from "@prisma/client";
 
 import { normalizePhoneE164 } from "@/lib/crm/phone";
 import { PRODUCT_KIND_LABELS, UNIT_LABELS } from "@/lib/inventory/catalogue";
+import {
+  facts,
+  pluralise,
+  SEARCH_PER_TYPE_LIMIT,
+  type SearchResult,
+} from "@/lib/records/search-result";
 
 type Tx = Prisma.TransactionClient;
 
-export type SearchResultType =
-  | "PERSON"
-  | "COMPANY"
-  | "LEAD"
-  | "DEAL"
-  | "SITE"
-  | "QUOTATION"
-  | "INVOICE"
-  | "RECEIPT"
-  | "PRODUCT"
-  | "CUSTOMER";
-
-export type SearchFact = { label: string; value: string };
-
-export type SearchResult = {
-  type: SearchResultType;
-  id: string;
-  /** The record number, shown alongside the title. */
-  reference: string | null;
-  title: string;
-  /** One line of disambiguating detail, for the list row. */
-  subtitle: string | null;
-  /**
-   * The same detail, labelled, for the preview pane.
-   *
-   * A preview showing one line is a list row in a bigger box. The command bar
-   * gathered all of this already and then joined it with a middle dot, so the
-   * pane beside the results had nothing to say that the row had not.
-   */
-  facts: SearchFact[];
-  href: string;
-};
-
-/** Labelled facts, minus the ones with nothing in them. */
-function facts(entries: Array<[string, string | number | null | undefined]>): SearchFact[] {
-  return entries
-    .filter(([, value]) => value !== null && value !== undefined && value !== "")
-    .map(([label, value]) => ({ label, value: String(value) }));
-}
-
-export const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
-  PERSON: "People",
-  COMPANY: "Companies",
-  LEAD: "Leads",
-  DEAL: "Deals",
-  SITE: "Sites",
-  QUOTATION: "Quotations",
-  INVOICE: "Invoices",
-  RECEIPT: "Receipts",
-  PRODUCT: "Catalogue",
-  CUSTOMER: "Accounts",
-};
-
-/** Order groups appear in: the records people look for most, first. */
-export const SEARCH_TYPE_ORDER: SearchResultType[] = [
-  "DEAL",
-  "PERSON",
-  "COMPANY",
-  "LEAD",
-  "SITE",
-  "PRODUCT",
-  "QUOTATION",
-  "INVOICE",
-  "RECEIPT",
-  "CUSTOMER",
-];
-
-const PER_TYPE_LIMIT = 5;
-
-/** A query that looks like "QTN-0042" or "CRMD-7" is a record number, not a name. */
-export function looksLikeReference(query: string): boolean {
-  return /^[a-z]{2,6}-?\d{1,8}$/i.test(query.trim());
-}
-
-function pluralise(count: number, singular: string): string {
-  return `${count} ${singular}${count === 1 ? "" : "s"}`;
-}
-
 /**
- * Search across the workspace. Every query is tenant-scoped; the caller
- * supplies the companyId and no result can cross that boundary.
+ * Search the CRM and the ledgers beside it. Every query is tenant-scoped; the
+ * caller supplies the companyId and no result can cross that boundary.
  *
  * Deliberately not CRM-only. Someone typing a product code is looking for the
  * item in the shared catalogue whether they are quoting from the CRM, ringing
@@ -110,7 +44,7 @@ export async function searchCrm(
   const query = input.query.trim();
   if (query.length < 2) return [];
 
-  const take = input.limitPerType ?? PER_TYPE_LIMIT;
+  const take = input.limitPerType ?? SEARCH_PER_TYPE_LIMIT;
   const contains = { contains: query, mode: "insensitive" as const };
   const phoneE164 = normalizePhoneE164(query);
   const companyId = input.companyId;
@@ -508,13 +442,4 @@ export async function searchCrm(
   }
 
   return results;
-}
-
-/** Group flat results for rendering, in the order defined by SEARCH_TYPE_ORDER. */
-export function groupSearchResults(results: SearchResult[]) {
-  return SEARCH_TYPE_ORDER.map((type) => ({
-    type,
-    label: SEARCH_TYPE_LABELS[type],
-    results: results.filter((result) => result.type === type),
-  })).filter((group) => group.results.length > 0);
 }

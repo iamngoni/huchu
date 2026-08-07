@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { generateArrearsAgingReport } from "@/lib/schools/reports";
 
 const querySchema = z.object({
@@ -13,6 +14,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.reports", "view");
+    if (denied) return errorResponse(denied, 403);
 
     const { searchParams } = new URL(request.url);
     const query = querySchema.parse({

@@ -64,16 +64,24 @@ export class ConnectivityChangeEvent extends Event {
 
 // ── Internal State ───────────────────────────────────────────────────────────
 
+// `navigator.onLine`, not `navigator`: Node defines a global `navigator` with
+// no `onLine`, so testing the object alone reports the server as offline. See
+// the note in `hooks/use-offline-connectivity.ts`.
+const navigatorIsOnline =
+  typeof navigator !== "undefined" && typeof navigator.onLine === "boolean"
+    ? navigator.onLine
+    : true;
+
 const defaultState: ConnectivityState = {
-  isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
-  quality: typeof navigator !== "undefined" && navigator.onLine ? "online" : "offline",
+  isOnline: navigatorIsOnline,
+  quality: navigatorIsOnline ? "online" : "offline",
   latencyMs: 0,
   lastHeartbeatAt: null,
   consecutiveFailures: 0,
   consecutiveSuccesses: 0,
 };
 
-let currentState: ConnectivityState = { ...defaultState };
+const currentState: ConnectivityState = { ...defaultState };
 const latencyHistory: LatencyMeasurement[] = [];
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let isDestroyed = false;

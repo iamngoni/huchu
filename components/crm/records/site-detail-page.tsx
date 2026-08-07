@@ -15,16 +15,16 @@ import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
 
-import { customFieldAttributes } from "./custom-field-attributes";
+import { customFieldAttributes } from "@/components/records/custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
-import { RecordMark } from "./record-mark";
+import { RecordMark } from "@/components/records/record-mark";
 import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
-import { RecordAttributes } from "./record-attributes";
+import { RecordAttributes } from "@/components/records/record-attributes";
 import { RelationAttribute } from "./relation-attribute";
-import { useAttributeEditor } from "./use-attribute-editor";
-import { EntityLink } from "./entity-link";
+import { useAttributeEditor } from "@/components/records/use-attribute-editor";
+import { EntityLink } from "@/components/records/entity-link";
 import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
-import { RailSection, RecordPageShell, RelatedList } from "./record-page-shell";
+import { RailSection, RecordPageShell, RelatedList } from "@/components/records/record-page-shell";
 import { SiteFormSheet } from "./site-form-sheet";
 
 import { Stack } from "@corelithzw/react";

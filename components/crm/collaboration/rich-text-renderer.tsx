@@ -33,6 +33,14 @@ const GLYPH: Record<Reference["kind"], string> = {
   quotation: "§",
   invoice: "§",
   receipt: "§",
+  // Schools (S-4.5). A person is "@" whichever module they belong to; the
+  // things get marks that distinguish them at a glance in a sentence.
+  student: "@",
+  guardian: "@",
+  teacher: "@",
+  class: "▤",
+  subject: "❑",
+  hostel: "⌂",
 };
 
 /**

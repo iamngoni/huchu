@@ -13,7 +13,9 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { getTeacherProfile, isPrivilegedRole } from "@/lib/schools/governance-v2";
+import { getCurrentTerm } from "@/lib/schools/calendar";
 
 const attendanceEntryStatusSchema = z.enum(["PRESENT", "ABSENT", "LATE", "EXCUSED"]);
 const attendanceSessionStatusSchema = z.enum(["DRAFT", "SUBMITTED", "LOCKED"]);
@@ -29,7 +31,12 @@ const attendanceSessionsQuerySchema = z.object({
 });
 
 const createAttendanceSessionSchema = z.object({
-  termId: z.string().uuid(),
+  /**
+   * Absent means the school's current term. A teacher taking this morning's
+   * register is not choosing a term — there is one — and making the client
+   * fetch it first only adds a request that can disagree with the server.
+   */
+  termId: z.string().uuid().optional(),
   classId: z.string().uuid(),
   streamId: z.string().uuid().nullable().optional(),
   attendanceDate: z.string().date(),
@@ -178,6 +185,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.attendance", "view");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { searchParams } = new URL(request.url);
     const { page, limit, skip } = getPaginationParams(request);
@@ -244,14 +254,25 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.attendance", "create");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
     const body = await request.json();
     const validated = createAttendanceSessionSchema.parse(body);
 
+    const termId = validated.termId ?? (await getCurrentTerm(companyId))?.id;
+    if (!termId) {
+      return errorResponse(
+        "This school has no active term. Open an academic year and term under Academics before taking a register.",
+        409,
+      );
+    }
+
     const [term, schoolClass, stream] = await Promise.all([
       prisma.schoolTerm.findFirst({
-        where: { id: validated.termId, companyId },
+        where: { id: termId, companyId },
         select: { id: true },
       }),
       prisma.schoolClass.findFirst({
@@ -278,7 +299,7 @@ export async function POST(request: NextRequest) {
       companyId,
       userId: session.user.id,
       role: session.user.role,
-      termId: validated.termId,
+      termId,
       classId: validated.classId,
       streamId: validated.streamId ?? null,
     });
@@ -287,7 +308,7 @@ export async function POST(request: NextRequest) {
     const existing = await prisma.schoolAttendanceSession.findFirst({
       where: {
         companyId,
-        termId: validated.termId,
+        termId,
         classId: validated.classId,
         streamId: validated.streamId ?? null,
         attendanceDate,
@@ -321,7 +342,7 @@ export async function POST(request: NextRequest) {
       const sessionRow = await tx.schoolAttendanceSession.create({
         data: {
           companyId,
-          termId: validated.termId,
+          termId,
           classId: validated.classId,
           streamId: validated.streamId ?? null,
           attendanceDate,

@@ -50,11 +50,17 @@ export function VerticalDataViews({
   return (
     <section
       className={cn(
-        "grid gap-4 lg:grid-cols-[var(--rail-w)_minmax(0,1fr)]",
+        // `minmax(0,1fr)` on the single-column layout as well as the two-column
+        // one. Below `lg` the implicit track was `auto`, so the rail's
+        // max-content width — long labels, several views — set the width of the
+        // whole section, and every page using this component was wider than a
+        // phone. It did not read as broken because the app shell scrolls
+        // horizontally, so the content pane simply sat half off-screen.
+        "grid gap-4 grid-cols-[minmax(0,1fr)] lg:grid-cols-[var(--rail-w)_minmax(0,1fr)]",
         className,
       )}
     >
-      <aside className="lg:sticky lg:top-16 lg:self-start">
+      <aside className="min-w-0 lg:sticky lg:top-16 lg:self-start">
         <NavRail label={accessibleLabel} orientation="responsive">
           {railLabel ? <div className="group-label">{railLabel}</div> : null}
           {items.map((item) => {

@@ -339,17 +339,27 @@ flowchart LR
 
 ## 10. Current Delivery Status
 
+Audited 2026-08-04. Full findings, defects and the layered plan to production live in
+[`schools-production-readiness.md`](./schools-production-readiness.md) — read that before picking up work.
+
 | Requirement Theme | Status | Notes |
 |---|---|---|
-| Database schema | ✅ Complete | All models exist in `prisma/schema.prisma` |
+| Database schema | ✅ Complete | 27 `School*` models in the baseline migration |
 | Basic dashboard | ✅ Delivered | Shows metrics from `/api/v2` |
-| Detail pages | ❌ Missing | Need student/teacher/guardian/hostel detail pages with tabs |
-| Fee workflows | ⚠️ Partial | Basic API exists; needs invoice generation, receipt posting |
-| Receipt posting | ❌ Missing | Posting integration needed |
-| Portals | ⚠️ Partial | Portal login exists; content shells incomplete |
-| Academics | ⚠️ Partial | Basic result sheets exist; moderation/publishing incomplete |
-| Boarding | ⚠️ Partial | Basic allocation API exists; leave/check-in incomplete |
-| Reporting | ❌ Missing | Export and scheduled reports needed |
+| Detail pages | ✅ Delivered | Student/teacher/guardian/class/hostel detail pages shipped |
+| Academic year & terms | ❌ Missing | No API, UI or seed creates them — blocks every term-keyed workflow |
+| Provisioning | ❌ Missing | Org-provision wizard seeds no school domain data |
+| Fee workflows | ✅ Delivered | Structures, bulk invoice generation, receipts, allocation, waivers, write-offs |
+| Receipt posting | ⚠️ Partial | Emits a PENDING `AccountingIntegrationEvent`; never creates a journal entry |
+| Fee money model | ❌ Unsound | `Float` columns, no `currency`, allocation races, no duplicate-invoice constraint |
+| Portals | ⚠️ Partial | Shells and hosts shipped; identity resolved by email string match, no account provisioning |
+| Academics | ⚠️ Partial | Result sheets, moderation and publish windows are real; grading scale, per-subject sheets and aggregates missing |
+| Timetable | ❌ Not real | No model; slots are fabricated by array index |
+| Admissions | ⚠️ Partial | Read-only enrolment list; no intake/verification/offer workflow |
+| Boarding | ⚠️ Partial | Allocation and leave shipped; gender policy and capacity unenforced |
+| Reporting | ⚠️ Partial | Report queries are real; PDF export is a placeholder and CSV is unescaped |
+| Authorization | ❌ Unsound | 56 of 72 routes have no role check; `TEACHER` can post receipts and write off debt |
+| Tests | ❌ Missing | No schools test exists |
 
 ## 11. Implementation Phases
 

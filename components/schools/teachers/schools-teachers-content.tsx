@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MobileList, MobileListEmpty } from "@corelithzw/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
+import { PersonAvatar } from "@/components/schools/common/person-avatar";
 import {
   Dialog,
   DialogContent,
@@ -17,14 +19,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { NumericCell } from "@/components/ui/numeric-cell";
+import { EmployeeLinkCell } from "./employee-link-cell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VerticalDataViews } from "@/components/ui/vertical-data-views";
+import { FilterBar, FilterSelect } from "@/components/schools/common/filter-select";
+import {
+  BulkAllocationSheet,
+  type BulkAllocationResult,
+  type BulkAllocationValues,
+} from "./bulk-allocation-sheet";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
   fetchTeacherProfileUsers,
   fetchTeacherAssignments,
   fetchTeacherProfiles,
   fetchTeacherSubjects,
+  fetchSchoolsClasses,
   type TeacherAssignmentRecord,
   type TeacherProfileRecord,
   type TeacherProfileUserRecord,
@@ -32,6 +42,23 @@ import {
 } from "@/lib/schools/admin-v2";
 
 type TeachersView = "profiles" | "subjects" | "assignments";
+
+/**
+ * "Still here" versus "has left" for staff, and "still taught" for subjects.
+ * Both were previously baked into the sort — `isActive desc` — which made the
+ * list neither alphabetical nor filterable. It is a filter now, and the order
+ * is plain alphabetical.
+ */
+type ActiveFilter = "all" | "active" | "inactive";
+
+const ACTIVE_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
+function activeParam(filter: ActiveFilter) {
+  return filter === "all" ? undefined : filter === "active";
+}
 
 const initialSubjectForm = { code: "", name: "", isCore: false, passMark: "50" };
 const initialTeacherForm = {
@@ -45,6 +72,11 @@ const initialTeacherForm = {
 export function SchoolsTeachersContent() {
   const [activeView, setActiveView] = useState<TeachersView>("profiles");
   const queryClient = useQueryClient();
+  const [profileActiveFilter, setProfileActiveFilter] = useState<ActiveFilter>("all");
+  const [subjectActiveFilter, setSubjectActiveFilter] = useState<ActiveFilter>("all");
+  const [allocateOpen, setAllocateOpen] = useState(false);
+  const [allocateError, setAllocateError] = useState<string | null>(null);
+  const [allocateResult, setAllocateResult] = useState<BulkAllocationResult | null>(null);
 
   const [subjectDialogOpen, setSubjectDialogOpen] = useState(false);
   const [subjectForm, setSubjectForm] = useState(initialSubjectForm);
@@ -122,16 +154,30 @@ export function SchoolsTeachersContent() {
     queryFn: () => fetchTeacherProfileUsers({ page: 1, limit: 500, active: true }),
   });
   const profilesQuery = useQuery({
-    queryKey: ["schools", "teachers", "profiles"],
-    queryFn: () => fetchTeacherProfiles({ page: 1, limit: 200 }),
+    queryKey: ["schools", "teachers", "profiles", profileActiveFilter],
+    queryFn: () =>
+      fetchTeacherProfiles({
+        page: 1,
+        limit: 200,
+        isActive: activeParam(profileActiveFilter),
+      }),
   });
   const subjectsQuery = useQuery({
-    queryKey: ["schools", "teachers", "subjects"],
-    queryFn: () => fetchTeacherSubjects({ page: 1, limit: 200 }),
+    queryKey: ["schools", "teachers", "subjects", subjectActiveFilter],
+    queryFn: () =>
+      fetchTeacherSubjects({
+        page: 1,
+        limit: 200,
+        isActive: activeParam(subjectActiveFilter),
+      }),
   });
   const assignmentsQuery = useQuery({
     queryKey: ["schools", "teachers", "assignments"],
     queryFn: () => fetchTeacherAssignments({ page: 1, limit: 200 }),
+  });
+  const classesQuery = useQuery({
+    queryKey: ["schools", "teachers", "classes"],
+    queryFn: () => fetchSchoolsClasses({ page: 1, limit: 200 }),
   });
 
   const profiles = useMemo(() => profilesQuery.data?.data ?? [], [profilesQuery.data]);
@@ -144,6 +190,31 @@ export function SchoolsTeachersContent() {
     () => teacherUsersQuery.data?.data ?? [],
     [teacherUsersQuery.data],
   );
+  const classes = useMemo(() => classesQuery.data?.data ?? [], [classesQuery.data]);
+
+  const allocate = useMutation({
+    mutationFn: async (values: BulkAllocationValues) =>
+      fetchJson<BulkAllocationResult>("/api/v2/schools/teachers/assignments/bulk", {
+        method: "POST",
+        body: JSON.stringify({
+          subjectId: values.subjectId,
+          teacherProfileId: values.teacherProfileId,
+          targets: values.classIds.map((classId) => ({ classId })),
+        }),
+      }),
+    onSuccess: (result) => {
+      // Kept open: "3 lessons now clash" is the part that needs acting on.
+      queryClient.invalidateQueries({ queryKey: ["schools", "teachers"] });
+      queryClient.invalidateQueries({ queryKey: ["schools", "timetable"] });
+      setAllocateResult(result);
+      setAllocateError(null);
+    },
+    onError: (error) => {
+      setAllocateResult(null);
+      setAllocateError(getApiErrorMessage(error));
+    },
+  });
+
   const profiledUserIds = useMemo(() => new Set(profiles.map((profile) => profile.user.id)), [profiles]);
   const availableTeacherUsers = useMemo(
     () => teacherUsers.filter((user) => !profiledUserIds.has(user.id)),
@@ -164,11 +235,16 @@ export function SchoolsTeachersContent() {
       {
         id: "teacher",
         header: "Teacher",
+        // Staff get a face for the same reason pupils do: a directory is
+        // scanned, not read.
         cell: ({ row }) => (
-          <div>
-            <div className="font-medium">{row.original.user.name}</div>
-            <div className="text-xs text-muted-foreground">
-              {row.original.employeeCode} / {row.original.user.email}
+          <div className="flex items-center gap-3">
+            <PersonAvatar name={row.original.user.name} />
+            <div className="min-w-0">
+              <div className="font-medium">{row.original.user.name}</div>
+              <div className="text-xs text-muted-foreground">
+                {row.original.employeeCode} / {row.original.user.email}
+              </div>
             </div>
           </div>
         ),
@@ -197,6 +273,14 @@ export function SchoolsTeachersContent() {
         cell: ({ row }) => <NumericCell>{row.original._count.assignments}</NumericCell>,
       },
       {
+        // In the list rather than on a detail page: the useful question is
+        // "which of my staff are not joined up", and that is only answerable
+        // from here.
+        id: "hr",
+        header: "HR record",
+        cell: ({ row }) => <EmployeeLinkCell profile={row.original} />,
+      },
+      {
         id: "active",
         header: "Active",
         cell: ({ row }) => (
@@ -214,10 +298,12 @@ export function SchoolsTeachersContent() {
       {
         id: "subject",
         header: "Subject",
+        // Name first: the list is sorted by name, and leading with the code
+        // made an alphabetical list look arbitrary.
         cell: ({ row }) => (
           <div>
-            <div className="font-medium">{row.original.code}</div>
-            <div className="text-xs text-muted-foreground">{row.original.name}</div>
+            <div className="font-medium">{row.original.name}</div>
+            <div className="text-xs text-muted-foreground">{row.original.code}</div>
           </div>
         ),
       },
@@ -331,47 +417,165 @@ export function SchoolsTeachersContent() {
         railLabel="Teacher Views"
       >
         <div className={activeView === "profiles" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Teacher Profiles</h2>
             <Button size="sm" onClick={openTeacherDialog}>
               Add Teacher
             </Button>
           </div>
+          <FilterBar>
+            <FilterSelect
+              label="Status"
+              allLabel="Everyone"
+              value={profileActiveFilter === "all" ? "" : profileActiveFilter}
+              options={ACTIVE_OPTIONS}
+              onChange={(value) => setProfileActiveFilter((value || "all") as ActiveFilter)}
+            />
+          </FilterBar>
           <DataTable
             data={profiles}
             columns={profileColumns}
             searchPlaceholder="Search teacher profiles"
             searchSubmitLabel="Search"
             pagination={{ enabled: true }}
+            mobileListRenderer={({ rows }) => (
+              <MobileList>
+                {rows.length === 0 ? (
+                  <MobileListEmpty>
+                    {profilesQuery.isLoading ? "Loading profiles…" : "No profiles found."}
+                  </MobileListEmpty>
+                ) : (
+                  rows.map(({ row }) => (
+                    <MobileList.Row
+                      key={row.id}
+                      title={row.user.name ?? row.employeeCode}
+                      subtitle={[
+                        row.employeeCode,
+                        row.department,
+                        row.employee ? `HR ${row.employee.employeeId}` : "No HR record",
+                        row.isHod ? "HOD" : null,
+                        row.isClassTeacher ? "Class teacher" : null,
+                        row.isActive ? null : "Inactive",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                      onClick={() => {
+                        window.location.href = `/schools/teachers/${row.id}`;
+                      }}
+                    />
+                  ))
+                )}
+              </MobileList>
+            )}
             emptyState={profilesQuery.isLoading ? "Loading profiles..." : "No profiles found."}
           />
         </div>
 
         <div className={activeView === "subjects" ? "space-y-2" : "hidden"}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-section-title">Subjects</h2>
             <Button size="sm" onClick={() => setSubjectDialogOpen(true)}>
               Add Subject
             </Button>
           </div>
+          <FilterBar>
+            <FilterSelect
+              label="Status"
+              allLabel="All subjects"
+              value={subjectActiveFilter === "all" ? "" : subjectActiveFilter}
+              options={ACTIVE_OPTIONS}
+              onChange={(value) => setSubjectActiveFilter((value || "all") as ActiveFilter)}
+            />
+          </FilterBar>
           <DataTable
             data={subjects}
             columns={subjectColumns}
             searchPlaceholder="Search subjects"
             searchSubmitLabel="Search"
             pagination={{ enabled: true }}
+            mobileListRenderer={({ rows }) => (
+              <MobileList>
+                {rows.length === 0 ? (
+                  <MobileListEmpty>
+                    {subjectsQuery.isLoading ? "Loading subjects…" : "No subjects found."}
+                  </MobileListEmpty>
+                ) : (
+                  rows.map(({ row }) => (
+                    <MobileList.Row
+                      key={row.id}
+                      static
+                      title={row.name}
+                      subtitle={[
+                        row.code,
+                        row.isCore ? "Core" : "Optional",
+                        `Pass ${row.passMark}%`,
+                        row.isActive ? null : "Inactive",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    />
+                  ))
+                )}
+              </MobileList>
+            )}
             emptyState={subjectsQuery.isLoading ? "Loading subjects..." : "No subjects found."}
           />
         </div>
 
         <div className={activeView === "assignments" ? "space-y-2" : "hidden"}>
-          <h2 className="text-section-title">Class-Subject Assignments</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-section-title">Class-Subject Assignments</h2>
+            <Button
+              size="sm"
+              disabled={subjects.length === 0 || profiles.length === 0}
+              onClick={() => {
+                setAllocateError(null);
+                setAllocateResult(null);
+                setAllocateOpen(true);
+              }}
+            >
+              Allocate a teacher
+            </Button>
+          </div>
           <DataTable
             data={assignments}
             columns={assignmentColumns}
             searchPlaceholder="Search assignments"
             searchSubmitLabel="Search"
             pagination={{ enabled: true }}
+            rowGroup={(row) => ({
+              key: `${row.class.id}:${row.stream?.id ?? ""}`,
+              label: row.stream
+                ? `${row.class.name} · ${row.stream.name}`
+                : row.class.name,
+            })}
+            mobileListRenderer={({ rows }) => (
+              <MobileList>
+                {rows.length === 0 ? (
+                  <MobileListEmpty>
+                    {assignmentsQuery.isLoading
+                      ? "Loading assignments…"
+                      : "No assignments found."}
+                  </MobileListEmpty>
+                ) : (
+                  rows.map(({ row }) => (
+                    <MobileList.Row
+                      key={row.id}
+                      static
+                      title={`${row.subject.code} - ${row.subject.name}`}
+                      subtitle={[
+                        row.class.name,
+                        row.stream?.name,
+                        row.teacherProfile?.user.name,
+                        row.term.name,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    />
+                  ))
+                )}
+              </MobileList>
+            )}
             emptyState={
               assignmentsQuery.isLoading ? "Loading assignments..." : "No assignments found."
             }
@@ -564,6 +768,24 @@ export function SchoolsTeachersContent() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <BulkAllocationSheet
+        open={allocateOpen}
+        onOpenChange={(open) => {
+          setAllocateOpen(open);
+          if (!open) {
+            setAllocateError(null);
+            setAllocateResult(null);
+          }
+        }}
+        subjects={subjects}
+        teachers={profiles}
+        classes={classes}
+        isSubmitting={allocate.isPending}
+        error={allocateError}
+        result={allocateResult}
+        onSubmit={(values) => allocate.mutate(values)}
+      />
     </div>
   );
 }

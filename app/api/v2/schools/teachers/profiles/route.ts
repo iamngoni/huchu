@@ -8,6 +8,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { isUniqueConstraintError } from "../../_helpers";
 
 const profilesQuerySchema = z.object({
@@ -32,6 +33,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.teachers", "view");
+    if (denied) return errorResponse(denied, 403);
     const { searchParams } = new URL(request.url);
     const { page, limit, skip } = getPaginationParams(request);
 
@@ -60,9 +64,19 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           user: { select: { id: true, name: true, email: true, isActive: true } },
+          // The HR record for the same person, so the list can say which
+          // teachers are not joined up yet rather than leaving it invisible.
+          employee: { select: { id: true, employeeId: true, name: true, jobTitle: true } },
           _count: { select: { assignments: true } },
         },
-        orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }, { createdAt: "desc" }],
+        // Alphabetical by the name on screen. This was `isActive desc,
+        // updatedAt desc`, so the staff list reshuffled itself every time
+        // anyone edited a profile and there was no way to find a teacher by
+        // running an eye down it. Active-versus-left is a filter, not an order.
+        orderBy: [
+          { user: { name: "asc" } },
+          { employeeCode: "asc" },
+        ],
         skip,
         take: limit,
       }),
@@ -84,6 +98,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.teachers", "create");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
     const body = await request.json();
@@ -109,6 +126,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         user: { select: { id: true, name: true, email: true, isActive: true } },
+        employee: { select: { id: true, employeeId: true, name: true, jobTitle: true } },
         _count: { select: { assignments: true } },
       },
     });

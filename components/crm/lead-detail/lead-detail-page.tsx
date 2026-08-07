@@ -27,7 +27,7 @@ import { visitItemsToQuotationLines } from "@/lib/crm/site-visits";
 import type { CrmDocumentLineInput } from "@/lib/crm/accounting-bridge";
 
 import { DocumentList } from "@/components/crm/documents/document-list";
-import { EntityLink } from "@/components/crm/records/entity-link";
+import { EntityLink } from "@/components/records/entity-link";
 import { formatMoney, invoiceOutstanding } from "@/components/crm/documents/document-types";
 import { LeadFormSheet } from "@/components/crm/leads/lead-form-sheet";
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
@@ -54,14 +54,14 @@ import {
   type NextInteraction,
 } from "@/components/crm/records/record-panels";
 import { RecordStory } from "@/components/crm/records/record-story";
-import { customFieldAttributes } from "@/components/crm/records/custom-field-attributes";
-import { RecordAttributes } from "@/components/crm/records/record-attributes";
+import { customFieldAttributes } from "@/components/records/custom-field-attributes";
+import { RecordAttributes } from "@/components/records/record-attributes";
 // RailSection comes from the shell rather than being redefined here: this
 // file had its own copy, which is why the rail on a lead kept its frames
 // when every other record lost theirs.
-import { RailSection, RecordPageShell } from "@/components/crm/records/record-page-shell";
+import { RailSection, RecordPageShell } from "@/components/records/record-page-shell";
 import { RelationAttribute } from "@/components/crm/records/relation-attribute";
-import { useAttributeEditor } from "@/components/crm/records/use-attribute-editor";
+import { useAttributeEditor } from "@/components/records/use-attribute-editor";
 import { buildStory } from "@/lib/crm/story";
 import { AttributesPanel } from "./attributes-panel";
 import { StageProgress } from "./stage-progress";

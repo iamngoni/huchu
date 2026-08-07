@@ -9,6 +9,8 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import { money, sumMoney } from "@/lib/schools/money";
 
 const querySchema = z.object({
   search: z.string().trim().min(1).optional(),
@@ -39,15 +41,14 @@ const createSchema = z.object({
   lines: z.array(structureLineSchema).min(1),
 });
 
-function toMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "view");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -101,12 +102,12 @@ export async function GET(request: NextRequest) {
         "lines" in record && Array.isArray(record.lines) ? record.lines : [];
       return {
         ...record,
+        // Post S-2.1 Float→Decimal: `line.amount` is a `Prisma.Decimal`, and
+        // `successResponse` turns these back into numbers on the way out.
         totals: {
-          amount: toMoney(lines.reduce((sum, line) => sum + line.amount, 0)),
-          mandatoryAmount: toMoney(
-            lines
-              .filter((line) => line.isMandatory)
-              .reduce((sum, line) => sum + line.amount, 0),
+          amount: sumMoney(lines.map((line) => line.amount)),
+          mandatoryAmount: sumMoney(
+            lines.filter((line) => line.isMandatory).map((line) => line.amount),
           ),
         },
       };
@@ -127,6 +128,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "create");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
     const body = await request.json();
@@ -165,7 +169,7 @@ export async function POST(request: NextRequest) {
             companyId,
             feeCode: line.feeCode.toUpperCase(),
             description: line.description,
-            amount: toMoney(line.amount),
+            amount: money(line.amount),
             isMandatory: line.isMandatory ?? true,
             sortOrder: line.sortOrder ?? index,
           })),

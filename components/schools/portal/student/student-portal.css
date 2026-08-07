@@ -1,0 +1,1034 @@
+/* ============================================================
+   Student portal skin — ported from the build contract at
+   docs/design-system/portals/student.html so the built screens
+   read like the demo. Every colour is a token from the
+   @corelithzw/react sheet (same sheet as docs/tokens.css);
+   no hex literals. Everything is scoped under `.student-portal`,
+   the class the shell puts on the MobileShell root.
+   ============================================================ */
+
+/* ── Shell chrome ──────────────────────────────────────────
+   The demo's app bar is a left-aligned bold title with the bell
+   and avatar on the right (`.ps-appbar h1 { flex: 1 }`). The DS
+   MobileShellHeader centres its title with inline styles, so the
+   overrides need !important to win. */
+.student-portal .x-mobile-shell-header {
+  height: 52px !important;
+}
+/* The empty 40px left-action spacer pushes the title off the demo's
+   16px gutter; the student shell never passes a leftAction. */
+.student-portal .x-mobile-shell-header > div:first-child {
+  display: none !important;
+}
+.student-portal .x-mobile-shell-header > div:nth-child(2) {
+  text-align: left !important;
+  font: 700 17px/1.2 var(--font-sans) !important;
+  letter-spacing: -0.01em;
+  color: var(--text-strong) !important;
+}
+
+.student-portal .sp-appbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.student-portal .sp-nav-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--text-strong);
+  text-decoration: none;
+}
+.student-portal .sp-nav-btn:hover { background: var(--surface-muted); }
+
+/* Bottom tabs — the demo bar is 64px with a safe-area inset and a
+   22px icon well. Both the DS CSS class and the component's inline
+   styles are in play, so height needs !important. */
+.student-portal .b-bottom-tabs {
+  height: 64px !important;
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 8px));
+  box-shadow: var(--shadow-bar-bottom);
+}
+.student-portal .b-bottom-tabs .b-bt-ic {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+.student-portal .b-bottom-tab-item.active { color: var(--brand) !important; }
+
+/* One screen's page box. The demo runs a 16px gutter (12px on true
+   phones) and leaves room for the tab bar under the last card. */
+.student-portal .sp-page {
+  padding: 14px 16px calc(80px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 400px) {
+  .student-portal .sp-page { padding-left: 12px; padding-right: 12px; }
+}
+
+/* Demo `.greet` — the greeting block above the first section. */
+.student-portal .sp-greet-h {
+  font: 700 20px/1.2 var(--font-sans);
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  margin: 0;
+}
+.student-portal .sp-greet {
+  font: 500 13px/1.3 var(--font-sans);
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Section header (demo `.demo-psh`) ─────────────────────
+   Small-caps eyebrow with an optional link on the right. */
+.student-portal .sp-psh {
+  padding: 14px 0 8px;
+  font: 500 11.5px/1 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.student-portal .sp-psh a,
+.student-portal .sp-psh .sp-psh-link {
+  font: 500 12px/1 var(--font-sans);
+  color: var(--brand-strong);
+  text-decoration: none;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+/* ── Subject accents ───────────────────────────────────────
+   The demo hard-codes seven subject colours; here the same seven
+   hues come from the DS accent sets, assigned per subject by the
+   screens. Each class sets three custom properties the widgets
+   below read. */
+.student-portal .sp-c-0 { --sp-a: var(--accent-blue-solid);   --sp-a-bg: var(--accent-blue-bg);   --sp-a-fg: var(--accent-blue-fg); }
+.student-portal .sp-c-1 { --sp-a: var(--accent-pink-solid);   --sp-a-bg: var(--accent-pink-bg);   --sp-a-fg: var(--accent-pink-fg); }
+.student-portal .sp-c-2 { --sp-a: var(--accent-red-solid);    --sp-a-bg: var(--accent-red-bg);    --sp-a-fg: var(--accent-red-fg); }
+.student-portal .sp-c-3 { --sp-a: var(--accent-orange-solid); --sp-a-bg: var(--accent-orange-bg); --sp-a-fg: var(--accent-orange-fg); }
+.student-portal .sp-c-4 { --sp-a: var(--accent-green-solid);  --sp-a-bg: var(--accent-green-bg);  --sp-a-fg: var(--accent-green-fg); }
+.student-portal .sp-c-5 { --sp-a: var(--accent-violet-solid); --sp-a-bg: var(--accent-violet-bg); --sp-a-fg: var(--accent-violet-fg); }
+.student-portal .sp-c-6 { --sp-a: var(--accent-cyan-solid);   --sp-a-bg: var(--accent-cyan-bg);   --sp-a-fg: var(--accent-cyan-fg); }
+.student-portal .sp-c-7 { --sp-a: var(--accent-teal-solid);   --sp-a-bg: var(--accent-teal-bg);   --sp-a-fg: var(--accent-teal-fg); }
+.student-portal .sp-c-8 { --sp-a: var(--accent-indigo-solid); --sp-a-bg: var(--accent-indigo-bg); --sp-a-fg: var(--accent-indigo-fg); }
+.student-portal .sp-c-9 { --sp-a: var(--accent-amber-solid);  --sp-a-bg: var(--accent-amber-bg);  --sp-a-fg: var(--accent-amber-fg); }
+
+/* ── Home: next-class card (demo `.next-class`) ────────────── */
+.student-portal .sp-next-class {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+}
+.student-portal .sp-next-class .sp-nc-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: var(--brand-100);
+  color: var(--brand);
+  display: grid;
+  place-items: center;
+}
+.student-portal .sp-next-class .sp-nc-badge .sp-nc-col { display: grid; gap: 3px; place-items: center; }
+.student-portal .sp-next-class .sp-nc-badge .sp-nc-t { font: 700 14px/1 var(--font-mono); }
+.student-portal .sp-next-class .sp-nc-badge .sp-nc-d {
+  font: 500 9px/1 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.student-portal .sp-next-class .sp-nc-nm { font: 600 15px/1.3 var(--font-sans); color: var(--text-strong); }
+.student-portal .sp-next-class .sp-nc-sb { font: 12px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+.student-portal .sp-next-class .sp-nc-meta {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--text-subtle);
+  margin-top: 6px;
+  display: inline-flex;
+  gap: 10px;
+}
+.student-portal .sp-next-class .sp-nc-chev { color: var(--text-subtle); display: inline-flex; }
+
+/* ── Home: week glance (demo `.week-glance`) ──────────────── */
+.student-portal .sp-week-glance {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.student-portal .sp-week-glance .sp-wg-h {
+  font: 600 13px/1 var(--font-sans);
+  color: var(--text-strong);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.student-portal .sp-week-glance .sp-wg-h .sp-wg-sb { font: 500 11px/1 var(--font-mono); color: var(--text-muted); }
+.student-portal .sp-week-glance .sp-wg-days {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+.student-portal .sp-week-glance .sp-wg-day {
+  padding: 6px 2px;
+  border-radius: 6px;
+  text-align: center;
+  background: var(--surface-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.student-portal .sp-week-glance .sp-wg-day.today { background: var(--brand-soft); }
+.student-portal .sp-week-glance .sp-wg-day .sp-wg-lbl {
+  font: 600 10px/1 var(--font-sans);
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.student-portal .sp-week-glance .sp-wg-day.today .sp-wg-lbl { color: var(--brand-strong); }
+.student-portal .sp-week-glance .sp-wg-day .sp-wg-dots { display: inline-flex; gap: 2px; min-height: 5px; }
+.student-portal .sp-week-glance .sp-wg-day .sp-wg-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-strong);
+}
+
+/* ── KPI tiles (demo `.kpi-row` / `.kpi` / `.kpi.brand`) ──── */
+.student-portal .sp-kpi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.student-portal .sp-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.student-portal .sp-kpi .sp-kpi-l {
+  font: 500 10.5px/1.3 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.student-portal .sp-kpi .sp-kpi-v {
+  font: 700 22px/1.05 var(--font-sans);
+  color: var(--text-strong);
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.student-portal .sp-kpi .sp-kpi-v.sm { font-size: 16px; font-weight: 600; }
+.student-portal .sp-kpi .sp-kpi-sb { font: 11.5px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 4px; }
+.student-portal .sp-kpi.brand { background: var(--ink); color: var(--text-inverse); border-color: transparent; }
+.student-portal .sp-kpi.brand .sp-kpi-l { color: var(--text-inverse); opacity: 0.65; }
+.student-portal .sp-kpi.brand .sp-kpi-v { color: var(--text-inverse); }
+.student-portal .sp-kpi.brand .sp-kpi-sb { color: var(--text-inverse); opacity: 0.75; }
+.student-portal .sp-kpi .sp-kpi-delta { font: 500 11px/1 var(--font-sans); color: var(--tone-success); margin-left: 6px; }
+.student-portal .sp-kpi .sp-kpi-delta.down { color: var(--tone-danger); }
+
+/* ── Home: school-news / dark banner card ──────────────────── */
+.student-portal .sp-ink-card {
+  background: var(--ink);
+  color: var(--text-inverse);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+}
+.student-portal .sp-ink-card .sp-ink-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--accent-amber-bg);
+  color: var(--accent-amber-fg);
+  display: grid;
+  place-items: center;
+}
+.student-portal .sp-ink-card .sp-ink-nm { font: 600 14px/1.3 var(--font-sans); color: var(--text-inverse); }
+.student-portal .sp-ink-card .sp-ink-sb { font: 12.5px/1.4 var(--font-sans); color: var(--text-inverse); opacity: 0.78; margin-top: 3px; }
+.student-portal .sp-ink-card .sp-ink-chev { color: var(--text-inverse); opacity: 0.6; display: inline-flex; }
+
+/* ── Timetable: week label + day picker (demo `.tt-wk-nav`) ──
+   The demo's arrows step a week at a time; this portal's route has
+   no week offset, so the label stands on its own rather than
+   flanked by buttons that would do nothing. */
+.student-portal .sp-tt-nav {
+  text-align: center;
+  font: 600 13px/1.3 var(--font-sans);
+  color: var(--text-strong);
+  padding: 4px 0 10px;
+}
+.student-portal .sp-tt-nav .sp-tt-nav-sb {
+  font: 11px/1.3 var(--font-mono);
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: block;
+}
+.student-portal .sp-tt-days { padding: 12px 0 0; }
+
+/* ── Timetable: week grid (demo `.tt-grid`) ────────────────── */
+.student-portal .sp-tt { padding: 4px 0 0; }
+.student-portal .sp-tt .sp-tt-tbl {
+  display: grid;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+}
+.student-portal .sp-tt .sp-tt-hd {
+  font: 600 10px/1 var(--font-sans);
+  color: var(--text-strong);
+  text-align: center;
+  padding: 6px 0 4px;
+}
+.student-portal .sp-tt .sp-tt-hd.today { color: var(--brand-strong); }
+.student-portal .sp-tt .sp-tt-tm {
+  font: 500 9px/1.2 var(--font-mono);
+  color: var(--text-subtle);
+  text-align: right;
+  padding: 6px 4px 0 0;
+}
+/* Grid tracks must be allowed to shrink below their content's min-content
+   width, or one long subject name pushes Friday off the screen. */
+.student-portal .sp-tt .sp-tt-tbl > *,
+.student-portal .sp-tt .sp-tt-tbl .contents > * { min-width: 0; }
+.student-portal .sp-tt .sp-tt-cell { padding: 0; min-height: 42px; min-width: 0; overflow: hidden; }
+.student-portal .sp-tt .sp-pd {
+  min-width: 0;
+  overflow: hidden;
+}
+.student-portal .sp-tt .sp-pd {
+  background: var(--sp-a-bg, var(--surface-muted));
+  border-left: 3px solid var(--sp-a, var(--brand));
+  border-radius: 6px;
+  padding: 5px;
+  height: 100%;
+  min-height: 42px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* "Combined Science" wraps at the space rather than becoming "Combine / d
+   Science"; `break-word` only splits a word that cannot fit a line on its own,
+   which is the one case (a long single word like "Mathematics") where clipping
+   would otherwise lose the end of the name. */
+.student-portal .sp-tt .sp-pd .sp-pd-nm {
+  font: 600 8.5px/1.2 var(--font-sans);
+  color: var(--text-strong);
+  overflow-wrap: break-word;
+  hyphens: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.student-portal .sp-tt .sp-pd .sp-pd-rm {
+  font: 500 8.5px/1 var(--font-mono);
+  color: var(--text-muted);
+  margin-top: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.student-portal .sp-tt .sp-pd.free {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  justify-content: center;
+  align-items: center;
+}
+.student-portal .sp-tt .sp-pd.free .sp-pd-nm { color: var(--text-subtle); font-weight: 500; }
+.student-portal .sp-tt .sp-tt-cell.today .sp-pd { box-shadow: 0 0 0 2px var(--focus-ring-soft); }
+
+/* Timetable summary list header (demo `.tt-summary .h`) reuses .sp-psh. */
+.student-portal .sp-list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: clip;
+}
+.student-portal .sp-list-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+  background: transparent;
+}
+.student-portal .sp-list-row:last-child { border-bottom: 0; }
+.student-portal .sp-list-row .sp-lr-nm { font: 500 14px/1.3 var(--font-sans); color: var(--text-strong); }
+.student-portal .sp-list-row .sp-lr-sb { font: 12px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 2px; }
+.student-portal .sp-list-row .sp-lr-chev { color: var(--text-subtle); display: inline-flex; }
+.student-portal .sp-ic-tile {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  background: var(--sp-a-bg, var(--surface-muted));
+  color: var(--sp-a-fg, var(--text-strong));
+  border-radius: 8px;
+  flex: none;
+}
+.student-portal .sp-ic-tile.brand { background: var(--brand-soft); color: var(--brand-strong); }
+
+/* ── Marks: term tabs (demo `.term-tabs`) ──────────────────── */
+.student-portal .sp-term-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 0 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.student-portal .sp-term-row::-webkit-scrollbar { display: none; }
+.student-portal .sp-term-year {
+  font: 500 12px/1 var(--font-sans);
+  color: var(--text-muted);
+  flex: none;
+}
+.student-portal .sp-term-tabs {
+  display: inline-flex;
+  padding: 4px;
+  background: var(--surface-muted);
+  border-radius: 10px;
+  gap: 2px;
+}
+.student-portal .sp-term-tabs button {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font: 500 13px/1 var(--font-sans);
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.student-portal .sp-term-tabs button.on {
+  background: var(--surface);
+  color: var(--text-strong);
+  box-shadow: var(--shadow-inset-soft);
+  font-weight: 600;
+}
+
+/* ── Marks: gradient hero (demo `.b-stat-hero .b-sh-lead`) ── */
+.student-portal .sp-hero {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deeper) 100%);
+  color: var(--text-inverse);
+  border-radius: 14px;
+  padding: 18px 18px 20px;
+  position: relative;
+  overflow: clip;
+}
+.student-portal .sp-hero::before {
+  content: "";
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--hairline), transparent 70%);
+}
+.student-portal .sp-hero .sp-hero-l {
+  font: 500 11px/1 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+.student-portal .sp-hero .sp-hero-v {
+  font: 700 32px/1.05 var(--font-sans);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  margin-top: 10px;
+}
+.student-portal .sp-hero .sp-hero-v .sp-hero-u { font-size: 14px; opacity: 0.7; margin-left: 4px; font-weight: 500; }
+.student-portal .sp-hero .sp-hero-d { font: 13.5px/1.4 var(--font-sans); opacity: 0.85; margin-top: 6px; }
+.student-portal .sp-hero .sp-hero-pos {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--surface-muted);
+  background: color-mix(in srgb, var(--text-inverse) 22%, transparent);
+  color: var(--text-inverse);
+  border-radius: 9999px;
+  font: 600 11px/1 var(--font-sans);
+  margin-top: 8px;
+}
+
+/* Orange identity variant — the student accent from the demo's
+   sign-in block, profile ID card and goals hero. */
+.student-portal .sp-hero.identity {
+  background: linear-gradient(135deg, var(--accent-orange-fg) 0%, var(--accent-orange-solid) 100%);
+}
+
+/* ── Marks / homework row cards (demo `.b-row-card` + bits) ── */
+.student-portal .sp-row-card {
+  display: block;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  text-align: left;
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.student-portal .sp-row-card:hover,
+.student-portal .sp-row-card:active {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+}
+.student-portal .sp-rc-top { display: flex; align-items: flex-start; gap: 10px; }
+.student-portal .sp-rc-info { flex: 1; min-width: 0; }
+.student-portal .sp-rc-nm { font: 600 14px/1.3 var(--font-sans); color: var(--text-strong); }
+.student-portal .sp-rc-sb { font: 12px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+.student-portal .sp-rc-val {
+  font: 700 18px/1 var(--font-sans);
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.student-portal .sp-rc-val .sp-rc-of { font: 500 11px/1 var(--font-sans); color: var(--text-subtle); }
+
+/* Subject colour tag (demo `.as-tag`) */
+.student-portal .sp-tag {
+  width: 6px;
+  border-radius: 3px;
+  align-self: stretch;
+  flex: none;
+  background: var(--sp-a, var(--brand));
+}
+.student-portal .sp-tag.marks { width: 8px; height: 36px; align-self: auto; }
+.student-portal .sp-tag.goal { width: 8px; height: 26px; align-self: auto; }
+
+/* Marks subject bar (demo `.subj-bar`) */
+.student-portal .sp-subj-bar {
+  height: 6px;
+  background: var(--surface-muted);
+  border-radius: 9999px;
+  margin: 10px 0 0 18px;
+  overflow: hidden;
+}
+.student-portal .sp-subj-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sp-a, var(--brand));
+}
+
+/* Footnote strip (demo's marks privacy line) */
+.student-portal .sp-note {
+  margin-top: 8px;
+  padding: 9px 12px;
+  background: var(--surface-muted);
+  border-radius: 9px;
+  font: 500 11.5px/1.4 var(--font-sans);
+  color: var(--text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.student-portal .sp-note .sp-note-ic { color: var(--text-subtle); display: inline-flex; padding-top: 1px; flex: none; }
+
+/* ── Homework: subject eyebrow + due pill (demo `.as-*`) ──── */
+.student-portal .sp-as-subj {
+  font: 500 10.5px/1 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.student-portal .sp-as-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.student-portal .sp-as-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: var(--surface-muted);
+  color: var(--text-strong);
+  font: 500 11px/1 var(--font-sans);
+}
+.student-portal .sp-as-due.upcoming { background: var(--tone-warn-bg); color: var(--tone-warn); }
+.student-portal .sp-as-due.overdue { background: var(--tone-danger); color: var(--text-inverse); }
+.student-portal .sp-as-due.submitted { background: var(--tone-success-bg); color: var(--tone-success); }
+.student-portal .sp-as-due.graded { background: var(--brand-soft); color: var(--brand-strong); }
+.student-portal .sp-as-grade {
+  font: 600 12px/1 var(--font-mono);
+  color: var(--brand-strong);
+}
+.student-portal .sp-rc-note {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  font: 12.5px/1.45 var(--font-sans);
+  color: var(--text-body);
+}
+
+/* Filter chips (demo `.b-filter-chips` / `.b-fc`) */
+.student-portal .sp-chips {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.student-portal .sp-chips::-webkit-scrollbar { display: none; }
+.student-portal .sp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  font: 500 12px/1 var(--font-sans);
+  color: var(--text-strong);
+  white-space: nowrap;
+  cursor: pointer;
+  flex: none;
+}
+.student-portal .sp-chip:hover { background: var(--surface-muted); }
+.student-portal .sp-chip .sp-chip-ct {
+  font: 600 11px/1 var(--font-sans);
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+.student-portal .sp-chip.on { background: var(--brand); color: var(--text-inverse); border-color: var(--brand); }
+.student-portal .sp-chip.on .sp-chip-ct {
+  background: color-mix(in srgb, var(--text-inverse) 22%, transparent);
+  color: var(--text-inverse);
+}
+
+/* ── Library (demo `.lib-search`, `.fines-pill`, cards) ───── */
+.student-portal .sp-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  border-radius: 12px;
+}
+.student-portal .sp-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  outline: 0;
+  font: 500 14px/1.2 var(--font-sans);
+  color: var(--text-strong);
+  min-width: 0;
+}
+.student-portal .sp-search input::placeholder { color: var(--text-subtle); }
+.student-portal .sp-search .sp-search-ic { color: var(--text-muted); display: inline-flex; }
+
+.student-portal .sp-fines {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--tone-danger-bg);
+  border: 1px solid var(--tone-danger-bd);
+  border-radius: 12px;
+}
+.student-portal .sp-fines .sp-fines-ic {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--tone-danger);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.student-portal .sp-fines .sp-fines-nm { font: 600 13.5px/1.3 var(--font-sans); color: var(--tone-danger-strong); }
+.student-portal .sp-fines .sp-fines-sb { font: 11.5px/1.3 var(--font-sans); color: var(--tone-danger); margin-top: 2px; }
+.student-portal .sp-fines .sp-fines-val {
+  margin-left: auto;
+  font: 700 14px/1 var(--font-mono);
+  color: var(--tone-danger-strong);
+  flex: none;
+}
+
+.student-portal .sp-borrow-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+/* The shared `BookCover` sets its own type scale for a grid tile. At the
+   prototype's 56px and 42px spine widths that overflows, so the spine type is
+   stepped down here rather than in the shared component, which other screens
+   still want at full size. */
+.student-portal .sp-cover { flex: none; }
+.student-portal .sp-cover > div { padding: 5px 4px; border-radius: 6px; }
+.student-portal .sp-cover span { font-size: 8.5px; line-height: 1.15; }
+.student-portal .sp-cover.sm > div { padding: 4px 3px; }
+.student-portal .sp-cover.sm span { font-size: 7px; line-height: 1.1; }
+
+.student-portal .sp-borrow-card .sp-bc-nm { font: 600 13.5px/1.3 var(--font-sans); color: var(--text-strong); }
+.student-portal .sp-borrow-card .sp-bc-sb { font: 11.5px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+.student-portal .sp-borrow-card .sp-bc-due {
+  font: 500 11px/1.3 var(--font-mono);
+  color: var(--text-muted);
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.student-portal .sp-borrow-card .sp-bc-due.urgent { color: var(--tone-warn); }
+.student-portal .sp-borrow-card .sp-bc-due.overdue { color: var(--tone-danger); font-weight: 700; }
+.student-portal .sp-bc-acts { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.student-portal .sp-renew {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  font: 600 11px/1 var(--font-sans);
+  color: var(--text-strong);
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.student-portal .sp-renew:hover { background: var(--surface-sunken); }
+.student-portal .sp-renew.danger { background: var(--tone-danger-bg); color: var(--tone-danger); }
+
+.student-portal .sp-catalog-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.student-portal .sp-catalog-card .sp-cc-nm { font: 600 13px/1.3 var(--font-sans); color: var(--text-strong); }
+.student-portal .sp-catalog-card .sp-cc-sb { font: 11px/1.3 var(--font-sans); color: var(--text-muted); margin-top: 2px; }
+.student-portal .sp-borrow-btn {
+  font: 600 11px/1 var(--font-sans);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  cursor: pointer;
+  border: 0;
+  white-space: nowrap;
+}
+.student-portal .sp-out-pill {
+  font: 500 11px/1 var(--font-sans);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Goals (demo `.goal-card`) ─────────────────────────────── */
+.student-portal .sp-goal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 8px;
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.student-portal .sp-goal-card .sp-gc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.student-portal .sp-goal-card .sp-gc-nm { font: 600 14px/1.3 var(--font-sans); color: var(--text-strong); }
+.student-portal .sp-goal-card .sp-gc-sb { font: 11.5px/1.4 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+.student-portal .sp-goal-card .sp-gc-target { font: 600 12.5px/1 var(--font-mono); color: var(--text-strong); }
+.student-portal .sp-goal-card .sp-gc-target .sp-gc-of { color: var(--text-subtle); font-weight: 500; }
+.student-portal .sp-goal-card .sp-gc-delta {
+  font: 500 11.5px/1.3 var(--font-sans);
+  color: var(--tone-success);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.student-portal .sp-goal-card .sp-gc-delta.down { color: var(--tone-danger); }
+.student-portal .sp-goal-card .sp-gc-delta.muted { color: var(--text-muted); }
+.student-portal .sp-goal-card .sp-gc-bar {
+  height: 8px;
+  background: var(--surface-muted);
+  border-radius: 9999px;
+  margin: 12px 0 4px;
+  overflow: hidden;
+  position: relative;
+}
+.student-portal .sp-goal-card .sp-gc-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sp-a, var(--brand));
+}
+.student-portal .sp-goal-card .sp-gc-note { font: 12px/1.45 var(--font-sans); color: var(--text-muted); margin-top: 8px; }
+.student-portal .sp-goal-card .sp-gc-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.student-portal .sp-goal-card .sp-gc-foot .sp-gc-note { margin-top: 0; }
+
+/* Disabled row actions read as unavailable, not broken. */
+.student-portal .sp-renew[disabled],
+.student-portal .sp-borrow-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Notifications (demo `.notif-row`) ─────────────────────── */
+.student-portal .sp-notif-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 0 10px;
+  font: 500 12px/1.3 var(--font-sans);
+  color: var(--text-muted);
+}
+.student-portal .sp-psh-link[disabled] { opacity: 0.5; cursor: not-allowed; }
+.student-portal .sp-notifs {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: clip;
+}
+.student-portal .sp-notif {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  background: var(--surface);
+  width: 100%;
+  text-align: left;
+}
+.student-portal .sp-notif:last-child { border-bottom: 0; }
+.student-portal .sp-notif.unread { background: var(--brand-soft); }
+.student-portal .sp-notif.unread::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+  align-self: center;
+  flex: none;
+  margin-right: -4px;
+}
+.student-portal .sp-notif .sp-nf-ic {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--sp-a-bg, var(--brand-100));
+  color: var(--sp-a-fg, var(--brand));
+}
+.student-portal .sp-notif .sp-nf-body { flex: 1; min-width: 0; }
+.student-portal .sp-notif .sp-nf-nm { font: 600 13.5px/1.3 var(--font-sans); color: var(--text-strong); }
+.student-portal .sp-notif .sp-nf-sb { font: 12.5px/1.45 var(--font-sans); color: var(--text-muted); margin-top: 3px; }
+.student-portal .sp-notif .sp-nf-tm { font: 500 11px/1 var(--font-mono); color: var(--text-subtle); margin-top: 5px; }
+
+/* ── Profile: ID card (demo `.id-card`) ────────────────────── */
+.student-portal .sp-id-card {
+  background: linear-gradient(135deg, var(--accent-orange-fg), var(--accent-orange-solid));
+  color: var(--text-inverse);
+  border-radius: 16px;
+  padding: 16px;
+  position: relative;
+  overflow: clip;
+}
+.student-portal .sp-id-card::before {
+  content: "";
+  position: absolute;
+  right: -50px;
+  bottom: -50px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--text-inverse) 18%, transparent), transparent 70%);
+}
+.student-portal .sp-id-card .sp-id-top { display: flex; align-items: center; gap: 14px; }
+.student-portal .sp-id-card .sp-id-nm { font: 700 17px/1.2 var(--font-sans); letter-spacing: -0.01em; }
+.student-portal .sp-id-card .sp-id-sb { font: 12.5px/1.4 var(--font-sans); opacity: 0.85; margin-top: 3px; }
+.student-portal .sp-id-card .sp-id-pills { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.student-portal .sp-id-card .sp-id-pill {
+  font: 500 11px/1 var(--font-mono);
+  padding: 4px 9px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--text-inverse) 18%, transparent);
+}
+.student-portal .sp-id-card .sp-id-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--text-inverse) 18%, transparent);
+}
+.student-portal .sp-id-card .sp-id-stat-l {
+  font: 500 10px/1.3 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.student-portal .sp-id-card .sp-id-stat-v {
+  font: 700 15px/1.2 var(--font-sans);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* ── Settings groups (demo `.setting-group` / `.setting-row`) ── */
+.student-portal .sp-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.student-portal .sp-setting-row {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-subtle);
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+}
+.student-portal .sp-setting-row:last-child { border-bottom: 0; }
+.student-portal .sp-setting-row .sp-sr-ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--surface-muted);
+  color: var(--text-strong);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.student-portal .sp-setting-row .sp-sr-body { flex: 1; min-width: 0; }
+.student-portal .sp-setting-row .sp-sr-nm { font: 500 14px/1.3 var(--font-sans); color: var(--text-strong); }
+.student-portal .sp-setting-row .sp-sr-sb { font: 12px/1.4 var(--font-sans); color: var(--text-muted); margin-top: 2px; }
+.student-portal .sp-setting-row .sp-sr-chev { color: var(--text-subtle); display: inline-flex; }
+
+/* ── Bottom sheet: undo an off-screen transform ─────────────
+   The shipped `.x-bottom-sheet` rule parks the sheet at
+   `translateY(100%)` and slides it back with
+   `.x-bs-scrim.open .x-bottom-sheet` — a selector written for the
+   vanilla markup. The React `BottomSheet` renders its own
+   `.x-bottom-sheet-backdrop` instead and never satisfies it, so the
+   sheet opens below the fold: the scrim dims, nothing appears, and
+   handing in homework or setting a goal is unreachable.
+   The selector is deliberately narrow — a `.x-bottom-sheet` that is a
+   direct child of that backdrop only exists for the React component,
+   so nothing the vanilla CSS drives is touched. */
+.x-bottom-sheet-backdrop > .x-bottom-sheet {
+  transform: none;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+/* ── Help cards (demo `.help-card`) ────────────────────────── */
+.student-portal .sp-help-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.student-portal .sp-help-card .sp-hc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  list-style: none;
+}
+.student-portal .sp-help-card .sp-hc-head::-webkit-details-marker { display: none; }
+.student-portal .sp-help-card .sp-hc-chev {
+  color: var(--text-subtle);
+  display: inline-flex;
+  flex: none;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.student-portal .sp-help-card[open] .sp-hc-chev { transform: rotate(90deg); }
+.student-portal .sp-help-card .sp-hc-ic {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.student-portal .sp-help-card .sp-hc-nm { font: 600 14px/1.3 var(--font-sans); color: var(--text-strong); }
+.student-portal .sp-help-card .sp-hc-body {
+  padding: 0 14px 14px;
+  font: 13px/1.55 var(--font-sans);
+  color: var(--text-body);
+}

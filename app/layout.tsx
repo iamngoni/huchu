@@ -12,6 +12,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
+import { getServerSession } from "next-auth";
 import { AppProviders } from "@/components/providers/app-providers";
 import { AppShell } from "@/components/layout/app-shell";
 import {
@@ -23,6 +24,7 @@ import {
   getBrandingCssVariables,
   getEffectiveBrandingForHost,
 } from "@/lib/platform/branding";
+import { authOptions } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/marketing/seo";
 import { getHostHeaderFromRequestHeaders, getPlatformHostContext } from "@/lib/platform/tenant";
 import {
@@ -119,6 +121,27 @@ export default async function RootLayout({
   const hostContext = getPlatformHostContext(hostHeader);
   const brandingVars = getBrandingCssVariables(branding);
 
+  /**
+   * The session, resolved on the server and handed to `SessionProvider`.
+   *
+   * Without this, `useSession()` had no data during SSR and every client
+   * component that reads it rendered its signed-out shape into the HTML, then a
+   * different shape on hydration. The sidebar was the visible casualty: the
+   * workspace model falls back to the first profile when it is given no role and
+   * no features, so the server sent Scrap & Recycling's label and icon and the
+   * browser replaced them with School Operations — a hydration error on every
+   * page of the app, including ones nothing in the schools work had touched.
+   *
+   * `getServerSession` here rather than a guard in the sidebar because the
+   * sidebar is not the only reader: the command bar's module bands, the nav
+   * filter and the quick actions all derive from the same three fields, and
+   * fixing them one at a time is how the next one gets missed. The layout is
+   * already dynamic — it reads `headers()` — so this costs a session decode, and
+   * it saves the client's opening `/api/auth/session` round trip: given the prop,
+   * `SessionProvider` treats it as the initial value instead of fetching.
+   */
+  const session = await getServerSession(authOptions);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -135,7 +158,7 @@ export default async function RootLayout({
       >
         <Analytics />
         <div className="app-root">
-          <AppProviders>
+          <AppProviders session={session}>
             <Suspense fallback={<div className="min-h-screen bg-background" />}>
               <AppShell hostPortalPath={hostContext.portalPath}>
                 {children}

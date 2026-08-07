@@ -8,6 +8,7 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
 import { isUniqueConstraintError } from "../../_helpers";
 
 const assignmentsQuerySchema = z.object({
@@ -36,6 +37,9 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.teachers", "view");
+    if (denied) return errorResponse(denied, 403);
     const { searchParams } = new URL(request.url);
     const { page, limit, skip } = getPaginationParams(request);
     const companyId = session.user.companyId;
@@ -92,7 +96,15 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+        // Class, then subject, then teacher — the order a timetable is read
+        // in. This was `updatedAt desc`, so the list reshuffled on every edit
+        // and the same class's subjects were scattered through it.
+        orderBy: [
+          { class: { level: "asc" } },
+          { class: { name: "asc" } },
+          { subject: { name: "asc" } },
+          { teacherProfile: { user: { name: "asc" } } },
+        ],
         skip,
         take: limit,
       }),
@@ -114,6 +126,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.teachers", "create");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
     const body = await request.json();

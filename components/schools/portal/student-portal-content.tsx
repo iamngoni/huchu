@@ -9,6 +9,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { NumericCell } from "@/components/ui/numeric-cell";
 import { VerticalDataViews } from "@/components/ui/vertical-data-views";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { formatSchoolMoney } from "@/lib/schools/format";
 import { fetchStudentPortalData, type StudentPortalData } from "@/lib/schools/portal-v2";
 
 type StudentPortalView =
@@ -313,17 +314,23 @@ export function StudentPortalContent() {
       {
         id: "totalAmount",
         header: "Total",
-        cell: ({ row }) => <NumericCell>{row.original.totalAmount.toFixed(2)}</NumericCell>,
+        cell: ({ row }) => <NumericCell>
+            {formatSchoolMoney(row.original.totalAmount, row.original.currency)}
+          </NumericCell>,
       },
       {
         id: "paidAmount",
         header: "Paid",
-        cell: ({ row }) => <NumericCell>{row.original.paidAmount.toFixed(2)}</NumericCell>,
+        cell: ({ row }) => <NumericCell>
+            {formatSchoolMoney(row.original.paidAmount, row.original.currency)}
+          </NumericCell>,
       },
       {
         id: "balanceAmount",
         header: "Outstanding",
-        cell: ({ row }) => <NumericCell>{row.original.balanceAmount.toFixed(2)}</NumericCell>,
+        cell: ({ row }) => <NumericCell>
+            {formatSchoolMoney(row.original.balanceAmount, row.original.currency)}
+          </NumericCell>,
       },
       {
         id: "dueDate",
@@ -425,7 +432,7 @@ export function StudentPortalContent() {
         </div>
         <div>
           <h2 className="text-sm font-semibold">Outstanding Fees</h2>
-          <p className="font-mono tabular-nums">{(summary?.outstandingBalance ?? 0).toFixed(2)}</p>
+          <p className="font-mono tabular-nums">{formatSchoolMoney(summary?.outstandingBalance ?? 0)}</p>
         </div>
         <div>
           <h2 className="text-sm font-semibold">Unread Notices</h2>

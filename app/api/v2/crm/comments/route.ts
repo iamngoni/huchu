@@ -7,13 +7,16 @@ import {
   collabRecordPath,
   collabRecordSchema,
   commentAudience,
-  commentRecordColumns,
-  commentRecordWhere,
   createCommentSchema,
-  isValidParent,
   type CollabRecord,
 } from "@/lib/crm/collaboration";
 import { extractMentionedUserIds, toPlainText } from "@/lib/crm/rich-text";
+import {
+  isValidReplyParent,
+  subjectData,
+  subjectFromEntity,
+  subjectWhere,
+} from "@/lib/records/subject";
 import { emitCrmNotification } from "@/lib/notifications";
 import { crmRecordExists } from "../_helpers";
 
@@ -42,11 +45,15 @@ export async function GET(request: NextRequest) {
     });
     if (!parsed.success) return errorResponse("A record is required", 400);
 
+    const subject = subjectFromEntity(parsed.data.entity, parsed.data.recordId);
+    if (!subject) return errorResponse("A record is required", 400);
+
     const comments = await prisma.crmComment.findMany({
       where: {
         companyId: session.user.companyId,
         parentId: null,
-        ...commentRecordWhere(parsed.data),
+        // S-4.2 — finds a comment filed under either scheme.
+        ...subjectWhere("comment", subject),
       },
       include: commentInclude,
       // Pinned notes are the ones a new person on the account needs first.
@@ -70,6 +77,8 @@ export async function POST(request: NextRequest) {
 
     const data = createCommentSchema.parse(await request.json());
     const record: CollabRecord = { entity: data.entity, recordId: data.recordId };
+    const writeSubject = subjectFromEntity(data.entity, data.recordId);
+    if (!writeSubject) return errorResponse("A record is required", 400);
 
     if (!(await crmRecordExists(companyId, record))) {
       return errorResponse("Record not found", 404);
@@ -88,7 +97,7 @@ export async function POST(request: NextRequest) {
           siteId: true,
         },
       });
-      if (!isValidParent(parent, record)) {
+      if (!isValidReplyParent(parent ?? {}, writeSubject)) {
         return errorResponse("You can only reply to a comment on this record", 400);
       }
     }
@@ -112,7 +121,8 @@ export async function POST(request: NextRequest) {
           body: data.body,
           parentId: data.parentId ?? undefined,
           createdById: session.user.id,
-          ...commentRecordColumns(record),
+          // Dual-write: the pair always, the legacy column where one exists.
+          ...subjectData("comment", writeSubject),
         },
         include: commentInclude,
       });
@@ -169,7 +179,7 @@ export async function POST(request: NextRequest) {
         select: { userId: true },
       }),
       prisma.crmComment.findMany({
-        where: { companyId, ...commentRecordWhere(record) },
+        where: { companyId, ...subjectWhere("comment", writeSubject) },
         select: { createdById: true },
         distinct: ["createdById"],
       }),

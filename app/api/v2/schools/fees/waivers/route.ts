@@ -9,6 +9,16 @@ import {
   validateSession,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { writeSchoolAuditEvent } from "@/lib/schools/audit";
+import { schoolPermissionDenial } from "@/lib/schools/permissions";
+import {
+  exceeds,
+  money,
+  resolveDocumentCurrency,
+  toBaseAmount,
+  toNumberOrZero,
+  UnknownExchangeRateError,
+} from "@/lib/schools/money";
 
 const querySchema = z.object({
   search: z.string().trim().min(1).optional(),
@@ -26,21 +36,22 @@ const createSchema = z.object({
   invoiceId: z.string().uuid().nullable().optional(),
   waiverType: z.enum(["SCHOLARSHIP", "DISCOUNT", "HARDSHIP", "OTHER"]),
   amount: z.number().finite().positive(),
+  /** S-2.2. Ignored when the waiver names an invoice — that invoice decides. */
+  currency: z.string().trim().min(3).max(10).optional(),
   reason: z.string().trim().max(500).nullable().optional(),
   status: z
     .enum(["DRAFT", "APPROVED", "APPLIED", "REJECTED", "REVERSED"])
     .optional(),
 });
 
-function toMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "view");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -110,6 +121,9 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    const denied = schoolPermissionDenial(session, "schools.fees", "create");
+    if (denied) return errorResponse(denied, 403);
     const companyId = session.user.companyId;
 
     const body = await request.json();
@@ -127,7 +141,13 @@ export async function POST(request: NextRequest) {
       validated.invoiceId
         ? prisma.schoolFeeInvoice.findFirst({
             where: { id: validated.invoiceId, companyId, studentId: validated.studentId },
-            select: { id: true, termId: true, balanceAmount: true },
+            select: {
+              id: true,
+              termId: true,
+              balanceAmount: true,
+              currency: true,
+              exchangeRate: true,
+            },
           })
         : Promise.resolve(null),
     ]);
@@ -140,46 +160,117 @@ export async function POST(request: NextRequest) {
     if (invoice && invoice.termId !== validated.termId) {
       return errorResponse("Waiver term must match invoice term", 400);
     }
-    if (invoice && validated.amount - invoice.balanceAmount > 0.009) {
+    // Post S-2.1 Float→Decimal: an exact comparison, no epsilon fudge.
+    if (invoice && exceeds(validated.amount, invoice.balanceAmount)) {
       return errorResponse("Waiver amount exceeds invoice outstanding balance", 400);
     }
 
+    // S-2.2. A waiver against an invoice inherits that invoice's currency and
+    // the rate it was raised at, so the discount and the bill cannot drift
+    // apart when the rate moves.
+    let documentCurrency;
+    try {
+      documentCurrency = invoice
+        ? {
+            baseCurrency: null,
+            currency: invoice.currency,
+            exchangeRate: invoice.exchangeRate,
+          }
+        : await resolveDocumentCurrency({ companyId, currency: validated.currency });
+    } catch (error) {
+      if (error instanceof UnknownExchangeRateError) {
+        return errorResponse(error.message, 400);
+      }
+      throw error;
+    }
+
+    const amount = money(validated.amount);
     const status = validated.status ?? "DRAFT";
-    const created = await prisma.schoolFeeWaiver.create({
-      data: {
+    const approvedHere = status === "APPROVED" || status === "APPLIED";
+
+    // S-2.8. The create and the rows that describe it commit together. This
+    // route can hand out an approval in the same call that writes the waiver
+    // down — `status: "APPROVED"` stamps `approvedById` — and that approval is
+    // what reduces a family's bill, so it cannot be the one thing with no
+    // record behind it.
+    const created = await prisma.$transaction(async (tx) => {
+      const waiver = await tx.schoolFeeWaiver.create({
+        data: {
+          companyId,
+          studentId: validated.studentId,
+          termId: validated.termId,
+          invoiceId: validated.invoiceId ?? null,
+          waiverType: validated.waiverType,
+          amount,
+          currency: documentCurrency.currency,
+          exchangeRate: documentCurrency.exchangeRate,
+          baseAmount: toBaseAmount(amount, documentCurrency.exchangeRate),
+          reason: validated.reason ?? null,
+          status,
+          approvedById: approvedHere ? session.user.id : null,
+          approvedAt: approvedHere ? new Date() : null,
+          appliedById: status === "APPLIED" ? session.user.id : null,
+          appliedAt: status === "APPLIED" ? new Date() : null,
+          createdById: session.user.id,
+        },
+        include: {
+          student: {
+            select: {
+              id: true,
+              studentNo: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          term: { select: { id: true, code: true, name: true } },
+          invoice: {
+            select: {
+              id: true,
+              invoiceNo: true,
+              status: true,
+              balanceAmount: true,
+            },
+          },
+        },
+      });
+
+      const shared = {
         companyId,
-        studentId: validated.studentId,
-        termId: validated.termId,
-        invoiceId: validated.invoiceId ?? null,
-        waiverType: validated.waiverType,
-        amount: toMoney(validated.amount),
-        reason: validated.reason ?? null,
-        status,
-        approvedById: status === "APPROVED" || status === "APPLIED" ? session.user.id : null,
-        approvedAt: status === "APPROVED" || status === "APPLIED" ? new Date() : null,
-        appliedById: status === "APPLIED" ? session.user.id : null,
-        appliedAt: status === "APPLIED" ? new Date() : null,
-        createdById: session.user.id,
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            studentNo: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        term: { select: { id: true, code: true, name: true } },
-        invoice: {
-          select: {
-            id: true,
-            invoiceNo: true,
-            status: true,
-            balanceAmount: true,
-          },
-        },
-      },
+        actorId: session.user.id,
+        entityType: "SchoolFeeWaiver",
+        entityId: waiver.id,
+        reason: validated.reason ?? undefined,
+      } as const;
+      const shape = {
+        studentId: waiver.studentId,
+        termId: waiver.termId,
+        invoiceId: waiver.invoiceId,
+        waiverType: waiver.waiverType,
+        currency: waiver.currency,
+        // `amount` is a `Decimal`; a number is what belongs in the payload.
+        amount: toNumberOrZero(waiver.amount),
+        baseAmount: toNumberOrZero(waiver.baseAmount),
+        status: waiver.status,
+      };
+
+      await writeSchoolAuditEvent(tx, {
+        ...shared,
+        eventType: "schools.fee.waiver.created",
+        payload: shape,
+      });
+
+      // Two things happened when a waiver arrives already approved, and only
+      // one of them costs the school money. "Who authorised this discount" is
+      // the question an auditor asks, and it wants its own verb.
+      if (approvedHere) {
+        await writeSchoolAuditEvent(tx, {
+          ...shared,
+          eventType: "schools.fee.waiver.approved",
+          payload: { ...shape, approvedAt: waiver.approvedAt?.toISOString() ?? null },
+        });
+      }
+
+      return waiver;
     });
 
     return successResponse(created, 201);

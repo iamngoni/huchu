@@ -12,6 +12,16 @@ function buildQuery(params: Record<string, QueryValue>) {
   return query ? `?${query}` : "";
 }
 
+/**
+ * NOTE: `successResponse` in `lib/api-utils.ts` does *not* wrap its payload —
+ * it returns the value as the body. Anything typed `ApiResponse<T>` here is
+ * therefore only correct when the route explicitly returns `{ success, data }`.
+ * The paginated fetchers below take the body as-is, because a route that calls
+ * `successResponse(paginationResponse(...))` sends `{ data, pagination }` and
+ * nothing more. Reading `.data` off that returns the array, and the components
+ * then read `.data` off an array and render nothing — which is what every
+ * schools list did before this was corrected.
+ */
 type ApiResponse<T> = {
   success: true;
   data: T;
@@ -54,6 +64,8 @@ export type SchoolsGuardianRecord = {
   phone: string;
   email: string | null;
   nationalId: string | null;
+  /** Set once the guardian has claimed a portal invitation. */
+  userId: string | null;
   _count: { studentLinks: number };
 };
 
@@ -133,8 +145,48 @@ export type TeacherProfileRecord = {
   isHod: boolean;
   isActive: boolean;
   user: { id: string; name: string; email: string; isActive: boolean };
+  /** The HR record for the same person. Null until somebody links them. */
+  employee: {
+    id: string;
+    employeeId: string;
+    name: string;
+    jobTitle: string | null;
+  } | null;
   _count: { assignments: number };
 };
+
+export type EmployeeSuggestionRecord = {
+  id: string;
+  employeeId: string;
+  name: string;
+  jobTitle: string | null;
+  phone: string;
+  reason: string;
+  confidence: "certain" | "likely" | "possible";
+};
+
+export async function fetchEmployeeSuggestions(teacherProfileId: string) {
+  return fetchJson<{ suggestions: EmployeeSuggestionRecord[] }>(
+    `/api/v2/schools/teachers/profiles/${teacherProfileId}/employee`,
+  );
+}
+
+export async function linkTeacherEmployee(
+  teacherProfileId: string,
+  employeeId: string,
+) {
+  return fetchJson<{ id: string; employeeId: string | null }>(
+    `/api/v2/schools/teachers/profiles/${teacherProfileId}/employee`,
+    { method: "PUT", body: JSON.stringify({ employeeId }) },
+  );
+}
+
+export async function unlinkTeacherEmployee(teacherProfileId: string) {
+  return fetchJson<{ id: string; employeeId: string | null }>(
+    `/api/v2/schools/teachers/profiles/${teacherProfileId}/employee`,
+    { method: "DELETE" },
+  );
+}
 
 export type TeacherSubjectRecord = {
   id: string;
@@ -187,10 +239,10 @@ export async function fetchSchoolsStudents(params: {
   isBoarding?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsStudentRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsStudentRecord>>(
     `/api/v2/schools/students${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchSchoolsGuardians(params: {
@@ -198,12 +250,13 @@ export async function fetchSchoolsGuardians(params: {
   limit?: number;
   search?: string;
   studentId?: string;
+  hasPortalAccount?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsGuardianRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsGuardianRecord>>(
     `/api/v2/schools/guardians${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchSchoolsEnrollments(params: {
@@ -216,10 +269,10 @@ export async function fetchSchoolsEnrollments(params: {
   streamId?: string;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsEnrollmentRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsEnrollmentRecord>>(
     `/api/v2/schools/enrollments${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchSchoolsAttendanceRoster(params: {
@@ -245,10 +298,10 @@ export async function fetchTeacherProfiles(params: {
   isActive?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<TeacherProfileRecord>>>(
+  const response = await fetchJson<Paginated<TeacherProfileRecord>>(
     `/api/v2/schools/teachers/profiles${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchTeacherSubjects(params: {
@@ -258,10 +311,10 @@ export async function fetchTeacherSubjects(params: {
   isActive?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<TeacherSubjectRecord>>>(
+  const response = await fetchJson<Paginated<TeacherSubjectRecord>>(
     `/api/v2/schools/teachers/subjects${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchStudentProfile(studentId: string) {
@@ -293,10 +346,10 @@ export async function fetchTeacherAssignments(params: {
   isActive?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<TeacherAssignmentRecord>>>(
+  const response = await fetchJson<Paginated<TeacherAssignmentRecord>>(
     `/api/v2/schools/teachers/assignments${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchTeacherProfileUsers(params: {
@@ -317,10 +370,10 @@ export async function fetchSchoolsClasses(params: {
   search?: string;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsClassRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsClassRecord>>(
     `/api/v2/schools/classes${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export async function fetchSchoolsSubjects(params: {
@@ -330,10 +383,10 @@ export async function fetchSchoolsSubjects(params: {
   isActive?: boolean;
 } = {}) {
   const query = buildQuery(params);
-  const response = await fetchJson<ApiResponse<Paginated<SchoolsSubjectRecord>>>(
+  const response = await fetchJson<Paginated<SchoolsSubjectRecord>>(
     `/api/v2/schools/subjects${query}`,
   );
-  return response.data;
+  return response;
 }
 
 export type HostelDetail = {
@@ -377,8 +430,339 @@ export type HostelDetail = {
 };
 
 export async function fetchHostelDetail(hostelId: string) {
-  const response = await fetchJson<ApiResponse<HostelDetail>>(
+  const response = await fetchJson<HostelDetail>(
     `/api/v2/schools/boarding/hostels/${hostelId}`,
   );
+  return response;
+}
+
+// ---------------------------------------------------------------------------
+// Academic calendar — years and terms
+// ---------------------------------------------------------------------------
+
+export type SchoolsTermRecord = {
+  id: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  academicYear: { id: string; code: string; name: string; isActive: boolean };
+  _count: {
+    enrollments: number;
+    feeInvoices: number;
+    resultSheets: number;
+    classSubjects: number;
+  };
+};
+
+export type SchoolsAcademicYearRecord = {
+  id: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  terms: Array<{
+    id: string;
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  }>;
+  _count: { terms: number; classes: number };
+};
+
+export async function fetchSchoolsAcademicYears(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+} = {}) {
+  const response = await fetchJson<Paginated<SchoolsAcademicYearRecord>>(
+    `/api/v2/schools/academic-years${buildQuery(params)}`,
+  );
+  return response;
+}
+
+export async function createSchoolsAcademicYear(input: {
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive?: boolean;
+}) {
+  const response = await fetchJson<ApiResponse<SchoolsAcademicYearRecord>>(
+    "/api/v2/schools/academic-years",
+    { method: "POST", body: JSON.stringify(input) },
+  );
+  return response;
+}
+
+export async function updateSchoolsAcademicYear(
+  id: string,
+  input: Partial<{
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  }>,
+) {
+  const response = await fetchJson<ApiResponse<SchoolsAcademicYearRecord>>(
+    `/api/v2/schools/academic-years/${id}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+  );
+  return response;
+}
+
+export async function fetchSchoolsTerms(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  academicYearId?: string;
+  isActive?: boolean;
+} = {}) {
+  const response = await fetchJson<Paginated<SchoolsTermRecord>>(
+    `/api/v2/schools/terms${buildQuery(params)}`,
+  );
+  return response;
+}
+
+export async function createSchoolsTerm(input: {
+  academicYearId: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive?: boolean;
+}) {
+  const response = await fetchJson<ApiResponse<SchoolsTermRecord>>(
+    "/api/v2/schools/terms",
+    { method: "POST", body: JSON.stringify(input) },
+  );
+  return response;
+}
+
+export async function updateSchoolsTerm(
+  id: string,
+  input: Partial<{
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  }>,
+) {
+  const response = await fetchJson<ApiResponse<SchoolsTermRecord>>(
+    `/api/v2/schools/terms/${id}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+  );
+  return response;
+}
+
+// ---------------------------------------------------------------------------
+// Portal invitations
+// ---------------------------------------------------------------------------
+
+export type PortalInviteSubject = "STUDENT" | "GUARDIAN";
+
+export type IssuedPortalInvite = {
+  subjectId: string;
+  subject: PortalInviteSubject;
+  sentTo: string;
+  /** Shown once. The server keeps only a hash. */
+  token: string;
+  expiresAt: string;
+};
+
+export type PortalInviteFailure = {
+  subjectId: string;
+  sentTo: string;
+  reason: string;
+};
+
+export async function issuePortalInvites(
+  invites: Array<{ subject: PortalInviteSubject; subjectId: string; sentTo: string }>,
+) {
+  const response = await fetchJson<
+    ApiResponse<{ issued: IssuedPortalInvite[]; failed: PortalInviteFailure[] }>
+  >("/api/v2/schools/portal-invites", {
+    method: "POST",
+    body: JSON.stringify({ invites }),
+  });
   return response.data;
+}
+
+// ---------------------------------------------------------------------------
+// Timetable (S-1.1)
+// ---------------------------------------------------------------------------
+
+export type SchoolsPeriodRecord = {
+  id: string;
+  code: string;
+  name: string;
+  /** Minutes from midnight. `formatMinute` in `lib/schools/timetable` renders it. */
+  startMinute: number;
+  endMinute: number;
+  sequence: number;
+  isTeaching: boolean;
+  termId: string | null;
+  term?: { id: string; code: string; name: string } | null;
+  _count?: { slots: number };
+};
+
+export type SchoolsRoomRecord = {
+  id: string;
+  code: string;
+  name: string;
+  capacity: number | null;
+  kind: string | null;
+  isActive: boolean;
+  _count?: { slots: number };
+};
+
+export type SchoolsTimetableSlotRecord = {
+  id: string;
+  dayOfWeek: number;
+  termId: string;
+  periodId: string;
+  period: {
+    id: string;
+    code: string;
+    name: string;
+    startMinute: number;
+    endMinute: number;
+    sequence: number;
+  };
+  room: { id: string; code: string; name: string } | null;
+  classSubject: {
+    id: string;
+    subject: { id: string; code: string; name: string };
+    class: { id: string; code: string; name: string };
+    stream: { id: string; code: string; name: string } | null;
+    teacherProfile: {
+      id: string;
+      employeeCode: string;
+      user: { id: string; name: string | null };
+    };
+  };
+};
+
+export type SchoolsTimetable = {
+  termId: string;
+  periods: SchoolsPeriodRecord[];
+  slots: SchoolsTimetableSlotRecord[];
+};
+
+export async function fetchSchoolsPeriods(params: {
+  page?: number;
+  limit?: number;
+  termId?: string;
+  isTeaching?: boolean;
+} = {}) {
+  const query = buildQuery(params);
+  const response = await fetchJson<Paginated<SchoolsPeriodRecord>>(
+    `/api/v2/schools/periods${query}`,
+  );
+  return response;
+}
+
+export async function fetchSchoolsRooms(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+} = {}) {
+  const query = buildQuery(params);
+  const response = await fetchJson<Paginated<SchoolsRoomRecord>>(
+    `/api/v2/schools/rooms${query}`,
+  );
+  return response;
+}
+
+/**
+ * The whole timetable for a term, not a page of it — the endpoint is
+ * unpaginated because the caller draws a grid, so this returns the object
+ * rather than a `Paginated`.
+ */
+export async function fetchSchoolsTimetable(params: {
+  termId?: string;
+  classId?: string;
+  streamId?: string;
+  teacherProfileId?: string;
+  roomId?: string;
+} = {}) {
+  const query = buildQuery(params);
+  // Not `ApiResponse<T>`: `successResponse` does not wrap, so `.data` here
+  // would be undefined and the grid would render empty for ever. This is the
+  // same trap the note at the top of this file describes — reintroduced once
+  // already, hence the reminder at the call site.
+  const response = await fetchJson<SchoolsTimetable>(
+    `/api/v2/schools/timetable${query}`,
+  );
+  return response;
+}
+
+export type SchoolsCalendarEventRecord = {
+  id: string;
+  title: string;
+  kind:
+    | "HOLIDAY"
+    | "PUBLIC_HOLIDAY"
+    | "HALF_TERM"
+    | "EXAM"
+    | "EVENT"
+    | "STAFF_ONLY";
+  startDate: string;
+  endDate: string;
+  isTeachingDay: boolean;
+  notes: string | null;
+  termId: string | null;
+  term: { id: string; code: string; name: string } | null;
+};
+
+export type SchoolDayVerdictRecord = {
+  isSchoolDay: boolean;
+  reason: string;
+  termId: string | null;
+};
+
+/**
+ * The calendar, unpaginated — a caller draws a year, and a page of a year is a
+ * calendar with holes in it. Not `ApiResponse<T>`: `successResponse` does not
+ * wrap.
+ */
+export async function fetchSchoolsCalendar(params: {
+  from?: string;
+  to?: string;
+  on?: string;
+} = {}) {
+  const query = buildQuery(params);
+  return fetchJson<{
+    events: SchoolsCalendarEventRecord[];
+    schoolDay: SchoolDayVerdictRecord | null;
+  }>(`/api/v2/schools/calendar${query}`);
+}
+
+export async function createSchoolsCalendarEvent(input: {
+  title: string;
+  kind?: SchoolsCalendarEventRecord["kind"];
+  startDate: string;
+  endDate: string;
+  isTeachingDay?: boolean;
+  termId?: string | null;
+  notes?: string | null;
+}) {
+  return fetchJson<SchoolsCalendarEventRecord>("/api/v2/schools/calendar", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteSchoolsCalendarEvent(id: string) {
+  return fetchJson<{ id: string }>(`/api/v2/schools/calendar/${id}`, {
+    method: "DELETE",
+  });
 }

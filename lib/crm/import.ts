@@ -7,17 +7,37 @@
  */
 import { z } from "zod";
 
-import { parseCsv, rowToRecord, type CsvTable } from "./csv";
+import {
+  buildImportPlan as buildPlan,
+  columnPreview,
+  mappingWarnings,
+  parseImportList,
+  parseImportNumber,
+  type ColumnPreview,
+  type ImportField,
+  type ImportPlan as CoreImportPlan,
+  type ImportRowIssue,
+  type ImportRowPlan,
+} from "@/lib/import-core/plan";
+
+import { parseCsv, type CsvTable } from "./csv";
+
+// The planning pass, the column preview and the value parsers moved to
+// lib/import-core when the schools importer needed them. What stayed here is
+// everything that knows what a person, a company or a deal is.
+export {
+  columnPreview,
+  mappingWarnings,
+  parseImportList,
+  parseImportNumber,
+  type ColumnPreview,
+  type ImportField,
+  type ImportRowIssue,
+  type ImportRowPlan,
+};
 
 export const IMPORT_ENTITIES = ["PERSON", "COMPANY", "LEAD"] as const;
 export type ImportEntity = (typeof IMPORT_ENTITIES)[number];
-
-export type ImportField = {
-  key: string;
-  label: string;
-  required?: boolean;
-  aliases?: string[];
-};
 
 export const IMPORT_FIELDS: Record<ImportEntity, ImportField[]> = {
   PERSON: [
@@ -59,109 +79,6 @@ export const IMPORT_FIELDS: Record<ImportEntity, ImportField[]> = {
   ],
 };
 
-/**
- * What is actually in a column, so a mapping can be checked rather than
- * trusted.
- *
- * The wizard guesses which column is which from the headers, and a guess that
- * is right nine times out of ten is exactly the kind that gets waved through
- * on the tenth. Showing the first few real values turns "Phone → mobile" from
- * a claim into something somebody can see is wrong before importing four
- * thousand rows of it.
- */
-export type ColumnPreview = {
-  /** The first distinct values, in file order. */
-  samples: string[];
-  /** How many rows have nothing in this column. */
-  blanks: number;
-  total: number;
-  /** Distinct value count, capped — a hint that a column is a category. */
-  distinct: number;
-};
-
-export function columnPreview(
-  table: { headers: string[]; rows: string[][] },
-  header: string,
-  limit = 3,
-): ColumnPreview | null {
-  const index = table.headers.indexOf(header);
-  if (index === -1) return null;
-
-  const samples: string[] = [];
-  const seen = new Set<string>();
-  let blanks = 0;
-
-  for (const row of table.rows) {
-    const raw = (row[index] ?? "").trim();
-    if (!raw) {
-      blanks += 1;
-      continue;
-    }
-    if (!seen.has(raw)) {
-      seen.add(raw);
-      if (samples.length < limit) samples.push(raw);
-    }
-  }
-
-  return { samples, blanks, total: table.rows.length, distinct: seen.size };
-}
-
-/**
- * Whether the values in a column look like the field they are mapped to.
- *
- * Deliberately shallow: it catches an email column with no `@` and a number
- * column full of words, and says nothing about the rest. A validator that
- * guesses harder starts refusing legitimate data, and a wizard that argues
- * with a correct mapping is worse than one that stays quiet.
- */
-export function mappingWarnings(fieldKey: string, preview: ColumnPreview): string[] {
-  const warnings: string[] = [];
-  const { samples, blanks, total } = preview;
-  if (samples.length === 0) {
-    return total > 0 ? ["Every row is blank in this column."] : [];
-  }
-
-  const lowered = fieldKey.toLowerCase();
-
-  if (lowered.includes("email") && !samples.some((value) => value.includes("@"))) {
-    warnings.push("None of these look like email addresses.");
-  }
-
-  if (
-    (lowered.includes("value") || lowered.includes("amount") || lowered.includes("price")) &&
-    samples.every((value) => parseImportNumber(value) === null)
-  ) {
-    warnings.push("None of these look like numbers.");
-  }
-
-  if (blanks > 0 && total > 0 && blanks / total > 0.5) {
-    warnings.push(`Blank in ${Math.round((blanks / total) * 100)}% of rows.`);
-  }
-
-  return warnings;
-}
-
-export type ImportRowIssue = { field: string; message: string };
-
-export type ImportRowPlan = {
-  /** 1-based row number in the file, counting the header as row 1. */
-  line: number;
-  action: "CREATE" | "UPDATE" | "SKIP";
-  values: Record<string, string>;
-  /** The existing record this row matched, when it did. */
-  matchId?: string;
-  matchLabel?: string;
-  issues: ImportRowIssue[];
-};
-
-export type ImportPlan = {
-  entity: ImportEntity;
-  totals: { create: number; update: number; skip: number };
-  rows: ImportRowPlan[];
-  /** Columns in the file that no field claimed, so nothing is lost silently. */
-  unmappedHeaders: string[];
-};
-
 export const importMappingSchema = z.object({
   entity: z.enum(IMPORT_ENTITIES),
   mapping: z.record(z.string(), z.string()),
@@ -170,21 +87,8 @@ export const importMappingSchema = z.object({
 });
 export type ImportMapping = z.infer<typeof importMappingSchema>;
 
-/** Numbers in exports arrive as "1,250.00", "$1250" or "1 250". */
-export function parseImportNumber(raw: string): number | null {
-  const cleaned = raw.replace(/[^0-9.\-]/g, "");
-  if (!cleaned || cleaned === "-" || cleaned === ".") return null;
-  const value = Number(cleaned);
-  return Number.isFinite(value) ? value : null;
-}
-
-/** Tags and services arrive semicolon- or comma-separated inside one cell. */
-export function parseImportList(raw: string): string[] {
-  return raw
-    .split(/[;,|]/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
+/** A CRM plan names the entity it was built for; the core plan does not. */
+export type ImportPlan = CoreImportPlan & { entity: ImportEntity };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -233,60 +137,16 @@ export function buildImportPlan(
   config: ImportMapping,
   findMatch: (values: Record<string, string>) => { id: string; label: string } | null = () => null,
 ): ImportPlan {
-  const rows: ImportRowPlan[] = [];
-  const seen = new Map<string, number>();
-  const mappedHeaders = new Set(Object.values(config.mapping).filter(Boolean));
-
-  table.rows.forEach((cells, index) => {
-    const line = index + 2; // header is line 1
-    const values = rowToRecord(table.headers, cells, config.mapping);
-
-    // A row where every mapped cell was blank is padding at the end of a
-    // spreadsheet, not a record somebody meant to import.
-    if (Object.keys(values).length === 0) return;
-
-    const issues = validateRow(config.entity, values);
-
-    const key = importRowKey(config.entity, values);
-    if (key) {
-      const firstLine = seen.get(key);
-      if (firstLine) {
-        issues.push({
-          field: "_row",
-          message: `Same contact as row ${firstLine} in this file`,
-        });
-      } else {
-        seen.set(key, line);
-      }
-    }
-
-    const match = issues.length === 0 ? findMatch(values) : null;
-
-    let action: ImportRowPlan["action"];
-    if (issues.length > 0) action = "SKIP";
-    else if (match) action = config.onDuplicate === "UPDATE" ? "UPDATE" : "SKIP";
-    else action = "CREATE";
-
-    rows.push({
-      line,
-      action,
-      values,
-      matchId: match?.id,
-      matchLabel: match?.label,
-      issues,
-    });
+  const plan = buildPlan(table, {
+    mapping: config.mapping,
+    onDuplicate: config.onDuplicate,
+    validate: (values) => validateRow(config.entity, values),
+    rowKey: (values) => importRowKey(config.entity, values),
+    findMatch,
+    duplicateMessage: (firstLine) => `Same contact as row ${firstLine} in this file`,
   });
 
-  return {
-    entity: config.entity,
-    totals: {
-      create: rows.filter((row) => row.action === "CREATE").length,
-      update: rows.filter((row) => row.action === "UPDATE").length,
-      skip: rows.filter((row) => row.action === "SKIP").length,
-    },
-    rows,
-    unmappedHeaders: table.headers.filter((header) => !mappedHeaders.has(header)),
-  };
+  return { entity: config.entity, ...plan };
 }
 
 export function parseImportFile(text: string): CsvTable {

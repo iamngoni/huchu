@@ -490,49 +490,17 @@ export async function generateOccupancyReport(companyId: string): Promise<Occupa
 }
 
 // ============================================================================
-// Export Functions (CSV/PDF placeholders)
+// Exports
 // ============================================================================
-
-export async function exportReportToCSV(
-  reportType: "collections" | "arrears" | "enrollment" | "occupancy",
-  data: unknown[],
-): Promise<string> {
-  // Simple CSV generation
-  if (data.length === 0) {
-    return "";
-  }
-
-  const headers = Object.keys(data[0] as object);
-  const csvRows = [headers.join(",")];
-
-  for (const row of data) {
-    const values = headers.map((header) => {
-      const value = (row as Record<string, unknown>)[header];
-      if (typeof value === "object" && value !== null) {
-        return JSON.stringify(value);
-      }
-      return String(value ?? "");
-    });
-    csvRows.push(values.join(","));
-  }
-
-  return csvRows.join("\n");
-}
-
-export async function exportReportToPDF(
-  reportType: string,
-  data: unknown[],
-  companyName: string,
-): Promise<Buffer> {
-  // Placeholder for PDF generation
-  // In production, use a library like @react-pdf/renderer or puppeteer
-  const content = `
-    ${companyName}
-    ${reportType.toUpperCase()} REPORT
-    Generated: ${new Date().toISOString()}
-
-    ${JSON.stringify(data, null, 2)}
-  `;
-
-  return Buffer.from(content, "utf-8");
-}
+//
+// S-5.4 removed `exportReportToCSV` and `exportReportToPDF` from this file.
+// The first joined values with commas and no quoting — one comma in a hostel's
+// name and every column after it moved — and the second returned
+// `Buffer.from(JSON.stringify(data))` under an `application/pdf` header, so a
+// head who pressed Export got a file their reader refused to open.
+//
+// A report export now goes through `lib/documents/`, the same pipeline the
+// invoices and report cards use: the tenant's letterhead, a template the school
+// can edit, a real PDF renderer and a CSV renderer that quotes. See
+// `app/api/v2/schools/reports/export/route.ts`, which declares the columns rather
+// than deriving them from the first row's keys.

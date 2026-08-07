@@ -53,3 +53,7 @@ next-env.d.ts
 # Local-only scratch: seeds and browser probes used while verifying a change.
 zz-*
 scripts/zz-*
+# Throwaway Playwright probes — named *.tmp.mjs so a half-finished run cannot
+# be committed by a sweep that stages everything.
+*.tmp.mjs
+test-results/

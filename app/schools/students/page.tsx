@@ -1,9 +1,13 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/layout/page-heading";
-import { SchoolsStudentsContent } from "@/components/schools/students/schools-students-content";
+import { GradePicker } from "@/components/schools/common/grade-picker";
 import { authOptions } from "@/lib/auth";
 
+/**
+ * Students starts at the year group, not at a list of every student. See the
+ * note on `GradePicker`.
+ */
 export default async function SchoolsStudentsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,7 +17,7 @@ export default async function SchoolsStudentsPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
       <PageHeading title="Students" />
-      <SchoolsStudentsContent />
+      <GradePicker basePath="/schools/students" />
     </div>
   );
 }
