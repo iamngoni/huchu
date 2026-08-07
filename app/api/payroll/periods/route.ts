@@ -8,6 +8,7 @@ import {
   successResponse,
   validateSession,
 } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
 import {
   deriveCyclePeriodKey,
@@ -81,6 +82,8 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.payroll", "view")
+    if (denial) return errorResponse(denial, 403)
     await ensureAutoPeriods(prisma, {
       companyId: session.user.companyId,
       createdById: session.user.id,
@@ -176,6 +179,8 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.payroll", "create")
+    if (denial) return errorResponse(denial, 403)
     if (!ensureApproverRole(session)) {
       return errorResponse("Insufficient permissions to create payroll periods", 403)
     }

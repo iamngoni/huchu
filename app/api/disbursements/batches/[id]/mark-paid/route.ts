@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { applyDisbursementToGoldShares } from "@/lib/gold/payouts"
 import { prisma } from "@/lib/prisma"
 import { createJournalEntryFromSource } from "@/lib/accounting/posting"
@@ -10,6 +11,7 @@ import {
   ensureApproverRole,
 } from "@/lib/hr-payroll"
 import { isPositive, money, toNumber, toNumberOrZero } from "@/lib/money"
+import { writePlatformAuditEvent } from "@/lib/audit/platform"
 import { createRouteLogger } from "@/lib/observability/route-logger"
 
 const markPaidSchema = z.object({
@@ -44,6 +46,8 @@ export async function POST(
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.disbursements", "disburse")
+    if (denial) return errorResponse(denial, 403)
     const { id } = await params
     const body = await request.json()
     const validated = markPaidSchema.parse(body)
@@ -292,6 +296,27 @@ export async function POST(
         toStatus: savedBatch.status,
         note: "Recorded disbursement item payment updates.",
       })
+
+      // Money leaving the business. On the chain, inside the transaction, so the
+      // payment and the record of who authorised it commit together.
+      await writePlatformAuditEvent(
+        {
+          companyId: session.user.companyId,
+          actorId: session.user.id,
+          eventType: "hr.disbursement.paid",
+          entityType: "DISBURSEMENT_BATCH",
+          entityId: id,
+          payload: {
+            code: savedBatch.code,
+            method: savedBatch.method,
+            currency: savedBatch.currency,
+            totalAmount: savedBatch.totalAmount.toFixed(2),
+            itemsPaid: validated.items.length,
+            status: savedBatch.status,
+          },
+        },
+        tx,
+      )
 
       return savedBatch
     })

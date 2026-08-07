@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { captureAccountingEvent } from "@/lib/accounting/integration"
 import {
   buildGoldPayoutNotes,
@@ -169,6 +170,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.compensation", "edit")
+    if (denial) return errorResponse(denial, 403)
     const { id } = await params
 
     const body = await request.json()

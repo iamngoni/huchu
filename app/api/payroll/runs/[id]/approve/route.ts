@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
 import {
   createApprovalAction,
@@ -7,6 +8,7 @@ import {
   isTwoStepActionAllowed,
 } from "@/lib/hr-payroll"
 import { postPayrollRun } from "@/lib/hr/payroll/posting"
+import { writePlatformAuditEvent } from "@/lib/audit/platform"
 import { createRouteLogger } from "@/lib/observability/route-logger"
 
 export async function POST(
@@ -23,6 +25,8 @@ export async function POST(
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.payroll", "approve")
+    if (denial) return errorResponse(denial, 403)
     const { id } = await params
     logger.info("approve_run_requested", {
       companyId: session.user.companyId,
@@ -86,6 +90,9 @@ export async function POST(
         include: {
           period: { select: { id: true, periodKey: true } },
           approvedBy: { select: { id: true, name: true } },
+          // For the audit payload: how many people this run pays. A count rather
+          // than the rows, since nothing here needs them.
+          _count: { select: { lineItems: true } },
         },
       })
 
@@ -107,6 +114,34 @@ export async function POST(
         fromStatus: "SUBMITTED",
         toStatus: "APPROVED",
       })
+
+      // Inside the transaction, so the approval and its audit row commit
+      // together or not at all. `ApprovalAction` records the workflow move;
+      // this records it on the hash-chained `PlatformAuditEvent` chain, where it
+      // cannot be edited afterwards without breaking every event behind it.
+      //
+      // Approving a payroll run is the moment a wage bill becomes owed to real
+      // people and a tax liability becomes owed to the state. If any HR action
+      // deserves a tamper-evident record, it is this one.
+      await writePlatformAuditEvent(
+        {
+          companyId: session.user.companyId,
+          actorId: session.user.id,
+          eventType: "hr.payroll.run.approved",
+          entityType: "PAYROLL_RUN",
+          entityId: id,
+          payload: {
+            runNumber: run.runNumber,
+            periodKey: run.period.periodKey,
+            grossTotal: run.grossTotal.toFixed(2),
+            netTotal: run.netTotal.toFixed(2),
+            deductionsTotal: run.deductionsTotal.toFixed(2),
+            employerCostTotal: run.employerCostTotal.toFixed(2),
+            lineCount: run._count.lineItems,
+          },
+        },
+        tx,
+      )
 
       return run
     })

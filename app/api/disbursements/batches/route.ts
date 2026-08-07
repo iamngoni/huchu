@@ -7,6 +7,7 @@ import {
   successResponse,
   validateSession,
 } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { captureAccountingEvent } from "@/lib/accounting/integration"
 import { prisma } from "@/lib/prisma"
 import {
@@ -35,6 +36,8 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.disbursements", "view")
+    if (denial) return errorResponse(denial, 403)
 
     const { searchParams } = new URL(request.url)
     const { page, limit, skip } = getPaginationParams(request)
@@ -109,6 +112,8 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.disbursements", "create")
+    if (denial) return errorResponse(denial, 403)
 
     if (!ensureApproverRole(session)) {
       return errorResponse("Insufficient permissions to create disbursement batches", 403)

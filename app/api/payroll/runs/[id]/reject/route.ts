@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
 import {
   createApprovalAction,
@@ -20,6 +21,8 @@ export async function POST(
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.payroll", "approve")
+    if (denial) return errorResponse(denial, 403)
     const { id } = await params
     const body = await request.json()
     const validated = rejectSchema.parse(body)

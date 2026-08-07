@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { ensureApproverRole } from "@/lib/hr-payroll"
 import { ensureAutoPeriods } from "@/lib/payroll-periods"
 import { prisma } from "@/lib/prisma"
@@ -15,6 +16,8 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.payroll", "create")
+    if (denial) return errorResponse(denial, 403)
 
     if (!ensureApproverRole(session)) {
       return errorResponse("Insufficient permissions to seed payroll periods", 403)

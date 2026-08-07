@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { ensureApproverRole } from "@/lib/hr-payroll"
 import { prisma } from "@/lib/prisma"
 
@@ -52,6 +53,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.employees", "view")
+    if (denial) return errorResponse(denial, 403)
     const { id } = await params
 
     const action = await getActionForCompany(id, session.user.companyId)
@@ -69,6 +72,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.employees", "edit")
+    if (denial) return errorResponse(denial, 403)
     const { id } = await params
 
     if (!ensureApproverRole(session)) {
@@ -168,6 +173,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.employees", "edit")
+    if (denial) return errorResponse(denial, 403)
     const { id } = await params
 
     if (!ensureApproverRole(session)) {

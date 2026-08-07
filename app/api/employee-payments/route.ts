@@ -6,6 +6,7 @@ import {
   getPaginationParams,
   paginationResponse,
 } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { captureAccountingEvent } from "@/lib/accounting/integration"
 import {
   buildGoldPayoutNotes,
@@ -186,6 +187,8 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.compensation", "view")
+    if (denial) return errorResponse(denial, 403)
 
     const { searchParams } = new URL(request.url)
     const type = searchParams.get("type")
@@ -308,6 +311,8 @@ export async function POST(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.compensation", "create")
+    if (denial) return errorResponse(denial, 403)
 
     const body = await request.json()
     const validated = employeePaymentCreateSchema.parse(body)

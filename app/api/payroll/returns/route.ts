@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
-import { ensureApproverRole } from "@/lib/hr-payroll"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import {
   computeNssaSchedule,
   computeP2,
@@ -36,13 +36,8 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
-
-    // A statutory return is the whole workforce's pay on one page. The feature
-    // gate says the tenant bought payroll; this says the caller is allowed to
-    // see everybody's.
-    if (!ensureApproverRole(session)) {
-      return errorResponse("Your role cannot view statutory returns", 403)
-    }
+    const denial = hrPermissionDenial(session, "hr.returns", "view")
+    if (denial) return errorResponse(denial, 403)
 
     const parsed = querySchema.safeParse({
       periodKey: request.nextUrl.searchParams.get("periodKey") ?? "",

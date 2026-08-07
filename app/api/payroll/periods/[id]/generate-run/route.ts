@@ -3,6 +3,8 @@ import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import type { CompensationCalcMethod, CompensationRuleType } from "@prisma/client"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
+import { writePlatformAuditEvent } from "@/lib/audit/platform"
 import { createApprovalAction, ensureApproverRole } from "@/lib/hr-payroll"
 import { ensureHrPayrollDefaults } from "@/lib/hr/bootstrap"
 import {
@@ -428,6 +430,8 @@ export async function POST(
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.payroll", "create")
+    if (denial) return errorResponse(denial, 403)
     if (!ensureApproverRole(session)) {
       return errorResponse("Insufficient permissions to generate payroll runs", 403)
     }
@@ -665,6 +669,33 @@ export async function POST(
         toStatus: "DRAFT",
         note: runDraft.workflowNote,
       })
+
+      // Computing a run is the act that decides what everybody is paid and what
+      // the state is owed, so it goes on the tamper-evident chain even though
+      // nothing has been approved yet. The statutory figures are recorded here
+      // because a later dispute is about what the tables said *at compute time* —
+      // and by then somebody may have corrected a rate.
+      await writePlatformAuditEvent(
+        {
+          companyId: session.user.companyId,
+          actorId: session.user.id,
+          eventType: "hr.payroll.run.computed",
+          entityType: "PAYROLL_RUN",
+          entityId: created.id,
+          payload: {
+            runNumber,
+            periodKey: period.periodKey,
+            domain: period.domain,
+            lineCount: stampedLines.length,
+            grossTotal: runDraft.totals.grossTotal.toFixed(2),
+            netTotal: runDraft.totals.netTotal.toFixed(2),
+            deductionsTotal: runDraft.totals.deductionsTotal.toFixed(2),
+            employerCostTotal: runDraft.totals.employerCostTotal.toFixed(2),
+            warningCount: runDraft.warnings.length,
+          },
+        },
+        tx,
+      )
 
       return created
     })

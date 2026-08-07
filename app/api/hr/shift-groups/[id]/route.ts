@@ -7,6 +7,7 @@ import {
   successResponse,
   validateSession,
 } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { ensureApproverRole } from "@/lib/hr-payroll"
 import { prisma } from "@/lib/prisma"
 
@@ -27,6 +28,8 @@ export async function GET(
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.employees", "view")
+    if (denial) return errorResponse(denial, 403)
     const { id } = await params
 
     const group = await prisma.shiftGroup.findUnique({
@@ -67,6 +70,8 @@ export async function PATCH(
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.employees", "edit")
+    if (denial) return errorResponse(denial, 403)
 
     if (!ensureApproverRole(session)) {
       return errorResponse("Insufficient permissions to update shift groups", 403)
@@ -260,6 +265,8 @@ export async function DELETE(
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.employees", "edit")
+    if (denial) return errorResponse(denial, 403)
 
     if (!ensureApproverRole(session)) {
       return errorResponse("Insufficient permissions to manage shift groups", 403)

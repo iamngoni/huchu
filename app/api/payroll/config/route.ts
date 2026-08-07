@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
+import { hrPermissionDenial } from "@/lib/hr/permissions"
 import { prisma } from "@/lib/prisma"
 import { ensureApproverRole } from "@/lib/hr-payroll"
 
@@ -21,6 +22,8 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.payroll", "view")
+    if (denial) return errorResponse(denial, 403)
 
     const company = await prisma.company.findUnique({
       where: { id: session.user.companyId },
@@ -52,6 +55,8 @@ export async function PATCH(request: NextRequest) {
     const sessionResult = await validateSession(request)
     if (sessionResult instanceof NextResponse) return sessionResult
     const { session } = sessionResult
+    const denial = hrPermissionDenial(session, "hr.payroll", "configure")
+    if (denial) return errorResponse(denial, 403)
 
     if (!ensureApproverRole(session)) {
       return errorResponse("Insufficient permissions to update payroll settings", 403)
