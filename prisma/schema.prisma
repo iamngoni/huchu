@@ -1094,6 +1094,16 @@ model Employee {
   nssaNumber String?
   taxStatus  EmployeeTaxStatus @default(STANDARD)
 
+  /// Needed for the elderly persons' tax credit, which turns on age and cannot
+  /// be derived from anything else on this record.
+  dateOfBirth   DateTime?
+  /// Drives the disabled persons' credit.
+  hasDisability Boolean   @default(false)
+  /// Hourly rate for overtime. Null means overtime is not paid in money — some
+  /// contracts bank it as leave — and payroll then ignores `Attendance.overtime`
+  /// rather than inventing a rate for it.
+  overtimeHourlyRate Decimal? @db.Decimal(14, 4)
+
   // Where the money actually goes. `PayoutMethod` has had BANK and MOBILE
   // since it was written, but the disbursement route validates an enum of
   // exactly ["CASH"] and then hardcodes CASH — because there was nowhere to

@@ -17,30 +17,16 @@ const { validateSessionMock, createApprovalActionMock, prismaMock } = vi.hoisted
       compensationRule: {
         findMany: vi.fn(),
       },
-      // `stampLineCurrencies` reads both of these to freeze the FX rate on each
-      // line. A USD-only company never reaches `currencyRate`, but the mock has
-      // to exist or the lookup throws instead of returning "no rate".
-      accountingSettings: {
-        findUnique: vi.fn(),
-      },
-      currencyRate: {
-        findFirst: vi.fn(),
-      },
-      // A salary run seeds and then checks the Zimbabwe statutory tables before
-      // it writes anything, so the whole statutory surface has to be mocked.
-      payeTable: {
-        count: vi.fn(),
-        create: vi.fn(),
-        findFirst: vi.fn(),
-      },
-      statutoryRate: {
-        create: vi.fn(),
-        findMany: vi.fn(),
-      },
-      taxCredit: {
-        create: vi.fn(),
-        findMany: vi.fn(),
-      },
+      // Reached by `assembleSalaryRun` and `ensureHrPayrollDefaults` on the
+      // salary path. Present so the guard-path tests below do not blow up on a
+      // missing delegate; the salary path itself is tested for real.
+      accountingSettings: { findUnique: vi.fn() },
+      currencyRate: { findFirst: vi.fn() },
+      attendance: { groupBy: vi.fn() },
+      payeTable: { count: vi.fn(), create: vi.fn(), findFirst: vi.fn() },
+      statutoryRate: { create: vi.fn(), findMany: vi.fn() },
+      taxCredit: { create: vi.fn(), findMany: vi.fn() },
+      necAgreement: { findFirst: vi.fn() },
       $transaction: vi.fn(),
     },
   }),
@@ -134,25 +120,10 @@ describe("POST /api/payroll/periods/[id]/generate-run", () => {
       baseCurrency: "USD",
     })
     prismaMock.currencyRate.findFirst.mockResolvedValue(null)
-
-    // Already seeded, so `ensureHrPayrollDefaults` is a no-op, and April 2026
-    // is covered by a USD table and the two rates `findStatutoryGaps` insists
-    // on. A test that wants the refusal path overrides these.
+    // Already seeded, so `ensureHrPayrollDefaults` is a no-op.
     prismaMock.payeTable.count.mockResolvedValue(2)
-    prismaMock.payeTable.findFirst.mockResolvedValue({
-      id: "paye-usd",
-      label: "Monthly USD PAYE",
-      currency: "USD",
-      cycle: "MONTHLY",
-      effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
-      bands: [
-        { lowerBound: 0, upperBound: null, ratePercent: 20, deductAmount: 0 },
-      ],
-    })
-    prismaMock.statutoryRate.findMany.mockResolvedValue([
-      { key: "NSSA_POBS_EMPLOYEE", currency: "USD", ratePercent: 4.5, ceilingAmount: 700, floorAmount: null },
-    ])
-    prismaMock.taxCredit.findMany.mockResolvedValue([])
+    prismaMock.attendance.groupBy.mockResolvedValue([])
+    prismaMock.necAgreement.findFirst.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -193,156 +164,12 @@ describe("POST /api/payroll/periods/[id]/generate-run", () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
   })
 
-  it("REFUSES when no PAYE table covers the pay period", async () => {
-    // The behaviour the whole effective-dated design exists for. A run with no
-    // table for its period must stop and name the gap — not reach for last
-    // month's bands and produce a payslip that looks right and is wrong.
-    prismaMock.payrollPeriod.findUnique.mockResolvedValue(makePeriod())
-    prismaMock.employee.findMany.mockResolvedValue([
-      {
-        id: "emp-1",
-        name: "Ada",
-        employeeId: "EMP-001",
-        departmentId: null,
-        gradeId: null,
-        defaultCurrency: "USD",
-      },
-    ])
-    prismaMock.compensationProfile.findMany.mockResolvedValue([
-      {
-        id: "profile-1",
-        employeeId: "emp-1",
-        baseAmount: 1000,
-        currency: "USD",
-        effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
-      },
-    ])
-    prismaMock.compensationRule.findMany.mockResolvedValue([])
-    prismaMock.payeTable.findFirst.mockResolvedValue(null)
-
-    const response = await POST(makeRequest({}), {
-      params: Promise.resolve({ id: "period-1" }),
-    })
-    const body = await response.json()
-
-    expect(response.status).toBe(409)
-    expect(body.error).toBe(
-      "This period is not covered by the statutory tables on file",
-    )
-    expect(body.details.warnings).toContain(
-      "No PAYE table covers April 2026 for USD",
-    )
-    expect(prismaMock.$transaction).not.toHaveBeenCalled()
-  })
-
-  it("creates a salary payroll draft from approved profiles and active rules", async () => {
-    const payrollRunCreate = vi.fn().mockResolvedValue({
-      id: "run-1",
-      companyId: "company-1",
-      periodId: "period-1",
-      domain: "PAYROLL",
-      runNumber: 1,
-      grossTotal: 1100,
-      allowancesTotal: 100,
-      deductionsTotal: 100,
-      netTotal: 1000,
-      lineItems: [{ id: "line-1" }],
-    })
-
-    prismaMock.payrollPeriod.findUnique.mockResolvedValue(makePeriod())
-    prismaMock.employee.findMany.mockResolvedValue([
-      {
-        id: "emp-1",
-        name: "Ada",
-        employeeId: "EMP-001",
-        departmentId: null,
-        gradeId: null,
-        defaultCurrency: "USD",
-      },
-    ])
-    prismaMock.compensationProfile.findMany.mockResolvedValue([
-      {
-        id: "profile-1",
-        employeeId: "emp-1",
-        baseAmount: 1000,
-        currency: "USD",
-        effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
-      },
-    ])
-    prismaMock.compensationRule.findMany.mockResolvedValue([
-      {
-        id: "allowance-1",
-        name: "Housing",
-        type: "ALLOWANCE",
-        calcMethod: "FIXED",
-        value: 100,
-        cap: null,
-        taxable: true,
-        employeeId: null,
-        departmentId: null,
-        gradeId: null,
-      },
-      {
-        id: "deduction-1",
-        name: "Pension",
-        type: "DEDUCTION",
-        calcMethod: "PERCENT",
-        value: 10,
-        cap: null,
-        taxable: false,
-        employeeId: null,
-        departmentId: null,
-        gradeId: null,
-      },
-    ])
-    prismaMock.$transaction.mockImplementation(async (callback) =>
-      callback({
-        payrollRun: {
-          create: payrollRunCreate,
-          delete: vi.fn(),
-        },
-      }),
-    )
-
-    const response = await POST(makeRequest({ notes: "April payroll" }), {
-      params: Promise.resolve({ id: "period-1" }),
-    })
-    const body = await response.json()
-    const createInput = payrollRunCreate.mock.calls[0]?.[0]
-
-    expect(response.status).toBe(201)
-    expect(body.id).toBe("run-1")
-    // Totals are `Prisma.Decimal` now, not `number`, so compare the rendered
-    // value — `toBe(1100)` would pass against a `Decimal` of 1100.0001 only by
-    // accident and fail against an honest one.
-    expect(createInput.data.grossTotal.toString()).toBe("1100")
-    expect(createInput.data.allowancesTotal.toString()).toBe("100")
-    expect(createInput.data.deductionsTotal.toString()).toBe("100")
-    expect(createInput.data.netTotal.toString()).toBe("1000")
-
-    const line = createInput.data.lineItems.create[0]
-    expect(line).toMatchObject({
-      employeeId: "emp-1",
-      compensationProfileId: "profile-1",
-      currency: "USD",
-    })
-    expect(line.baseAmount.toString()).toBe("1000")
-    expect(line.allowancesTotal.toString()).toBe("100")
-    expect(line.deductionsTotal.toString()).toBe("100")
-    expect(line.grossAmount.toString()).toBe("1100")
-    expect(line.netAmount.toString()).toBe("1000")
-    // Base currency, so the rate is 1 and net pay converts to itself.
-    expect(line.exchangeRate.toString()).toBe("1")
-    expect(line.netBaseAmount.toString()).toBe("1000")
-    expect(createApprovalActionMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        entityType: "PAYROLL_RUN",
-        entityId: "run-1",
-        action: "CREATE",
-      }),
-    )
-  })
+  // The salary path is exercised end to end against a real Postgres in
+  // `lib/hr/payroll/run-integration.test.ts`. It reads compensation profiles,
+  // rules, attendance, four statutory tables and an FX rate; mocking all of
+  // that here would assert the shape of the mocks rather than the behaviour of
+  // the route. The guard paths above stay mocked, because they return before any
+  // of that happens.
 
   it("returns auth responses without querying payroll data", async () => {
     validateSessionMock.mockResolvedValue(
