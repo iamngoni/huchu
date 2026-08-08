@@ -49,6 +49,10 @@ async function main() {
     });
     await prisma.disbursementBatch.deleteMany({ where: { companyId } });
     await prisma.hrIncident.deleteMany({ where: { companyId } });
+    await prisma.shiftGroupMember.deleteMany({
+      where: { shiftGroup: { companyId } },
+    });
+    await prisma.shiftGroup.deleteMany({ where: { companyId } });
     await prisma.payrollLineItem.deleteMany({ where: { run: { companyId } } });
     await prisma.approvalAction.deleteMany({ where: { companyId } });
     await prisma.payrollRun.deleteMany({ where: { companyId } });
@@ -530,10 +534,26 @@ async function main() {
   // feature is missing rather than idle. What follows is the smallest amount of
   // data that makes each one legible.
   //
-  // **Rosters stays empty, deliberately.** `ShiftGroup.siteId` is required, and
-  // a bureau has no sites — inventing one to fill the screen is exactly the gold
-  // assumption this branch is removing. Making that column optional is P-5's
-  // job, not a seed's.
+  // A company-wide crew, which is now expressible: `ShiftGroup.siteId` used to be
+  // required, so a bureau could not have a roster at all without inventing a
+  // site. A crew is a group of people who work together; a site is a mine's way
+  // of narrowing that.
+  const roster = await prisma.shiftGroup.create({
+    data: {
+      companyId,
+      siteId: null,
+      name: "Payroll desk",
+      code: "PD-1",
+      leaderEmployeeId: createdEmployees[0].id,
+      members: {
+        create: createdEmployees.slice(0, 3).map((employee) => ({
+          employeeId: employee.id,
+        })),
+      },
+    },
+    select: { id: true },
+  });
+  void roster;
 
   // Money out the door: a batch against the approved run, part-paid, so the
   // outstanding column has something in it and PAID/PARTIAL/DUE all render.

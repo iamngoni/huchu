@@ -2846,10 +2846,16 @@ model Attendance {
   @@index([goldLedgerEntryId])
 }
 
+/// A crew that works together on a shift.
+///
+/// `siteId` is optional. It was required, which meant a workforce with no sites
+/// could not be scheduled at all — a payroll bureau or a school has staff and
+/// rotas but no shafts, and the only way past it was to invent a site. Workforce
+/// scheduling belongs to People; a site is a mine's way of narrowing it.
 model ShiftGroup {
   id               String   @id @default(uuid())
   companyId        String
-  siteId           String
+  siteId           String?
   name             String
   code             String?
   leaderEmployeeId String
@@ -2858,7 +2864,7 @@ model ShiftGroup {
   updatedAt        DateTime @updatedAt
 
   company              Company               @relation(fields: [companyId], references: [id])
-  site                 Site                  @relation(fields: [siteId], references: [id])
+  site                 Site?                 @relation(fields: [siteId], references: [id])
   leader               Employee              @relation("ShiftGroupLeader", fields: [leaderEmployeeId], references: [id])
   members              ShiftGroupMember[]
   schedules            ShiftGroupSchedule[]

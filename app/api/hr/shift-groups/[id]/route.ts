@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma"
 const updateShiftGroupSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   code: z.string().trim().max(40).nullable().optional(),
-  siteId: z.string().uuid().optional(),
+  siteId: z.string().uuid().nullable().optional(),
   leaderEmployeeId: z.string().uuid().optional(),
   memberIds: z.array(z.string().uuid()).optional(),
   isActive: z.boolean().optional(),
@@ -140,7 +140,7 @@ export async function PATCH(
         data: {
           name: validated.name,
           code: validated.code === null ? null : (validated.code?.trim() || undefined),
-          siteId: validated.siteId,
+          siteId: validated.siteId === undefined ? undefined : (validated.siteId ?? null),
           leaderEmployeeId: validated.leaderEmployeeId,
           isActive: validated.isActive,
         },

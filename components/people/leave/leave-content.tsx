@@ -178,7 +178,13 @@ export function LeaveContent() {
             onValueChange={setEmployeeId}
             disabled={employeesQuery.isPending || employees.length === 0}
           >
-            <SelectTrigger size="sm" className="h-8 w-[220px]">
+            {/* Not a fixed width: at tablet a 220px trigger clipped "Ada Moyo ·
+                EMP-001" to "Ada Moy". It sizes to the space it has and caps on
+                wide screens. */}
+            <SelectTrigger
+              size="sm"
+              className="h-8 w-full min-w-[9rem] max-w-[16rem] sm:w-auto"
+            >
               <SelectValue placeholder="Choose an employee" />
             </SelectTrigger>
             <SelectContent>

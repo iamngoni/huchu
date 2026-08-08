@@ -57,6 +57,10 @@ import {
 } from "@/lib/api"
 import { ApiError, getApiErrorMessage } from "@/lib/api-client"
 
+/// A `Select` cannot hold "" as a value, so "no site" needs a sentinel. It is
+/// translated back to null on the way out; nothing persists this string.
+const NO_SITE = "__whole_company"
+
 type GroupForm = {
   name: string
   code: string
@@ -154,7 +158,8 @@ function buildGroupFormFromRecord(
     form: {
       name: group.name,
       code: group.code ?? "",
-      siteId: group.siteId,
+      // "" is the form's way of saying company-wide; the column says null.
+      siteId: group.siteId ?? "",
       leaderEmployeeId: group.leaderEmployeeId,
       memberIds,
     },
@@ -328,10 +333,13 @@ export default function HrShiftGroupsPage() {
   }
 
   const openCreateGroupSheet = useCallback(() => {
-    const defaultSiteId = siteFilter === "all" ? sites[0]?.id ?? "" : siteFilter
+    // Only carries the filter through when one is actually set. Defaulting to
+    // `sites[0]` put a site on every group in a workspace that has one, whether
+    // or not the crew belonged to it.
+    const defaultSiteId = siteFilter === "all" ? "" : siteFilter
     resetGroupComposerState(defaultSiteId)
     setGroupSheetOpen(true)
-  }, [resetGroupComposerState, siteFilter, sites])
+  }, [resetGroupComposerState, siteFilter])
 
   const openEditGroupSheet = useCallback(
     async (groupId: string) => {
@@ -376,7 +384,7 @@ export default function HrShiftGroupsPage() {
       createShiftGroup({
         name: groupForm.name.trim(),
         code: groupForm.code.trim() || undefined,
-        siteId: groupForm.siteId,
+        siteId: groupForm.siteId || null,
         leaderEmployeeId: groupForm.leaderEmployeeId,
         memberIds: Array.from(new Set([...groupForm.memberIds, groupForm.leaderEmployeeId])),
       }),
@@ -402,7 +410,7 @@ export default function HrShiftGroupsPage() {
       return updateShiftGroup(editingGroupId, {
         name: groupForm.name.trim(),
         code: groupForm.code.trim() || null,
-        siteId: groupForm.siteId,
+        siteId: groupForm.siteId || null,
         leaderEmployeeId: groupForm.leaderEmployeeId,
         memberIds: Array.from(new Set([...groupForm.memberIds, groupForm.leaderEmployeeId])),
       })
@@ -885,19 +893,27 @@ export default function HrShiftGroupsPage() {
                 placeholder="Optional"
               />
             </div>
+            {/* Not required, and not shown at all to a workspace with no sites. A
+                bureau or a school has crews without shafts, and asking it to pick
+                a site it does not have is what made this screen unusable. */}
+            {sites.length > 0 ? (
             <div>
-              <label className="mb-2 block text-sm font-semibold">Site *</label>
+              <label className="mb-2 block text-sm font-semibold">Site</label>
               <Select
-                value={groupForm.siteId}
+                value={groupForm.siteId || NO_SITE}
                 onValueChange={(value) => {
                   setGroupFormFeedback(null)
-                  setGroupForm((prev) => ({ ...prev, siteId: value }))
+                  setGroupForm((prev) => ({
+                    ...prev,
+                    siteId: value === NO_SITE ? "" : value,
+                  }))
                 }}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select site" />
+                  <SelectValue placeholder="Whole company" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NO_SITE}>Whole company</SelectItem>
                   {sites.map((site) => (
                     <SelectItem key={site.id} value={site.id}>
                       {site.name}
@@ -906,6 +922,7 @@ export default function HrShiftGroupsPage() {
                 </SelectContent>
               </Select>
             </div>
+            ) : null}
             <div>
               <label className="mb-2 block text-sm font-semibold">Group leader *</label>
               <Popover open={leaderPickerOpen} onOpenChange={setLeaderPickerOpen}>
@@ -1057,7 +1074,6 @@ export default function HrShiftGroupsPage() {
                 createGroupMutation.isPending ||
                 updateGroupMutation.isPending ||
                 !groupForm.name.trim() ||
-                !groupForm.siteId ||
                 !groupForm.leaderEmployeeId
               }
             >

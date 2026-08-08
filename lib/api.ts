@@ -126,7 +126,8 @@ export type ScrapTicketContext = {
 export type ShiftGroupRecord = {
   id: string;
   companyId: string;
-  siteId: string;
+  /// Null for a company-wide crew.
+  siteId: string | null;
   name: string;
   code?: string | null;
   leaderEmployeeId: string;
@@ -1447,7 +1448,8 @@ export async function fetchShiftGroup(id: string) {
 export async function createShiftGroup(input: {
   name: string;
   code?: string;
-  siteId: string;
+  /// Null for a company-wide crew. Not every workforce is organised by site.
+  siteId?: string | null;
   leaderEmployeeId: string;
   memberIds?: string[];
 }) {
@@ -1462,7 +1464,7 @@ export async function updateShiftGroup(
   input: {
     name?: string;
     code?: string | null;
-    siteId?: string;
+    siteId?: string | null;
     leaderEmployeeId?: string;
     memberIds?: string[];
     isActive?: boolean;
