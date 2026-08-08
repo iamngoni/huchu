@@ -648,12 +648,18 @@ const WORKSPACE_PROFILE_RECIPES: Record<WorkspaceProfile, WorkspaceProfileRecipe
           { moduleId: "payroll", href: "/payroll/statutory/returns" },
         ],
       },
+      // Not "People", and it does not claim `/people`. A curated section takes
+      // its hrefs out of the module rails (`getPrimarySections` excludes
+      // `usedHrefs`), so titling this "People" put two sections called People in
+      // the rail *and* emptied the directory out of the one that owns it.
+      // Compensation is what a bureau needs shortcut here; the People rail keeps
+      // the people.
       {
-        id: "payroll-people",
-        title: "People",
+        id: "payroll-compensation",
+        title: "Compensation",
         refs: [
-          { moduleId: "people", href: "/people" },
           { moduleId: "payroll", href: "/payroll/compensation" },
+          { moduleId: "payroll", href: "/payroll/salaries" },
         ],
       },
     ],

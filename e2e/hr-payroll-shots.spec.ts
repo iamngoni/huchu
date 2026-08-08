@@ -88,11 +88,30 @@ test.use({
   launchOptions: { executablePath: "/opt/pw-browsers/chromium" },
 });
 
-const VIEWPORTS: Array<[label: string, width: number, height: number]> = [
+const ALL_VIEWPORTS: Array<[label: string, width: number, height: number]> = [
   ["desktop", 1440, 900],
   ["tablet", 768, 1024],
   ["phone", 390, 844],
 ];
+
+// A full pass is ~20 minutes, which is too slow a loop when one screen changed.
+// `SHOT_ONLY=leave,public-holidays SHOT_VIEWPORTS=desktop` reshoots just that.
+function only(value: string | undefined) {
+  const names = (value ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  return names.length > 0 ? new Set(names) : null;
+}
+
+const screenFilter = only(process.env.SHOT_ONLY);
+const viewportFilter = only(process.env.SHOT_VIEWPORTS);
+const SELECTED = screenFilter
+  ? SCREENS.filter((screen) => screenFilter.has(screen.name))
+  : SCREENS;
+const VIEWPORTS = viewportFilter
+  ? ALL_VIEWPORTS.filter(([label]) => viewportFilter.has(label))
+  : ALL_VIEWPORTS;
 
 for (const [label, width, height] of VIEWPORTS) {
   test.describe(`${label}`, () => {
@@ -127,7 +146,7 @@ for (const [label, width, height] of VIEWPORTS) {
       await page.goto("/", { waitUntil: "commit" }).catch(() => {});
       await page.waitForTimeout(1000);
 
-      for (const { name, path, prepare } of SCREENS) {
+      for (const { name, path, prepare } of SELECTED) {
         // One retry: an aborted navigation is a race, not a broken route.
         try {
           await page.goto(path);
