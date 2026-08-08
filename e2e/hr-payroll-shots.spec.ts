@@ -20,9 +20,6 @@ import { expect, test, type Page } from "@playwright/test";
 const OUT = process.env.SHOT_DIR ?? "/tmp/shots";
 const BASE = process.env.E2E_BASE_URL ?? "http://payroll-demo.apps.pagka.local:3000";
 
-// Returns default to the previous complete month — the right default to file
-// against and the wrong one to photograph, since the demo run is August 2026
-// and July lands on the empty state.
 type Screen = {
   name: string;
   path: string;
@@ -30,33 +27,22 @@ type Screen = {
 };
 
 const SCREENS: Screen[] = [
-  { name: "statutory-tables", path: "/payroll/statutory" },
+  // --- People, in rail order.
+  { name: "people-employees", path: "/people" },
+  { name: "people-rosters", path: "/people/rosters" },
   {
-    name: "statutory-returns",
-    path: "/payroll/statutory/returns",
-    prepare: async (page) => {
-      const trigger = page.getByRole("combobox").first();
-      if (!(await trigger.isVisible().catch(() => false))) return;
-      await trigger.click();
-      const option = page.getByRole("option", { name: /August 2026/i });
-      if (await option.isVisible().catch(() => false)) await option.click();
-      await page.waitForLoadState("networkidle");
-    },
-  },
-  { name: "employees", path: "/people" },
-  {
-    name: "leave",
+    name: "people-leave",
     path: "/people/leave",
     prepare: async (page) => {
       await page
-        .getByText(/day/i)
+        .getByText(/Annual leave/i)
         .first()
         .waitFor({ state: "visible", timeout: 30000 })
         .catch(() => {});
     },
   },
   {
-    name: "public-holidays",
+    name: "people-public-holidays",
     path: "/people/leave/holidays",
     prepare: async (page) => {
       await page
@@ -66,10 +52,15 @@ const SCREENS: Screen[] = [
         .catch(() => {});
     },
   },
+  { name: "people-incidents", path: "/people/incidents" },
+  { name: "people-approvals-history", path: "/people/approvals" },
+
+  // --- Payroll, in rail order.
+  { name: "payroll-compensation-rules", path: "/payroll/compensation" },
+  { name: "payroll-salaries", path: "/payroll/salaries" },
+  { name: "payroll-salaries-outstanding", path: "/payroll/salaries/outstanding" },
   {
     name: "payroll-runs",
-    // The resolved URL. /payroll/runs redirects here, and a shot
-    // taken mid-redirect catches the periods table still loading.
     path: "/payroll/runs",
     prepare: async (page) => {
       await page
@@ -77,6 +68,23 @@ const SCREENS: Screen[] = [
         .first()
         .waitFor({ state: "visible", timeout: 30000 })
         .catch(() => {});
+    },
+  },
+  { name: "payroll-disbursements", path: "/payroll/disbursements" },
+  { name: "payroll-statutory-tables", path: "/payroll/statutory" },
+  {
+    name: "payroll-statutory-returns",
+    path: "/payroll/statutory/returns",
+    // Returns default to the previous complete month — the right default to file
+    // against and the wrong one to photograph, since the demo run is August 2026
+    // and July lands on the empty state.
+    prepare: async (page) => {
+      const trigger = page.getByRole("combobox").first();
+      if (!(await trigger.isVisible().catch(() => false))) return;
+      await trigger.click();
+      const option = page.getByRole("option", { name: /August 2026/i });
+      if (await option.isVisible().catch(() => false)) await option.click();
+      await page.waitForLoadState("networkidle");
     },
   },
 ];
@@ -160,6 +168,13 @@ for (const [label, width, height] of VIEWPORTS) {
         // The runs page needs the longer end of this — it fires a second query
         // for periods after the shell paints.
         await page.waitForTimeout(8000);
+        // A screen that renders its own error banner is worth photographing as
+        // it is, but it is not worth photographing *silently* — the desktop leg
+        // once shipped six pictures of "Failed to fetch payroll periods".
+        const banner = page.getByText(/Unable to load|Failed to (fetch|load)/i).first();
+        if (await banner.isVisible().catch(() => false)) {
+          console.error(`[shots] ${name} at ${label} rendered an error banner`);
+        }
         if (prepare) {
           await prepare(page);
           await page.waitForTimeout(1500);

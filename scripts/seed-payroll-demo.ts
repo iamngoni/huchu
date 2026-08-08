@@ -43,6 +43,12 @@ async function main() {
     await prisma.payrollLineComponent.deleteMany({
       where: { lineItem: { run: { companyId } } },
     });
+    await prisma.employeePayment.deleteMany({ where: { employee: { companyId } } });
+    await prisma.disbursementItem.deleteMany({
+      where: { batch: { companyId } },
+    });
+    await prisma.disbursementBatch.deleteMany({ where: { companyId } });
+    await prisma.hrIncident.deleteMany({ where: { companyId } });
     await prisma.payrollLineItem.deleteMany({ where: { run: { companyId } } });
     await prisma.approvalAction.deleteMany({ where: { companyId } });
     await prisma.payrollRun.deleteMany({ where: { companyId } });
@@ -514,6 +520,210 @@ async function main() {
         ...(spec.status === "APPROVED"
           ? { decidedById: admin.id, decidedAt: new Date(`${spec.start}T00:00:00.000Z`) }
           : {}),
+      },
+    });
+  }
+
+  // ── The rest of the surface ────────────────────────────────────────────────
+  //
+  // Six screens were showing empty states, which photographs as though the
+  // feature is missing rather than idle. What follows is the smallest amount of
+  // data that makes each one legible.
+  //
+  // **Rosters stays empty, deliberately.** `ShiftGroup.siteId` is required, and
+  // a bureau has no sites — inventing one to fill the screen is exactly the gold
+  // assumption this branch is removing. Making that column optional is P-5's
+  // job, not a seed's.
+
+  // Money out the door: a batch against the approved run, part-paid, so the
+  // outstanding column has something in it and PAID/PARTIAL/DUE all render.
+  const lineDetails = await prisma.payrollLineItem.findMany({
+    where: { runId: run.id },
+    select: {
+      id: true,
+      employeeId: true,
+      netAmount: true,
+      currency: true,
+      exchangeRate: true,
+      netBaseAmount: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  const usdLines = lineDetails.filter((line) => line.currency === "USD");
+
+  const batch = await prisma.disbursementBatch.create({
+    data: {
+      companyId,
+      payrollRunId: run.id,
+      code: "DSB-2026-08-001",
+      status: "APPROVED",
+      method: "CASH",
+      currency: "USD",
+      cashCustodian: "Rudo Chirwa",
+      cashIssuedAt: new Date("2026-08-31T09:00:00.000Z"),
+      totalAmount: usdLines.reduce(
+        (sum, line) => sum.plus(line.netAmount),
+        usdLines[0].netAmount.minus(usdLines[0].netAmount),
+      ),
+      itemCount: usdLines.length,
+      createdById: admin.id,
+      submittedById: admin.id,
+      submittedAt: new Date("2026-08-31T08:00:00.000Z"),
+      approvedById: admin.id,
+      approvedAt: new Date("2026-08-31T08:30:00.000Z"),
+      items: {
+        create: usdLines.map((line, index) => {
+          // The last one is short by 40 — a cashier out of small change. That is
+          // the case the outstanding column exists for.
+          const isShort = index === usdLines.length - 1;
+          const paid = isShort
+            ? line.netAmount.minus(40)
+            : line.netAmount;
+          return {
+            lineItemId: line.id,
+            employeeId: line.employeeId,
+            amount: line.netAmount,
+            paidAmount: paid,
+            currency: line.currency,
+            exchangeRate: line.exchangeRate,
+            baseAmount: line.netBaseAmount,
+            status: isShort ? "PARTIAL" : "PAID",
+            paidAt: new Date("2026-08-31T10:00:00.000Z"),
+            receiptReference: `RCP-${String(index + 1).padStart(3, "0")}`,
+          };
+        }),
+      },
+    },
+    select: { id: true, items: { select: { id: true, employeeId: true, amount: true, paidAmount: true, currency: true, status: true, lineItemId: true } } },
+  });
+
+  // What each person was paid, which is what the salaries screens read.
+  for (const item of batch.items) {
+    await prisma.employeePayment.create({
+      data: {
+        employeeId: item.employeeId,
+        periodStart: START,
+        periodEnd: END,
+        dueDate: new Date("2026-08-31T00:00:00.000Z"),
+        amount: item.amount,
+        unit: item.currency,
+        paidAmount: item.paidAmount,
+        paidAt: new Date("2026-08-31T10:00:00.000Z"),
+        status: item.status,
+        notes: `Disbursement batch DSB-2026-08-001`,
+        createdById: admin.id,
+        payrollRunId: run.id,
+        payrollLineItemId: item.lineItemId,
+        disbursementBatchId: batch.id,
+        disbursementItemId: item.id,
+      },
+    });
+  }
+
+  // A workforce incident with no site, because `HrIncident.siteId` is nullable
+  // and a bureau's incidents happen in an office.
+  await prisma.hrIncident.create({
+    data: {
+      companyId,
+      employeeId: createdEmployees[2].id,
+      incidentDate: new Date("2026-08-14T00:00:00.000Z"),
+      category: "ATTENDANCE",
+      severity: "MEDIUM",
+      status: "UNDER_REVIEW",
+      title: "Repeated late arrival",
+      description:
+        "Arrived after 09:00 on four occasions in the fortnight to 14 August. Discussed informally on the second occasion.",
+      investigationNotes: "Statement taken. Awaiting the employee's written response.",
+      reportedById: admin.id,
+    },
+  });
+
+  // The audit trail. These are written by the workflow routes in normal use;
+  // the seed creates the run and the batch directly, so it writes the actions
+  // the routes would have — otherwise History photographs empty on a tenant
+  // that has plainly approved things.
+  const auditTrail: Array<{
+    entityType: "PAYROLL_RUN" | "DISBURSEMENT_BATCH";
+    entityId: string;
+    action: "CREATE" | "SUBMIT" | "APPROVE";
+    fromStatus: string | null;
+    toStatus: string;
+    at: string;
+    note: string;
+  }> = [
+    {
+      entityType: "PAYROLL_RUN",
+      entityId: run.id,
+      action: "CREATE",
+      fromStatus: null,
+      toStatus: "DRAFT",
+      at: "2026-08-28T09:00:00.000Z",
+      note: `Run ${run.runNumber} generated for ${PERIOD_KEY}.`,
+    },
+    {
+      entityType: "PAYROLL_RUN",
+      entityId: run.id,
+      action: "SUBMIT",
+      fromStatus: "DRAFT",
+      toStatus: "SUBMITTED",
+      at: "2026-08-29T11:30:00.000Z",
+      note: "Submitted for approval.",
+    },
+    {
+      entityType: "PAYROLL_RUN",
+      entityId: run.id,
+      action: "APPROVE",
+      fromStatus: "SUBMITTED",
+      toStatus: "APPROVED",
+      at: "2026-08-31T00:00:00.000Z",
+      note: "Approved; posted to the ledger.",
+    },
+    {
+      entityType: "DISBURSEMENT_BATCH",
+      entityId: batch.id,
+      action: "CREATE",
+      fromStatus: null,
+      toStatus: "DRAFT",
+      at: "2026-08-31T07:45:00.000Z",
+      note: "Cash disbursement batch DSB-2026-08-001 created.",
+    },
+    {
+      entityType: "DISBURSEMENT_BATCH",
+      entityId: batch.id,
+      action: "SUBMIT",
+      fromStatus: "DRAFT",
+      toStatus: "SUBMITTED",
+      at: "2026-08-31T08:00:00.000Z",
+      note: "Submitted for approval.",
+    },
+    {
+      entityType: "DISBURSEMENT_BATCH",
+      entityId: batch.id,
+      action: "APPROVE",
+      fromStatus: "SUBMITTED",
+      toStatus: "APPROVED",
+      at: "2026-08-31T08:30:00.000Z",
+      note: "Approved for cash issue.",
+    },
+  ];
+
+  for (const entry of auditTrail) {
+    await prisma.approvalAction.create({
+      data: {
+        companyId,
+        entityType: entry.entityType,
+        entityId: entry.entityId,
+        action: entry.action,
+        actedById: admin.id,
+        fromStatus: entry.fromStatus ?? undefined,
+        toStatus: entry.toStatus,
+        note: entry.note,
+        // Both, because the screen orders and displays `actedAt` while
+        // `createdAt` is the row's own age. Setting only the latter gave six
+        // rows stamped with the moment the seed ran, which reads as one
+        // simultaneous event rather than a sequence.
+        actedAt: new Date(entry.at),
+        createdAt: new Date(entry.at),
       },
     });
   }
