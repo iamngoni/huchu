@@ -56,7 +56,6 @@ type BatchDetails = {
   payrollRun: {
     id: string;
     runNumber: number;
-    domain: "PAYROLL" | "GOLD_PAYOUT";
     period: {
       id: string;
       periodKey: string;
@@ -396,17 +395,6 @@ export default function DisbursementsPage() {
         minSize: 220,
         maxSize: 420},
       {
-        id: "type",
-        header: "Type",
-        cell: ({ row }) => (
-          <Badge variant="neutral">
-            {row.original.domain === "GOLD_PAYOUT" ? "Settlements" : "Salary Payroll"}
-          </Badge>
-        ),
-        size: 160,
-        minSize: 160,
-        maxSize: 160},
-      {
         accessorKey: "period.periodKey",
         header: "Period",
         cell: ({ row }) => row.original.period.periodKey,
@@ -457,17 +445,6 @@ export default function DisbursementsPage() {
         size: 280,
         minSize: 220,
         maxSize: 420},
-      {
-        id: "type",
-        header: "Type",
-        cell: ({ row }) => (
-          <Badge variant="neutral">
-            {row.original.payrollRun.domain === "GOLD_PAYOUT" ? "Settlements" : "Salary Payroll"}
-          </Badge>
-        ),
-        size: 160,
-        minSize: 160,
-        maxSize: 160},
       {
         id: "run",
         header: "Run",
@@ -780,7 +757,7 @@ export default function DisbursementsPage() {
                   ) : (
                     availableRuns.map((run) => (
                       <SelectItem key={run.id} value={run.id}>
-                        {run.domain === "GOLD_PAYOUT" ? "Settlement" : "Salary"} - Run
+                        Salary - Run
                         #{run.runNumber} ({run.period.periodKey})
                       </SelectItem>
                     ))
@@ -854,10 +831,8 @@ export default function DisbursementsPage() {
               <div className="rounded-md border-0 bg-muted/40 p-3 text-sm shadow-[var(--surface-frame-shadow)]">
                 <div className="font-medium">Preview</div>
                 <div className="text-muted-foreground">
-                  {selectedRun.domain === "GOLD_PAYOUT"
-                    ? "Settlement"
-                    : "Salary payroll"}{" "}
-                  run #{selectedRun.runNumber} ({selectedRun.period.periodKey})
+                  Salary payroll run #{selectedRun.runNumber} (
+                  {selectedRun.period.periodKey})
                 </div>
                 <div className="mt-1">
                   Estimated batch amount: {previewAmount.toFixed(2)}

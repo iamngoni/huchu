@@ -20,11 +20,8 @@ model Company {
   suspendedAt                   DateTime?
   disabledAt                    DateTime?
   payrollCycle                  PayrollCycle       @default(MONTHLY)
-  goldPayoutCycle               PayrollCycle       @default(MONTHLY)
-  goldSettlementMode            GoldSettlementMode @default(CURRENT_PERIOD)
   cashDisbursementOnly          Boolean            @default(true)
   autoGeneratePayrollPeriods    Boolean            @default(true)
-  autoGenerateGoldPayoutPeriods Boolean            @default(true)
   periodGenerationHorizon       Int                @default(3)
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
@@ -185,7 +182,6 @@ model Company {
   goldPurchases                 GoldPurchase[]
   goldPrices                    GoldPrice[]
   goldExpenseTypes              GoldExpenseType[]
-  irregularPayoutBatches        IrregularPayoutBatch[]
   leaveTypes                    LeaveType[]
   leaveEntitlements             LeaveEntitlement[]
   leaveRequests                 LeaveRequest[]
@@ -1002,9 +998,6 @@ model User {
   approvedScrapMetalSales           ScrapMetalSale[]               @relation("ScrapMetalSaleApprovedBy")
   createdScrapMetalBalanceEntries   ScrapMetalBalanceEntry[]       @relation("ScrapMetalBalanceEntryCreatedBy")
   createdScrapTicketComplianceRules ScrapTicketComplianceRule[]    @relation("ScrapTicketComplianceRuleCreatedBy")
-  createdIrregularPayoutBatches     IrregularPayoutBatch[]         @relation("IrregularPayoutBatchCreatedBy")
-  submittedIrregularPayoutBatches   IrregularPayoutBatch[]         @relation("IrregularPayoutBatchSubmittedBy")
-  approvedIrregularPayoutBatches    IrregularPayoutBatch[]         @relation("IrregularPayoutBatchApprovedBy")
   createdLeaveRequests              LeaveRequest[]                 @relation("LeaveRequestCreatedBy")
   decidedLeaveRequests              LeaveRequest[]                 @relation("LeaveRequestDecidedBy")
   createdSettlementIntakes          SettlementIntake[]             @relation("SettlementIntakeCreatedBy")
@@ -1162,7 +1155,6 @@ model Employee {
   scrapMetalBalance         ScrapMetalEmployeeBalance?
   scrapMetalBalanceEntries  ScrapMetalBalanceEntry[]
   moduleAssignments         EmployeeModuleAssignment[]
-  irregularPayoutBatchItems IrregularPayoutBatchItem[]
   leaveEntitlements         LeaveEntitlement[]
   leaveRequests             LeaveRequest[]                @relation("LeaveRequestEmployee")
   coveredLeaveRequests      LeaveRequest[]                @relation("LeaveRequestCover")
@@ -1222,57 +1214,50 @@ model FixedSalary {
   @@index([employeeId])
 }
 
+/// What an employee was paid against a payroll run.
+///
+/// `amount` is money, at money's scale. It used to be `Float` and polymorphic —
+/// read in whatever `unit` said, which on a gold payout was **grams** — with
+/// five more columns bolted on to carry the USD value and the weight separately.
+/// Settlements own that shape now: `SettlementPayment.quantity` is the weight
+/// and its `amount` is the money, so neither needs a comment explaining that it
+/// means something else on Tuesdays.
+///
+/// There is no `type` either. Every row here is a salary payment; a settlement
+/// is a `SettlementPayment`.
 model EmployeePayment {
-  id                     String                 @id @default(uuid())
-  employeeId             String
-  type                   PaymentType
-  payoutSource           IrregularPayoutSource?
-  periodStart            DateTime
-  periodEnd              DateTime
-  dueDate                DateTime
-  // Deliberately still `Float`. `amount` here is polymorphic — it is read in
-  // whatever `unit` says, which for a GOLD payout is grams, not money. Giving
-  // it `Decimal(14,2)` would round a gold weight to two places and quietly
-  // lose the rest. Deciding what this column means per `type` is Gold's call,
-  // not this change's; the Zimbabwe payroll path does not touch this model.
-  amount                 Float
-  unit                   String
-  paidAmount             Float?
-  paidAt                 DateTime?
-  status                 PaymentStatus          @default(DUE)
-  notes                  String?
-  goldWeightGrams        Float?
-  goldPriceUsdPerGram    Float?
-  valuationDate          DateTime?
-  amountUsd              Float?
-  paidAmountUsd          Float?
-  payrollRunId           String?
-  payrollLineItemId      String?
-  disbursementBatchId    String?
-  disbursementItemId     String?
-  goldShiftAllocationId  String?
-  irregularPayoutBatchId String?
-  createdById            String
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
+  id                  String        @id @default(uuid())
+  employeeId          String
+  periodStart         DateTime
+  periodEnd           DateTime
+  dueDate             DateTime
+  amount              Decimal       @db.Decimal(14, 2)
+  /// The currency `amount` is in.
+  unit                String
+  paidAmount          Decimal?      @db.Decimal(14, 2)
+  paidAt              DateTime?
+  status              PaymentStatus @default(DUE)
+  notes               String?
+  payrollRunId        String?
+  payrollLineItemId   String?
+  disbursementBatchId String?
+  disbursementItemId  String?
+  createdById         String
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  employee             Employee              @relation(fields: [employeeId], references: [id])
-  createdBy            User                  @relation(fields: [createdById], references: [id])
-  payrollRun           PayrollRun?           @relation(fields: [payrollRunId], references: [id])
-  payrollLineItem      PayrollLineItem?      @relation(fields: [payrollLineItemId], references: [id])
-  disbursementBatch    DisbursementBatch?    @relation(fields: [disbursementBatchId], references: [id])
-  disbursementItem     DisbursementItem?     @relation(fields: [disbursementItemId], references: [id])
-  goldShiftAllocation  GoldShiftAllocation?  @relation(fields: [goldShiftAllocationId], references: [id])
-  irregularPayoutBatch IrregularPayoutBatch? @relation(fields: [irregularPayoutBatchId], references: [id])
+  employee          Employee           @relation(fields: [employeeId], references: [id])
+  createdBy         User               @relation(fields: [createdById], references: [id])
+  payrollRun        PayrollRun?        @relation(fields: [payrollRunId], references: [id])
+  payrollLineItem   PayrollLineItem?   @relation(fields: [payrollLineItemId], references: [id])
+  disbursementBatch DisbursementBatch? @relation(fields: [disbursementBatchId], references: [id])
+  disbursementItem  DisbursementItem?  @relation(fields: [disbursementItemId], references: [id])
 
-  @@index([employeeId, type])
-  @@index([employeeId, payoutSource])
+  @@index([employeeId, dueDate])
   @@index([payrollRunId])
   @@index([payrollLineItemId])
   @@index([disbursementBatchId])
   @@index([disbursementItemId])
-  @@index([goldShiftAllocationId])
-  @@index([irregularPayoutBatchId])
 }
 
 model Department {
@@ -1429,9 +1414,6 @@ model CompensationTemplateRule {
 model PayrollPeriod {
   id                       String                 @id @default(uuid())
   companyId                String
-  domain                   RunDomain              @default(PAYROLL)
-  payoutSource             IrregularPayoutSource?
-  scopeKey                 String                 @default("DEFAULT")
   periodKey                String
   startDate                DateTime
   endDate                  DateTime
@@ -1457,8 +1439,8 @@ model PayrollPeriod {
   approvedBy  User?        @relation("PayrollPeriodApprovedBy", fields: [approvedById], references: [id])
   runs        PayrollRun[]
 
-  @@unique([companyId, domain, periodKey, scopeKey])
-  @@index([companyId, domain, payoutSource, scopeKey, startDate])
+  @@unique([companyId, periodKey])
+  @@index([companyId, startDate])
   @@index([status])
 }
 
@@ -1466,8 +1448,6 @@ model PayrollRun {
   id                 String                 @id @default(uuid())
   companyId          String
   periodId           String
-  domain             RunDomain              @default(PAYROLL)
-  payoutSource       IrregularPayoutSource?
   runNumber          Int                    @default(1)
   status             PayrollRunStatus       @default(DRAFT)
   notes              String?
@@ -1484,9 +1464,6 @@ model PayrollRun {
   /// without a journal — but it says so rather than leaving the caller to guess.
   journalEntryId     String?
   postingSkippedReason String?
-  goldRatePerUnit    Decimal?               @db.Decimal(14, 4)
-  goldRateUnit       String                 @default("g")
-  goldSettlementMode GoldSettlementMode     @default(CURRENT_PERIOD)
   createdById        String
   submittedById      String?
   approvedById       String?
@@ -1503,10 +1480,10 @@ model PayrollRun {
   lineItems           PayrollLineItem[]
   disbursementBatches DisbursementBatch[]
   adjustments         AdjustmentEntry[]
-  legacyPayments      EmployeePayment[]
+  payments            EmployeePayment[]
 
   @@unique([periodId, runNumber])
-  @@index([companyId, status, domain, payoutSource])
+  @@index([companyId, status])
 }
 
 model PayrollLineItem {
@@ -1514,13 +1491,10 @@ model PayrollLineItem {
   runId                 String
   employeeId            String
   compensationProfileId String?
-  /// Basic pay — except on a GOLD_PAYOUT run, where the gold settlement path
-  /// overloads it to carry a weight in grams and `mark-paid` copies it straight
-  /// into `EmployeePayment.goldWeightGrams`. Hence scale 4, not 2: gold weights
-  /// are `Decimal(12,4)` everywhere else and two places would truncate them.
-  /// Money written through `money()` still lands on exact cents. The overload
-  /// itself is a wart Gold owns; see `lib/gold/payouts.ts`.
-  baseAmount            Decimal  @default(0) @db.Decimal(14, 4)
+  /// Basic pay. Money, at money's scale — it was `Decimal(14,4)` only because a
+  /// gold payout overloaded it to carry a weight in grams. Weights live on
+  /// `SettlementLine.quantity` now.
+  baseAmount            Decimal  @default(0) @db.Decimal(14, 2)
   variableAmount        Decimal  @default(0) @db.Decimal(14, 2)
   allowancesTotal       Decimal  @default(0) @db.Decimal(14, 2)
   deductionsTotal       Decimal  @default(0) @db.Decimal(14, 2)
@@ -1550,7 +1524,7 @@ model PayrollLineItem {
   components          PayrollLineComponent[]
   disbursementItems   DisbursementItem[]
   adjustments         AdjustmentEntry[]
-  legacyPayments      EmployeePayment[]
+  payments            EmployeePayment[]
 
   @@unique([runId, employeeId])
   @@index([employeeId])
@@ -2415,51 +2389,6 @@ model SettlementPayment {
   @@index([settlementRunId])
 }
 
-model IrregularPayoutBatch {
-  id             String                @id @default(uuid())
-  companyId      String
-  source         IrregularPayoutSource
-  label          String
-  periodStart    DateTime
-  periodEnd      DateTime
-  dueDate        DateTime
-  currency       String                @default("USD")
-  workflowStatus WorkflowStatus        @default(DRAFT)
-  notes          String?
-  createdById    String
-  submittedById  String?
-  approvedById   String?
-  submittedAt    DateTime?
-  approvedAt     DateTime?
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-
-  company     Company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy   User                       @relation("IrregularPayoutBatchCreatedBy", fields: [createdById], references: [id])
-  submittedBy User?                      @relation("IrregularPayoutBatchSubmittedBy", fields: [submittedById], references: [id])
-  approvedBy  User?                      @relation("IrregularPayoutBatchApprovedBy", fields: [approvedById], references: [id])
-  items       IrregularPayoutBatchItem[]
-  payments    EmployeePayment[]
-
-  @@index([companyId, source, workflowStatus, dueDate])
-}
-
-model IrregularPayoutBatchItem {
-  id         String   @id @default(uuid())
-  batchId    String
-  employeeId String
-  amount     Float
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  batch    IrregularPayoutBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  employee Employee             @relation(fields: [employeeId], references: [id])
-
-  @@unique([batchId, employeeId])
-  @@index([employeeId])
-}
-
 // ============================================
 // PHASE 1: DAILY OPERATIONS
 // ============================================
@@ -2504,12 +2433,6 @@ enum ReportStatus {
   REJECTED
 }
 
-enum PaymentType {
-  GOLD
-  IRREGULAR
-  SALARY
-}
-
 enum PaymentStatus {
   DUE
   PARTIAL
@@ -2529,13 +2452,6 @@ enum EmployeeModule {
   SCRAP_METAL
   CAR_SALES
   RETAIL      @map("THRIFT")
-}
-
-enum IrregularPayoutSource {
-  GOLD
-  SCRAP
-  COMMISSION
-  OTHER
 }
 
 enum WorkflowStatus {
@@ -2623,16 +2539,6 @@ enum PayrollCycle {
   WEEKLY
 }
 
-enum GoldSettlementMode {
-  CURRENT_PERIOD
-  NEXT_PERIOD
-}
-
-enum RunDomain {
-  PAYROLL
-  GOLD_PAYOUT
-}
-
 enum PeriodPurpose {
   STANDARD
   CONTRACTOR
@@ -2675,7 +2581,6 @@ enum ApprovalTargetType {
   COMPENSATION_PROFILE
   COMPENSATION_RULE
   GOLD_SHIFT_ALLOCATION
-  IRREGULAR_PAYOUT_BATCH
   DISCIPLINARY_ACTION
   SETTLEMENT_INTAKE
   SETTLEMENT_RUN
@@ -2753,7 +2658,6 @@ enum NotificationEntityType {
   COMPENSATION_PROFILE
   COMPENSATION_RULE
   GOLD_SHIFT_ALLOCATION
-  IRREGULAR_PAYOUT_BATCH
   DISCIPLINARY_ACTION
   HR_INCIDENT
   INCIDENT
@@ -3386,7 +3290,6 @@ model GoldShiftAllocation {
   expenses         GoldShiftExpense[]
   workerShares     GoldShiftWorkerShare[]
   pours            GoldPour[]
-  employeePayments EmployeePayment[]
   settlementOrigins SettlementLineOrigin[]
 
   @@unique([siteId, date, shift, shiftGroupId])

@@ -26,8 +26,6 @@ type OnboardingPayload = {
 function getWorkspaceOnboardingDefaults(workspaceProfile: string | null | undefined) {
   void workspaceProfile;
   return {
-    goldPayoutCycle: "MONTHLY" as const,
-    goldSettlementMode: "CURRENT_PERIOD" as const,
   };
 }
 
@@ -145,9 +143,6 @@ export async function POST(request: NextRequest) {
           isProvisioned: true,
           tenantStatus: "ACTIVE",
           payrollCycle: body.organizationPrefs?.payrollCycle ?? "MONTHLY",
-          goldPayoutCycle:
-            onboardingDefaults.goldPayoutCycle,
-          goldSettlementMode: onboardingDefaults.goldSettlementMode,
           cashDisbursementOnly:
             body.organizationPrefs?.cashDisbursementOnly ?? true,
         },

@@ -175,7 +175,7 @@ export default function SalaryPayrollPage() {
     error: periodsError,
   } = useQuery({
     queryKey: ["payroll-periods", "salary"],
-    queryFn: () => fetchPayrollPeriods({ domain: "PAYROLL", limit: 200 }),
+    queryFn: () => fetchPayrollPeriods({ limit: 200 }),
   });
   const periods = useMemo(() => periodsData?.data ?? [], [periodsData]);
   const activePeriodId = selectedPeriodId || periods[0]?.id || "";
@@ -185,7 +185,6 @@ export default function SalaryPayrollPage() {
       queryKey: ["payroll-runs", "salary", periodId],
       queryFn: () =>
         fetchPayrollRuns({
-          domain: "PAYROLL",
           periodId,
           limit: 200,
         }),
@@ -227,7 +226,6 @@ export default function SalaryPayrollPage() {
     queryKey: ["payroll-runs", "salary", activePeriodId],
     queryFn: () =>
       fetchPayrollRuns({
-        domain: "PAYROLL",
         periodId: activePeriodId,
         limit: 200,
       }),
@@ -266,7 +264,6 @@ export default function SalaryPayrollPage() {
     mutationFn: async () =>
       fetchJson("/api/payroll/periods/seed", {
         method: "POST",
-        body: JSON.stringify({ domains: ["PAYROLL"] }),
       }),
     onSuccess: () => {
       toast({ title: "Future periods generated", variant: "success" });
@@ -308,7 +305,6 @@ export default function SalaryPayrollPage() {
       fetchJson("/api/payroll/periods", {
         method: "POST",
         body: JSON.stringify({
-          domain: "PAYROLL",
           periodKey:
             payload.cycle === "FORTNIGHTLY"
               ? `${payload.monthKey}-${payload.half}`

@@ -157,7 +157,6 @@ export async function PATCH(
             select: {
               id: true,
               runNumber: true,
-              domain: true,
               period: { select: { id: true, periodKey: true, startDate: true, endDate: true } },
             },
           },
@@ -172,7 +171,6 @@ export async function PATCH(
     })
 
     try {
-      const isGoldRun = updated.payrollRun.domain === "GOLD_PAYOUT"
       await captureAccountingEvent({
         companyId: session.user.companyId,
         sourceDomain: "disbursements",
@@ -188,7 +186,7 @@ export async function PATCH(
           updatedItems: validated.items?.map((item) => item.id) ?? [],
         },
         createdById: session.user.id,
-        status: isGoldRun ? "IGNORED" : "PENDING",
+        status: "PENDING",
       })
     } catch (error) {
       console.error("[Accounting] Disbursement batch update capture failed:", error)

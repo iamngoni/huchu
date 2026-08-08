@@ -44,7 +44,7 @@ const MONEY_COLUMNS: Array<[table: string, column: string, scale: number]> = [
   ["PayrollRun", "netTotal", 2],
   ["PayrollRun", "employerCostTotal", 2],
   // Scale 4, not 2 — the gold settlement path overloads this to carry grams.
-  ["PayrollLineItem", "baseAmount", 4],
+  ["PayrollLineItem", "baseAmount", 2],
   ["PayrollLineItem", "variableAmount", 2],
   ["PayrollLineItem", "allowancesTotal", 2],
   ["PayrollLineItem", "deductionsTotal", 2],
@@ -61,6 +61,12 @@ const MONEY_COLUMNS: Array<[table: string, column: string, scale: number]> = [
   ["DisbursementItem", "paidAmount", 2],
   ["DisbursementItem", "baseAmount", 2],
   ["AdjustmentEntry", "amountDelta", 2],
+  ["EmployeePayment", "amount", 2],
+  ["EmployeePayment", "paidAmount", 2],
+  ["SettlementLine", "grossAmount", 2],
+  ["SettlementLine", "netAmount", 2],
+  ["SettlementBatch", "totalAmount", 2],
+  ["SettlementBatchItem", "amount", 2],
 ];
 
 /** Exchange rates, which need four places to be worth stamping at all. */
@@ -179,12 +185,29 @@ describe("a hostile third decimal survives the round trip", () => {
     expect(reread.baseAmount.toString()).toBe("8.58");
   });
 
-  it("keeps a four-place gold weight on PayrollLineItem.baseAmount", async () => {
-    // Not a money value: the gold settlement path puts grams here, and gold
-    // weights are `Decimal(12,4)` everywhere else. Two places would round
-    // 12.3456 g to 12.35 g and the disbursement would pay for metal that was
-    // never poured.
-    const facts = await columnFacts("PayrollLineItem", "baseAmount");
-    expect(facts!.numeric_scale).toBe(4);
+  it("PayrollLineItem.baseAmount is money, and grams live on the settlement line", async () => {
+    // The inverse of what this asserted before. `baseAmount` was
+    // `Decimal(14,4)` because a gold payout overloaded it to carry a weight in
+    // grams — two places would have rounded 12.3456 g to 12.35 g and paid for
+    // metal that was never poured. The overload is gone: it is basic pay, at
+    // money's scale, and a weight is `SettlementLine.quantity`.
+    const line = await columnFacts("PayrollLineItem", "baseAmount");
+    expect(line!.numeric_scale).toBe(2);
+
+    const quantity = await columnFacts("SettlementLine", "quantity");
+    expect(quantity, "SettlementLine.quantity is missing").not.toBeNull();
+    expect(quantity!.data_type).toBe("numeric");
+    expect(quantity!.numeric_precision).toBe(12);
+    expect(quantity!.numeric_scale).toBe(4);
+  });
+
+  it("EmployeePayment.amount is money, not a Float read as grams", async () => {
+    // It was `Float` and polymorphic — read in whatever `unit` said, which on a
+    // gold payout was grams, with `amountUsd` alongside to carry the money.
+    // Settlements took that job, so this can be exactly one thing.
+    const amount = await columnFacts("EmployeePayment", "amount");
+    expect(amount, "EmployeePayment.amount is missing").not.toBeNull();
+    expect(amount!.data_type).toBe("numeric");
+    expect(amount!.numeric_scale).toBe(2);
   });
 });

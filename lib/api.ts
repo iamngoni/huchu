@@ -289,7 +289,6 @@ export type CompensationTemplateRecord = {
   _count?: { rules: number };
 };
 
-export type RunDomain = "PAYROLL" | "GOLD_PAYOUT";
 
 export type PeriodPurpose = "STANDARD" | "CONTRACTOR" | "EDGE_CASE";
 
@@ -308,7 +307,6 @@ export type PayrollConfigRecord = {
 export type PayrollPeriodRecord = {
   id: string;
   companyId: string;
-  domain: RunDomain;
   payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER" | null;
   scopeKey: string;
   periodKey: string;
@@ -340,7 +338,6 @@ export type PayrollRunRecord = {
   id: string;
   companyId: string;
   periodId: string;
-  domain: RunDomain;
   payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER" | null;
   runNumber: number;
   status: "DRAFT" | "SUBMITTED" | "APPROVED" | "POSTED" | "REJECTED";
@@ -389,7 +386,6 @@ export type DisbursementBatchRecord = {
   payrollRun: {
     id: string;
     runNumber: number;
-    domain?: RunDomain;
     payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER" | null;
     status?: string;
     goldRatePerUnit?: number | null;
@@ -518,19 +514,12 @@ export type UserNotificationPreferences = {
 export type EmployeePayment = {
   id: string;
   employeeId: string;
-  type: "GOLD" | "IRREGULAR" | "SALARY";
-  payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER" | null;
   periodStart: string;
   periodEnd: string;
   dueDate: string;
   amount: number;
-  amountUsd?: number | null;
   unit: string;
-  goldWeightGrams?: number | null;
-  goldPriceUsdPerGram?: number | null;
-  valuationDate?: string | null;
   paidAmount?: number | null;
-  paidAmountUsd?: number | null;
   paidAt?: string | null;
   status: "DUE" | "PARTIAL" | "PAID";
   notes?: string | null;
@@ -538,8 +527,6 @@ export type EmployeePayment = {
   payrollLineItemId?: string | null;
   disbursementBatchId?: string | null;
   disbursementItemId?: string | null;
-  goldShiftAllocationId?: string | null;
-  irregularPayoutBatchId?: string | null;
   createdAt: string;
   updatedAt: string;
   employee: {
@@ -553,7 +540,6 @@ export type EmployeePayment = {
   payrollRun?: {
     id: string;
     runNumber: number;
-    domain: RunDomain;
     status: "DRAFT" | "SUBMITTED" | "APPROVED" | "POSTED" | "REJECTED";
     period?: { id: string; periodKey: string } | null;
   } | null;
@@ -1753,7 +1739,6 @@ export async function fetchCompensationTemplates(
 export async function fetchPayrollPeriods(
   params: {
     search?: string;
-    domain?: RunDomain;
     status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "CLOSED";
     cycle?: "MONTHLY" | "FORTNIGHTLY";
     periodPurpose?: PeriodPurpose;
@@ -1772,7 +1757,6 @@ export async function fetchPayrollRuns(
   params: {
     search?: string;
     periodId?: string;
-    domain?: RunDomain;
     status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "POSTED" | "REJECTED";
     page?: number;
     limit?: number;
@@ -1915,7 +1899,6 @@ export async function fetchEmployeePayments(
   params: {
     search?: string;
     type?: "GOLD" | "SALARY" | "IRREGULAR";
-    payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER";
     employeeId?: string;
     status?: "DUE" | "PARTIAL" | "PAID";
     startDate?: string;

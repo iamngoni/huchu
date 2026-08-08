@@ -36,13 +36,8 @@ export async function POST(
         disbursementBatchId: true,
         lineItemId: true,
         disbursementItemId: true,
-        payrollRun: { select: { status: true, domain: true } },
-        disbursementBatch: {
-          select: {
-            status: true,
-            payrollRun: { select: { domain: true } },
-          },
-        },
+        payrollRun: { select: { status: true } },
+        disbursementBatch: { select: { status: true } },
       },
     })
 
@@ -200,10 +195,6 @@ export async function POST(
         updated.targetType === "DISBURSEMENT_BATCH" || updated.targetType === "DISBURSEMENT_ITEM"
           ? "PAYROLL_DISBURSEMENT"
           : "PAYROLL_RUN"
-      const isGoldDomain =
-        (sourceType === "PAYROLL_RUN" && existing.payrollRun?.domain === "GOLD_PAYOUT") ||
-        (sourceType === "PAYROLL_DISBURSEMENT" &&
-          existing.disbursementBatch?.payrollRun?.domain === "GOLD_PAYOUT")
       // The event carries the size of the correction and a direction flag, so
       // the sign lives in `invertDirection` and never in the amount.
       const magnitude = toNumberOrZero(updated.amountDelta.abs())
@@ -225,7 +216,7 @@ export async function POST(
           invertDirection: updated.amountDelta.isNegative(),
         },
         createdById: session.user.id,
-        status: isGoldDomain ? "IGNORED" : "PENDING",
+        status: "PENDING",
       })
     } catch (error) {
       console.error("[Accounting] Adjustment approval capture failed:", error)

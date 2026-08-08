@@ -8,6 +8,7 @@ import {
   paginationResponse,
 } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
+import { toNumberOrZero } from "@/lib/money"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { ensureApproverRole } from "@/lib/workflow/approvals"
@@ -247,10 +248,11 @@ export async function GET(request: NextRequest) {
     ])
 
     const employeeIds = employees.map((employee) => employee.id)
-    const owedByEmployee = new Map<
-      string,
-      { goldOwed: number; irregularOwed: number; salaryOwed: number }
-    >()
+    // Salary only. `goldOwed` and `irregularOwed` used to be summed here off the
+    // same rows by reading `type` — a gold row's money was in `amountUsd` while
+    // `amount` held grams. Settlements answer "what does this worker have coming
+    // for gold" now, and this answers it for payroll.
+    const owedByEmployee = new Map<string, { salaryOwed: number }>()
 
     if (employeeIds.length > 0) {
       const outstandingTotals = await prisma.employeePayment.findMany({
@@ -260,36 +262,18 @@ export async function GET(request: NextRequest) {
         },
         select: {
           employeeId: true,
-          type: true,
-          payoutSource: true,
           amount: true,
           paidAmount: true,
-          amountUsd: true,
-          paidAmountUsd: true,
         },
       })
 
       outstandingTotals.forEach((row) => {
-        const amount =
-          row.type === "GOLD" ? (row.amountUsd ?? 0) : (row.amount ?? 0)
-        const paidAmount =
-          row.type === "GOLD" ? (row.paidAmountUsd ?? 0) : (row.paidAmount ?? 0)
-        const outstanding = Math.max(amount - paidAmount, 0)
-        const current = owedByEmployee.get(row.employeeId) ?? {
-          goldOwed: 0,
-          irregularOwed: 0,
-          salaryOwed: 0,
-        }
-
-        if (row.type === "GOLD" || row.payoutSource === "GOLD") {
-          current.goldOwed += outstanding
-          current.irregularOwed += outstanding
-        } else if (row.type === "IRREGULAR") {
-          current.irregularOwed += outstanding
-        } else if (row.type === "SALARY") {
-          current.salaryOwed += outstanding
-        }
-
+        const outstanding = Math.max(
+          toNumberOrZero(row.amount) - toNumberOrZero(row.paidAmount),
+          0,
+        )
+        const current = owedByEmployee.get(row.employeeId) ?? { salaryOwed: 0 }
+        current.salaryOwed += outstanding
         owedByEmployee.set(row.employeeId, current)
       })
     }
@@ -298,8 +282,6 @@ export async function GET(request: NextRequest) {
       const owed = owedByEmployee.get(employee.id)
       return {
         ...employee,
-        goldOwed: owed?.goldOwed ?? 0,
-        irregularOwed: owed?.irregularOwed ?? 0,
         salaryOwed: owed?.salaryOwed ?? 0,
       }
     })

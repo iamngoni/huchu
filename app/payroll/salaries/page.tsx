@@ -55,12 +55,12 @@ export default function HrSalariesPage() {
   })
   const { data: periodsData, isLoading: periodsLoading, error: periodsError } = useQuery({
     queryKey: ["payroll-periods", "salary-ops"],
-    queryFn: () => fetchPayrollPeriods({ domain: "PAYROLL", limit: 200 }),
+    queryFn: () => fetchPayrollPeriods({ limit: 200 }),
   })
 
   const { data: runsData, isLoading: runsLoading, error: runsError } = useQuery({
     queryKey: ["payroll-runs", "salary-approved"],
-    queryFn: () => fetchPayrollRuns({ domain: "PAYROLL", status: "APPROVED", limit: 200 }),
+    queryFn: () => fetchPayrollRuns({ status: "APPROVED", limit: 200 }),
   })
 
   const { data: batchesData, isLoading: batchesLoading, error: batchesError } = useQuery({
@@ -80,7 +80,7 @@ export default function HrSalariesPage() {
   const paidPayments = useMemo(() => paidPaymentsData?.data ?? [], [paidPaymentsData])
 
   const salaryBatches = useMemo(
-    () => allBatches.filter((batch) => batch.payrollRun.domain === "PAYROLL"),
+    () => allBatches,
     [allBatches],
   )
   const paidSalaryBatches = useMemo(

@@ -150,7 +150,7 @@ export async function POST(
     // the run looking posted when it was not. `postPayrollRun` posts one entry
     // per currency against the real statutory payable accounts, and stamps the
     // entry id or the reason on the run.
-    if (updated.domain !== "GOLD_PAYOUT") {
+    {
       let outcome: Awaited<ReturnType<typeof postPayrollRun>>
       try {
         outcome = await postPayrollRun({
@@ -167,7 +167,6 @@ export async function POST(
           companyId: session.user.companyId,
           actorId: session.user.id,
           payrollRunId: updated.id,
-          domain: updated.domain,
         })
         outcome = {
           posted: false,
@@ -197,7 +196,6 @@ export async function POST(
       actorId: session.user.id,
       payrollRunId: updated.id,
       periodId: updated.period.id,
-      domain: updated.domain,
       fromStatus: "SUBMITTED",
       toStatus: "APPROVED",
       statusCode: 200,

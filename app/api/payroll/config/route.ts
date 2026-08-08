@@ -7,11 +7,8 @@ import { ensureApproverRole } from "@/lib/workflow/approvals"
 const updateSchema = z
   .object({
     payrollCycle: z.enum(["MONTHLY", "FORTNIGHTLY"]).optional(),
-    goldPayoutCycle: z.enum(["MONTHLY", "FORTNIGHTLY"]).optional(),
-    goldSettlementMode: z.enum(["CURRENT_PERIOD", "NEXT_PERIOD"]).optional(),
     cashDisbursementOnly: z.boolean().optional(),
     autoGeneratePayrollPeriods: z.boolean().optional(),
-    autoGenerateGoldPayoutPeriods: z.boolean().optional(),
     periodGenerationHorizon: z.number().int().min(1).max(12).optional(),
   })
   .refine((payload) => Object.keys(payload).length > 0, { message: "No fields provided" })
@@ -30,11 +27,8 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         payrollCycle: true,
-        goldPayoutCycle: true,
-        goldSettlementMode: true,
         cashDisbursementOnly: true,
         autoGeneratePayrollPeriods: true,
-        autoGenerateGoldPayoutPeriods: true,
         periodGenerationHorizon: true,
       },
     })
@@ -71,11 +65,8 @@ export async function PATCH(request: NextRequest) {
         id: true,
         name: true,
         payrollCycle: true,
-        goldPayoutCycle: true,
-        goldSettlementMode: true,
         cashDisbursementOnly: true,
         autoGeneratePayrollPeriods: true,
-        autoGenerateGoldPayoutPeriods: true,
         periodGenerationHorizon: true,
       },
     })

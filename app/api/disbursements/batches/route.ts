@@ -72,11 +72,7 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               runNumber: true,
-              domain: true,
-              payoutSource: true,
               status: true,
-              goldRatePerUnit: true,
-              goldRateUnit: true,
               period: { select: { id: true, periodKey: true, startDate: true, endDate: true } },
             },
           },
@@ -178,8 +174,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const isIrregularRun = run.domain === "GOLD_PAYOUT"
-    const irregularLabel = run.payoutSource ? `${run.payoutSource} payout` : "Irregular payout"
     // Currency, rate and base amount are copied off the line rather than
     // re-derived. The line froze its rate when the run was computed; looking the
     // rate up again here would pay a ZWG employee at today's rate against a
@@ -248,10 +242,6 @@ export async function POST(request: NextRequest) {
             select: {
               id: true,
               runNumber: true,
-              domain: true,
-              payoutSource: true,
-              goldRatePerUnit: true,
-              goldRateUnit: true,
               period: { select: { id: true, periodKey: true, startDate: true, endDate: true } },
             },
           },
@@ -271,16 +261,13 @@ export async function POST(request: NextRequest) {
         action: "CREATE",
         actedById: session.user.id,
         toStatus: "DRAFT",
-        note: isIrregularRun
-          ? `${irregularLabel} disbursement batch ${created.code} created from payout run ${run.runNumber}.`
-          : `Salary disbursement batch ${created.code} created from payroll run ${run.runNumber}.`,
+        note: `Salary disbursement batch ${created.code} created from payroll run ${run.runNumber}.`,
       })
 
       return created
     })
 
     try {
-      const isIrregularRun = batch.payrollRun.domain === "GOLD_PAYOUT"
       await captureAccountingEvent({
         companyId: session.user.companyId,
         sourceDomain: "disbursements",
@@ -292,11 +279,10 @@ export async function POST(request: NextRequest) {
         amount: batch.totalAmount,
         payload: {
           payrollRunId: batch.payrollRun.id,
-          domain: batch.payrollRun.domain,
           itemCount: batch.items.length,
         },
         createdById: session.user.id,
-        status: isIrregularRun ? "IGNORED" : "PENDING",
+        status: "PENDING",
       })
     } catch (error) {
       logger.error("disbursement_batch_capture_failed", error, {

@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils"
 import { hrPermissionDenial } from "@/lib/hr/permissions"
-import { applyDisbursementToGoldShares } from "@/lib/gold/payouts"
 import { prisma } from "@/lib/prisma"
 import { createJournalEntryFromSource } from "@/lib/accounting/posting"
 import { derivePaidStatus } from "@/lib/payroll/disbursements"
 import { createApprovalAction, ensureApproverRole } from "@/lib/workflow/approvals"
-import { isPositive, money, toNumber, toNumberOrZero } from "@/lib/money"
+import { isPositive, money } from "@/lib/money"
 import { writePlatformAuditEvent } from "@/lib/audit/platform"
 import { createRouteLogger } from "@/lib/observability/route-logger"
 
@@ -109,10 +108,10 @@ export async function POST(
     }
 
     const updatedBatch = await prisma.$transaction(async (tx) => {
-      const isIrregularRun = batch.payrollRun.domain === "GOLD_PAYOUT"
-      const irregularSource = batch.payrollRun.payoutSource ?? "GOLD"
-      const isGoldRun = isIrregularRun && irregularSource === "GOLD"
-
+      // One branch, not three. A disbursement batch is payroll — the gold and
+      // "irregular" branches that used to live here wrote money into a `Float`
+      // column that a gold payout read as grams, and paying a settlement is
+      // `SettlementBatch`'s job now.
       for (const payload of validated.items) {
         const item = itemById.get(payload.id)!
         const paidAmount = money(payload.paidAmount ?? item.amount)
@@ -135,107 +134,42 @@ export async function POST(
           include: { lineItem: { select: { currency: true, baseAmount: true, netAmount: true } } },
         })
 
-        // `EmployeePayment` is still `Float` — see the note on the model, where
-        // `amount` means grams for a gold payout. Convert once here rather than
-        // letting a `Decimal` reach a `Float` column four times over.
-        const legacyAmount = toNumberOrZero(updatedItem.amount)
-        const legacyPaidAmount = toNumber(updatedItem.paidAmount)
+        const existingPayment = await tx.employeePayment.findFirst({
+          where: { disbursementItemId: updatedItem.id },
+          select: { id: true },
+        })
 
-        if (isGoldRun) {
-          await applyDisbursementToGoldShares(tx, {
-            updatedItem,
-            batch,
-            createdById: session.user.id,
+        if (existingPayment) {
+          await tx.employeePayment.update({
+            where: { id: existingPayment.id },
+            data: {
+              amount: updatedItem.amount,
+              paidAmount: updatedItem.paidAmount,
+              paidAt: updatedItem.paidAt,
+              status: updatedItem.status,
+              notes: updatedItem.notes ?? `Disbursement batch ${batch.code}`,
+            },
           })
-        } else if (isIrregularRun) {
-          const existingPayment = await tx.employeePayment.findFirst({
-            where: { disbursementItemId: updatedItem.id },
-            select: { id: true },
-          })
-
-          if (existingPayment) {
-            await tx.employeePayment.update({
-              where: { id: existingPayment.id },
-              data: {
-                amount: legacyAmount,
-                amountUsd: legacyAmount,
-                unit: updatedItem.lineItem.currency,
-                payoutSource: irregularSource,
-                paidAmount: legacyPaidAmount,
-                paidAmountUsd: legacyPaidAmount,
-                paidAt: updatedItem.paidAt,
-                status: updatedItem.status,
-                notes: updatedItem.notes ?? `Irregular payout batch ${batch.code}`,
-              },
-            })
-          } else {
-            await tx.employeePayment.create({
-              data: {
-                employeeId: updatedItem.employeeId,
-                type: "IRREGULAR",
-                payoutSource: irregularSource,
-                periodStart: batch.payrollRun.period.startDate,
-                periodEnd: batch.payrollRun.period.endDate,
-                dueDate: batch.payrollRun.period.dueDate,
-                amount: legacyAmount,
-                amountUsd: legacyAmount,
-                unit: updatedItem.lineItem.currency,
-                paidAmount: legacyPaidAmount,
-                paidAmountUsd: legacyPaidAmount,
-                paidAt: updatedItem.paidAt,
-                status: updatedItem.status,
-                notes: updatedItem.notes ?? `Irregular payout batch ${batch.code}`,
-                createdById: session.user.id,
-                payrollRunId: batch.payrollRunId,
-                payrollLineItemId: updatedItem.lineItemId,
-                disbursementBatchId: batch.id,
-                disbursementItemId: updatedItem.id,
-              },
-            })
-          }
         } else {
-          const existingPayment = await tx.employeePayment.findFirst({
-            where: { disbursementItemId: updatedItem.id },
-            select: { id: true },
+          await tx.employeePayment.create({
+            data: {
+              employeeId: updatedItem.employeeId,
+              periodStart: batch.payrollRun.period.startDate,
+              periodEnd: batch.payrollRun.period.endDate,
+              dueDate: batch.payrollRun.period.dueDate,
+              amount: updatedItem.amount,
+              unit: updatedItem.lineItem.currency,
+              paidAmount: updatedItem.paidAmount,
+              paidAt: updatedItem.paidAt,
+              status: updatedItem.status,
+              notes: updatedItem.notes ?? `Disbursement batch ${batch.code}`,
+              createdById: session.user.id,
+              payrollRunId: batch.payrollRunId,
+              payrollLineItemId: updatedItem.lineItemId,
+              disbursementBatchId: batch.id,
+              disbursementItemId: updatedItem.id,
+            },
           })
-
-          if (existingPayment) {
-            await tx.employeePayment.update({
-              where: { id: existingPayment.id },
-              data: {
-                amount: legacyAmount,
-                amountUsd: legacyAmount,
-                paidAmount: legacyPaidAmount,
-                paidAmountUsd: legacyPaidAmount,
-                paidAt: updatedItem.paidAt,
-                status: updatedItem.status,
-                notes: updatedItem.notes ?? `Disbursement batch ${batch.code}`,
-              },
-            })
-          } else {
-            await tx.employeePayment.create({
-              data: {
-                employeeId: updatedItem.employeeId,
-                type: "SALARY",
-                periodStart: batch.payrollRun.period.startDate,
-                periodEnd: batch.payrollRun.period.endDate,
-                dueDate: batch.payrollRun.period.dueDate,
-                amount: legacyAmount,
-                amountUsd: legacyAmount,
-                unit: updatedItem.lineItem.currency,
-                paidAmount: legacyPaidAmount,
-                paidAmountUsd: legacyPaidAmount,
-                paidAt: updatedItem.paidAt,
-                status: updatedItem.status,
-                notes: updatedItem.notes ?? `Disbursement batch ${batch.code}`,
-                createdById: session.user.id,
-                payrollRunId: batch.payrollRunId,
-                payrollLineItemId: updatedItem.lineItemId,
-                disbursementBatchId: batch.id,
-                disbursementItemId: updatedItem.id,
-              },
-            })
-          }
         }
       }
 
@@ -319,7 +253,9 @@ export async function POST(
     })
 
     try {
-      if (updatedBatch.status === "PAID" && updatedBatch.payrollRun.domain !== "GOLD_PAYOUT") {
+      // No domain check. Every disbursement batch is payroll, so every paid one
+      // posts; a settlement posts through its own run.
+      if (updatedBatch.status === "PAID") {
         await createJournalEntryFromSource({
           companyId: session.user.companyId,
           sourceType: "PAYROLL_DISBURSEMENT",

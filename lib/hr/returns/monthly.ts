@@ -143,7 +143,6 @@ async function approvedLines(
       run: {
         companyId: input.companyId,
         status: "APPROVED",
-        domain: "PAYROLL",
         period: { periodKey: input.periodKey },
       },
     },

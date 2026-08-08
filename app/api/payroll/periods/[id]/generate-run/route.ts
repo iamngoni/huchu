@@ -13,7 +13,6 @@ import {
 } from "@/lib/hr/payroll/assemble"
 import {
   money,
-  rate,
   resolveBaseCurrency,
   resolveExchangeRate,
   sumMoney,
@@ -114,9 +113,6 @@ type RunDraft = {
   }
   workflowNote: string
   warnings: string[]
-  goldRatePerUnit?: number
-  goldRateUnit?: string
-  goldSettlementMode?: "CURRENT_PERIOD" | "NEXT_PERIOD"
 }
 
 function parseEmployeeScopeIds(raw: string | null | undefined) {
@@ -140,204 +136,6 @@ function deriveRunTotals(lineItems: LineItemDraft[]) {
     // cost to the company, not part of anybody's wage.
     employerCostTotal: sumMoney(lineItems.map((line) => line.employerCost ?? ZERO)),
   }
-}
-
-async function buildIrregularPayoutRunDraft(input: {
-  companyId: string
-  payoutSource: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER"
-  periodStart: Date
-  periodEnd: Date
-  goldSettlementMode: "CURRENT_PERIOD" | "NEXT_PERIOD"
-}) {
-  if (input.payoutSource !== "GOLD") {
-    const approvedBatches = await prisma.irregularPayoutBatch.findMany({
-      where: {
-        companyId: input.companyId,
-        source: input.payoutSource,
-        workflowStatus: "APPROVED",
-        dueDate: {
-          gte: input.periodStart,
-          lte: input.periodEnd,
-        },
-      },
-      include: {
-        items: {
-          select: {
-            employeeId: true,
-            amount: true,
-          },
-        },
-      },
-      orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
-    })
-
-    const payoutByEmployee = new Map<
-      string,
-      { amount: Prisma.Decimal; batchCount: number }
-    >()
-    for (const batch of approvedBatches) {
-      for (const item of batch.items) {
-        const current = payoutByEmployee.get(item.employeeId) ?? {
-          amount: ZERO,
-          batchCount: 0,
-        }
-        payoutByEmployee.set(item.employeeId, {
-          amount: sumMoney([current.amount, item.amount]),
-          batchCount: current.batchCount + 1,
-        })
-      }
-    }
-
-    const employeeIds = Array.from(payoutByEmployee.keys())
-    if (employeeIds.length === 0) {
-      return null
-    }
-
-    const employees = await prisma.employee.findMany({
-      where: {
-        id: { in: employeeIds },
-        companyId: input.companyId,
-      },
-      select: {
-        id: true,
-        defaultCurrency: true,
-      },
-    })
-    const employeeById = new Map(employees.map((employee) => [employee.id, employee]))
-
-    const lineItems: LineItemDraft[] = employeeIds.map((employeeId) => {
-      const payout = payoutByEmployee.get(employeeId) ?? { amount: ZERO, batchCount: 0 }
-      const employee = employeeById.get(employeeId)
-      return {
-        employeeId,
-        compensationProfileId: null,
-        baseAmount: ZERO,
-        variableAmount: payout.amount,
-        allowancesTotal: ZERO,
-        deductionsTotal: ZERO,
-        grossAmount: payout.amount,
-        netAmount: payout.amount,
-        currency: employee?.defaultCurrency ?? "USD",
-        notes: `${input.payoutSource} payout snapshot from ${payout.batchCount} approved batch${payout.batchCount === 1 ? "" : "es"}.`,
-        components: [],
-      }
-    })
-
-    return {
-      lineItems,
-      totals: deriveRunTotals(lineItems),
-      workflowNote: `${input.payoutSource} payout run generated from approved irregular payout batches.`,
-      warnings: [],
-    } satisfies RunDraft
-  }
-
-  const allocationDateFloor = new Date(input.periodStart)
-  allocationDateFloor.setDate(allocationDateFloor.getDate() - 42)
-
-  const approvedAllocations = await prisma.goldShiftAllocation.findMany({
-    where: {
-      workflowStatus: "APPROVED",
-      site: { companyId: input.companyId },
-      date:
-        input.goldSettlementMode === "CURRENT_PERIOD"
-          ? { gte: input.periodStart, lte: input.periodEnd }
-          : { gte: allocationDateFloor, lte: input.periodEnd },
-    },
-    include: {
-      workerShares: {
-        select: {
-          employeeId: true,
-          shareWeight: true,
-          shareValueUsd: true,
-        },
-      },
-    },
-  })
-
-  const payoutByEmployee = new Map<string, { goldWeight: number; valueUsd: number }>()
-  for (const allocation of approvedAllocations) {
-    const dueDate = new Date(allocation.date)
-    dueDate.setDate(dueDate.getDate() + allocation.payCycleWeeks * 7)
-
-    const qualifiesForPeriod =
-      input.goldSettlementMode === "CURRENT_PERIOD"
-        ? allocation.date >= input.periodStart && allocation.date <= input.periodEnd
-        : dueDate >= input.periodStart && dueDate <= input.periodEnd
-
-    if (!qualifiesForPeriod) continue
-
-    for (const workerShare of allocation.workerShares) {
-      const current = payoutByEmployee.get(workerShare.employeeId) ?? { goldWeight: 0, valueUsd: 0 }
-      const allocGoldPrice = allocation.goldPriceUsdPerGram != null ? Number(allocation.goldPriceUsdPerGram) : 0;
-      const fallbackValueUsd =
-        allocGoldPrice > 0
-          ? Number(workerShare.shareWeight) * allocGoldPrice
-          : 0
-      payoutByEmployee.set(workerShare.employeeId, {
-        goldWeight: current.goldWeight + Number(workerShare.shareWeight),
-        valueUsd: current.valueUsd + (workerShare.shareValueUsd != null ? Number(workerShare.shareValueUsd) : fallbackValueUsd),
-      })
-    }
-  }
-
-  const employeeIds = Array.from(payoutByEmployee.keys())
-  if (employeeIds.length === 0) {
-    return null
-  }
-
-  const employees = await prisma.employee.findMany({
-    where: {
-      id: { in: employeeIds },
-      companyId: input.companyId,
-    },
-    select: {
-      id: true,
-      defaultCurrency: true,
-    },
-  })
-  const employeeById = new Map(employees.map((employee) => [employee.id, employee]))
-
-  let totalGoldWeight = 0
-  let totalValueUsd = 0
-  const lineItems: LineItemDraft[] = employeeIds.map((employeeId) => {
-    const payout = payoutByEmployee.get(employeeId) ?? { goldWeight: 0, valueUsd: 0 }
-    const goldWeight = payout.goldWeight
-    const convertedAmount = payout.valueUsd
-    const derivedRate = goldWeight > 0 ? convertedAmount / goldWeight : null
-    const employee = employeeById.get(employeeId)
-    totalGoldWeight += goldWeight
-    totalValueUsd += convertedAmount
-
-    return {
-      employeeId,
-      compensationProfileId: null,
-      // Grams, not money — see the note on `PayrollLineItem.baseAmount`. Kept at
-      // four places through `rate()` rather than rounded to cents by `money()`.
-      baseAmount: rate(goldWeight),
-      variableAmount: money(convertedAmount),
-      allowancesTotal: ZERO,
-      deductionsTotal: ZERO,
-      grossAmount: money(convertedAmount),
-      netAmount: money(convertedAmount),
-      currency: employee?.defaultCurrency ?? "USD",
-      notes: derivedRate
-        ? `Gold payout snapshot: ${goldWeight.toFixed(3)} g => ${convertedAmount.toFixed(2)} USD @ ${derivedRate.toFixed(4)} per g`
-        : `Gold payout snapshot: ${goldWeight.toFixed(3)} g => ${convertedAmount.toFixed(2)} USD`,
-      components: [],
-    }
-  })
-
-  const weightedRate = totalGoldWeight > 0 ? totalValueUsd / totalGoldWeight : undefined
-
-  return {
-    lineItems,
-    totals: deriveRunTotals(lineItems),
-    workflowNote: "Gold payout run generated from approved gold shift allocations.",
-    warnings: [],
-    goldRatePerUnit: weightedRate,
-    goldRateUnit: "g",
-    goldSettlementMode: input.goldSettlementMode,
-  } satisfies RunDraft
 }
 
 async function buildSalaryPayrollRunDraft(input: {
@@ -450,11 +248,6 @@ export async function POST(
     const period = await prisma.payrollPeriod.findUnique({
       where: { id },
       include: {
-        company: {
-          select: {
-            goldSettlementMode: true,
-          },
-        },
         runs: {
           select: {
             id: true,
@@ -492,30 +285,7 @@ export async function POST(
       (period.runs.length > 0 ? Math.max(...period.runs.map((run) => run.runNumber)) + 1 : 1)
 
     let runDraft: RunDraft
-    if (period.domain === "GOLD_PAYOUT") {
-      const irregularDraft = await buildIrregularPayoutRunDraft({
-        companyId: session.user.companyId,
-        payoutSource: period.payoutSource ?? "GOLD",
-        periodStart: new Date(period.startDate),
-        periodEnd: new Date(period.endDate),
-        goldSettlementMode: period.company.goldSettlementMode,
-      })
-      if (!irregularDraft) {
-        logger.info("generate_run_no_source_records", {
-          companyId: session.user.companyId,
-          actorId: session.user.id,
-          periodId: id,
-          domain: period.domain,
-          payoutSource: period.payoutSource ?? "GOLD",
-          statusCode: 409,
-        })
-        return errorResponse(
-          `No approved ${(period.payoutSource ?? "GOLD").toLowerCase()} payout records found for this period. Approve source records before generating a run.`,
-          409,
-        )
-      }
-      runDraft = irregularDraft
-    } else {
+    {
       // Seed the statutory tables if this company has none — a no-op for anyone
       // who already does, and it means enabling the payroll addon on an existing
       // workspace does not need a re-provision.
@@ -553,7 +323,6 @@ export async function POST(
           companyId: session.user.companyId,
           actorId: session.user.id,
           periodId: id,
-          domain: period.domain,
           warningCount: runDraft.warnings.length,
           statusCode: 409,
         })
@@ -595,8 +364,6 @@ export async function POST(
         data: {
           companyId: session.user.companyId,
           periodId: period.id,
-          domain: period.domain,
-          payoutSource: period.payoutSource ?? undefined,
           runNumber,
           status: "DRAFT",
           notes: validated.notes,
@@ -605,9 +372,6 @@ export async function POST(
           deductionsTotal: runDraft.totals.deductionsTotal,
           netTotal: runDraft.totals.netTotal,
           employerCostTotal: runDraft.totals.employerCostTotal,
-          goldRatePerUnit: runDraft.goldRatePerUnit,
-          goldRateUnit: runDraft.goldRateUnit,
-          goldSettlementMode: runDraft.goldSettlementMode ?? period.company.goldSettlementMode,
           createdById: session.user.id,
           lineItems: {
             create: stampedLines.map((line) => ({
@@ -685,7 +449,6 @@ export async function POST(
           payload: {
             runNumber,
             periodKey: period.periodKey,
-            domain: period.domain,
             lineCount: stampedLines.length,
             grossTotal: runDraft.totals.grossTotal.toFixed(2),
             netTotal: runDraft.totals.netTotal.toFixed(2),
@@ -705,7 +468,6 @@ export async function POST(
       actorId: session.user.id,
       periodId: id,
       payrollRunId: createdRun.id,
-      domain: createdRun.domain,
       runNumber: createdRun.runNumber,
       lineItemCount: createdRun.lineItems.length,
       warningCount: runDraft.warnings.length,
