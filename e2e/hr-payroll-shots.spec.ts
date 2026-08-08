@@ -45,6 +45,28 @@ const SCREENS: Screen[] = [
   },
   { name: "employees", path: "/people" },
   {
+    name: "leave",
+    path: "/people/leave",
+    prepare: async (page) => {
+      await page
+        .getByText(/day/i)
+        .first()
+        .waitFor({ state: "visible", timeout: 30000 })
+        .catch(() => {});
+    },
+  },
+  {
+    name: "public-holidays",
+    path: "/people/leave/holidays",
+    prepare: async (page) => {
+      await page
+        .getByText(/Heroes/i)
+        .first()
+        .waitFor({ state: "visible", timeout: 30000 })
+        .catch(() => {});
+    },
+  },
+  {
     name: "payroll-runs",
     // The resolved URL. /payroll/runs redirects here, and a shot
     // taken mid-redirect catches the periods table still loading.
@@ -97,8 +119,22 @@ for (const [label, width, height] of VIEWPORTS) {
         )
         .toBe(true);
 
+      // The post-login redirect goes to whatever NEXTAUTH_URL names, which is a
+      // host this box does not resolve. That navigation is still in flight when
+      // the loop starts, and it aborts the first real `goto` — which is how the
+      // desktop leg produced no files while tablet and phone got lucky on
+      // timing. Park on a page of our own host before photographing anything.
+      await page.goto("/", { waitUntil: "commit" }).catch(() => {});
+      await page.waitForTimeout(1000);
+
       for (const { name, path, prepare } of SCREENS) {
-        await page.goto(path);
+        // One retry: an aborted navigation is a race, not a broken route.
+        try {
+          await page.goto(path);
+        } catch {
+          await page.waitForTimeout(1000);
+          await page.goto(path);
+        }
         await page.waitForLoadState("networkidle");
         // Compile on first hit can take seconds; a screenshot taken during it is
         // a picture of a skeleton, which is how 30 blank images happened before.

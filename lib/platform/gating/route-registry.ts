@@ -285,7 +285,6 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/people/leave", featureKey: "hr.leave" },
   { scope: "api", prefix: "/api/hr/incidents", featureKey: "hr.incidents" },
   { scope: "api", prefix: "/api/hr/disciplinary-actions", featureKey: "hr.disciplinary-actions" },
-  { scope: "api", prefix: "/api/hr/payout-batches", featureKey: "settlements.core" },
   // Longest prefix wins, so the bare /api/settlements entry stays last of the
   // three or it swallows the two below it.
   { scope: "api", prefix: "/api/settlements/runs", featureKey: "settlements.core" },

@@ -9,6 +9,8 @@ import "dotenv/config";
 import { prisma } from "@/lib/prisma";
 import { ensureAccountingDefaults } from "@/lib/accounting/bootstrap";
 import { seedZimbabweStatutoryPack } from "@/lib/hr/statutory/zimbabwe-pack";
+import { seedZimbabweLeavePack } from "@/lib/people/leave/zimbabwe-pack";
+import { countWorkingDays, holidayKeysForSite } from "@/lib/people/leave/working-days";
 import { FEATURE_BUNDLES, FEATURE_CATALOG, TIERS } from "@/lib/platform/feature-catalog";
 import {
   getClientTemplateBundleCodes,
@@ -53,6 +55,10 @@ async function main() {
     await prisma.statutoryRate.deleteMany({ where: { companyId } });
     await prisma.taxCredit.deleteMany({ where: { companyId } });
     await prisma.necAgreement.deleteMany({ where: { companyId } });
+    await prisma.leaveRequest.deleteMany({ where: { companyId } });
+    await prisma.leaveEntitlement.deleteMany({ where: { companyId } });
+    await prisma.leaveType.deleteMany({ where: { companyId } });
+    await prisma.publicHoliday.deleteMany({ where: { companyId } });
     await prisma.currencyRate.deleteMany({ where: { companyId } });
     await prisma.platformAuditEvent.deleteMany({ where: { companyId } });
     await prisma.companyFeatureFlag.deleteMany({ where: { companyId } });
@@ -81,10 +87,10 @@ async function main() {
   });
   const companyId = company.id;
 
-  // The onboarding check is "at least one site", and a bureau is one office.
-  await prisma.site.create({
-    data: { companyId, name: "Harare Office", code: "HRE" },
-  });
+  // No site. A bureau has an office, not a shaft — and now that sites are
+  // optional the demo stops pretending otherwise. This is the case that proved
+  // the requirement was wrong: the only way past onboarding used to be inventing
+  // one.
 
   const admin = await prisma.user.create({
     data: {
@@ -102,6 +108,7 @@ async function main() {
 
   await ensureAccountingDefaults(companyId);
   await seedZimbabweStatutoryPack({ companyId });
+  await seedZimbabweLeavePack({ companyId, year: 2026 });
 
   // What the bureau buys: the template's recommended tier and its bundles, plus
   // accounting bought separately so the journal seam has a ledger to post into.
@@ -233,6 +240,8 @@ async function main() {
     ["Nyasha Banda", "EMP-006", "19800", "ZWG", "BP1000006", true],
   ];
 
+  const createdEmployees: Array<{ id: string; name: string }> = [];
+
   for (const [name, employeeId, base, currency, taxNumber, hasDisability] of people) {
     const employee = await prisma.employee.create({
       data: {
@@ -254,6 +263,7 @@ async function main() {
       },
       select: { id: true },
     });
+    createdEmployees.push({ id: employee.id, name: String(name) });
 
     await prisma.compensationProfile.create({
       data: {
@@ -398,6 +408,115 @@ async function main() {
       employerCostTotal: totals.reduce((s, x) => s.plus(x.employerCost), totals[0].employerCost.minus(totals[0].employerCost)),
     },
   });
+
+  // ── Leave ──────────────────────────────────────────────────────────────────
+  //
+  // Enough to make the screens honest: a granted entitlement, leave already
+  // taken, one request waiting on a decision, and one deliberately spanning
+  // Heroes' Day so the frozen day count visibly differs from the calendar span.
+  const leaveTypes = await prisma.leaveType.findMany({
+    where: { companyId },
+    select: { id: true, code: true, defaultEntitlement: true },
+  });
+  const typeByCode = new Map(leaveTypes.map((type) => [type.code, type]));
+  const holidays = await prisma.publicHoliday.findMany({
+    where: { companyId },
+    select: { date: true, siteId: true },
+  });
+  const holidayKeys = holidayKeysForSite(holidays, null);
+
+  const leavePeople = createdEmployees.slice(0, 4);
+  for (const [index, employee] of leavePeople.entries()) {
+    for (const code of ["ANNUAL", "SICK"]) {
+      const type = typeByCode.get(code);
+      if (!type) continue;
+      await prisma.leaveEntitlement.create({
+        data: {
+          companyId,
+          employeeId: employee.id,
+          leaveTypeId: type.id,
+          year: 2026,
+          granted: type.defaultEntitlement,
+          carriedOver: code === "ANNUAL" && index === 0 ? "3" : "0",
+        },
+      });
+    }
+  }
+
+  const annual = typeByCode.get("ANNUAL");
+  const sick = typeByCode.get("SICK");
+
+  const leaveSpecs: Array<{
+    employeeId: string;
+    typeId: string | undefined;
+    start: string;
+    end: string;
+    status: "APPROVED" | "SUBMITTED";
+    reason: string;
+    cover?: string;
+  }> = [
+    {
+      employeeId: leavePeople[0].id,
+      typeId: annual?.id,
+      start: "2026-04-06",
+      end: "2026-04-10",
+      status: "APPROVED",
+      reason: "Family visit to Bulawayo",
+      cover: leavePeople[1]?.id,
+    },
+    {
+      // 10–14 August spans Heroes' Day and Defence Forces Day, so five calendar
+      // days cost three. The whole reason the holiday calendar exists.
+      employeeId: leavePeople[1].id,
+      typeId: annual?.id,
+      start: "2026-08-10",
+      end: "2026-08-14",
+      status: "APPROVED",
+      reason: "Leave over the August holidays",
+    },
+    {
+      employeeId: leavePeople[2].id,
+      typeId: sick?.id,
+      start: "2026-07-15",
+      end: "2026-07-16",
+      status: "APPROVED",
+      reason: "Flu",
+    },
+    {
+      employeeId: leavePeople[3].id,
+      typeId: annual?.id,
+      start: "2026-09-21",
+      end: "2026-09-25",
+      status: "SUBMITTED",
+      reason: "Wedding in Mutare",
+      cover: leavePeople[0]?.id,
+    },
+  ];
+
+  for (const spec of leaveSpecs) {
+    if (!spec.typeId) continue;
+    const startDate = new Date(`${spec.start}T00:00:00.000Z`);
+    const endDate = new Date(`${spec.end}T00:00:00.000Z`);
+    const count = countWorkingDays({ startDate, endDate, holidayKeys });
+    await prisma.leaveRequest.create({
+      data: {
+        companyId,
+        employeeId: spec.employeeId,
+        leaveTypeId: spec.typeId,
+        startDate,
+        endDate,
+        workingDays: count.workingDays,
+        reason: spec.reason,
+        coveringEmployeeId: spec.cover ?? null,
+        status: spec.status,
+        createdById: admin.id,
+        submittedAt: new Date(`${spec.start}T00:00:00.000Z`),
+        ...(spec.status === "APPROVED"
+          ? { decidedById: admin.id, decidedAt: new Date(`${spec.start}T00:00:00.000Z`) }
+          : {}),
+      },
+    });
+  }
 
   const outcome = await postPayrollRun({
     companyId,

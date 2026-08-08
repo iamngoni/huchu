@@ -564,33 +564,6 @@ export type EmployeePayment = {
   } | null;
 };
 
-export type IrregularPayoutBatchRecord = {
-  id: string;
-  companyId: string;
-  source: "SCRAP" | "COMMISSION" | "OTHER";
-  label: string;
-  periodStart: string;
-  periodEnd: string;
-  dueDate: string;
-  currency: string;
-  workflowStatus: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
-  notes?: string | null;
-  submittedAt?: string | null;
-  approvedAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: { id: string; name: string } | null;
-  submittedBy?: { id: string; name: string } | null;
-  approvedBy?: { id: string; name: string } | null;
-  items: Array<{
-    id: string;
-    employeeId: string;
-    amount: number;
-    notes?: string | null;
-    employee: { id: string; employeeId: string; name: string };
-  }>;
-};
-
 export type SectionSummary = {
   id: string;
   name: string;
@@ -1953,19 +1926,6 @@ export async function fetchEmployeePayments(
 ) {
   const query = buildQuery(params);
   return fetchJson<Pagination<EmployeePayment>>(`/api/employee-payments${query}`);
-}
-
-export async function fetchIrregularPayoutBatches(
-  params: {
-    source?: "SCRAP" | "COMMISSION" | "OTHER";
-    workflowStatus?: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
-    search?: string;
-    page?: number;
-    limit?: number;
-  } = {},
-) {
-  const query = buildQuery(params);
-  return fetchJson<Pagination<IrregularPayoutBatchRecord>>(`/api/hr/payout-batches${query}`);
 }
 
 export async function fetchSections(
