@@ -1,5 +1,8 @@
 import { AttendanceStatus } from "@prisma/client";
 
+import type { AuthenticatedSession } from "@/lib/auth-core/types";
+import { hasTokenFeature } from "@/lib/platform/gating/token-check";
+
 /**
  * The attendance statuses, once, from the schema.
  *
@@ -48,3 +51,28 @@ export const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
   REST_DAY: "Rest day",
   HOLIDAY: "Public holiday",
 };
+
+/**
+ * The feature that lets somebody mark a register.
+ *
+ * Was `ops.attendance.mark`, living in `lib/operations/access.ts` alongside the
+ * shift and plant report keys, because attendance arrived as part of Mine Daily
+ * Operations. It is not a mining concern: a school, a bureau and a yard all keep a
+ * register, and the ones with no shafts could not reach it.
+ *
+ * `ops.attendance.mark` is deliberately still in the catalogue and still in
+ * `ADDON_MINE_DAILY_OPS`. It now gates no route, which is a loose end worth naming
+ * rather than tidying: the key exists on live `CompanyFeatureFlag` rows, and
+ * removing it is a data migration.
+ */
+export const ATTENDANCE_FEATURE_KEY = "hr.attendance";
+
+/** Whether this session may mark or amend a register. */
+export function canSessionMarkAttendance(session: AuthenticatedSession): boolean {
+  return hasTokenFeature(session.user.enabledFeatures, ATTENDANCE_FEATURE_KEY);
+}
+
+/** The same question from the client, which holds the feature list and no session. */
+export function canMarkAttendance(enabledFeatures: string[] | undefined): boolean {
+  return hasTokenFeature(enabledFeatures, ATTENDANCE_FEATURE_KEY);
+}

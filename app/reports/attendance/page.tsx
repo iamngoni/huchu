@@ -114,7 +114,7 @@ export default function AttendanceHistoryPage() {
         notes?: string | null;
       };
     }) =>
-      fetchJson<AttendanceRecord>(`/api/attendance/${payload.id}`, {
+      fetchJson<AttendanceRecord>(`/api/people/attendance/${payload.id}`, {
         method: "PATCH",
         body: JSON.stringify(payload.data),
       }),
@@ -133,7 +133,7 @@ export default function AttendanceHistoryPage() {
   const deleteAttendanceMutation = useMutation({
     mutationFn: (id: string) =>
       fetchJson<{ success: boolean; deleted?: boolean }>(
-        `/api/attendance/${id}`,
+        `/api/people/attendance/${id}`,
         {
           method: "DELETE",
         },
@@ -399,7 +399,7 @@ export default function AttendanceHistoryPage() {
       <PageActions>
         {isSuperAdmin ? (
           <Button size="sm" asChild variant="outline">
-            <Link href="/attendance">New Attendance Entry</Link>
+            <Link href="/people/attendance">New Attendance Entry</Link>
           </Button>
         ) : null}
         <ExportMenu

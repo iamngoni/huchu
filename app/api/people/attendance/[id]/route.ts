@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { errorResponse, hasRole, successResponse, validateSession } from "@/lib/api-utils";
-import { ATTENDANCE_FEATURE_KEY, canSessionAccessOperationalFeature } from "@/lib/operations/access";
-import { ATTENDANCE_STATUSES } from "@/lib/people/attendance";
+import { hrPermissionDenial } from "@/lib/hr/permissions";
+import { ATTENDANCE_STATUSES, canSessionMarkAttendance } from "@/lib/people/attendance";
 import { prisma } from "@/lib/prisma";
 
 function normalizeShiftLabel(value: string) {
@@ -39,6 +39,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
 
+    // A register says who was at work, which is workforce data. A signed-in
+    // teacher, parent or cashier on a tenant that also runs a yard has no
+    // business reading it.
+    const viewDenial = hrPermissionDenial(session, "hr.attendance", "view");
+    if (viewDenial) return errorResponse(viewDenial, 403);
+
     const { id } = await params;
 
     const record = await prisma.attendance.findUnique({
@@ -67,7 +73,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return successResponse(record);
   } catch (error) {
-    console.error("[API] GET /api/attendance/[id] error:", error);
+    console.error("[API] GET /api/people/attendance/[id] error:", error);
     return errorResponse("Failed to fetch attendance record");
   }
 }
@@ -78,7 +84,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
 
-    if (!canSessionAccessOperationalFeature(session, ATTENDANCE_FEATURE_KEY)) {
+    const denial = hrPermissionDenial(session, "hr.attendance", "edit");
+    if (denial) return errorResponse(denial, 403);
+
+    if (!canSessionMarkAttendance(session)) {
       return errorResponse("Insufficient permissions to update attendance records.", 403);
     }
 
@@ -207,7 +216,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return errorResponse("Attendance already exists for this employee/shift/date.", 409);
     }
-    console.error("[API] PATCH /api/attendance/[id] error:", error);
+    console.error("[API] PATCH /api/people/attendance/[id] error:", error);
     return errorResponse("Failed to update attendance record");
   }
 }
@@ -243,7 +252,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return successResponse({ success: true, deleted: true });
   } catch (error) {
-    console.error("[API] DELETE /api/attendance/[id] error:", error);
+    console.error("[API] DELETE /api/people/attendance/[id] error:", error);
     return errorResponse("Failed to delete attendance record");
   }
 }

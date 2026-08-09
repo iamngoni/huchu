@@ -6,9 +6,10 @@ import {
   getPaginationParams,
   paginationResponse,
 } from '@/lib/api-utils';
-import { ATTENDANCE_FEATURE_KEY, canSessionAccessOperationalFeature } from "@/lib/operations/access";
+import { hrPermissionDenial } from "@/lib/hr/permissions";
 import {
   ATTENDANCE_STATUSES,
+  canSessionMarkAttendance,
   parseAttendanceStatus,
 } from "@/lib/people/attendance";
 import { prisma } from '@/lib/prisma';
@@ -44,6 +45,12 @@ export async function GET(request: NextRequest) {
     const sessionResult = await validateSession(request);
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
+
+    // A register says who was at work, which is workforce data. A signed-in
+    // teacher, parent or cashier on a tenant that also runs a yard has no
+    // business reading it.
+    const viewDenial = hrPermissionDenial(session, "hr.attendance", "view");
+    if (viewDenial) return errorResponse(viewDenial, 403);
 
     const { searchParams } = new URL(request.url);
     const siteId = searchParams.get('siteId');
@@ -128,7 +135,7 @@ export async function GET(request: NextRequest) {
 
     return successResponse(paginationResponse(records, total, page, limit));
   } catch (error) {
-    console.error('[API] GET /api/attendance error:', error);
+    console.error('[API] GET /api/people/attendance error:', error);
     return errorResponse('Failed to fetch attendance records');
   }
 }
@@ -139,9 +146,16 @@ export async function POST(request: NextRequest) {
     if (sessionResult instanceof NextResponse) return sessionResult;
     const { session } = sessionResult;
 
-    if (!canSessionAccessOperationalFeature(session, ATTENDANCE_FEATURE_KEY)) {
+    // Two checks, two questions. The feature says the tenant bought a register;
+    // the role says this person may write to one. Only the first existed before
+    // the move, so on a tenant with attendance switched on any signed-in user
+    // could create a record — and `Attendance.overtime` is read straight into a
+    // payroll run.
+    if (!canSessionMarkAttendance(session)) {
       return errorResponse("Insufficient permissions to create attendance records.", 403);
     }
+    const denial = hrPermissionDenial(session, "hr.attendance", "create");
+    if (denial) return errorResponse(denial, 403);
 
     const body = await request.json();
     const validated = attendanceSchema.parse(body);
@@ -257,7 +271,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return errorResponse('Validation failed', 400, error.issues);
     }
-    console.error('[API] POST /api/attendance error:', error);
+    console.error('[API] POST /api/people/attendance error:', error);
     return errorResponse('Failed to record attendance');
   }
 }

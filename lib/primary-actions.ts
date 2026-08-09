@@ -40,7 +40,7 @@ type PrimaryActionsArgs = {
 const PRODUCT_PRIMARY_ACTIONS: Record<VerticalProductId, NavItem[]> = {
   "gold-operations": [
     { href: "/shift-report", icon: Dataset, label: "Shift Report" },
-    { href: "/attendance", icon: Calendar, label: "Attendance" },
+    { href: "/people/attendance", icon: Calendar, label: "Attendance" },
     { href: "/plant-report", icon: Factory, label: "Plant Report" },
     { href: "/gold/intake/pours/new", icon: Coins, label: "Log Gold Output" },
     { href: "/gold/intake/purchases/new", icon: Payments, label: "Record Purchase" },

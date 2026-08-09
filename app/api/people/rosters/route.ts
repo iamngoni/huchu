@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     return successResponse(paginationResponse(groups, total, page, limit))
   } catch (error) {
-    console.error("[API] GET /api/hr/shift-groups error:", error)
+    console.error("[API] GET /api/people/rosters error:", error)
     return errorResponse("Failed to fetch shift groups")
   }
 }
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
       }
       return errorResponse("Shift group data conflicts with an existing record", 409)
     }
-    console.error("[API] POST /api/hr/shift-groups error:", error)
+    console.error("[API] POST /api/people/rosters error:", error)
     return errorResponse("Failed to create shift group")
   }
 }

@@ -33,7 +33,7 @@ import {
   fetchSites,
 } from "@/lib/api";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
-import { ATTENDANCE_FEATURE_KEY, canAccessOperationalFeature } from "@/lib/operations/access";
+import { canMarkAttendance } from "@/lib/people/attendance";
 import { buildSavedRecordRedirect } from "@/lib/saved-record";
 
 /**
@@ -64,7 +64,7 @@ export default function AttendancePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const enabledFeatures = (session?.user as { enabledFeatures?: string[] } | undefined)?.enabledFeatures;
-  const canManageAttendance = canAccessOperationalFeature(enabledFeatures, ATTENDANCE_FEATURE_KEY);
+  const canManageAttendance = canMarkAttendance(enabledFeatures);
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -177,7 +177,7 @@ export default function AttendancePage() {
         overtime?: number;
       }>;
     }) =>
-      fetchJson("/api/attendance", {
+      fetchJson("/api/people/attendance", {
         method: "POST",
         body: JSON.stringify(payload),
       }),

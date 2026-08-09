@@ -3,6 +3,7 @@ import {
   FileCheck,
   ManageAccounts,
   ShieldCheck,
+  UserCheck,
   Users,
   type LucideIcon,
 } from "@/lib/icons";
@@ -29,6 +30,7 @@ import {
 
 export type PeopleTab =
   | "employees"
+  | "attendance"
   | "leave"
   | "holidays"
   | "incidents"
@@ -72,6 +74,13 @@ export const PEOPLE_TABS: PeopleTabItem[] = [
     label: "Rosters",
     href: "/people/rosters",
     icon: Users,
+    categoryId: "time",
+  },
+  {
+    id: "attendance",
+    label: "Attendance",
+    href: "/people/attendance",
+    icon: UserCheck,
     categoryId: "time",
   },
   {

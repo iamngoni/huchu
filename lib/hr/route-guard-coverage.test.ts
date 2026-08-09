@@ -31,6 +31,12 @@ const HR_API_DIRS = [
   "app/api/adjustments",
   "app/api/approvals",
   "app/api/hr",
+  // People's own tree. Added when rosters and the attendance register moved out
+  // of `app/api/hr/**` — without it those eight routes would have left this
+  // coverage set silently, which is how a coverage test stops covering things.
+  // Adding it is also what surfaced the attendance API having no role check at
+  // all.
+  "app/api/people",
 ].map((relative) => join(process.cwd(), relative));
 
 /**
@@ -45,6 +51,13 @@ const GUARD_MARKERS = [
   "hrPermissionDenial",
   "canHrRoleDo",
   "ensureApproverRole",
+  // Coarser than the others — it asks "which role" and not "which action on which
+  // resource" — but it is a genuine role check, and where it is used it is
+  // *stricter*: the attendance register's DELETE is SUPERADMIN-only, which no
+  // matrix action expresses, because `HrAction` has no `delete`. Adding one would
+  // hand MANAGER a delete on every HR resource including payroll rows, which is
+  // not a widening to make in passing.
+  "hasRole(",
 ];
 
 function routeFiles(dir: string): string[] {
@@ -101,9 +114,10 @@ describe("HR API route guards", () => {
       const sessions = (source.match(/const \{ session \} = sessionResult/g) ?? []).length;
       const denials = (source.match(/hrPermissionDenial\(/g) ?? []).length;
       const approverChecks = (source.match(/ensureApproverRole\(/g) ?? []).length;
+      const roleChecks = (source.match(/hasRole\(session/g) ?? []).length;
 
       if (sessions === 0) return;
-      expect(denials + approverChecks).toBeGreaterThanOrEqual(sessions);
+      expect(denials + approverChecks + roleChecks).toBeGreaterThanOrEqual(sessions);
     },
   );
 });

@@ -97,7 +97,7 @@ export function getQuickLinkModule(href: string): ExecutiveQuickLinkModule {
   if (href.startsWith("/maintenance")) return "maintenance";
   if (href.startsWith("/compliance")) return "compliance";
   if (href.startsWith("/cctv")) return "security";
-  if (href.startsWith("/shift-report") || href.startsWith("/plant-report") || href.startsWith("/attendance")) {
+  if (href.startsWith("/shift-report") || href.startsWith("/plant-report") || href.startsWith("/people/attendance")) {
     return "operations";
   }
   if (href.startsWith("/reports")) return "reports";

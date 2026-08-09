@@ -57,7 +57,7 @@ export async function GET(
 
     return successResponse(group)
   } catch (error) {
-    console.error("[API] GET /api/hr/shift-groups/[id] error:", error)
+    console.error("[API] GET /api/people/rosters/[id] error:", error)
     return errorResponse("Failed to fetch shift group")
   }
 }
@@ -252,7 +252,7 @@ export async function PATCH(
       }
       return errorResponse("Shift group data conflicts with an existing record", 409)
     }
-    console.error("[API] PATCH /api/hr/shift-groups/[id] error:", error)
+    console.error("[API] PATCH /api/people/rosters/[id] error:", error)
     return errorResponse("Failed to update shift group")
   }
 }
@@ -304,7 +304,7 @@ export async function DELETE(
         409,
       )
     }
-    console.error("[API] DELETE /api/hr/shift-groups/[id] error:", error)
+    console.error("[API] DELETE /api/people/rosters/[id] error:", error)
     return errorResponse("Failed to manage shift group")
   }
 }

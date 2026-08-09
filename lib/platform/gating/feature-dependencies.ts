@@ -15,6 +15,8 @@ const FEATURE_DEPENDENCIES: Record<string, string[]> = {
   "settlements.core": ["hr.employees"],
   "settlements.gold": ["settlements.core", "gold.payouts"],
   "settlements.scrap": ["settlements.core"],
+  // A register with nobody in it is not a register.
+  "hr.attendance": ["hr.employees"],
   "hr.leave": ["hr.employees"],
   // Payroll without an employee directory is runs against nobody.
   "hr.payroll": ["hr.employees"],

@@ -35,6 +35,9 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/people/leave/holidays", featureKey: "hr.leave" },
   { scope: "page", prefix: "/people/leave", featureKey: "hr.leave" },
   { scope: "page", prefix: "/people/rosters", featureKey: "hr.employees" },
+  // Ahead of the bare /people entry below: first match wins here, so a longer
+  // prefix listed after a shorter one never gets read.
+  { scope: "page", prefix: "/people/attendance", featureKey: "hr.attendance" },
   { scope: "page", prefix: "/payroll/salaries", featureKey: "hr.salaries" },
   { scope: "page", prefix: "/people/approvals", featureKey: "hr.approvals-history" },
   { scope: "page", prefix: "/people/incidents", featureKey: "hr.incidents" },
@@ -219,7 +222,6 @@ export const PAGE_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "page", prefix: "/user-management/password-reset", featureKey: "admin.user-management.password-reset" },
   { scope: "page", prefix: "/user-management/role-change", featureKey: "admin.user-management.role-change" },
   { scope: "page", prefix: "/user-management", featureKey: "admin.user-management.directory" },
-  { scope: "page", prefix: "/attendance", featureKey: "ops.attendance.mark" },
   { scope: "page", prefix: "/shift-report", featureKey: "ops.shift-report.submit" },
   { scope: "page", prefix: "/plant-report", featureKey: "ops.plant-report.submit" },
   // The production dashboard is built entirely on plant reports; gate it with
@@ -271,7 +273,6 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/cctv/nvrs", featureKey: "cctv.nvrs" },
 
   { scope: "api", prefix: "/api/shift-reports", featureKey: "ops.shift-report.submit" },
-  { scope: "api", prefix: "/api/attendance", featureKey: "ops.attendance.mark" },
   { scope: "api", prefix: "/api/plant-reports", featureKey: "ops.plant-report.submit" },
 
   // Longest prefix wins, so these must precede the bare `/api/payroll`.
@@ -283,6 +284,7 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/employee-payments", featureKey: "hr.salaries" },
   { scope: "api", prefix: "/api/approvals/history", featureKey: "hr.approvals-history" },
   { scope: "api", prefix: "/api/people/leave", featureKey: "hr.leave" },
+  { scope: "api", prefix: "/api/people/attendance", featureKey: "hr.attendance" },
   { scope: "api", prefix: "/api/hr/incidents", featureKey: "hr.incidents" },
   { scope: "api", prefix: "/api/hr/disciplinary-actions", featureKey: "hr.disciplinary-actions" },
   // Longest prefix wins, so the bare /api/settlements entry stays last of the
@@ -292,7 +294,7 @@ export const API_FEATURE_ROUTES: FeatureRouteEntry[] = [
   { scope: "api", prefix: "/api/settlements/intakes", featureKey: "settlements.core" },
   { scope: "api", prefix: "/api/settlements", featureKey: "settlements.core" },
   { scope: "api", prefix: "/api/hr/shift-group-schedules", featureKey: "hr.employees" },
-  { scope: "api", prefix: "/api/hr/shift-groups", featureKey: "hr.employees" },
+  { scope: "api", prefix: "/api/people/rosters", featureKey: "hr.employees" },
   { scope: "api", prefix: "/api/departments", featureKey: "hr.employees" },
   { scope: "api", prefix: "/api/job-grades", featureKey: "hr.employees" },
   { scope: "api", prefix: "/api/employees", featureKey: "hr.employees" },

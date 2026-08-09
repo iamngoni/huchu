@@ -112,6 +112,12 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
   f({ key: "scrap-metal.pricing", name: "Scrap & Recycling Price Board", description: "Scrap and recycling material catalog and pricing controls.", domain: "scrap-metal", defaultEnabled: false, isBillable: false, monthlyPrice: 0 }),
 
   f({ key: "hr.employees", name: "Employees", description: "Employee records and directory.", domain: "hr", defaultEnabled: false, isBillable: false, monthlyPrice: 0 }),
+  // Non-billable at zero, exactly like `hr.employees` and exactly like the
+  // `ops.attendance.mark` it takes over from. Marking a register moved from Mine
+  // Daily Operations to People because every vertical with a workforce keeps one —
+  // and an information-architecture change must not reprice anybody, so this
+  // deliberately does not become a billable line.
+  f({ key: "hr.attendance", name: "Attendance", description: "Crew attendance capture and the attendance register.", domain: "hr", defaultEnabled: false, isBillable: false, monthlyPrice: 0 }),
   f({ key: "hr.leave", name: "Leave", description: "Leave types, entitlements, requests and the public holiday calendar.", domain: "hr", defaultEnabled: false, isBillable: true, monthlyPrice: 3 }),
   f({ key: "hr.incidents", name: "HR Incidents", description: "HR incident management.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 2 }),
   f({ key: "hr.disciplinary-actions", name: "Disciplinary Actions", description: "Disciplinary action lifecycle.", domain: "hr", defaultEnabled: true, isBillable: true, monthlyPrice: 2 }),
@@ -293,7 +299,7 @@ export const FEATURE_BUNDLES: FeatureBundleDefinition[] = [
     description: "Employee directory and workforce base records.",
     monthlyPrice: 0,
     additionalSiteMonthlyPrice: 0,
-    features: ["hr.employees", "hr.leave"],
+    features: ["hr.employees", "hr.attendance", "hr.leave"],
   },
   {
     code: "ADDON_GOLD_CORE",

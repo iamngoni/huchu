@@ -133,7 +133,7 @@ export default function AllocationDetailPage() {
 
   const attendanceMutation = useMutation({
     mutationFn: async (payload: { attendanceId: string; status: string }) =>
-      fetchJson(`/api/attendance/${payload.attendanceId}`, {
+      fetchJson(`/api/people/attendance/${payload.attendanceId}`, {
         method: "PATCH",
         body: JSON.stringify({ status: payload.status }),
       }),

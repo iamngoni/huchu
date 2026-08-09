@@ -15,7 +15,13 @@ const MANAGER_TEMPLATE_DENY = new Set([
 
 const CLERK_TEMPLATE_ALLOW = new Set([
   "ops.shift-report.submit",
+  // Both, for now. A clerk marks the register, and the key that gates it moved
+  // from Mine Daily Operations to People — but `ops.attendance.mark` still exists
+  // on live `CompanyFeatureFlag` rows, so dropping it from a clerk's allowed set
+  // would silently narrow an existing clerk's access on a tenant that has not been
+  // resubscribed. Removing it is a data migration, which this is not.
   "ops.attendance.mark",
+  "hr.attendance",
   "ops.plant-report.submit",
   "stores.dashboard",
   "stores.inventory",

@@ -107,18 +107,16 @@ export const navSections: NavSection[] = [
   },
   {
     id: "daily",
+    // Attendance left this section. Marking a register is not mining — a school,
+    // a bureau and a scrap yard all keep one, and it is now People › Time ›
+    // Attendance. What stays here is production reporting, which is.
     title: "Daily Operations",
-    description: "Mining shift, attendance, and plant capture",
+    description: "Mining shift and plant capture",
     items: [
       {
         href: "/shift-report",
         icon: NoteAdd,
         label: "Submit Shift Report",
-      },
-      {
-        href: "/attendance",
-        icon: UserCheck,
-        label: "Mark Attendance",
       },
       {
         href: "/plant-report",

@@ -30,6 +30,9 @@ const SCREENS: Screen[] = [
   // --- People, in rail order.
   { name: "people-employees", path: "/people" },
   { name: "people-rosters", path: "/people/rosters" },
+  // Moved here from `/attendance` under Daily Operations: marking a register is
+  // not mining, and a bureau with no shafts could not reach one.
+  { name: "people-attendance", path: "/people/attendance" },
   {
     name: "people-leave",
     path: "/people/leave",
@@ -126,6 +129,13 @@ for (const [label, width, height] of VIEWPORTS) {
     test.use({ viewport: { width, height } });
 
     test(`payroll screens at ${width}x${height}`, async ({ page }) => {
+      // `playwright.config.ts` sets a 60s global timeout, which this spec cannot
+      // fit: sign-in alone is ~30s against a dev server, and each screen waits 8s
+      // for compile-on-first-hit. Screenshots are written inside the loop, so a
+      // run that overran left a directory of images *and* a failed test — which
+      // looks enough like success to be believed. Sized to the work instead.
+      test.setTimeout(90_000 + SELECTED.length * 25_000);
+
       await page.goto("/login");
       await page.waitForLoadState("networkidle");
       await page.waitForTimeout(2500);
@@ -162,7 +172,13 @@ for (const [label, width, height] of VIEWPORTS) {
           await page.waitForTimeout(1000);
           await page.goto(path);
         }
-        await page.waitForLoadState("networkidle");
+        // Bounded, and failure to settle is not fatal. Some screens never reach
+        // `networkidle` at all against a dev server — the crew board is one — and
+        // an unbounded wait there consumed the whole test budget and produced no
+        // picture of a page that renders perfectly well.
+        await page
+          .waitForLoadState("networkidle", { timeout: 15000 })
+          .catch(() => {});
         // Compile on first hit can take seconds; a screenshot taken during it is
         // a picture of a skeleton, which is how 30 blank images happened before.
         // The runs page needs the longer end of this — it fires a second query

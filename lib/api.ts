@@ -1431,7 +1431,7 @@ export async function fetchShiftGroups(
   } = {},
 ) {
   const query = buildQuery(params);
-  return fetchJson<Pagination<ShiftGroupRecord>>(`/api/hr/shift-groups${query}`);
+  return fetchJson<Pagination<ShiftGroupRecord>>(`/api/people/rosters${query}`);
 }
 
 export async function fetchShiftGroup(id: string) {
@@ -1440,7 +1440,7 @@ export async function fetchShiftGroup(id: string) {
       members: ShiftGroupMemberRecord[];
       schedules: ShiftGroupScheduleRecord[];
     }
-  >(`/api/hr/shift-groups/${id}`);
+  >(`/api/people/rosters/${id}`);
 }
 
 export async function createShiftGroup(input: {
@@ -1451,7 +1451,7 @@ export async function createShiftGroup(input: {
   leaderEmployeeId: string;
   memberIds?: string[];
 }) {
-  return fetchJson<ShiftGroupRecord>(`/api/hr/shift-groups`, {
+  return fetchJson<ShiftGroupRecord>(`/api/people/rosters`, {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -1468,7 +1468,7 @@ export async function updateShiftGroup(
     isActive?: boolean;
   },
 ) {
-  return fetchJson<ShiftGroupRecord>(`/api/hr/shift-groups/${id}`, {
+  return fetchJson<ShiftGroupRecord>(`/api/people/rosters/${id}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });
@@ -1476,7 +1476,7 @@ export async function updateShiftGroup(
 
 export async function archiveShiftGroup(id: string) {
   return fetchJson<{ success: boolean; archived?: boolean }>(
-    `/api/hr/shift-groups/${id}`,
+    `/api/people/rosters/${id}`,
     {
       method: "DELETE",
     },
@@ -1485,7 +1485,7 @@ export async function archiveShiftGroup(id: string) {
 
 export async function permanentlyDeleteShiftGroup(id: string) {
   return fetchJson<{ success: boolean; deleted?: boolean }>(
-    `/api/hr/shift-groups/${id}?permanent=true`,
+    `/api/people/rosters/${id}?permanent=true`,
     {
       method: "DELETE",
     },
@@ -1500,7 +1500,7 @@ export async function fetchShiftGroupMembers(
   return fetchJson<{
     data: ShiftGroupMemberRecord[];
     leaderEmployeeId?: string;
-  }>(`/api/hr/shift-groups/${groupId}/members${query}`);
+  }>(`/api/people/rosters/${groupId}/members${query}`);
 }
 
 export async function addShiftGroupMembers(
@@ -1508,7 +1508,7 @@ export async function addShiftGroupMembers(
   input: { employeeIds: string[] },
 ) {
   return fetchJson<{ data: ShiftGroupMemberRecord[] }>(
-    `/api/hr/shift-groups/${groupId}/members`,
+    `/api/people/rosters/${groupId}/members`,
     {
       method: "POST",
       body: JSON.stringify(input),
@@ -1522,7 +1522,7 @@ export async function updateShiftGroupMember(
   input: { isActive: boolean },
 ) {
   return fetchJson<ShiftGroupMemberRecord>(
-    `/api/hr/shift-groups/${groupId}/members/${memberId}`,
+    `/api/people/rosters/${groupId}/members/${memberId}`,
     {
       method: "PATCH",
       body: JSON.stringify(input),
@@ -1532,7 +1532,7 @@ export async function updateShiftGroupMember(
 
 export async function removeShiftGroupMember(groupId: string, memberId: string) {
   return fetchJson<{ success: boolean; removed?: boolean }>(
-    `/api/hr/shift-groups/${groupId}/members/${memberId}`,
+    `/api/people/rosters/${groupId}/members/${memberId}`,
     {
       method: "DELETE",
     },
@@ -2131,7 +2131,7 @@ export async function fetchAttendance(
   } = {},
 ) {
   const query = buildQuery(params);
-  return fetchJson<Pagination<AttendanceRecord>>(`/api/attendance${query}`);
+  return fetchJson<Pagination<AttendanceRecord>>(`/api/people/attendance${query}`);
 }
 
 export async function fetchShiftReports(

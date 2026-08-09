@@ -61,7 +61,7 @@ export async function GET(
       leaderEmployeeId: group.leaderEmployeeId,
     })
   } catch (error) {
-    console.error("[API] GET /api/hr/shift-groups/[id]/members error:", error)
+    console.error("[API] GET /api/people/rosters/[id]/members error:", error)
     return errorResponse("Failed to fetch shift group members")
   }
 }
@@ -143,7 +143,7 @@ export async function POST(
     if (error instanceof z.ZodError) {
       return errorResponse("Validation failed", 400, error.issues)
     }
-    console.error("[API] POST /api/hr/shift-groups/[id]/members error:", error)
+    console.error("[API] POST /api/people/rosters/[id]/members error:", error)
     return errorResponse("Failed to add shift group members")
   }
 }

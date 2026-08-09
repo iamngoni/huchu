@@ -60,10 +60,25 @@ describe("the payroll clerk", () => {
 });
 
 describe("roles with no business in HR", () => {
-  it("gives an OPERATOR nothing", () => {
-    // They mark attendance. Their own payslip reaches them through the
+  it("gives an OPERATOR the register and nothing else", () => {
+    // This case used to assert they got *nothing*, under a comment saying "they
+    // mark attendance" — which was true only because the attendance API had no
+    // role check to deny them. `hr.attendance` makes the grant explicit and, in
+    // doing so, actually narrows it: before, any signed-in user could write to a
+    // register, and `Attendance.overtime` is read straight into a payroll run.
+    expect(canHrRoleDo("OPERATOR", "hr.attendance", "view")).toBe(true);
+    expect(canHrRoleDo("OPERATOR", "hr.attendance", "create")).toBe(true);
+    expect(canHrRoleDo("OPERATOR", "hr.attendance", "edit")).toBe(true);
+
+    // Marking is not a two-step workflow, and nothing about a register is
+    // configuration.
+    expect(canHrRoleDo("OPERATOR", "hr.attendance", "approve")).toBe(false);
+    expect(canHrRoleDo("OPERATOR", "hr.attendance", "configure")).toBe(false);
+
+    // Everything else stays shut. Their own payslip reaches them through the
     // row-level self-service check, not through a role grant.
     for (const resource of HR_RESOURCES) {
+      if (resource === "hr.attendance") continue;
       expect(canHrRoleDo("OPERATOR", resource, "view")).toBe(false);
     }
   });
@@ -74,6 +89,11 @@ describe("roles with no business in HR", () => {
       // These share the `UserRole` enum with the HR roles, so a school running
       // payroll here would otherwise expose the salary bill to its teachers.
       // A BURSAR handles school fees, which is not the same as the payroll.
+      //
+      // No exemption for `hr.attendance` in this loop, unlike the OPERATOR case
+      // above: a workforce register is not a teacher's or a parent's to read
+      // either, and a school marks class attendance through `schools.attendance`,
+      // which is a different table and a different question.
       for (const resource of HR_RESOURCES) {
         expect(canHrRoleDo(role, resource, "view")).toBe(false);
       }

@@ -83,7 +83,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return errorResponse("Validation failed", 400, error.issues)
     }
-    console.error("[API] PATCH /api/hr/shift-groups/[id]/members/[memberId] error:", error)
+    console.error("[API] PATCH /api/people/rosters/[id]/members/[memberId] error:", error)
     return errorResponse("Failed to update shift group member")
   }
 }
@@ -118,7 +118,7 @@ export async function DELETE(
 
     return successResponse({ success: true, removed: true })
   } catch (error) {
-    console.error("[API] DELETE /api/hr/shift-groups/[id]/members/[memberId] error:", error)
+    console.error("[API] DELETE /api/people/rosters/[id]/members/[memberId] error:", error)
     return errorResponse("Failed to remove shift group member")
   }
 }

@@ -89,7 +89,7 @@ const MODULE_META: Record<
 
 const QUICK_ACTION_ICON_BY_HREF: Record<string, IconKey> = {
   "/shift-report": "shift-report",
-  "/attendance": "attendance",
+  "/people/attendance": "attendance",
   "/stores/receive": "receive-stock",
   "/stores/issue": "issue-stock",
   "/gold/intake/pours/new": "gold-output",

@@ -27,6 +27,7 @@
 
 export const HR_RESOURCES = [
   "hr.employees",
+  "hr.attendance",
   "hr.leave",
   "hr.compensation",
   "hr.payroll",
@@ -69,6 +70,17 @@ const VIEW_ONLY: HrAction[] = ["view"];
 /** Prepare but do not approve. The payroll clerk's spread. */
 const PREPARE: HrAction[] = ["view", "create", "edit", "submit"];
 
+/**
+ * Mark a register and correct it. What a shift supervisor needs and no more.
+ *
+ * `edit` is included on purpose despite `Attendance.overtime` feeding a payroll
+ * run: a mis-marked register is corrected in the moment, and withholding `edit`
+ * would push people to delete-and-recreate, which needs SUPERADMIN and loses the
+ * original. Not `submit` or `approve` — nothing about a register is a two-step
+ * workflow — and not `configure`.
+ */
+const MARK_REGISTER: HrAction[] = ["view", "create", "edit"];
+
 type Matrix = Partial<Record<string, Partial<Record<HrResource, HrAction[]>>>>;
 
 /**
@@ -82,6 +94,7 @@ type Matrix = Partial<Record<string, Partial<Record<HrResource, HrAction[]>>>>;
 const MATRIX: Matrix = {
   SUPERADMIN: {
     "hr.employees": ALL,
+    "hr.attendance": ALL,
     "hr.leave": ALL,
     "hr.compensation": ALL,
     "hr.payroll": ALL,
@@ -92,6 +105,7 @@ const MATRIX: Matrix = {
   },
   MANAGER: {
     "hr.employees": ALL,
+    "hr.attendance": ALL,
     "hr.leave": ALL,
     "hr.compensation": ALL,
     "hr.payroll": ALL,
@@ -106,6 +120,7 @@ const MATRIX: Matrix = {
   // the run should not also be the person who changes what it is computed on.
   CLERK: {
     "hr.employees": PREPARE,
+    "hr.attendance": MARK_REGISTER,
     // A clerk records leave and submits it. Approving somebody's time off is the
     // manager's, for the same reason approving a run is.
     "hr.leave": PREPARE,
@@ -116,10 +131,18 @@ const MATRIX: Matrix = {
     "hr.returns": VIEW_ONLY,
     "hr.payslips": VIEW_ONLY,
   },
-  // Deliberately nothing. An operator marks attendance and reads a shift
-  // report; they have no business in anybody's pay. Their own payslip reaches
-  // them through the self-service check in `lib/documents/hr-sources.ts`, which
-  // is a row-level scope rather than a role grant.
+  // The register and nothing else. This comment used to say "deliberately
+  // nothing" while explaining that an operator marks attendance — which was true
+  // only because the attendance API had no role check at all to deny them. Any
+  // signed-in user could create and amend attendance on a tenant with the
+  // feature, and `Attendance.overtime` is read straight into a payroll run by
+  // `overtimePayByEmployee`, so that was a route from "can sign in" to "can pay
+  // myself for hours I did not work". They still have no business in anybody's
+  // pay; their own payslip reaches them through the self-service check in
+  // `lib/documents/hr-sources.ts`, which is a row-level scope, not a role grant.
+  OPERATOR: {
+    "hr.attendance": MARK_REGISTER,
+  },
 };
 
 export function canHrRoleDo(
