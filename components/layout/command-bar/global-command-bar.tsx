@@ -47,6 +47,8 @@ type SearchGroup = { type: SearchResultType; label: string; results: SearchResul
 // The same icons `RecordMark` draws for these kinds, so a pupil looks like a
 // pupil whether you found her in the search box or opened her from a register.
 const TYPE_ICONS: Record<SearchResultType, LucideIcon> = {
+  EMPLOYEE: ManageAccounts,
+  SHIFT_GROUP: Users,
   PERSON: Users,
   COMPANY: Building2,
   DEAL: Funnel,
@@ -511,23 +513,54 @@ export function GlobalCommandBar() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Search"
-        // `btn btn-secondary` rather than a hand-rolled box: this sits in the
-        // app bar between the notification bell and the page's own action,
-        // and drawing its own padding is how it ended up 30px tall against
-        // their 36. The height, radius and gap now come from the same place
-        // theirs do.
-        className="btn btn-secondary text-[var(--text-muted)] hover:text-[var(--text)]"
-      >
-        <Search className="size-4" aria-hidden="true" />
-        <span className="hidden lg:inline">Search</span>
-        <kbd className="hidden rounded border border-[var(--border)] px-1 font-sans lg:inline">
+      {/*
+        A real input, not a button dressed as one.
+        =========================================
+        It used to be a `<button>`, which meant the app bar advertised a search
+        box and then asked you to open a dialog before you could type into it —
+        two gestures for the thing people do most. Now the first keystroke lands
+        where you aimed it.
+
+        What it is *not* is a second search. Typing hands the text straight to
+        the same `CommandBar` this file already renders, seeded with what you
+        typed, so there is one query, one result shape and one keyboard contract.
+        A separate suggestions dropdown here would have been a second engine to
+        keep in step with the first.
+
+        Kept narrow on purpose: on mobile the app bar has no room, so the icon
+        alone opens the bar.
+      */}
+      <div className="relative flex items-center">
+        <Search
+          className="pointer-events-none absolute left-2.5 size-4 text-[var(--text-subtle)] md:left-2.5"
+          aria-hidden="true"
+        />
+        <input
+          type="search"
+          value=""
+          aria-label="Search records and actions"
+          placeholder="Search"
+          // Read-only-ish by design: it owns no text of its own. Whatever you
+          // type opens the bar with that text already in it, and the bar's own
+          // input takes over from there — so there is never a moment where two
+          // inputs hold two different queries.
+          onChange={(event) => {
+            const typed = event.target.value;
+            if (typed) setQuery(typed);
+            setOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === "ArrowDown") {
+              event.preventDefault();
+              setOpen(true);
+            }
+          }}
+          className="h-9 w-36 rounded-[var(--radius-sm)] border border-[var(--chrome-edge)] bg-[var(--surface)] pl-8 pr-14 text-sm text-[var(--text-body)] outline-none placeholder:text-[var(--text-muted)] focus-visible:border-[var(--focus-ring)] lg:w-64 [&::-webkit-search-cancel-button]:hidden"
+        />
+        <kbd className="pointer-events-none absolute right-2 hidden rounded border border-[var(--border)] px-1 font-sans text-sm text-[var(--text-muted)] lg:inline">
           ⌘K
         </kbd>
-      </button>
+      </div>
 
       <CommandBar
         open={open}

@@ -56,11 +56,13 @@ export function AppShell({
     <PageChromeProvider>
       <SidebarProvider>
         <AppSidebar />
-        {/* Flat: no inset margin, rounding, border or shadow. The framed card
-            read as a window floating over a desktop, which cost a gutter on
-            every side and drew a line between the nav and the work that is
-            not a real boundary. */}
-        <SidebarInset className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-surface-base">
+        {/* Flat: no inset margin, rounding or gutter. The framed card read as a
+            window floating over a desktop, which cost space on every side.
+            What it does carry is one crisp hairline on the seam it shares with
+            the sidebar — the boundary between navigation and work is real, and
+            at `--border` on white it was invisible. Drawn here as an inset
+            shadow rather than a border so it costs no layout width. */}
+        <SidebarInset className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-surface-base shadow-[inset_1px_0_0_0_var(--chrome-edge)]">
           <Navbar />
           <main
             className={

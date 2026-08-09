@@ -30,7 +30,7 @@ describe("searchRecords", () => {
     await searchRecords(db, {
       companyId: "c1",
       query: "moyo",
-      scope: { crm: false, schools: ["STUDENT"] },
+      scope: { crm: false, schools: ["STUDENT"] , people: []},
     });
 
     expect(searchCrm).not.toHaveBeenCalled();
@@ -44,7 +44,7 @@ describe("searchRecords", () => {
     await searchRecords(db, {
       companyId: "c1",
       query: "delta",
-      scope: { crm: true, schools: [] },
+      scope: { crm: true, schools: [] , people: []},
     });
 
     expect(searchSchools).not.toHaveBeenCalled();
@@ -78,7 +78,7 @@ describe("searchRecords", () => {
     const results = await searchRecords(db, {
       companyId: "c1",
       query: "moyo",
-      scope: { crm: true, schools: ["STUDENT"] },
+      scope: { crm: true, schools: ["STUDENT"] , people: []},
     });
 
     expect(results.map((result) => result.type)).toEqual(["DEAL", "STUDENT"]);
@@ -90,7 +90,7 @@ describe("searchRecords", () => {
     const results = await searchRecords(db, {
       companyId: "c1",
       query: "anything",
-      scope: { crm: false, schools: [] },
+      scope: { crm: false, schools: [] , people: []},
     });
     expect(results).toEqual([]);
   });
@@ -99,7 +99,7 @@ describe("searchRecords", () => {
     const results = await searchRecords(db, {
       companyId: "c1",
       query: "a",
-      scope: { crm: true, schools: ["STUDENT"] },
+      scope: { crm: true, schools: ["STUDENT"] , people: []},
     });
 
     expect(results).toEqual([]);

@@ -705,18 +705,6 @@ export default function HumanResourcesPage() {
         minSize: 160,
         maxSize: 160},
       {
-        id: "goldOwed",
-        header: "Payouts Owed",
-        cell: ({ row }) => (
-          <div className="text-right">
-            <div className="font-mono font-semibold">${(row.original.irregularOwed ?? row.original.goldOwed).toFixed(2)}</div>
-            <div className="text-xs text-muted-foreground">Outstanding irregular payouts</div>
-          </div>
-        ),
-        size: 120,
-        minSize: 120,
-        maxSize: 120},
-      {
         id: "salaryOwed",
         header: "Salary Owed",
         cell: ({ row }) => (

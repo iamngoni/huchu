@@ -336,7 +336,18 @@
      old value was invisible. */
   --sidebar-accent:             var(--surface-muted);
   --sidebar-accent-foreground:  var(--text-strong);
-  --sidebar-border:             var(--border);
+  /* The seam between navigation and work, and the one under the app bar.
+     `--border` (#E5E8EE) and `--border-subtle` (#EEF0F4) are both too light to
+     read as an edge at 1px on white — the sidebar and the app bar were drawing
+     lines nobody could see, so the chrome and the content looked like one
+     undifferentiated white field. `--chrome-edge` is one step stronger, and
+     `--chrome-shadow` is a **hard** 1px offset with no blur: a crisp second
+     hairline for the sticky app bar, which genuinely is floating over the
+     scrolling content, rather than a soft glow that would violate
+     "borders at rest, shadows only when floating". */
+  --chrome-edge:                var(--border-strong);
+  --chrome-shadow:              0 1px 0 0 var(--hairline);
+  --sidebar-border:             var(--chrome-edge);
   --sidebar-ring:               var(--focus-ring);
 
   --sidebar-item-fg:            color-mix(in oklab, var(--text-body) 84%, var(--text-muted));

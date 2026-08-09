@@ -3,6 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { getFeatureMap } from "@/lib/platform/features";
+import { hrPermissionDenial } from "@/lib/hr/permissions";
+import {
+  PEOPLE_SEARCH_FEATURES,
+  PEOPLE_SEARCH_RESOURCES,
+  PEOPLE_SEARCH_TYPES,
+  type PeopleSearchType,
+} from "@/lib/people/search";
 import { groupSearchResults, searchRecords, type SearchScope } from "@/lib/records/search";
 import { canSchoolRoleDo } from "@/lib/schools/permissions";
 import {
@@ -46,7 +53,7 @@ export async function GET(request: NextRequest) {
     const limitPerType = Number(searchParams.get("limit") ?? 5);
     const companyId = session.user.companyId;
 
-    // One read of the feature map for all seven arms rather than `hasFeature`
+    // One read of the feature map for every arm rather than `hasFeature`
     // per type: that helper reads the map each time, and the map is four
     // uncached queries — twenty-eight to answer one keystroke. The map is built
     // from every active `PlatformFeature`, so a key missing from it is one the
@@ -61,7 +68,16 @@ export async function GET(request: NextRequest) {
         canSchoolRoleDo(role, SCHOOL_SEARCH_RESOURCES[type], "view"),
     );
 
-    const scope: SearchScope = { crm: enabled("crm.core"), schools };
+    // The People arms, resolved the same two ways. `hrPermissionDenial` returns
+    // a message when refused and null when allowed, which is the inverse of
+    // `canSchoolRoleDo` — hence the `=== null` rather than a bare call.
+    const people: PeopleSearchType[] = PEOPLE_SEARCH_TYPES.filter(
+      (type) =>
+        enabled(PEOPLE_SEARCH_FEATURES[type]) &&
+        hrPermissionDenial(session, PEOPLE_SEARCH_RESOURCES[type], "view") === null,
+    );
+
+    const scope: SearchScope = { crm: enabled("crm.core"), schools, people };
 
     const results = await searchRecords(prisma, {
       companyId,

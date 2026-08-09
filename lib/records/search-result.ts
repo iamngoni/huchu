@@ -28,6 +28,9 @@ export type SearchResultType =
   | "RECEIPT"
   | "PRODUCT"
   | "CUSTOMER"
+  // People — the workforce, whatever the vertical
+  | "EMPLOYEE"
+  | "SHIFT_GROUP"
   // Schools (S-4.5)
   | "STUDENT"
   | "GUARDIAN"
@@ -77,6 +80,8 @@ export const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
   RECEIPT: "Receipts",
   PRODUCT: "Catalogue",
   CUSTOMER: "Accounts",
+  EMPLOYEE: "Staff",
+  SHIFT_GROUP: "Crews",
   STUDENT: "Students",
   GUARDIAN: "Guardians",
   // "Staff" rather than "Teachers": the profile is the school's view of a
@@ -97,6 +102,11 @@ export const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
  * registrar's pupil should not sit under a catalogue item.
  */
 export const SEARCH_TYPE_ORDER: SearchResultType[] = [
+  // Staff first. Every vertical has a workforce — it is the one group that
+  // appears on a mine, a school and a bureau alike — and on a payroll tenant it
+  // is the only group there is.
+  "EMPLOYEE",
+  "SHIFT_GROUP",
   "STUDENT",
   "GUARDIAN",
   "TEACHER",

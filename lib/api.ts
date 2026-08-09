@@ -98,8 +98,6 @@ export type EmployeeSummary = {
   grade?: { id: string; code: string; name: string; rank: number } | null;
   supervisor?: { id: string; employeeId: string; name: string } | null;
   isActive: boolean;
-  goldOwed: number;
-  irregularOwed?: number;
   salaryOwed: number;
 };
 

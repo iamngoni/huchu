@@ -72,7 +72,9 @@ export function Navbar() {
   const showMembers = pathname === "/crm" || pathname.startsWith("/crm/");
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--border-subtle)] bg-surface-base pt-[env(safe-area-inset-top)]">
+    // Sticky, so it is genuinely floating over the scrolling content: a crisp
+    // hairline plus a hard 1px shadow (no blur), not a soft glow.
+    <header className="sticky top-0 z-20 border-b border-[var(--chrome-edge)] bg-surface-base pt-[env(safe-area-inset-top)] shadow-[var(--chrome-shadow)]">
       <div className="px-2 h-14 lg:pr-4">
         <>
           <div className="flex h-14 items-center gap-1.5 md:hidden">

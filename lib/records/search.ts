@@ -9,7 +9,7 @@
  * nothing about who can reach it.
  *
  * The fix is not a second search engine. Each module contributes an arm
- * (`searchCrm`, `searchSchools`) returning the shared result shape, this decides
+ * (`searchCrm`, `searchSchools`, `searchPeople`) returning the shared result shape, this decides
  * which arms the caller may run, and the callers see one grouped list. A tenant
  * with both modules gets both; a tenant with neither gets an empty list rather
  * than an error, because a search box that refuses is worse than one that finds
@@ -22,6 +22,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { searchCrm } from "@/lib/crm/search";
+import { searchPeople, type PeopleSearchType } from "@/lib/people/search";
 import { groupSearchResults, type SearchResult } from "@/lib/records/search-result";
 import { searchSchools, type SchoolSearchType } from "@/lib/schools/search";
 
@@ -32,6 +33,8 @@ export type SearchScope = {
   crm: boolean;
   /** The school arms this caller may run — empty means no school search. */
   schools: readonly SchoolSearchType[];
+  /** The People arms this caller may run — empty means no workforce search. */
+  people: readonly PeopleSearchType[];
 };
 
 export async function searchRecords(
@@ -60,6 +63,17 @@ export async function searchRecords(
         query,
         limitPerType: input.limitPerType,
         types: input.scope.schools,
+      }),
+    );
+  }
+
+  if (input.scope.people.length > 0) {
+    arms.push(
+      searchPeople(db, {
+        companyId: input.companyId,
+        query,
+        limitPerType: input.limitPerType,
+        types: input.scope.people,
       }),
     );
   }
