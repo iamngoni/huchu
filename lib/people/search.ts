@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import type { HrResource } from "@/lib/hr/permissions";
+import { EMPLOYEE_POSITION_LABELS } from "@/lib/platform/vertical-defaults";
 import type { SearchResult } from "@/lib/records/search-result";
 import { facts } from "@/lib/records/search-result";
 
@@ -56,6 +57,26 @@ export const PEOPLE_SEARCH_RESOURCES: Record<PeopleSearchType, HrResource> = {
  * sets and a helper taking both would be a helper with a parameter for each
  * caller.
  */
+/**
+ * The positions whose label the query looks like.
+ *
+ * `Employee.position` is an `EmployeePosition` enum, so it cannot be searched
+ * with `contains` — the first cut of this arm tried, and Prisma refused. But a
+ * job title is exactly the kind of thing somebody types, so a query matching a
+ * label is turned into an exact enum match instead: "driver" finds the drivers,
+ * "sales" finds the sales representatives.
+ */
+function positionMatches(query: string) {
+  const needle = query.trim().toLowerCase();
+  return (
+    Object.entries(EMPLOYEE_POSITION_LABELS) as Array<
+      [keyof typeof EMPLOYEE_POSITION_LABELS, string]
+    >
+  )
+    .filter(([, label]) => label.toLowerCase().includes(needle))
+    .map(([value]) => value);
+}
+
 function wordMatches(query: string, columns: readonly string[]) {
   return query
     .split(/\s+/)
@@ -82,6 +103,7 @@ export async function searchPeople(
 
   const take = input.limitPerType ?? 5;
   const wanted = new Set(input.types);
+  const positions = positionMatches(query);
   const arms: Array<Promise<SearchResult[]>> = [];
 
   if (wanted.has("EMPLOYEE")) {
@@ -90,10 +112,15 @@ export async function searchPeople(
         .findMany({
           where: {
             companyId: input.companyId,
-            // Name, staff number and job title. Not the national ID or the tax
-            // number: those identify a person to the state, and a search box
-            // that surfaces them turns every colleague into a lookup table.
-            AND: wordMatches(query, ["name", "employeeId", "position"]),
+            // Name, staff number, department or job title. Not the national ID
+            // or the tax number: those identify a person to the state, and a
+            // search box that surfaces them turns every colleague into a lookup
+            // table.
+            OR: [
+              { AND: wordMatches(query, ["name", "employeeId"]) },
+              { department: { name: { contains: query, mode: "insensitive" } } },
+              ...(positions.length > 0 ? [{ position: { in: positions } }] : []),
+            ],
           },
           select: {
             id: true,
@@ -112,10 +139,11 @@ export async function searchPeople(
             id: row.id,
             reference: row.employeeId,
             title: row.name,
-            subtitle: row.position || row.department?.name || null,
+            // The label, not the enum: nobody is looking for "SUPPORT_STAFF".
+            subtitle: EMPLOYEE_POSITION_LABELS[row.position] ?? null,
             facts: facts([
               ["Staff number", row.employeeId],
-              ["Position", row.position],
+              ["Position", EMPLOYEE_POSITION_LABELS[row.position]],
               ["Department", row.department?.name],
               // Said plainly, because a leaver still answers to their name and
               // paying one is a different decision from paying a colleague.

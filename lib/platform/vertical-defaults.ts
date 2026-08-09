@@ -61,7 +61,15 @@ type VerticalDefaultConfig = {
   };
 };
 
-const EMPLOYEE_POSITION_LABELS: Record<EmployeePositionValue, string> = {
+/**
+ * Exported because `position` is an enum, not free text.
+ *
+ * Anything that wants to show a job title, or to let somebody *search* for one,
+ * needs the same seventeen labels. A second copy would be a second copy to keep
+ * in step — see `lib/people/search.ts`, which maps a typed word back onto the
+ * enum so "driver" finds the drivers.
+ */
+export const EMPLOYEE_POSITION_LABELS: Record<EmployeePositionValue, string> = {
   MANAGER: "Manager",
   SUPERVISOR: "Supervisor",
   CLERK: "Clerk",
