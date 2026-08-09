@@ -662,7 +662,8 @@ export type AttendanceRecord = {
   status: string;
   overtime?: number | null;
   notes?: string | null;
-  site: { id: string; name: string; code: string };
+  /** Null on a tenant with no sites, and on any register kept company-wide. */
+  site: { id: string; name: string; code: string } | null;
   shiftGroup?: {
     id: string;
     name: string;
