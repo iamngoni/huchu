@@ -7,6 +7,10 @@ import {
   paginationResponse,
 } from '@/lib/api-utils';
 import { ATTENDANCE_FEATURE_KEY, canSessionAccessOperationalFeature } from "@/lib/operations/access";
+import {
+  ATTENDANCE_STATUSES,
+  parseAttendanceStatus,
+} from "@/lib/people/attendance";
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -29,7 +33,7 @@ const attendanceSchema = z.object({
   shiftLeaderId: z.string().uuid().optional(),
   records: z.array(z.object({
     employeeId: z.string().uuid(),
-    status: z.enum(['PRESENT', 'ABSENT', 'LATE']),
+    status: z.enum(ATTENDANCE_STATUSES),
     overtime: z.number().min(0).max(24).optional(),
     notes: z.string().max(500).optional(),
   })).min(1),
@@ -63,7 +67,12 @@ export async function GET(request: NextRequest) {
     if (shiftGroupId) where.shiftGroupId = shiftGroupId;
     if (shiftLeaderId) where.shiftLeaderId = shiftLeaderId;
     if (shift?.trim()) where.shift = normalizeShiftLabel(shift);
-    if (status) where.status = status;
+    // Parsed, not passed through. `where` is a loose `Record<string, unknown>`,
+    // so a raw `?status=bogus` typechecks and — now that the column is an enum —
+    // makes Postgres raise rather than return nothing. An unknown status means no
+    // such status, which means no rows.
+    const parsedStatus = parseAttendanceStatus(status);
+    if (parsedStatus) where.status = parsedStatus;
 
     if (date) {
       const dayStart = new Date(date);
@@ -81,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       const normalizedSearch = search.toUpperCase();
-      const statusMatches = ["PRESENT", "ABSENT", "LATE"].includes(normalizedSearch);
+      const searchedStatus = parseAttendanceStatus(normalizedSearch);
       where.OR = [
         { notes: { contains: search, mode: "insensitive" } },
         { shift: { contains: search, mode: "insensitive" } },
@@ -91,7 +100,7 @@ export async function GET(request: NextRequest) {
         { site: { name: { contains: search, mode: "insensitive" } } },
         { site: { code: { contains: search, mode: "insensitive" } } },
         { shiftGroup: { name: { contains: search, mode: "insensitive" } } },
-        ...(statusMatches ? [{ status: normalizedSearch }] : []),
+        ...(searchedStatus ? [{ status: searchedStatus }] : []),
       ];
     }
 

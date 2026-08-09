@@ -2820,8 +2820,28 @@ model DowntimeEvent {
   @@index([plantReportId])
 }
 
+/// Why somebody was or was not at work on a given shift.
+///
+/// This was a bare `String` with the three real values in a trailing comment,
+/// which is a comment the database does not read: nothing stopped a caller
+/// writing "present" or "Absent" and nothing would have told you it had.
+///
+/// Six values rather than three. `PRESENT`, `ABSENT` and `LATE` are all anything
+/// writes today; the other three are the states a register has to distinguish
+/// once leave and rostering exist, and each one is an absence that must not read
+/// as unexplained: somebody on approved leave, somebody whose rota gives them the
+/// day off, and a public holiday nobody was expected to work.
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  ON_LEAVE
+  REST_DAY
+  HOLIDAY
+}
+
 model Attendance {
-  id                String   @id @default(uuid())
+  id                String           @id @default(uuid())
   date              DateTime
   siteId            String
   shift             String
@@ -2829,7 +2849,7 @@ model Attendance {
   shiftLeaderId     String?
   shiftLeaderName   String?
   employeeId        String
-  status            String // PRESENT, ABSENT, LATE
+  status            AttendanceStatus
   overtime          Float? // hours
   notes             String?
   goldLedgerEntryId String?

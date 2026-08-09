@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { errorResponse, hasRole, successResponse, validateSession } from "@/lib/api-utils";
 import { ATTENDANCE_FEATURE_KEY, canSessionAccessOperationalFeature } from "@/lib/operations/access";
+import { ATTENDANCE_STATUSES } from "@/lib/people/attendance";
 import { prisma } from "@/lib/prisma";
 
 function normalizeShiftLabel(value: string) {
@@ -22,7 +23,10 @@ const attendanceUpdateSchema = z.object({
   shift: shiftLabelSchema.optional(),
   shiftGroupId: z.string().uuid().nullable().optional(),
   shiftLeaderId: z.string().uuid().nullable().optional(),
-  status: z.enum(["PRESENT", "ABSENT", "LATE"]).optional(),
+  // All six here, unlike the shift-report write: correcting a register is where
+  // somebody says "she was on approved leave, not absent", and that correction is
+  // the difference between a deduction and none.
+  status: z.enum(ATTENDANCE_STATUSES).optional(),
   overtime: z.number().min(0).max(24).nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
 });

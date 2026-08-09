@@ -1,3 +1,4 @@
+import { AttendanceStatus } from "@prisma/client"
 import { NextRequest, NextResponse } from "next/server"
 import {
   validateSession,
@@ -27,7 +28,16 @@ import { z } from "zod"
  */
 const attendanceItem = z.object({
   employeeId: z.string().uuid(),
-  status: z.enum(["PRESENT", "LATE", "ABSENT"]),
+  // Deliberately three of the six `AttendanceStatus` values, not all of them. A
+  // shift report says who turned up for this shift; it is not the place to record
+  // that somebody is on approved leave or that the day was a public holiday.
+  // Those are People's to set, and a shift supervisor setting them here would be
+  // changing a pay outcome from a production screen.
+  status: z.enum([
+    AttendanceStatus.PRESENT,
+    AttendanceStatus.LATE,
+    AttendanceStatus.ABSENT,
+  ]),
 })
 
 const expenseItem = z.object({

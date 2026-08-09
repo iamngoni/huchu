@@ -1,5 +1,6 @@
 "use client";
 
+import type { AttendanceStatus } from "@prisma/client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +36,15 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { ATTENDANCE_FEATURE_KEY, canAccessOperationalFeature } from "@/lib/operations/access";
 import { buildSavedRecordRedirect } from "@/lib/saved-record";
 
-type CrewStatus = "PRESENT" | "ABSENT" | "LATE";
+/**
+ * The three a supervisor marks at the crew board.
+ *
+ * A subset of `AttendanceStatus`, and typed against it so it cannot drift: the
+ * other three (`ON_LEAVE`, `REST_DAY`, `HOLIDAY`) are not decisions taken while
+ * standing in front of a crew — they come from an approved leave request, a rota
+ * or the public-holiday calendar.
+ */
+type CrewStatus = Extract<AttendanceStatus, "PRESENT" | "ABSENT" | "LATE">;
 
 type CrewWorker = {
   id: string;
