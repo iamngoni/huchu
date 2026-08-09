@@ -12,6 +12,7 @@ import { Plus, Send, Trash2 } from "@/lib/icons";
 import { PeopleShell } from "@/components/people/people-shell";
 import { EmployeeAvatar } from "@/components/shared/employee-avatar";
 import { FieldHelp } from "@/components/shared/field-help";
+import { FormShell } from "@/components/shared/form-shell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -551,15 +551,39 @@ export default function AttendancePage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {(shiftGroupsError || groupMembersError) ? (
-              <Alert variant="destructive">
-                <AlertTitle>Unable to load crews</AlertTitle>
-                <AlertDescription>
-                  {getApiErrorMessage(shiftGroupsError ?? groupMembersError)}
-                </AlertDescription>
-              </Alert>
-            ) : null}
+          {/*
+            `FormShell variant="bare"` rather than a raw `<form>`: it is the same
+            shape `components/stores/stock-movement-dialog.tsx` uses, and "bare" is
+            documented as the variant for exactly this — a form inside a dialog,
+            with no `Card` around it, because a card inside a modal is two borders
+            saying the same thing. It also owns the error list and the required
+            hint, which is one fewer thing for each dialog to reinvent.
+          */}
+          <FormShell
+            variant="bare"
+            onSubmit={handleSubmit}
+            requiredHint="Every crew member gets a status. Overtime is optional."
+            errors={
+              shiftGroupsError || groupMembersError
+                ? [getApiErrorMessage(shiftGroupsError ?? groupMembersError)]
+                : undefined
+            }
+            errorTitle="Unable to load crews"
+            actions={
+              <>
+                <Button type="button" variant="outline" onClick={() => setMarkOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={attendanceMutation.isPending || crew.length === 0}
+                >
+                  <Send className="size-4" />
+                  {attendanceMutation.isPending ? "Recording…" : "Record attendance"}
+                </Button>
+              </>
+            }
+          >
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
@@ -789,16 +813,7 @@ export default function AttendancePage() {
               )}
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setMarkOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={attendanceMutation.isPending || crew.length === 0}>
-                <Send className="size-4" />
-                Record attendance
-              </Button>
-            </DialogFooter>
-          </form>
+          </FormShell>
         </DialogContent>
       </Dialog>
     </PeopleShell>
