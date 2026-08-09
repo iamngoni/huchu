@@ -39,6 +39,7 @@ import {
   facts,
   pluralise,
   SEARCH_PER_TYPE_LIMIT,
+  wordMatches,
   type SearchResult,
   type SearchResultType,
 } from "@/lib/records/search-result";
@@ -88,20 +89,12 @@ export const SCHOOL_SEARCH_RESOURCES: Record<SchoolSearchType, SchoolResource> =
 /**
  * A person's name across two columns.
  *
- * Each word in the query has to match one of the name columns, so word order
- * does not matter and a single word still matches either half. Empty for a query
- * with no words, which the caller has already ruled out by length.
+ * `firstName` and `lastName` rather than one `fullName`, which is the whole
+ * reason the query has to be split; the splitting itself is
+ * `wordMatches` in `lib/records/search-result.ts`, shared with the seven other
+ * arms that need the same thing.
  */
-function nameParts(query: string, columns: readonly string[]) {
-  return query
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => ({
-      OR: columns.map((column) => ({
-        [column]: { contains: word, mode: "insensitive" as const },
-      })),
-    }));
-}
+const nameParts = wordMatches;
 
 function fullName(person: { firstName: string; lastName: string }): string {
   return `${person.firstName} ${person.lastName}`.trim();

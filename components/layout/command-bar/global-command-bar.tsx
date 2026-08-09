@@ -15,19 +15,24 @@ import {
   ArrowRight,
   Building2,
   Checklist,
+  Coins,
   Funnel,
   HelpCircle,
   Home,
+  LocalShipping,
   ManageAccounts,
   MapPin,
   MedusaBookOpenIcon,
   Package,
   PanelLeft,
   Receipt,
+  Scale,
   Search,
+  Settings2,
   TableRows,
   Users,
   Wallet,
+  Wrench,
   type LucideIcon,
 } from "@/lib/icons";
 import type { SearchResult, SearchResultType } from "@/lib/records/search-result";
@@ -65,6 +70,21 @@ const TYPE_ICONS: Record<SearchResultType, LucideIcon> = {
   CLASS: TableRows,
   SUBJECT: MedusaBookOpenIcon,
   HOSTEL: Home,
+  GOLD_POUR: Coins,
+  // A gold purchase is weighed in, so it takes the scales rather than the coin:
+  // the row beside it in the results is the pour, and two coins would be one
+  // icon doing no work.
+  GOLD_PURCHASE: Scale,
+  GOLD_DISPATCH: LocalShipping,
+  SCRAP_TICKET: Scale,
+  SCRAP_SELLER: Users,
+  VEHICLE: LocalShipping,
+  VEHICLE_DEAL: Funnel,
+  VEHICLE_LEAD: AddressBook,
+  RETAIL_SALE: Receipt,
+  INVENTORY_ITEM: Package,
+  EQUIPMENT: Settings2,
+  WORK_ORDER: Wrench,
 };
 
 type AppointmentRow = {
@@ -145,26 +165,39 @@ export function GlobalCommandBar() {
   // and React's purity rule is not broken by a Date.now() in render.
   const [now, setNow] = React.useState(0);
 
+  /**
+   * Open and close in one place, and **clear the query on the way out**.
+   *
+   * Clearing on the way *in* is the obvious version and it is wrong: the app-bar
+   * input's `onChange` sets the query and opens the bar in the same event, so a
+   * reset that runs on opening lands after the seed and eats the first
+   * keystroke. Typing "Moyo" searched "oyo" — which `contains` quietly rescued —
+   * and typing "EMP-001" searched "MP-001", which it did not.
+   *
+   * Clearing on close gets both cases with no handover at all: ⌘K opens onto an
+   * empty field because the last close emptied it, and a keystroke in the app bar
+   * opens onto exactly what was typed.
+   */
+  const changeOpen = React.useCallback((next: boolean) => {
+    setOpen(next);
+    if (next) {
+      setRecents(loadRecents());
+    } else {
+      setQuery("");
+      setDebounced("");
+    }
+  }, []);
+
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
-        setOpen((current) => !current);
+        changeOpen(!open);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  const [wasOpen, setWasOpen] = React.useState(open);
-  if (open !== wasOpen) {
-    setWasOpen(open);
-    if (open) {
-      setRecents(loadRecents());
-      setQuery("");
-      setDebounced("");
-    }
-  }
+  }, [open, changeOpen]);
 
   React.useEffect(() => {
     if (open) setNow(Date.now());
@@ -547,12 +580,12 @@ export function GlobalCommandBar() {
           onChange={(event) => {
             const typed = event.target.value;
             if (typed) setQuery(typed);
-            setOpen(true);
+            changeOpen(true);
           }}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === "ArrowDown") {
               event.preventDefault();
-              setOpen(true);
+              changeOpen(true);
             }
           }}
           className="h-9 w-36 rounded-[var(--radius-sm)] border border-[var(--chrome-edge)] bg-[var(--surface)] pl-8 pr-14 text-sm text-[var(--text-body)] outline-none placeholder:text-[var(--text-muted)] focus-visible:border-[var(--focus-ring)] lg:w-64 [&::-webkit-search-cancel-button]:hidden"
@@ -564,7 +597,7 @@ export function GlobalCommandBar() {
 
       <CommandBar
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={changeOpen}
         query={query}
         onQueryChange={setQuery}
         groups={groups}

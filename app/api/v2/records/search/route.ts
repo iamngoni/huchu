@@ -5,6 +5,27 @@ import { prisma } from "@/lib/prisma";
 import { getFeatureMap } from "@/lib/platform/features";
 import { hrPermissionDenial } from "@/lib/hr/permissions";
 import {
+  AUTOS_SEARCH_FEATURES,
+  AUTOS_SEARCH_TYPES,
+  type AutosSearchType,
+} from "@/lib/autos/search";
+import { GOLD_SEARCH_FEATURES, GOLD_SEARCH_TYPES, type GoldSearchType } from "@/lib/gold/search";
+import {
+  OPERATIONS_SEARCH_FEATURES,
+  OPERATIONS_SEARCH_TYPES,
+  type OperationsSearchType,
+} from "@/lib/operations/search";
+import {
+  RETAIL_SEARCH_FEATURES,
+  RETAIL_SEARCH_TYPES,
+  type RetailSearchType,
+} from "@/lib/retail/search";
+import {
+  SCRAP_SEARCH_FEATURES,
+  SCRAP_SEARCH_TYPES,
+  type ScrapSearchType,
+} from "@/lib/scrap-metal/search";
+import {
   PEOPLE_SEARCH_FEATURES,
   PEOPLE_SEARCH_RESOURCES,
   PEOPLE_SEARCH_TYPES,
@@ -77,7 +98,40 @@ export async function GET(request: NextRequest) {
         hrPermissionDenial(session, PEOPLE_SEARCH_RESOURCES[type], "view") === null,
     );
 
-    const scope: SearchScope = { crm: enabled("crm.core"), schools, people };
+    // The remaining verticals resolve on the feature axis only, because that is
+    // all they have: `lib/gold/**`, `lib/retail/**` and the rest ship no
+    // role-resource matrix of their own — the modules gate on features and on
+    // route access, and there is no `canGoldRoleDo` to consult. Inventing a
+    // second, search-only permission model for them would be a rule enforced in
+    // one place and nowhere else, which is worse than the honest gap. If those
+    // modules grow a role matrix, these filters gain their second clause exactly
+    // as the school and People ones have.
+    const gold: GoldSearchType[] = GOLD_SEARCH_TYPES.filter((type) =>
+      enabled(GOLD_SEARCH_FEATURES[type]),
+    );
+    const scrap: ScrapSearchType[] = SCRAP_SEARCH_TYPES.filter((type) =>
+      enabled(SCRAP_SEARCH_FEATURES[type]),
+    );
+    const autos: AutosSearchType[] = AUTOS_SEARCH_TYPES.filter((type) =>
+      enabled(AUTOS_SEARCH_FEATURES[type]),
+    );
+    const retail: RetailSearchType[] = RETAIL_SEARCH_TYPES.filter((type) =>
+      enabled(RETAIL_SEARCH_FEATURES[type]),
+    );
+    const operations: OperationsSearchType[] = OPERATIONS_SEARCH_TYPES.filter((type) =>
+      enabled(OPERATIONS_SEARCH_FEATURES[type]),
+    );
+
+    const scope: SearchScope = {
+      crm: enabled("crm.core"),
+      schools,
+      people,
+      gold,
+      scrap,
+      autos,
+      retail,
+      operations,
+    };
 
     const results = await searchRecords(prisma, {
       companyId,

@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { groupSearchResults, SEARCH_TYPE_ORDER } from "./search-result";
-import { searchRecords } from "./search";
+import { searchRecords, type SearchScope } from "./search";
+import { searchAutos } from "@/lib/autos/search";
 import { searchCrm } from "@/lib/crm/search";
+import { searchGold } from "@/lib/gold/search";
+import { searchOperations } from "@/lib/operations/search";
+import { searchPeople } from "@/lib/people/search";
+import { searchRetail } from "@/lib/retail/search";
 import { searchSchools } from "@/lib/schools/search";
+import { searchScrapMetal } from "@/lib/scrap-metal/search";
 
 /**
  * S-4.5 — one search across whichever modules a tenant has.
@@ -17,12 +23,49 @@ import { searchSchools } from "@/lib/schools/search";
 
 vi.mock("@/lib/crm/search", () => ({ searchCrm: vi.fn(async () => []) }));
 vi.mock("@/lib/schools/search", () => ({ searchSchools: vi.fn(async () => []) }));
+vi.mock("@/lib/people/search", () => ({ searchPeople: vi.fn(async () => []) }));
+vi.mock("@/lib/gold/search", () => ({ searchGold: vi.fn(async () => []) }));
+vi.mock("@/lib/scrap-metal/search", () => ({ searchScrapMetal: vi.fn(async () => []) }));
+vi.mock("@/lib/autos/search", () => ({ searchAutos: vi.fn(async () => []) }));
+vi.mock("@/lib/retail/search", () => ({ searchRetail: vi.fn(async () => []) }));
+vi.mock("@/lib/operations/search", () => ({ searchOperations: vi.fn(async () => []) }));
 
 const db = {} as never;
 
+/** Every arm, keyed the way `SearchScope` is, so a new one shows up as a gap. */
+const ARMS = {
+  schools: searchSchools,
+  people: searchPeople,
+  gold: searchGold,
+  scrap: searchScrapMetal,
+  autos: searchAutos,
+  retail: searchRetail,
+  operations: searchOperations,
+} as const;
+
+/**
+ * A scope with nothing switched on but what the case is about.
+ *
+ * Written out in full at every call site, this file was eight empty arrays of
+ * noise per test and the interesting field was the ninth.
+ */
+function scope(granted: Partial<SearchScope> = {}): SearchScope {
+  return {
+    crm: false,
+    schools: [],
+    people: [],
+    gold: [],
+    scrap: [],
+    autos: [],
+    retail: [],
+    operations: [],
+    ...granted,
+  };
+}
+
 beforeEach(() => {
   vi.mocked(searchCrm).mockClear();
-  vi.mocked(searchSchools).mockClear();
+  for (const arm of Object.values(ARMS)) vi.mocked(arm).mockClear();
 });
 
 describe("searchRecords", () => {
@@ -30,7 +73,7 @@ describe("searchRecords", () => {
     await searchRecords(db, {
       companyId: "c1",
       query: "moyo",
-      scope: { crm: false, schools: ["STUDENT"] , people: []},
+      scope: scope({ schools: ["STUDENT"] }),
     });
 
     expect(searchCrm).not.toHaveBeenCalled();
@@ -44,7 +87,7 @@ describe("searchRecords", () => {
     await searchRecords(db, {
       companyId: "c1",
       query: "delta",
-      scope: { crm: true, schools: [] , people: []},
+      scope: scope({ crm: true }),
     });
 
     expect(searchSchools).not.toHaveBeenCalled();
@@ -78,7 +121,7 @@ describe("searchRecords", () => {
     const results = await searchRecords(db, {
       companyId: "c1",
       query: "moyo",
-      scope: { crm: true, schools: ["STUDENT"] , people: []},
+      scope: scope({ crm: true, schools: ["STUDENT"] }),
     });
 
     expect(results.map((result) => result.type)).toEqual(["DEAL", "STUDENT"]);
@@ -90,7 +133,7 @@ describe("searchRecords", () => {
     const results = await searchRecords(db, {
       companyId: "c1",
       query: "anything",
-      scope: { crm: false, schools: [] , people: []},
+      scope: scope(),
     });
     expect(results).toEqual([]);
   });
@@ -99,12 +142,66 @@ describe("searchRecords", () => {
     const results = await searchRecords(db, {
       companyId: "c1",
       query: "a",
-      scope: { crm: true, schools: ["STUDENT"] , people: []},
+      scope: scope({ crm: true, schools: ["STUDENT"] }),
     });
 
     expect(results).toEqual([]);
     expect(searchCrm).not.toHaveBeenCalled();
     expect(searchSchools).not.toHaveBeenCalled();
+  });
+
+  it("runs each vertical's arm only when its types were granted", async () => {
+    // The eight `if (types.length > 0)` blocks became one `arm()` helper in a
+    // loop, and the thing that helper must not do is call an arm the caller was
+    // not given: an unentitled type leaks through a group heading and a result
+    // count even when the rows are empty. One case per arm, granted alone.
+    const granted: Array<[keyof typeof ARMS, Partial<SearchScope>]> = [
+      ["schools", { schools: ["STUDENT"] }],
+      ["people", { people: ["EMPLOYEE"] }],
+      ["gold", { gold: ["GOLD_POUR"] }],
+      ["scrap", { scrap: ["SCRAP_TICKET"] }],
+      ["autos", { autos: ["VEHICLE"] }],
+      ["retail", { retail: ["RETAIL_SALE"] }],
+      ["operations", { operations: ["WORK_ORDER"] }],
+    ];
+
+    for (const [name, only] of granted) {
+      for (const arm of Object.values(ARMS)) vi.mocked(arm).mockClear();
+
+      await searchRecords(db, { companyId: "c1", query: "anything", scope: scope(only) });
+
+      for (const [other, arm] of Object.entries(ARMS)) {
+        if (other === name) expect(arm, `${name} arm`).toHaveBeenCalledOnce();
+        else expect(arm, `${other} arm on a ${name}-only tenant`).not.toHaveBeenCalled();
+      }
+      expect(searchCrm, `CRM on a ${name}-only tenant`).not.toHaveBeenCalled();
+    }
+  });
+
+  it("hands every arm the same query and tenant", async () => {
+    // A copy-paste slip in the old expanded version would have been an arm
+    // searching the right words on the wrong company.
+    await searchRecords(db, {
+      companyId: "c9",
+      query: "hilux",
+      limitPerType: 3,
+      scope: scope({
+        crm: true,
+        gold: ["GOLD_DISPATCH"],
+        autos: ["VEHICLE"],
+        operations: ["EQUIPMENT"],
+      }),
+    });
+
+    const expected = expect.objectContaining({
+      companyId: "c9",
+      query: "hilux",
+      limitPerType: 3,
+    });
+    expect(searchCrm).toHaveBeenCalledWith(db, expected);
+    expect(searchGold).toHaveBeenCalledWith(db, expected);
+    expect(searchAutos).toHaveBeenCalledWith(db, expected);
+    expect(searchOperations).toHaveBeenCalledWith(db, expected);
   });
 });
 

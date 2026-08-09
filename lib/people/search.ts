@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type { HrResource } from "@/lib/hr/permissions";
 import { EMPLOYEE_POSITION_LABELS } from "@/lib/platform/vertical-defaults";
 import type { SearchResult } from "@/lib/records/search-result";
-import { facts } from "@/lib/records/search-result";
+import { facts, wordMatches } from "@/lib/records/search-result";
 
 /**
  * The People arm of global search.
@@ -49,15 +49,6 @@ export const PEOPLE_SEARCH_RESOURCES: Record<PeopleSearchType, HrResource> = {
 };
 
 /**
- * Every word in the query has to match one of the columns.
- *
- * So word order does not matter and one word still matches any column — "moyo"
- * finds Ada Moyo, and so does "ada moyo". The same shape `searchSchools` uses;
- * kept local rather than shared because the two arms search different column
- * sets and a helper taking both would be a helper with a parameter for each
- * caller.
- */
-/**
  * The positions whose label the query looks like.
  *
  * `Employee.position` is an `EmployeePosition` enum, so it cannot be searched
@@ -75,17 +66,6 @@ function positionMatches(query: string) {
   )
     .filter(([, label]) => label.toLowerCase().includes(needle))
     .map(([value]) => value);
-}
-
-function wordMatches(query: string, columns: readonly string[]) {
-  return query
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => ({
-      OR: columns.map((column) => ({
-        [column]: { contains: word, mode: "insensitive" as const },
-      })),
-    }));
 }
 
 export async function searchPeople(
