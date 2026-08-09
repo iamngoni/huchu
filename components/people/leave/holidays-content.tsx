@@ -7,13 +7,6 @@ import { PeopleShell } from "@/components/people/people-shell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -42,6 +35,10 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
  * Easter is deliberately not seeded. Getting a moveable feast wrong by a day
  * changes what leave costs, so the calendar carries only fixed dates and asks the
  * operator to add the rest.
+ *
+ * The table is full-bleed rather than boxed in a `Card`. A section shell around
+ * a table adds a second border for no information; see the note in
+ * `leave-content.tsx`.
  */
 
 type Holiday = {
@@ -88,38 +85,39 @@ export function HolidaysContent() {
         </Alert>
       ) : null}
 
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div className="space-y-1">
-            <CardTitle>Calendar</CardTitle>
-            <CardDescription>
-              A holiday inside a leave range does not cost a day. Add any that are
-              missing before approving leave that spans them.
-            </CardDescription>
-          </div>
-          <Select value={year} onValueChange={setYear}>
-            <SelectTrigger size="sm" className="h-8 w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardHeader>
-        <CardContent>
-          {holidaysQuery.isPending ? (
-            <Skeleton className="h-64 w-full" />
-          ) : holidays.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No holidays recorded for {year}. Every day in a leave range will
-              count as leave until they are added.
-            </p>
-          ) : (
-            <>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold">Calendar</h2>
+          <p className="max-w-prose text-sm text-muted-foreground">
+            A holiday inside a leave range does not cost a day. Add any that are
+            missing before approving leave that spans them.
+          </p>
+        </div>
+        <Select value={year} onValueChange={setYear}>
+          <SelectTrigger size="sm" className="h-8 w-[7.5rem]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        {holidaysQuery.isPending ? (
+          <Skeleton className="h-64 w-full" />
+        ) : holidays.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No holidays recorded for {year}. Every day in a leave range will
+            count as leave until they are added.
+          </p>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -150,7 +148,9 @@ export function HolidaysContent() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {holiday.doublePayIfWorked ? "Double pay" : "Normal pay"}
+                        {holiday.doublePayIfWorked
+                          ? "Double pay"
+                          : "Normal pay"}
                       </TableCell>
                       <TableCell>
                         {holiday.isSeeded ? (
@@ -163,15 +163,15 @@ export function HolidaysContent() {
                   ))}
                 </TableBody>
               </Table>
-              <p className="mt-3 text-xs text-muted-foreground">
-                {seededCount} of {holidays.length} were seeded as fixed dates.
-                Good Friday and Easter Monday move each year and are not seeded —
-                add them, or leave spanning them will be charged in full.
-              </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {seededCount} of {holidays.length} were seeded as fixed dates.
+              Good Friday and Easter Monday move each year and are not seeded —
+              add them, or leave spanning them will be charged in full.
+            </p>
+          </>
+        )}
+      </div>
     </PeopleShell>
   );
 }
