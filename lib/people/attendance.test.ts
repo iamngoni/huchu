@@ -64,7 +64,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.attendance.deleteMany({ where: { siteId } });
+  await prisma.attendance.deleteMany({ where: { companyId } });
   await prisma.employee.deleteMany({ where: { companyId } });
   await prisma.site.deleteMany({ where: { companyId } });
   await prisma.company.deleteMany({ where: { id: companyId } });
@@ -107,8 +107,9 @@ describe("Attendance.status storage", () => {
   it("refuses a value outside the enum on write", async () => {
     const insert = (status: string, shift: string) =>
       prisma.$executeRawUnsafe(
-        `INSERT INTO "Attendance" (id, date, "siteId", shift, "employeeId", status, "createdAt")
-         VALUES (gen_random_uuid(), NOW(), $1, $2, $3, '${status}', NOW())`,
+        `INSERT INTO "Attendance" (id, "companyId", date, "siteId", shift, "employeeId", status, "createdAt")
+         VALUES (gen_random_uuid(), $1, NOW(), $2, $3, $4, '${status}', NOW())`,
+        companyId,
         siteId,
         shift,
         employeeId,
@@ -131,6 +132,7 @@ describe("Attendance.status storage", () => {
     ).entries()) {
       const row = await prisma.attendance.create({
         data: {
+          companyId,
           siteId,
           employeeId,
           date: new Date(`2026-08-${String(index + 10).padStart(2, "0")}`),
@@ -141,6 +143,136 @@ describe("Attendance.status storage", () => {
       });
       expect(row.status).toBe(status);
     }
+  });
+});
+
+describe("Attendance without a site", () => {
+  it("has a companyId of its own, and an optional siteId", async () => {
+    // The pair matters more than either half. Making `siteId` optional was only
+    // safe because the company moved onto the row: this table used to be
+    // tenant-scoped *through* the site, so a nullable site with no `companyId`
+    // would have put every siteless register outside the only filter separating
+    // one company's from another's.
+    const columns = await prisma.$queryRaw<
+      Array<{ column_name: string; is_nullable: string }>
+    >`
+      SELECT column_name, is_nullable FROM information_schema.columns
+      WHERE table_name = 'Attendance' AND column_name IN ('companyId', 'siteId')
+    `;
+    const byName = new Map(columns.map((column) => [column.column_name, column.is_nullable]));
+
+    expect(byName.get("companyId")).toBe("NO");
+    expect(byName.get("siteId")).toBe("YES");
+  });
+
+  it("marks a register with no site at all", async () => {
+    // The whole point. A payroll bureau, a school and a scrap yard have a
+    // workforce and no shafts, and this used to be impossible.
+    const row = await prisma.attendance.create({
+      data: {
+        companyId,
+        siteId: null,
+        employeeId,
+        date: new Date("2026-09-01"),
+        shift: "DAY",
+        status: "PRESENT",
+      },
+      select: { id: true, siteId: true, companyId: true },
+    });
+
+    expect(row.siteId).toBeNull();
+    expect(row.companyId).toBe(companyId);
+
+    // And it is reachable by the filter the list route actually uses.
+    const found = await prisma.attendance.findMany({
+      where: { companyId, siteId: null },
+      select: { id: true },
+    });
+    expect(found.map((r) => r.id)).toContain(row.id);
+  });
+
+  it("still refuses the same person twice for one shift, at any site", async () => {
+    // The unique key dropped the site, which is stricter than before rather than
+    // looser: under `[date, siteId, shift, employeeId]` the same person could be
+    // marked at two shafts on one shift, and nobody works two places at once.
+    const second = await prisma.site.create({
+      data: { companyId, name: "Shaft 3", code: `S3-${Date.now()}` },
+      select: { id: true },
+    });
+
+    await prisma.attendance.create({
+      data: {
+        companyId,
+        siteId,
+        employeeId,
+        date: new Date("2026-09-02"),
+        shift: "DAY",
+        status: "PRESENT",
+      },
+    });
+
+    await expect(
+      prisma.attendance.create({
+        data: {
+          companyId,
+          siteId: second.id,
+          employeeId,
+          date: new Date("2026-09-02"),
+          shift: "DAY",
+          status: "PRESENT",
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("keeps multi-site: two crews, two sites, one day, both recorded and filterable", async () => {
+    // Making the site optional must not have cost a mine anything. Different
+    // people at different shafts on the same shift is the normal case there.
+    const other = await prisma.site.create({
+      data: { companyId, name: "Shaft 4", code: `S4-${Date.now()}` },
+      select: { id: true },
+    });
+    const mate = await prisma.employee.create({
+      data: {
+        companyId,
+        employeeId: `AT2-${Date.now()}`,
+        name: "Tendai Banda",
+        phone: "0770000002",
+        nextOfKinName: "Kin",
+        nextOfKinPhone: "0770000003",
+        passportPhotoUrl: "https://example.invalid/p.jpg",
+        villageOfOrigin: "Village",
+        position: "OPERATOR",
+      },
+      select: { id: true },
+    });
+
+    const day = new Date("2026-09-03");
+    await prisma.attendance.createMany({
+      data: [
+        { companyId, siteId, employeeId, date: day, shift: "DAY", status: "PRESENT" },
+        {
+          companyId,
+          siteId: other.id,
+          employeeId: mate.id,
+          date: day,
+          shift: "DAY",
+          status: "LATE",
+        },
+      ],
+    });
+
+    const atOther = await prisma.attendance.findMany({
+      where: { companyId, siteId: other.id, date: day },
+      select: { employeeId: true },
+    });
+    expect(atOther.map((r) => r.employeeId)).toEqual([mate.id]);
+
+    const both = await prisma.attendance.findMany({
+      where: { companyId, date: day },
+      select: { id: true },
+    });
+    expect(both).toHaveLength(2);
   });
 });
 

@@ -31,6 +31,7 @@ model Company {
   employees                     Employee[]
   employeeModuleAssignments     EmployeeModuleAssignment[]
   shiftGroups                   ShiftGroup[]
+  attendances                   Attendance[]
   shiftGroupSchedules           ShiftGroupSchedule[]
   departments                   Department[]
   jobGrades                     JobGrade[]
@@ -2840,10 +2841,26 @@ enum AttendanceStatus {
   HOLIDAY
 }
 
+/// A person marked present, absent or otherwise for one shift on one day.
+///
+/// `siteId` is optional, and `companyId` is the reason it can be. This table used
+/// to be tenant-scoped *through* `Site` — every query said
+/// `where: { site: { companyId } }` — which meant a required site was load-bearing
+/// for the tenant boundary, not just for reporting. A nullable `siteId` on that
+/// shape would have made siteless rows unreachable by the list and, worse, would
+/// have taken them outside the only thing keeping one company's register away from
+/// another's. So the company is denormalised onto the row and the queries scope on
+/// it directly; `siteId` is now what it always should have been — where the shift
+/// happened, useful and optional.
+///
+/// Multi-site is unaffected: the column, its index and every per-site filter and
+/// report stay exactly as they were. A mine still marks a register per shaft. A
+/// bureau simply no longer has to invent a shaft to mark one at all.
 model Attendance {
   id                String           @id @default(uuid())
+  companyId         String
   date              DateTime
-  siteId            String
+  siteId            String?
   shift             String
   shiftGroupId      String?
   shiftLeaderId     String?
@@ -2855,12 +2872,22 @@ model Attendance {
   goldLedgerEntryId String?
   createdAt         DateTime @default(now())
 
-  site            Site             @relation(fields: [siteId], references: [id])
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  site            Site?            @relation(fields: [siteId], references: [id])
   shiftGroup      ShiftGroup?      @relation(fields: [shiftGroupId], references: [id])
   employee        Employee         @relation(fields: [employeeId], references: [id])
   goldLedgerEntry GoldLedgerEntry? @relation("AttendanceGoldLedgerEntry", fields: [goldLedgerEntryId], references: [id])
 
-  @@unique([date, siteId, shift, employeeId])
+  /// One person, one shift, one day — one record, wherever they were.
+  ///
+  /// The site used to be part of this key, which with a nullable column would have
+  /// stopped preventing anything: Postgres treats NULLs as distinct, so every
+  /// siteless mark would have been unique against every other. Dropping the site
+  /// from the key is also stricter than what it replaces rather than looser —
+  /// under the old key the same person could be marked at two sites on the same
+  /// shift, and nobody works two places at once.
+  @@unique([date, shift, employeeId])
+  @@index([companyId, date])
   @@index([siteId, date])
   @@index([shiftGroupId])
   @@index([goldLedgerEntryId])

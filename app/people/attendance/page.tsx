@@ -81,7 +81,11 @@ export default function AttendancePage() {
     queryFn: fetchSites,
     enabled: canManageAttendance,
   });
+  // "" means no site, which is a legitimate answer rather than a missing one: a
+  // bureau or a school has a workforce and no shafts. It only defaults to the
+  // first site when there is one to default to.
   const activeSiteId = formData.siteId || sites?.[0]?.id || "";
+  const hasSites = (sites?.length ?? 0) > 0;
 
   const {
     data: shiftGroupsData,
@@ -95,7 +99,10 @@ export default function AttendancePage() {
         active: true,
         limit: 300,
       }),
-    enabled: Boolean(activeSiteId && canManageAttendance),
+    // Not gated on a site. Gating it meant a siteless tenant was offered no crews
+    // at all, which made the whole screen unusable — the site is a narrowing, not
+    // a prerequisite.
+    enabled: canManageAttendance,
   });
   const shiftGroups = useMemo(() => shiftGroupsData?.data ?? [], [shiftGroupsData]);
 
@@ -103,12 +110,12 @@ export default function AttendancePage() {
     queryKey: ["shift-group-schedules", "attendance", activeSiteId, formData.date, formData.shift],
     queryFn: () =>
       fetchShiftGroupSchedules({
-        siteId: activeSiteId,
+        siteId: activeSiteId || undefined,
         date: formData.date,
         shift: formData.shift,
         limit: 10,
       }),
-    enabled: Boolean(activeSiteId && formData.date && formData.shift && canManageAttendance),
+    enabled: Boolean(formData.date && formData.shift && canManageAttendance),
   });
 
   const scheduledShiftGroupId = scheduleData?.data?.[0]?.shiftGroupId ?? "";
@@ -167,7 +174,8 @@ export default function AttendancePage() {
   const attendanceMutation = useMutation({
     mutationFn: async (payload: {
       date: string;
-      siteId: string;
+      /** Omitted entirely on a tenant with no sites; the server computes it. */
+      siteId?: string;
       shift: string;
       shiftGroupId?: string;
       shiftLeaderId?: string;
@@ -192,17 +200,18 @@ export default function AttendancePage() {
       const destination = buildSavedRecordRedirect(
         "/reports/attendance",
         {
-          createdId: `${payload.siteId}:${payload.shift}:${reportDate}`,
+          createdId: `${payload.siteId ?? "all"}:${payload.shift}:${reportDate}`,
           createdAt: new Date(payload.date),
           source: "attendance",
         },
         {
-          siteId: payload.siteId,
+          // Dropped from the filter rather than sent empty: `siteId=` would filter
+          // the report down to nothing on a tenant that has no sites.
+          ...(payload.siteId ? { siteId: payload.siteId, batchSiteId: payload.siteId } : {}),
           startDate: reportDate,
           endDate: reportDate,
           batchDate: reportDate,
           batchShift: payload.shift,
-          batchSiteId: payload.siteId,
         },
       );
       router.push(destination);
@@ -260,10 +269,12 @@ export default function AttendancePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeSiteId || !effectiveShiftGroupId) {
+    // The crew is the only requirement. Where it worked is computed from the crew
+    // server-side, and on a tenant with no sites there is nothing to compute.
+    if (!effectiveShiftGroupId) {
       toast({
         title: "Missing details",
-        description: "Site and shift group are required.",
+        description: "Choose a shift group.",
         variant: "destructive",
       });
       return;
@@ -277,7 +288,7 @@ export default function AttendancePage() {
 
     attendanceMutation.mutate({
       date: formData.date,
-      siteId: activeSiteId,
+      siteId: activeSiteId || undefined,
       shift: formData.shift,
       shiftGroupId: effectiveShiftGroupId,
       shiftLeaderId: effectiveShiftLeaderId || undefined,
@@ -392,11 +403,20 @@ export default function AttendancePage() {
                 />
                 <FieldHelp hint="Use the shift label for this run (for example SHIFT-1)." />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-semibold">Site *</label>
-                {sitesLoading ? (
+              {/*
+                Only rendered when there is a site to choose. A required field with
+                an empty dropdown is a dead end, and it is what made this screen
+                unusable on any tenant without shafts — the register itself never
+                needed one, and the crew's site is used when it has one.
+              */}
+              {sitesLoading ? (
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Site</label>
                   <Skeleton className="h-9 w-full" />
-                ) : (
+                </div>
+              ) : hasSites ? (
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Site</label>
                   <Select
                     value={activeSiteId || undefined}
                     onValueChange={(value) => {
@@ -405,7 +425,7 @@ export default function AttendancePage() {
                     }}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select site..." />
+                      <SelectValue placeholder="All sites" />
                     </SelectTrigger>
                     <SelectContent>
                       {sites?.map((site) => (
@@ -415,8 +435,9 @@ export default function AttendancePage() {
                       ))}
                     </SelectContent>
                   </Select>
-                )}
-              </div>
+                  <FieldHelp hint="Narrows the crews below. Taken from the crew when left alone." />
+                </div>
+              ) : null}
             </div>
 
             {shiftGroupsLoading ? (

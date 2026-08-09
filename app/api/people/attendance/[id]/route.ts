@@ -67,7 +67,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return errorResponse("Attendance record not found", 404);
     }
 
-    if (record.site.companyId !== session.user.companyId) {
+    if (record.companyId !== session.user.companyId) {
       return errorResponse("Forbidden", 403);
     }
 
@@ -98,7 +98,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const existing = await prisma.attendance.findUnique({
       where: { id },
       include: {
-        site: { select: { id: true, companyId: true } },
+        site: { select: { id: true } },
       },
     });
 
@@ -106,7 +106,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return errorResponse("Attendance record not found", 404);
     }
 
-    if (existing.site.companyId !== session.user.companyId) {
+    if (existing.companyId !== session.user.companyId) {
       return errorResponse("Forbidden", 403);
     }
 
@@ -235,14 +235,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const existing = await prisma.attendance.findUnique({
       where: { id },
-      include: { site: { select: { companyId: true } } },
     });
 
     if (!existing) {
       return errorResponse("Attendance record not found", 404);
     }
 
-    if (existing.site.companyId !== session.user.companyId) {
+    if (existing.companyId !== session.user.companyId) {
       return errorResponse("Forbidden", 403);
     }
 

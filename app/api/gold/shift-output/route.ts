@@ -206,6 +206,7 @@ export async function POST(request: NextRequest) {
       if (validated.attendance.length > 0) {
         await tx.attendance.createMany({
           data: validated.attendance.map((a) => ({
+            companyId: session.user.companyId,
             date: dateObj,
             siteId: validated.siteId,
             shift: validated.shift,

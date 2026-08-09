@@ -465,7 +465,9 @@ async function resolveShiftList(companyId: string, filters: Record<string, strin
 async function resolveAttendanceList(companyId: string, filters: Record<string, string> | undefined): Promise<SourceResolution> {
   const rows = await prisma.attendance.findMany({
     where: {
-      site: { companyId },
+      // The row's own company. `site: { companyId }` stopped being a complete
+      // tenant filter when a register stopped needing a site.
+      companyId,
       ...applyDateFilter("date", filters),
       ...(filters?.siteId ? { siteId: filters.siteId } : {}),
     },
@@ -481,7 +483,9 @@ async function resolveAttendanceList(companyId: string, filters: Record<string, 
   const exportRows = rows.map((row) => ({
     date: isoDate(row.date),
     shift: row.shift,
-    site: row.site.name,
+    // Blank rather than a crash: a register without a site is a whole
+    // company's, which is the normal shape off a mine.
+    site: row.site?.name ?? "Whole company",
     employeeId: row.employee.employeeId,
     employeeName: row.employee.name,
     shiftGroup: row.shiftGroup?.name ?? "-",

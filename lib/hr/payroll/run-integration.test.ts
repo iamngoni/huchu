@@ -236,6 +236,7 @@ describe("Attendance.overtime finally reaches payroll", () => {
       data: [
         {
           employeeId: overtimeId,
+          companyId,
           siteId,
           date: new Date("2026-08-08T00:00:00.000Z"),
           shift: "DAY",
@@ -244,6 +245,7 @@ describe("Attendance.overtime finally reaches payroll", () => {
         },
         {
           employeeId: overtimeId,
+          companyId,
           siteId,
           date: new Date("2026-08-15T00:00:00.000Z"),
           shift: "DAY",
@@ -277,6 +279,7 @@ describe("Attendance.overtime finally reaches payroll", () => {
     await prisma.attendance.create({
       data: {
         employeeId: noRateId,
+        companyId,
         siteId,
         date: new Date("2026-08-08T00:00:00.000Z"),
         shift: "DAY",
@@ -303,6 +306,7 @@ describe("Attendance.overtime finally reaches payroll", () => {
     await prisma.attendance.create({
       data: {
         employeeId: spillId,
+        companyId,
         siteId,
         date: new Date("2026-09-05T00:00:00.000Z"),
         shift: "DAY",

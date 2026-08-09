@@ -527,6 +527,7 @@ export async function POST(
           // instead of the broad (siteId, date, shift) triple.
           await tx.attendance.createMany({
             data: Array.from(presentEmployeeIds).map((employeeId) => ({
+              companyId,
               date: entry.parsedDate!,
               siteId,
               shift: shiftName,

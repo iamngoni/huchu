@@ -28,7 +28,10 @@ const shiftLabelSchema = z
 
 const attendanceSchema = z.object({
   date: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
-  siteId: z.string().uuid(),
+  // Optional, and usually not sent at all. A crew already knows where it works,
+  // so the site is taken from the shift group below; a tenant with no sites has
+  // nothing to send and no longer has to invent one.
+  siteId: z.string().uuid().optional(),
   shift: shiftLabelSchema,
   shiftGroupId: z.string().uuid().optional(),
   shiftLeaderId: z.string().uuid().optional(),
@@ -65,8 +68,11 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")?.trim();
     const { page, limit, skip } = getPaginationParams(request);
 
+    // On the row, not through the site. A register with no site is normal now, and
+    // `site: { companyId }` would have hidden every one of them — and, worse, left
+    // them outside the only thing scoping this table to a tenant.
     const where: Record<string, unknown> = {
-      site: { companyId: session.user.companyId },
+      companyId: session.user.companyId,
     };
 
     if (siteId) where.siteId = siteId;
@@ -160,20 +166,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = attendanceSchema.parse(body);
 
-    // Verify site
-    const site = await prisma.site.findUnique({
-      where: { id: validated.siteId },
-      select: { companyId: true, isActive: true },
-    });
+    // Verify the site only if one was named. Still validated the same way when it
+    // is, so a mine cannot mark a register against somebody else's shaft.
+    if (validated.siteId) {
+      const site = await prisma.site.findUnique({
+        where: { id: validated.siteId },
+        select: { companyId: true, isActive: true },
+      });
 
-    if (!site || site.companyId !== session.user.companyId) {
-      return errorResponse('Invalid site', 403);
+      if (!site || site.companyId !== session.user.companyId) {
+        return errorResponse('Invalid site', 403);
+      }
+
+      if (!site.isActive) {
+        return errorResponse('Site is not active', 400);
+      }
     }
 
-    if (!site.isActive) {
-      return errorResponse('Site is not active', 400);
-    }
-
+    // Where the shift happened, computed rather than asked for. Explicit wins if
+    // sent; otherwise the crew's own site; otherwise none, which is a whole
+    // company's register and the normal case off a mine.
+    let resolvedSiteId: string | null = validated.siteId ?? null;
     let resolvedShiftLeaderId: string | undefined = validated.shiftLeaderId;
     let resolvedShiftLeaderName: string | undefined;
 
@@ -196,9 +209,12 @@ export async function POST(request: NextRequest) {
       if (!shiftGroup.isActive) {
         return errorResponse("Shift group is not active", 400);
       }
-      if (shiftGroup.siteId !== validated.siteId) {
+      // Only a contradiction is an error. A group with no site is not a mismatch
+      // with a request that named none — it is the ordinary case.
+      if (validated.siteId && shiftGroup.siteId && shiftGroup.siteId !== validated.siteId) {
         return errorResponse("Shift group does not belong to the selected site", 400);
       }
+      resolvedSiteId = validated.siteId ?? shiftGroup.siteId ?? null;
 
       resolvedShiftLeaderId = shiftGroup.leaderEmployeeId;
       resolvedShiftLeaderName = shiftGroup.leader.name;
@@ -221,10 +237,13 @@ export async function POST(request: NextRequest) {
 
     const attendanceDate = new Date(validated.date);
 
+    // Matches the unique key, which is `[date, shift, employeeId]` and no longer
+    // includes the site. Keeping the site in this check would have let the same
+    // person be marked twice for one shift at two shafts and then failed at the
+    // insert with a constraint error instead of this 409.
     const existingAttendance = await prisma.attendance.findMany({
       where: {
         date: attendanceDate,
-        siteId: validated.siteId,
         shift: validated.shift,
         employeeId: { in: employeeIds },
       },
@@ -247,8 +266,9 @@ export async function POST(request: NextRequest) {
     }
 
     const attendanceRecords = validated.records.map((record) => ({
+      companyId: session.user.companyId,
       date: attendanceDate,
-      siteId: validated.siteId,
+      siteId: resolvedSiteId,
       shift: validated.shift,
       shiftGroupId: validated.shiftGroupId,
       shiftLeaderId: resolvedShiftLeaderId,
