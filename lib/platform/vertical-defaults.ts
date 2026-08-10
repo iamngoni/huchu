@@ -61,7 +61,15 @@ type VerticalDefaultConfig = {
   };
 };
 
-const EMPLOYEE_POSITION_LABELS: Record<EmployeePositionValue, string> = {
+/**
+ * Exported because `position` is an enum, not free text.
+ *
+ * Anything that wants to show a job title, or to let somebody *search* for one,
+ * needs the same seventeen labels. A second copy would be a second copy to keep
+ * in step — see `lib/people/search.ts`, which maps a typed word back onto the
+ * enum so "driver" finds the drivers.
+ */
+export const EMPLOYEE_POSITION_LABELS: Record<EmployeePositionValue, string> = {
   MANAGER: "Manager",
   SUPERVISOR: "Supervisor",
   CLERK: "Clerk",
@@ -207,6 +215,36 @@ const VERTICAL_DEFAULTS: Record<WorkspaceProfile, VerticalDefaultConfig> = {
       equipmentCategories: ["POS", "DISPLAY", "COOLING", "POWER", "VEHICLE", "OTHER"],
       measurementUnits: ["units", "shelves", "registers"],
       siteNamePlaceholder: "Main Store",
+    },
+    stores: {
+      allowFuel: false,
+    },
+    accounting: {
+      includeGoldFlows: false,
+      includeSchoolFlows: false,
+    },
+  },
+  PAYROLL: {
+    // A bureau's own staff, and the positions its clients' employees are likely
+    // to hold. No miners, no teachers — a payroll-only workspace should not offer
+    // a position list that describes somebody else's business.
+    employeePositions: [...SHARED_POSITIONS, "STOREKEEPER", "DRIVER", "CASHIER", "SALES_REP", "TECHNICIAN", "OPERATOR"],
+    defaultEmployeePosition: "SUPPORT_STAFF",
+    workspace: {
+      siteNamePlaceholder: "Head Office",
+      siteCodeExample: "HO",
+      departmentNamePlaceholder: "Payroll",
+      departmentCodeExample: "PAY",
+      locationPlaceholder: "Harare, Zimbabwe",
+      jobTitlePlaceholder: "Payroll Officer",
+    },
+    maintenance: {
+      // Present because the shape requires it, not because a bureau maintains
+      // plant. The maintenance module is not in the template's bundles.
+      technicianPosition: "TECHNICIAN",
+      equipmentCategories: ["EQUIPMENT", "OTHER"],
+      measurementUnits: ["units"],
+      siteNamePlaceholder: "Head Office",
     },
     stores: {
       allowFuel: false,

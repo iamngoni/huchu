@@ -9,11 +9,17 @@
  * nothing about who can reach it.
  *
  * The fix is not a second search engine. Each module contributes an arm
- * (`searchCrm`, `searchSchools`) returning the shared result shape, this decides
- * which arms the caller may run, and the callers see one grouped list. A tenant
- * with both modules gets both; a tenant with neither gets an empty list rather
- * than an error, because a search box that refuses is worse than one that finds
- * nothing.
+ * returning the shared result shape, this decides which arms the caller may run,
+ * and the callers see one grouped list. A tenant with several modules gets all of
+ * them; a tenant with none gets an empty list rather than an error, because a
+ * search box that refuses is worse than one that finds nothing.
+ *
+ * Eight arms now — `searchCrm`, `searchSchools`, `searchPeople`, `searchGold`,
+ * `searchScrapMetal`, `searchAutos`, `searchRetail`, `searchOperations` — which
+ * is every module that has records worth typing at. That was the point of the
+ * shape: adding the gold, scrap, vehicle, till and plant arms touched this file
+ * for eight lines and the command bar, the ⌘K palette and the mention picker not
+ * at all. None of them knows how many modules exist.
  *
  * Entitlement is resolved by the caller — `app/api/v2/records/search/route.ts` —
  * because it holds the session, and a library that reads features from a global
@@ -21,9 +27,15 @@
  */
 import type { Prisma } from "@prisma/client";
 
+import { searchAutos, type AutosSearchType } from "@/lib/autos/search";
 import { searchCrm } from "@/lib/crm/search";
+import { searchGold, type GoldSearchType } from "@/lib/gold/search";
+import { searchOperations, type OperationsSearchType } from "@/lib/operations/search";
+import { searchPeople, type PeopleSearchType } from "@/lib/people/search";
 import { groupSearchResults, type SearchResult } from "@/lib/records/search-result";
+import { searchRetail, type RetailSearchType } from "@/lib/retail/search";
 import { searchSchools, type SchoolSearchType } from "@/lib/schools/search";
+import { searchScrapMetal, type ScrapSearchType } from "@/lib/scrap-metal/search";
 
 type Tx = Prisma.TransactionClient;
 
@@ -32,6 +44,18 @@ export type SearchScope = {
   crm: boolean;
   /** The school arms this caller may run — empty means no school search. */
   schools: readonly SchoolSearchType[];
+  /** The People arms this caller may run — empty means no workforce search. */
+  people: readonly PeopleSearchType[];
+  /** The gold arms this caller may run — empty means no gold search. */
+  gold: readonly GoldSearchType[];
+  /** The scrap arms this caller may run — empty means no scrap search. */
+  scrap: readonly ScrapSearchType[];
+  /** The vehicle-sales arms this caller may run. */
+  autos: readonly AutosSearchType[];
+  /** The till-receipt arm, if this caller has the point of sale. */
+  retail: readonly RetailSearchType[];
+  /** Stores and maintenance — stock, plant and work orders. */
+  operations: readonly OperationsSearchType[];
 };
 
 export async function searchRecords(
@@ -42,27 +66,39 @@ export async function searchRecords(
   if (query.length < 2) return [];
 
   const arms: Array<Promise<SearchResult[]>> = [];
+  const common = { companyId: input.companyId, query, limitPerType: input.limitPerType };
 
-  if (input.scope.crm) {
-    arms.push(
-      searchCrm(db, {
-        companyId: input.companyId,
-        query,
-        limitPerType: input.limitPerType,
-      }),
-    );
+  /**
+   * Queue one module's arm, if the caller was given any of its types.
+   *
+   * Written as a helper because there are eight of these now and the shape of
+   * each was identical: the version with eight expanded `if` blocks was thirty
+   * lines in which the only thing that varied was a name, and the eighth was
+   * pasted from the seventh. An arm with an empty type list is not called at all
+   * — that is what stops an unentitled type leaking through a group heading or a
+   * result count.
+   */
+  function arm<T extends string>(
+    types: readonly T[],
+    search: (
+      db: Tx,
+      input: { companyId: string; query: string; limitPerType?: number; types: readonly T[] },
+    ) => Promise<SearchResult[]>,
+  ) {
+    if (types.length > 0) arms.push(search(db, { ...common, types }));
   }
 
-  if (input.scope.schools.length > 0) {
-    arms.push(
-      searchSchools(db, {
-        companyId: input.companyId,
-        query,
-        limitPerType: input.limitPerType,
-        types: input.scope.schools,
-      }),
-    );
-  }
+  // The CRM takes no type list: it is gated as one module on `crm.core`, so it
+  // is either searched whole or not at all.
+  if (input.scope.crm) arms.push(searchCrm(db, common));
+
+  arm(input.scope.schools, searchSchools);
+  arm(input.scope.people, searchPeople);
+  arm(input.scope.gold, searchGold);
+  arm(input.scope.scrap, searchScrapMetal);
+  arm(input.scope.autos, searchAutos);
+  arm(input.scope.retail, searchRetail);
+  arm(input.scope.operations, searchOperations);
 
   const results = await Promise.all(arms);
   return results.flat();

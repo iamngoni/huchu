@@ -9,11 +9,15 @@
  * drift: one with a preview pane and one without, one that understands a
  * reference number and one that does not.
  *
- * So the shape lives here, module-neutral, and each module contributes arms:
- * `searchCrm` and `searchSchools`. `lib/records/search.ts` runs the arms a
- * tenant is entitled to and hands back one list. Types are here rather than in
- * `search.ts` so a module's arm file can import them without importing the
- * orchestrator that imports it.
+ * So the shape lives here, module-neutral, and each module contributes arms.
+ * `lib/records/search.ts` runs the arms a tenant is entitled to and hands back
+ * one list. Types are here rather than in `search.ts` so a module's arm file can
+ * import them without importing the orchestrator that imports it.
+ *
+ * There are eight arms now, covering the CRM, schools, People, gold, scrap,
+ * vehicle sales, retail and the plant that stores and maintenance share. Every
+ * one of them was written against this file and none of them changed it beyond
+ * adding rows to the three lists below.
  */
 
 export type SearchResultType =
@@ -28,13 +32,33 @@ export type SearchResultType =
   | "RECEIPT"
   | "PRODUCT"
   | "CUSTOMER"
+  // People — the workforce, whatever the vertical
+  | "EMPLOYEE"
+  | "SHIFT_GROUP"
   // Schools (S-4.5)
   | "STUDENT"
   | "GUARDIAN"
   | "TEACHER"
   | "CLASS"
   | "SUBJECT"
-  | "HOSTEL";
+  | "HOSTEL"
+  // Gold
+  | "GOLD_POUR"
+  | "GOLD_PURCHASE"
+  | "GOLD_DISPATCH"
+  // Scrap metal
+  | "SCRAP_TICKET"
+  | "SCRAP_SELLER"
+  // Vehicle sales
+  | "VEHICLE"
+  | "VEHICLE_DEAL"
+  | "VEHICLE_LEAD"
+  // Retail
+  | "RETAIL_SALE"
+  // Stores and maintenance — the plant every vertical runs on
+  | "INVENTORY_ITEM"
+  | "EQUIPMENT"
+  | "WORK_ORDER";
 
 export type SearchFact = { label: string; value: string };
 
@@ -77,6 +101,8 @@ export const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
   RECEIPT: "Receipts",
   PRODUCT: "Catalogue",
   CUSTOMER: "Accounts",
+  EMPLOYEE: "Staff",
+  SHIFT_GROUP: "Crews",
   STUDENT: "Students",
   GUARDIAN: "Guardians",
   // "Staff" rather than "Teachers": the profile is the school's view of a
@@ -86,23 +112,61 @@ export const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
   CLASS: "Classes",
   SUBJECT: "Subjects",
   HOSTEL: "Hostels",
+  GOLD_POUR: "Pours",
+  // "Gold purchases" rather than "Purchases": a mine also buys spares, and a
+  // group with a bare "Purchases" heading beside a stock item is a guess.
+  GOLD_PURCHASE: "Gold purchases",
+  GOLD_DISPATCH: "Dispatches",
+  SCRAP_TICKET: "Scrap tickets",
+  SCRAP_SELLER: "Scrap sellers",
+  VEHICLE: "Vehicles",
+  // Qualified, because the CRM's own DEAL and LEAD groups can be on the same
+  // tenant and "Deals" twice in one list tells you nothing.
+  VEHICLE_DEAL: "Vehicle deals",
+  VEHICLE_LEAD: "Vehicle enquiries",
+  RETAIL_SALE: "Sales",
+  INVENTORY_ITEM: "Stock",
+  EQUIPMENT: "Equipment",
+  WORK_ORDER: "Work orders",
 };
 
 /**
  * Order groups appear in: the records people look for most, first.
  *
- * School types lead. No tenant has both modules switched on today, so this only
- * decides the order *within* a module — but a school's searches are
- * overwhelmingly for a pupil, and if the two ever do meet on one tenant a
- * registrar's pupil should not sit under a catalogue item.
+ * Unlike the two-module version of this list, the order now does real work. A
+ * gold mine runs gold, stores, maintenance and People at once, so a pour has to
+ * sit above a spare part and a work order; an auto lot runs autos beside the
+ * CRM, so a Hilux on the forecourt has to sit above a deal that mentions one.
+ * The rule is: the tenant's own vertical first, then the plant it runs on, then
+ * the CRM and the ledgers, which are the same on every tenant.
  */
 export const SEARCH_TYPE_ORDER: SearchResultType[] = [
+  // Staff first. Every vertical has a workforce — it is the one group that
+  // appears on a mine, a school and a bureau alike — and on a payroll tenant it
+  // is the only group there is.
+  "EMPLOYEE",
+  "SHIFT_GROUP",
   "STUDENT",
   "GUARDIAN",
   "TEACHER",
   "CLASS",
   "SUBJECT",
   "HOSTEL",
+  // The verticals' own operational records.
+  "GOLD_POUR",
+  "GOLD_PURCHASE",
+  "GOLD_DISPATCH",
+  "SCRAP_TICKET",
+  "SCRAP_SELLER",
+  "VEHICLE",
+  "VEHICLE_DEAL",
+  "VEHICLE_LEAD",
+  "RETAIL_SALE",
+  // The plant underneath them. Below the vertical records deliberately: a mine
+  // searching "435" wants the pour, not the pump with 435 in its code.
+  "EQUIPMENT",
+  "WORK_ORDER",
+  "INVENTORY_ITEM",
   "DEAL",
   "PERSON",
   "COMPANY",
@@ -116,6 +180,31 @@ export const SEARCH_TYPE_ORDER: SearchResultType[] = [
 ];
 
 export const SEARCH_PER_TYPE_LIMIT = 5;
+
+/**
+ * Every word in the query has to match one of the given columns.
+ *
+ * So word order does not matter and one word still matches any column: "moyo"
+ * finds Ada Moyo, "moyo ada" finds her too, and "toyota hilux" finds the vehicle
+ * whose make and model are two separate columns. Returns an array to spread into
+ * an `AND`, empty for a query with no words — which every caller has already
+ * ruled out on length.
+ *
+ * Module-neutral because eight arms need it and eight copies of it drift: the
+ * first cut of this lived once in `lib/schools/search.ts` and once in
+ * `lib/people/search.ts` with a comment in the second explaining why it was not
+ * shared. That reasoning did not survive the sixth arm.
+ */
+export function wordMatches(query: string, columns: readonly string[]) {
+  return query
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => ({
+      OR: columns.map((column) => ({
+        [column]: { contains: word, mode: "insensitive" as const },
+      })),
+    }));
+}
 
 /** A query that looks like "QTN-0042" or "CRMD-7" is a record number, not a name. */
 export function looksLikeReference(query: string): boolean {

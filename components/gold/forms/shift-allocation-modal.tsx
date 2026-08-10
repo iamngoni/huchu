@@ -319,7 +319,7 @@ export function ShiftAllocationModal({
                   disabled={attendanceLoading || allocationsLoading || shiftReportsLoading}
                   onAddOption={() => {
                     handleDialogOpenChange(false);
-                    router.push("/attendance");
+                    router.push("/people/attendance");
                   }}
                   addLabel="Add attendance record"
                 />

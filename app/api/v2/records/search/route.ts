@@ -3,6 +3,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse, validateSession } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { getFeatureMap } from "@/lib/platform/features";
+import { hrPermissionDenial } from "@/lib/hr/permissions";
+import {
+  AUTOS_SEARCH_FEATURES,
+  AUTOS_SEARCH_TYPES,
+  type AutosSearchType,
+} from "@/lib/autos/search";
+import { GOLD_SEARCH_FEATURES, GOLD_SEARCH_TYPES, type GoldSearchType } from "@/lib/gold/search";
+import {
+  OPERATIONS_SEARCH_FEATURES,
+  OPERATIONS_SEARCH_TYPES,
+  type OperationsSearchType,
+} from "@/lib/operations/search";
+import {
+  RETAIL_SEARCH_FEATURES,
+  RETAIL_SEARCH_TYPES,
+  type RetailSearchType,
+} from "@/lib/retail/search";
+import {
+  SCRAP_SEARCH_FEATURES,
+  SCRAP_SEARCH_TYPES,
+  type ScrapSearchType,
+} from "@/lib/scrap-metal/search";
+import {
+  PEOPLE_SEARCH_FEATURES,
+  PEOPLE_SEARCH_RESOURCES,
+  PEOPLE_SEARCH_TYPES,
+  type PeopleSearchType,
+} from "@/lib/people/search";
 import { groupSearchResults, searchRecords, type SearchScope } from "@/lib/records/search";
 import { canSchoolRoleDo } from "@/lib/schools/permissions";
 import {
@@ -46,7 +74,7 @@ export async function GET(request: NextRequest) {
     const limitPerType = Number(searchParams.get("limit") ?? 5);
     const companyId = session.user.companyId;
 
-    // One read of the feature map for all seven arms rather than `hasFeature`
+    // One read of the feature map for every arm rather than `hasFeature`
     // per type: that helper reads the map each time, and the map is four
     // uncached queries — twenty-eight to answer one keystroke. The map is built
     // from every active `PlatformFeature`, so a key missing from it is one the
@@ -61,7 +89,49 @@ export async function GET(request: NextRequest) {
         canSchoolRoleDo(role, SCHOOL_SEARCH_RESOURCES[type], "view"),
     );
 
-    const scope: SearchScope = { crm: enabled("crm.core"), schools };
+    // The People arms, resolved the same two ways. `hrPermissionDenial` returns
+    // a message when refused and null when allowed, which is the inverse of
+    // `canSchoolRoleDo` — hence the `=== null` rather than a bare call.
+    const people: PeopleSearchType[] = PEOPLE_SEARCH_TYPES.filter(
+      (type) =>
+        enabled(PEOPLE_SEARCH_FEATURES[type]) &&
+        hrPermissionDenial(session, PEOPLE_SEARCH_RESOURCES[type], "view") === null,
+    );
+
+    // The remaining verticals resolve on the feature axis only, because that is
+    // all they have: `lib/gold/**`, `lib/retail/**` and the rest ship no
+    // role-resource matrix of their own — the modules gate on features and on
+    // route access, and there is no `canGoldRoleDo` to consult. Inventing a
+    // second, search-only permission model for them would be a rule enforced in
+    // one place and nowhere else, which is worse than the honest gap. If those
+    // modules grow a role matrix, these filters gain their second clause exactly
+    // as the school and People ones have.
+    const gold: GoldSearchType[] = GOLD_SEARCH_TYPES.filter((type) =>
+      enabled(GOLD_SEARCH_FEATURES[type]),
+    );
+    const scrap: ScrapSearchType[] = SCRAP_SEARCH_TYPES.filter((type) =>
+      enabled(SCRAP_SEARCH_FEATURES[type]),
+    );
+    const autos: AutosSearchType[] = AUTOS_SEARCH_TYPES.filter((type) =>
+      enabled(AUTOS_SEARCH_FEATURES[type]),
+    );
+    const retail: RetailSearchType[] = RETAIL_SEARCH_TYPES.filter((type) =>
+      enabled(RETAIL_SEARCH_FEATURES[type]),
+    );
+    const operations: OperationsSearchType[] = OPERATIONS_SEARCH_TYPES.filter((type) =>
+      enabled(OPERATIONS_SEARCH_FEATURES[type]),
+    );
+
+    const scope: SearchScope = {
+      crm: enabled("crm.core"),
+      schools,
+      people,
+      gold,
+      scrap,
+      autos,
+      retail,
+      operations,
+    };
 
     const results = await searchRecords(prisma, {
       companyId,

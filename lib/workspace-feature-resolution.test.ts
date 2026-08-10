@@ -2,11 +2,17 @@
  * Regression tests for workspace / feature resolution.
  *
  * The platform started as a gold-mine product and was later made modular.
- * These tests pin the boundary: mining-only surfaces (shift report, crew
- * attendance, plant report, gold intake) must never resolve into non-mining
- * workspaces — not from templates, not from bundles, and not from the
- * presentation layer (quick actions, sidebar, route gating) even when a
- * legacy tenant still carries leaked feature flags.
+ * These tests pin the boundary: mining-only surfaces (shift report, plant report,
+ * gold intake) must never resolve into non-mining workspaces — not from
+ * templates, not from bundles, and not from the presentation layer (quick
+ * actions, sidebar, route gating) even when a legacy tenant still carries leaked
+ * feature flags.
+ *
+ * Crew attendance used to be on that list and no longer is. It was mining-only by
+ * accident of where it was built: a register belongs to whoever has a workforce,
+ * and the `ops.attendance.mark` gate meant a school, a bureau or a scrap yard
+ * could not reach one. It is now `/people/attendance` on `hr.attendance`, and a
+ * non-mining template offering it is correct rather than a leak.
  */
 import { describe, expect, it } from "vitest";
 
@@ -32,7 +38,9 @@ const MINE_DAILY_OPS_FEATURE_KEYS = [
   "reports.plant",
 ];
 
-const MINING_PAGE_HREFS = ["/shift-report", "/attendance", "/plant-report"];
+// Attendance is deliberately absent: a register is not mining, so a non-mining
+// template offering `/people/attendance` is correct rather than a leak.
+const MINING_PAGE_HREFS = ["/shift-report", "/plant-report"];
 
 const MINING_TEMPLATE_CODES = new Set(["TEMPLATE_GOLD_MINE", "TEMPLATE_ALL_FEATURES"]);
 
@@ -301,8 +309,27 @@ describe("route gating", () => {
 
   it("gates mining capture pages behind mining ops features", () => {
     expect(resolveFeatureKeyForPath("/shift-report")).toBe("ops.shift-report.submit");
-    expect(resolveFeatureKeyForPath("/attendance")).toBe("ops.attendance.mark");
     expect(resolveFeatureKeyForPath("/plant-report")).toBe("ops.plant-report.submit");
+  });
+
+  it("gates the attendance register as People, not as mining", () => {
+    // It used to be `/attendance` on `ops.attendance.mark`, which meant a school,
+    // a bureau or a scrap yard — anybody with a workforce but no shafts — could
+    // not reach a register at all.
+    expect(resolveFeatureKeyForPath("/people/attendance")).toBe("hr.attendance");
+    expect(resolveFeatureKeyForPath("/api/people/attendance")).toBe("hr.attendance");
+
+    // And the old path is gone rather than redirected. AGENTS.md forbids
+    // compatibility layers, so an unregistered path must resolve to nothing —
+    // if this ever returns a key again, something re-added the route.
+    expect(resolveFeatureKeyForPath("/attendance")).toBeNull();
+  });
+
+  it("keeps the People register ahead of the bare /people entry", () => {
+    // First match wins in the registry, so a longer prefix listed after a shorter
+    // one is dead. If this resolves to `hr.employees` the two entries have been
+    // reordered and the register is gated on the wrong feature.
+    expect(resolveFeatureKeyForPath("/people/attendance/anything")).toBe("hr.attendance");
   });
 
   it("gates moved preferences organization pages behind their source features", () => {

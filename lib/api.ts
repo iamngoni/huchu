@@ -98,8 +98,6 @@ export type EmployeeSummary = {
   grade?: { id: string; code: string; name: string; rank: number } | null;
   supervisor?: { id: string; employeeId: string; name: string } | null;
   isActive: boolean;
-  goldOwed: number;
-  irregularOwed?: number;
   salaryOwed: number;
 };
 
@@ -126,7 +124,8 @@ export type ScrapTicketContext = {
 export type ShiftGroupRecord = {
   id: string;
   companyId: string;
-  siteId: string;
+  /// Null for a company-wide crew.
+  siteId: string | null;
   name: string;
   code?: string | null;
   leaderEmployeeId: string;
@@ -289,7 +288,6 @@ export type CompensationTemplateRecord = {
   _count?: { rules: number };
 };
 
-export type RunDomain = "PAYROLL" | "GOLD_PAYOUT";
 
 export type PeriodPurpose = "STANDARD" | "CONTRACTOR" | "EDGE_CASE";
 
@@ -308,7 +306,6 @@ export type PayrollConfigRecord = {
 export type PayrollPeriodRecord = {
   id: string;
   companyId: string;
-  domain: RunDomain;
   payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER" | null;
   scopeKey: string;
   periodKey: string;
@@ -340,7 +337,6 @@ export type PayrollRunRecord = {
   id: string;
   companyId: string;
   periodId: string;
-  domain: RunDomain;
   payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER" | null;
   runNumber: number;
   status: "DRAFT" | "SUBMITTED" | "APPROVED" | "POSTED" | "REJECTED";
@@ -389,7 +385,6 @@ export type DisbursementBatchRecord = {
   payrollRun: {
     id: string;
     runNumber: number;
-    domain?: RunDomain;
     payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER" | null;
     status?: string;
     goldRatePerUnit?: number | null;
@@ -518,19 +513,12 @@ export type UserNotificationPreferences = {
 export type EmployeePayment = {
   id: string;
   employeeId: string;
-  type: "GOLD" | "IRREGULAR" | "SALARY";
-  payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER" | null;
   periodStart: string;
   periodEnd: string;
   dueDate: string;
   amount: number;
-  amountUsd?: number | null;
   unit: string;
-  goldWeightGrams?: number | null;
-  goldPriceUsdPerGram?: number | null;
-  valuationDate?: string | null;
   paidAmount?: number | null;
-  paidAmountUsd?: number | null;
   paidAt?: string | null;
   status: "DUE" | "PARTIAL" | "PAID";
   notes?: string | null;
@@ -538,8 +526,6 @@ export type EmployeePayment = {
   payrollLineItemId?: string | null;
   disbursementBatchId?: string | null;
   disbursementItemId?: string | null;
-  goldShiftAllocationId?: string | null;
-  irregularPayoutBatchId?: string | null;
   createdAt: string;
   updatedAt: string;
   employee: {
@@ -553,7 +539,6 @@ export type EmployeePayment = {
   payrollRun?: {
     id: string;
     runNumber: number;
-    domain: RunDomain;
     status: "DRAFT" | "SUBMITTED" | "APPROVED" | "POSTED" | "REJECTED";
     period?: { id: string; periodKey: string } | null;
   } | null;
@@ -562,33 +547,6 @@ export type EmployeePayment = {
     code: string;
     status: "DRAFT" | "SUBMITTED" | "APPROVED" | "PAID" | "REJECTED";
   } | null;
-};
-
-export type IrregularPayoutBatchRecord = {
-  id: string;
-  companyId: string;
-  source: "SCRAP" | "COMMISSION" | "OTHER";
-  label: string;
-  periodStart: string;
-  periodEnd: string;
-  dueDate: string;
-  currency: string;
-  workflowStatus: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
-  notes?: string | null;
-  submittedAt?: string | null;
-  approvedAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: { id: string; name: string } | null;
-  submittedBy?: { id: string; name: string } | null;
-  approvedBy?: { id: string; name: string } | null;
-  items: Array<{
-    id: string;
-    employeeId: string;
-    amount: number;
-    notes?: string | null;
-    employee: { id: string; employeeId: string; name: string };
-  }>;
 };
 
 export type SectionSummary = {
@@ -704,7 +662,8 @@ export type AttendanceRecord = {
   status: string;
   overtime?: number | null;
   notes?: string | null;
-  site: { id: string; name: string; code: string };
+  /** Null on a tenant with no sites, and on any register kept company-wide. */
+  site: { id: string; name: string; code: string } | null;
   shiftGroup?: {
     id: string;
     name: string;
@@ -1473,7 +1432,7 @@ export async function fetchShiftGroups(
   } = {},
 ) {
   const query = buildQuery(params);
-  return fetchJson<Pagination<ShiftGroupRecord>>(`/api/hr/shift-groups${query}`);
+  return fetchJson<Pagination<ShiftGroupRecord>>(`/api/people/rosters${query}`);
 }
 
 export async function fetchShiftGroup(id: string) {
@@ -1482,17 +1441,18 @@ export async function fetchShiftGroup(id: string) {
       members: ShiftGroupMemberRecord[];
       schedules: ShiftGroupScheduleRecord[];
     }
-  >(`/api/hr/shift-groups/${id}`);
+  >(`/api/people/rosters/${id}`);
 }
 
 export async function createShiftGroup(input: {
   name: string;
   code?: string;
-  siteId: string;
+  /// Null for a company-wide crew. Not every workforce is organised by site.
+  siteId?: string | null;
   leaderEmployeeId: string;
   memberIds?: string[];
 }) {
-  return fetchJson<ShiftGroupRecord>(`/api/hr/shift-groups`, {
+  return fetchJson<ShiftGroupRecord>(`/api/people/rosters`, {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -1503,13 +1463,13 @@ export async function updateShiftGroup(
   input: {
     name?: string;
     code?: string | null;
-    siteId?: string;
+    siteId?: string | null;
     leaderEmployeeId?: string;
     memberIds?: string[];
     isActive?: boolean;
   },
 ) {
-  return fetchJson<ShiftGroupRecord>(`/api/hr/shift-groups/${id}`, {
+  return fetchJson<ShiftGroupRecord>(`/api/people/rosters/${id}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });
@@ -1517,7 +1477,7 @@ export async function updateShiftGroup(
 
 export async function archiveShiftGroup(id: string) {
   return fetchJson<{ success: boolean; archived?: boolean }>(
-    `/api/hr/shift-groups/${id}`,
+    `/api/people/rosters/${id}`,
     {
       method: "DELETE",
     },
@@ -1526,7 +1486,7 @@ export async function archiveShiftGroup(id: string) {
 
 export async function permanentlyDeleteShiftGroup(id: string) {
   return fetchJson<{ success: boolean; deleted?: boolean }>(
-    `/api/hr/shift-groups/${id}?permanent=true`,
+    `/api/people/rosters/${id}?permanent=true`,
     {
       method: "DELETE",
     },
@@ -1541,7 +1501,7 @@ export async function fetchShiftGroupMembers(
   return fetchJson<{
     data: ShiftGroupMemberRecord[];
     leaderEmployeeId?: string;
-  }>(`/api/hr/shift-groups/${groupId}/members${query}`);
+  }>(`/api/people/rosters/${groupId}/members${query}`);
 }
 
 export async function addShiftGroupMembers(
@@ -1549,7 +1509,7 @@ export async function addShiftGroupMembers(
   input: { employeeIds: string[] },
 ) {
   return fetchJson<{ data: ShiftGroupMemberRecord[] }>(
-    `/api/hr/shift-groups/${groupId}/members`,
+    `/api/people/rosters/${groupId}/members`,
     {
       method: "POST",
       body: JSON.stringify(input),
@@ -1563,7 +1523,7 @@ export async function updateShiftGroupMember(
   input: { isActive: boolean },
 ) {
   return fetchJson<ShiftGroupMemberRecord>(
-    `/api/hr/shift-groups/${groupId}/members/${memberId}`,
+    `/api/people/rosters/${groupId}/members/${memberId}`,
     {
       method: "PATCH",
       body: JSON.stringify(input),
@@ -1573,7 +1533,7 @@ export async function updateShiftGroupMember(
 
 export async function removeShiftGroupMember(groupId: string, memberId: string) {
   return fetchJson<{ success: boolean; removed?: boolean }>(
-    `/api/hr/shift-groups/${groupId}/members/${memberId}`,
+    `/api/people/rosters/${groupId}/members/${memberId}`,
     {
       method: "DELETE",
     },
@@ -1780,7 +1740,6 @@ export async function fetchCompensationTemplates(
 export async function fetchPayrollPeriods(
   params: {
     search?: string;
-    domain?: RunDomain;
     status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "CLOSED";
     cycle?: "MONTHLY" | "FORTNIGHTLY";
     periodPurpose?: PeriodPurpose;
@@ -1799,7 +1758,6 @@ export async function fetchPayrollRuns(
   params: {
     search?: string;
     periodId?: string;
-    domain?: RunDomain;
     status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "POSTED" | "REJECTED";
     page?: number;
     limit?: number;
@@ -1942,7 +1900,6 @@ export async function fetchEmployeePayments(
   params: {
     search?: string;
     type?: "GOLD" | "SALARY" | "IRREGULAR";
-    payoutSource?: "GOLD" | "SCRAP" | "COMMISSION" | "OTHER";
     employeeId?: string;
     status?: "DUE" | "PARTIAL" | "PAID";
     startDate?: string;
@@ -1953,19 +1910,6 @@ export async function fetchEmployeePayments(
 ) {
   const query = buildQuery(params);
   return fetchJson<Pagination<EmployeePayment>>(`/api/employee-payments${query}`);
-}
-
-export async function fetchIrregularPayoutBatches(
-  params: {
-    source?: "SCRAP" | "COMMISSION" | "OTHER";
-    workflowStatus?: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
-    search?: string;
-    page?: number;
-    limit?: number;
-  } = {},
-) {
-  const query = buildQuery(params);
-  return fetchJson<Pagination<IrregularPayoutBatchRecord>>(`/api/hr/payout-batches${query}`);
 }
 
 export async function fetchSections(
@@ -2188,7 +2132,7 @@ export async function fetchAttendance(
   } = {},
 ) {
   const query = buildQuery(params);
-  return fetchJson<Pagination<AttendanceRecord>>(`/api/attendance${query}`);
+  return fetchJson<Pagination<AttendanceRecord>>(`/api/people/attendance${query}`);
 }
 
 export async function fetchShiftReports(

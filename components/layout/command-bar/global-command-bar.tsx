@@ -15,19 +15,24 @@ import {
   ArrowRight,
   Building2,
   Checklist,
+  Coins,
   Funnel,
   HelpCircle,
   Home,
+  LocalShipping,
   ManageAccounts,
   MapPin,
   MedusaBookOpenIcon,
   Package,
   PanelLeft,
   Receipt,
+  Scale,
   Search,
+  Settings2,
   TableRows,
   Users,
   Wallet,
+  Wrench,
   type LucideIcon,
 } from "@/lib/icons";
 import type { SearchResult, SearchResultType } from "@/lib/records/search-result";
@@ -47,6 +52,8 @@ type SearchGroup = { type: SearchResultType; label: string; results: SearchResul
 // The same icons `RecordMark` draws for these kinds, so a pupil looks like a
 // pupil whether you found her in the search box or opened her from a register.
 const TYPE_ICONS: Record<SearchResultType, LucideIcon> = {
+  EMPLOYEE: ManageAccounts,
+  SHIFT_GROUP: Users,
   PERSON: Users,
   COMPANY: Building2,
   DEAL: Funnel,
@@ -63,6 +70,21 @@ const TYPE_ICONS: Record<SearchResultType, LucideIcon> = {
   CLASS: TableRows,
   SUBJECT: MedusaBookOpenIcon,
   HOSTEL: Home,
+  GOLD_POUR: Coins,
+  // A gold purchase is weighed in, so it takes the scales rather than the coin:
+  // the row beside it in the results is the pour, and two coins would be one
+  // icon doing no work.
+  GOLD_PURCHASE: Scale,
+  GOLD_DISPATCH: LocalShipping,
+  SCRAP_TICKET: Scale,
+  SCRAP_SELLER: Users,
+  VEHICLE: LocalShipping,
+  VEHICLE_DEAL: Funnel,
+  VEHICLE_LEAD: AddressBook,
+  RETAIL_SALE: Receipt,
+  INVENTORY_ITEM: Package,
+  EQUIPMENT: Settings2,
+  WORK_ORDER: Wrench,
 };
 
 type AppointmentRow = {
@@ -143,26 +165,39 @@ export function GlobalCommandBar() {
   // and React's purity rule is not broken by a Date.now() in render.
   const [now, setNow] = React.useState(0);
 
+  /**
+   * Open and close in one place, and **clear the query on the way out**.
+   *
+   * Clearing on the way *in* is the obvious version and it is wrong: the app-bar
+   * input's `onChange` sets the query and opens the bar in the same event, so a
+   * reset that runs on opening lands after the seed and eats the first
+   * keystroke. Typing "Moyo" searched "oyo" — which `contains` quietly rescued —
+   * and typing "EMP-001" searched "MP-001", which it did not.
+   *
+   * Clearing on close gets both cases with no handover at all: ⌘K opens onto an
+   * empty field because the last close emptied it, and a keystroke in the app bar
+   * opens onto exactly what was typed.
+   */
+  const changeOpen = React.useCallback((next: boolean) => {
+    setOpen(next);
+    if (next) {
+      setRecents(loadRecents());
+    } else {
+      setQuery("");
+      setDebounced("");
+    }
+  }, []);
+
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
-        setOpen((current) => !current);
+        changeOpen(!open);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  const [wasOpen, setWasOpen] = React.useState(open);
-  if (open !== wasOpen) {
-    setWasOpen(open);
-    if (open) {
-      setRecents(loadRecents());
-      setQuery("");
-      setDebounced("");
-    }
-  }
+  }, [open, changeOpen]);
 
   React.useEffect(() => {
     if (open) setNow(Date.now());
@@ -511,27 +546,58 @@ export function GlobalCommandBar() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Search"
-        // `btn btn-secondary` rather than a hand-rolled box: this sits in the
-        // app bar between the notification bell and the page's own action,
-        // and drawing its own padding is how it ended up 30px tall against
-        // their 36. The height, radius and gap now come from the same place
-        // theirs do.
-        className="btn btn-secondary text-[var(--text-muted)] hover:text-[var(--text)]"
-      >
-        <Search className="size-4" aria-hidden="true" />
-        <span className="hidden lg:inline">Search</span>
-        <kbd className="hidden rounded border border-[var(--border)] px-1 font-sans lg:inline">
+      {/*
+        A real input, not a button dressed as one.
+        =========================================
+        It used to be a `<button>`, which meant the app bar advertised a search
+        box and then asked you to open a dialog before you could type into it —
+        two gestures for the thing people do most. Now the first keystroke lands
+        where you aimed it.
+
+        What it is *not* is a second search. Typing hands the text straight to
+        the same `CommandBar` this file already renders, seeded with what you
+        typed, so there is one query, one result shape and one keyboard contract.
+        A separate suggestions dropdown here would have been a second engine to
+        keep in step with the first.
+
+        Kept narrow on purpose: on mobile the app bar has no room, so the icon
+        alone opens the bar.
+      */}
+      <div className="relative flex items-center">
+        <Search
+          className="pointer-events-none absolute left-2.5 size-4 text-[var(--text-subtle)] md:left-2.5"
+          aria-hidden="true"
+        />
+        <input
+          type="search"
+          value=""
+          aria-label="Search records and actions"
+          placeholder="Search"
+          // Read-only-ish by design: it owns no text of its own. Whatever you
+          // type opens the bar with that text already in it, and the bar's own
+          // input takes over from there — so there is never a moment where two
+          // inputs hold two different queries.
+          onChange={(event) => {
+            const typed = event.target.value;
+            if (typed) setQuery(typed);
+            changeOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === "ArrowDown") {
+              event.preventDefault();
+              changeOpen(true);
+            }
+          }}
+          className="h-9 w-36 rounded-[var(--radius-sm)] border border-[var(--chrome-edge)] bg-[var(--surface)] pl-8 pr-14 text-sm text-[var(--text-body)] outline-none placeholder:text-[var(--text-muted)] focus-visible:border-[var(--focus-ring)] lg:w-64 [&::-webkit-search-cancel-button]:hidden"
+        />
+        <kbd className="pointer-events-none absolute right-2 hidden rounded border border-[var(--border)] px-1 font-sans text-sm text-[var(--text-muted)] lg:inline">
           ⌘K
         </kbd>
-      </button>
+      </div>
 
       <CommandBar
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={changeOpen}
         query={query}
         onQueryChange={setQuery}
         groups={groups}

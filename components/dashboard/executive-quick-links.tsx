@@ -89,7 +89,7 @@ const MODULE_META: Record<
 
 const QUICK_ACTION_ICON_BY_HREF: Record<string, IconKey> = {
   "/shift-report": "shift-report",
-  "/attendance": "attendance",
+  "/people/attendance": "attendance",
   "/stores/receive": "receive-stock",
   "/stores/issue": "issue-stock",
   "/gold/intake/pours/new": "gold-output",
@@ -101,7 +101,7 @@ const LINK_ICON_BY_HREF_PREFIX: Array<{ prefix: string; icon: IconKey }> = [
   { prefix: "/gold/transit/dispatches", icon: "gold-dispatch" },
   { prefix: "/gold", icon: "gold" },
   { prefix: "/stores", icon: "stores" },
-  { prefix: "/human-resources", icon: "workforce" },
+  { prefix: "/people", icon: "workforce" },
   { prefix: "/accounting", icon: "finance" },
   { prefix: "/maintenance", icon: "maintenance" },
   { prefix: "/compliance", icon: "compliance" },

@@ -187,9 +187,6 @@ export async function POST(
         }
 
         if (priorAllocationIds.length > 0) {
-          await tx.employeePayment.deleteMany({
-            where: { goldShiftAllocationId: { in: priorAllocationIds } },
-          })
           await tx.goldShiftWorkerShare.deleteMany({
             where: { allocationId: { in: priorAllocationIds } },
           })
@@ -530,6 +527,7 @@ export async function POST(
           // instead of the broad (siteId, date, shift) triple.
           await tx.attendance.createMany({
             data: Array.from(presentEmployeeIds).map((employeeId) => ({
+              companyId,
               date: entry.parsedDate!,
               siteId,
               shift: shiftName,

@@ -80,6 +80,12 @@ export async function POST(
       prisma.schoolClass.findMany({
         where: { id: { in: body.classIds }, companyId },
         select: { id: true, code: true, name: true },
+        // Ordered, because this order is what a person reads. The clone loop below
+        // walks these in sequence and the audit row lists the codes in the order
+        // it created them — unordered, that row named the same set of year groups
+        // in a different sequence each run, which is both harder to read and what
+        // made `fee-structure-clone.test.ts` fail intermittently.
+        orderBy: { code: "asc" },
       }),
     ]);
     if (!term) return errorResponse("Term not found", 404);

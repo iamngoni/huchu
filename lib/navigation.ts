@@ -45,12 +45,15 @@ import {
   Wrench,
   type LucideIcon,
 } from "@/lib/icons";
-import { HR_TABS } from "@/lib/hr/tab-config";
+import { PEOPLE_TABS } from "@/lib/people/tab-config";
+import { PAYROLL_TABS } from "@/lib/payroll/tab-config";
 import { RETAIL_TABS } from "@/lib/retail/tab-config";
 import { hasRole, type UserRole } from "@/lib/roles";
 import { SCRAP_TABS } from "@/lib/scrap-metal/tab-config";
 
-const HR_MODULE_ALLOWED_ROLES: UserRole[] = ["SUPERADMIN", "MANAGER", "CLERK"];
+// Who may reach People and Payroll at all. Mirrored as a Set in `proxy.ts`,
+// which checks it on the route prefix before the page renders.
+const WORKFORCE_MODULE_ALLOWED_ROLES: UserRole[] = ["SUPERADMIN", "MANAGER", "CLERK"];
 
 export type NavItem = {
   href: string;
@@ -104,18 +107,16 @@ export const navSections: NavSection[] = [
   },
   {
     id: "daily",
+    // Attendance left this section. Marking a register is not mining — a school,
+    // a bureau and a scrap yard all keep one, and it is now People › Time ›
+    // Attendance. What stays here is production reporting, which is.
     title: "Daily Operations",
-    description: "Mining shift, attendance, and plant capture",
+    description: "Mining shift and plant capture",
     items: [
       {
         href: "/shift-report",
         icon: NoteAdd,
         label: "Submit Shift Report",
-      },
-      {
-        href: "/attendance",
-        icon: UserCheck,
-        label: "Mark Attendance",
       },
       {
         href: "/plant-report",
@@ -178,18 +179,32 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    id: "hr",
-    title: "Human Resources",
-    description: "Employee records and attendance roster",
+    id: "people",
+    title: "People",
+    description: "Employee records, rosters and workforce history",
     featureKey: "hr.employees",
-    items: HR_TABS.map((tab) => ({
+    items: PEOPLE_TABS.map((tab) => ({
       href: tab.href,
       icon: tab.icon,
       label: tab.label,
+      roles: WORKFORCE_MODULE_ALLOWED_ROLES,
+    })),
+  },
+  {
+    id: "payroll",
+    title: "Payroll",
+    description: "Compensation, month-end runs and statutory returns",
+    featureKey: "hr.payroll",
+    items: PAYROLL_TABS.map((tab) => ({
+      href: tab.href,
+      icon: tab.icon,
+      label: tab.label,
+      // Compensation rules set what everybody is paid, so they stay with the
+      // people who can approve a run rather than the clerk who prepares one.
       roles:
-        tab.id === "compensation"
+        tab.categoryId === "compensation"
           ? ["SUPERADMIN", "MANAGER"]
-          : HR_MODULE_ALLOWED_ROLES,
+          : WORKFORCE_MODULE_ALLOWED_ROLES,
     })),
   },
   {

@@ -400,6 +400,7 @@ If `.local` clashes with mDNS on a machine, switch to a `.test` or `.localhost` 
 - `docs/system-reference/live-capabilities.md` - capability inventory, useful for product and QA context.
 - `docs/system-reference/route-and-surface-inventory.md` - route/API footprint snapshot. Refresh when major surfaces change.
 - `docs/ux/platform-ux-playbook.md` - canonical UX/UI rules.
+- `docs/_start-here/LOCAL_DEV.md` - clone to signed-in tenant, plus Windows/macOS/Linux hosts config for tenant and portal hosts.
 - `docs/_start-here/DATABASE_SETUP.md` - detailed PostgreSQL setup notes.
 - `docs/_start-here/PRODUCTION_DEPLOYMENT.md` - deployment setup notes.
 - `docs/accounting/zimra-fiscalisation.md` - accounting fiscalisation notes.
