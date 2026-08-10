@@ -103,18 +103,47 @@ pnpm db:generate    # regenerate the typed client
 `AttendanceStatus` enum, `Attendance.companyId` and the nullable `Attendance.siteId`
 in one go.
 
-**On a database that already has data**, two changes cannot be done by `db push` —
-it refuses a text→enum cast and refuses to add a required column to a populated
-table. Run these first, in this order:
+**On a database that already has data**, `db push` refuses two of the changes and
+tells you so:
 
-```bash
-npx tsx scripts/normalise-attendance-status.ts   # then db:push
-npx tsx scripts/attendance-site-optional.ts      # then db:push
+```text
+• Added the required column `companyId` to the `Attendance` table without a
+  default value. There are N rows in this table, it is not possible to execute
+  this step.
+• Changed the type of `status` on the `Attendance` table. No cast exists, the
+  column would be dropped and recreated, which cannot be done since the column
+  is required and there is data in the table.
 ```
 
-Both are idempotent, both refuse rather than guess, and both print exactly what
-they would change before changing it. After either, `db push` should report *"The
-database is already in sync"* — if it wants to make changes, stop and read them.
+Neither needs a drop. Run the data migrations first, then push:
+
+```bash
+pnpm db:migrate:data
+pnpm db:push
+```
+
+`db:migrate:data` chains the two scripts in order and stops on the first failure.
+Both are idempotent, both refuse rather than guess — an attendance value outside
+the enum, or one person marked twice for a single shift, stops the run with the
+rows listed and nothing changed — and afterwards `db push` should report *"The
+database is already in sync"*. If it still wants to make changes, stop and read
+them.
+
+Ignore the `--force-reset` that Prisma suggests in that message. It drops the
+database.
+
+A third failure can appear on a database old enough to hold approvals from before
+the settlement tables landed:
+
+```text
+ERROR: invalid input value for enum "ApprovalTargetType_new": "IRREGULAR_PAYOUT_BATCH"
+```
+
+That one needs no script and no data change — it was a schema bug, fixed by keeping
+the retired value declared. If you see it, you are on a commit older than that fix;
+pull and push again. `ApprovalTargetType` may gain values and must never lose one,
+because `ApprovalAction` is an append-only audit trail and Postgres will not drop a
+value that existing rows still hold. `lib/workflow/approvals.test.ts` enforces it.
 
 ## 6. Seed a tenant and run
 

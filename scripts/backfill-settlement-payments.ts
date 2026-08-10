@@ -14,9 +14,13 @@
  * knows the columns being read, so a typed query cannot see them.
  */
 
-import { PrismaClient } from "@prisma/client"
+// `new PrismaClient()` with no arguments throws on Prisma 7 — it requires a driver
+// adapter — so this script could not run at all. The shared client in
+// `lib/prisma.ts` builds that adapter, and `dotenv/config` gives it a
+// `DATABASE_URL` to build it from.
+import "dotenv/config"
 
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
 
 const MIGRATED_NOTE_PREFIX = "MIGRATED_FROM_EMPLOYEE_PAYMENT:"
 

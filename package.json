@@ -30,7 +30,8 @@
     "worker:pdf": "tsx scripts/pdf-worker.ts",
     "db:generate": "prisma generate",
     "db:prepare:platform": "node scripts/backfill-platform-company-slugs.js",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "db:migrate:data": "tsx scripts/normalise-attendance-status.ts && tsx scripts/attendance-site-optional.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

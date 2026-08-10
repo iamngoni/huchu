@@ -399,6 +399,15 @@ export type DisbursementBatchRecord = {
 export type ApprovalHistoryRecord = {
   id: string;
   companyId: string;
+  /**
+   * Mirrors `ApprovalTargetType`, including the retired value.
+   *
+   * The settlement and leave values were missing, so an approval recorded against
+   * either was a row this type said could not exist — the history screen reads
+   * every row in the table, whatever wrote it. `IRREGULAR_PAYOUT_BATCH` stays for
+   * the opposite reason: nothing writes it any more, and rows from before P-1 are
+   * still there to be displayed.
+   */
   entityType:
     | "PAYROLL_RUN"
     | "DISBURSEMENT_BATCH"
@@ -406,8 +415,12 @@ export type ApprovalHistoryRecord = {
     | "COMPENSATION_PROFILE"
     | "COMPENSATION_RULE"
     | "GOLD_SHIFT_ALLOCATION"
-    | "IRREGULAR_PAYOUT_BATCH"
-    | "DISCIPLINARY_ACTION";
+    | "DISCIPLINARY_ACTION"
+    | "SETTLEMENT_INTAKE"
+    | "SETTLEMENT_RUN"
+    | "SETTLEMENT_BATCH"
+    | "LEAVE_REQUEST"
+    | "IRREGULAR_PAYOUT_BATCH";
   entityId: string;
   action: "CREATE" | "SUBMIT" | "APPROVE" | "REJECT" | "ADJUST";
   fromStatus?: string | null;
