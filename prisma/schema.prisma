@@ -2575,6 +2575,13 @@ enum PayoutMethod {
   MOBILE
 }
 
+/// What an `ApprovalAction` row was about.
+///
+/// `ApprovalAction` is an append-only audit trail, and that governs how this enum
+/// may change: **values can be added but never removed.** A value that any row
+/// still holds cannot be dropped by Postgres at all, and the two ways round that
+/// are both unacceptable — rewriting the rows makes the trail say something that
+/// did not happen, and deleting them destroys the record of who approved what.
 enum ApprovalTargetType {
   PAYROLL_RUN
   DISBURSEMENT_BATCH
@@ -2587,6 +2594,18 @@ enum ApprovalTargetType {
   SETTLEMENT_RUN
   SETTLEMENT_BATCH
   LEAVE_REQUEST
+
+  /// Retired, and deliberately still here. `IrregularPayoutBatch` was replaced by
+  /// the settlement tables in P-1, and nothing has written this value since — but
+  /// approvals recorded before that are real, and any database holding one refuses
+  /// the change outright:
+  ///
+  ///   invalid input value for enum "ApprovalTargetType_new": "IRREGULAR_PAYOUT_BATCH"
+  ///
+  /// Removing it from the schema turned a merged branch into a `db push` nobody
+  /// could apply. It is inert: `lib/workflow/approvals.test.ts` asserts nothing
+  /// writes it.
+  IRREGULAR_PAYOUT_BATCH
 }
 
 enum ApprovalActionType {

@@ -132,6 +132,19 @@ them.
 Ignore the `--force-reset` that Prisma suggests in that message. It drops the
 database.
 
+A third failure can appear on a database old enough to hold approvals from before
+the settlement tables landed:
+
+```text
+ERROR: invalid input value for enum "ApprovalTargetType_new": "IRREGULAR_PAYOUT_BATCH"
+```
+
+That one needs no script and no data change — it was a schema bug, fixed by keeping
+the retired value declared. If you see it, you are on a commit older than that fix;
+pull and push again. `ApprovalTargetType` may gain values and must never lose one,
+because `ApprovalAction` is an append-only audit trail and Postgres will not drop a
+value that existing rows still hold. `lib/workflow/approvals.test.ts` enforces it.
+
 ## 6. Seed a tenant and run
 
 ```bash
