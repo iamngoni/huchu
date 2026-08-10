@@ -28,6 +28,14 @@
  * text yet or no longer does, depending on which side of the push you are on.
  */
 
+// First, and before the Prisma client is constructed: `lib/prisma.ts` reads
+// `process.env.DATABASE_URL` at import time, and nothing else in a `tsx` script
+// loads `.env`. Without this the script warns "DATABASE_URL not set. Prisma will
+// use PG* env vars." and then talks to whatever those happen to name — or
+// nothing. `prisma db push` is unaffected because `prisma.config.ts` loads dotenv
+// itself, which is exactly why this went unnoticed.
+import "dotenv/config"
+
 import { prisma } from "@/lib/prisma"
 
 /** Exactly the values `enum AttendanceStatus` names, in schema order. */

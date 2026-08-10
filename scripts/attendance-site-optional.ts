@@ -36,6 +36,14 @@
  * partial failure resumes rather than repeating.
  */
 
+// First, and before the Prisma client is constructed: `lib/prisma.ts` reads
+// `process.env.DATABASE_URL` at import time, and nothing else in a `tsx` script
+// loads `.env`. Without this the script warns "DATABASE_URL not set. Prisma will
+// use PG* env vars." and then talks to whatever those happen to name — or
+// nothing. `prisma db push` is unaffected because `prisma.config.ts` loads dotenv
+// itself, which is exactly why this went unnoticed.
+import "dotenv/config"
+
 import { prisma } from "@/lib/prisma"
 
 type Column = { column_name: string; is_nullable: string; data_type: string }
@@ -124,11 +132,22 @@ async function main() {
     process.exit(1)
   }
 
-  if (byName.get("companyId")?.is_nullable === "YES") {
+  // Re-read, do not trust `byName`. That map was taken before the column was
+  // added, so on a first clean run `byName.get("companyId")` is `undefined`, this
+  // branch was skipped, and the script ended with the column still nullable —
+  // caught only by the final check, and only because somebody ran it against a
+  // database that had never been migrated. Testing it as a *second* pass, where
+  // the column already existed, hid the bug completely.
+  const afterBackfill = new Map(
+    (await attendanceColumns()).map((column) => [column.column_name, column]),
+  )
+  if (afterBackfill.get("companyId")?.is_nullable === "YES") {
     await prisma.$executeRawUnsafe(
       `ALTER TABLE "Attendance" ALTER COLUMN "companyId" SET NOT NULL`,
     )
     console.log("companyId is now NOT NULL.")
+  } else {
+    console.log("companyId is already NOT NULL.")
   }
 
   // --- Step 2: the unique key, narrowed. Check before changing anything.
@@ -188,7 +207,8 @@ async function main() {
     }
 
     // --- Step 3: siteId optional.
-    if (byName.get("siteId")?.is_nullable === "NO") {
+    // Same freshly-read state, for the same reason.
+    if (afterBackfill.get("siteId")?.is_nullable === "NO") {
       await tx.$executeRawUnsafe(`ALTER TABLE "Attendance" ALTER COLUMN "siteId" DROP NOT NULL`)
       console.log("siteId is now nullable.")
     } else {
