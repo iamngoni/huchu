@@ -26,6 +26,7 @@ It was assembled from the live codebase and the existing product/planning docs s
 - Read `commercial-and-marketing.md` if you need positioning, packaging, pricing, safe claims, or GTM material.
 - Read `roadmap-and-direction.md` if you need the planned expansion path and the difference between live product and documented intent.
 - Read `route-and-surface-inventory.md` if you need the current route/API footprint and inventory counts.
+- Read `building-a-vertical.md` if you are **building** a vertical module. It is the method the schools pack was built with — layers in build order, the productisation files, the four structural tests, and a mapped gap list for retail. Written to be followed, not surveyed.
 
 ## Source Material Used
 
