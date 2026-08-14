@@ -87,7 +87,7 @@ const DropdownMenuSubContent = React.forwardRef<
     ref={ref}
     data-slot="dropdown-menu-sub-content"
     className={cn(
-      "menu z-50 data-[state=open]:animate-in data-[state=closed]:animate-out",
+      "menu z-[var(--z-overlay)] data-[state=open]:animate-in data-[state=closed]:animate-out",
       className,
     )}
     {...props}
@@ -105,7 +105,7 @@ const DropdownMenuContent = React.forwardRef<
       data-slot="dropdown-menu-content"
       sideOffset={sideOffset}
       className={cn(
-        "menu z-50 data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "menu z-[var(--z-overlay)] data-[state=open]:animate-in data-[state=closed]:animate-out",
         className,
       )}
       {...props}

@@ -99,12 +99,12 @@ const DialogContent = React.forwardRef<
   <DialogPortal>
     {/* `fixed inset-0` restates what `.modal-scrim` already does, so the
         backdrop does not depend on which of the package's two `.modal-scrim`
-        rules lands last; `z-50` pins it to the app's overlay layer rather than
-        the DS's own `z-index: 1100`. */}
-    <DialogPrimitive.Backdrop className="modal-scrim fixed inset-0 z-50 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200" />
+        rules lands last. The z-index comes from the app's one overlay scale
+        (see `globals.css`) rather than the DS's own 1100. */}
+    <DialogPrimitive.Backdrop className="modal-scrim fixed inset-0 z-[var(--z-overlay)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200" />
     <DialogPrimitive.Viewport
       className={cn(
-        "fixed inset-0 z-50 flex justify-center overflow-y-auto overscroll-contain",
+        "fixed inset-0 z-[var(--z-overlay)] flex justify-center overflow-y-auto overscroll-contain",
         DIALOG_TABLET_VIEWPORT_CLASSNAMES[tabletBehavior],
         DIALOG_INSET_VIEWPORT_CLASSNAMES[inset ? "true" : "false"]
       )}

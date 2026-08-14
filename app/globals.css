@@ -205,7 +205,109 @@
   }
 }
 
+/* ── Overlay stacking order ─────────────────────────────────────────────────
+   One scale, declared once, read by every overlay in the app.
+
+   Before this, every overlay primitive in `components/ui` carried a bare
+   `z-50` — sheet, dialog, alert dialog, popover, menu, select — while the
+   design system painted its own drawer at 1100 and its toast viewport at 1200.
+   With six surfaces tied at 50 the winner was whichever portal happened to
+   mount last, and against the DS's 1100 they simply lost: opening the sidebar
+   on a phone and then tapping the workspace switcher put the menu *behind* the
+   sidebar, which is what a screenshot of it showed.
+
+   `docs/design-system/05-rules.md` publishes a rung per overlay kind — drawer
+   80, popover 90, modal 100. Every fixed order of those three is wrong in one
+   direction or the other, because this product nests them both ways: a filter
+   sheet made of popovers and a form dialog whose client picker is a sheet say
+   popover-and-drawer-over-modal, while a "discard these changes?" dialog
+   raised from inside a form sheet says the opposite. Measured, not reasoned
+   about: with drawers pinned below modals the client picker opened *behind*
+   the dialog that asked for it.
+
+   So every dismissable overlay shares one rung and **open order decides**,
+   which is the only rule that is right in both directions — a portal mounts
+   when it opens, so the newest layer is last in the DOM and paints on top.
+   Within a single overlay the scrim is written before its panel, so the panel
+   still covers its own scrim.
+
+   What keeps its own rung is the chrome that is never nested: the sidebar and
+   the app bar below, toasts above (they have to be readable over a modal). */
+:root {
+  --z-sidebar: 50;
+  --z-nav: 60;
+  --z-overlay: 100;
+  --z-toast: 200;
+}
+
 @layer app {
+  /* The design system's own drawer and toast, brought onto the scale. Its
+     `Sidebar` shell renders a `p-drawer` on mobile, so this is the rule that
+     decides whether a menu opened inside the sidebar can be seen at all.
+
+     `!important` because the package writes `zIndex: 1100` as an *inline
+     style* on the overlay (`src/primitives/Drawer.tsx`), and an inline style
+     outranks every layer. Verified in the browser: with a plain rule the
+     workspace menu still painted behind the sidebar. */
+  .p-drawer-overlay {
+    z-index: var(--z-overlay) !important;
+  }
+
+  .p-drawer {
+    z-index: var(--z-overlay);
+  }
+
+  .toast-viewport {
+    z-index: var(--z-toast);
+  }
+
+  /* ── Bottom sheets ───────────────────────────────────────────────────────
+     A bottom sheet is as tall as what is in it.
+
+     `.drawer-bottom` takes a fixed `height: var(--drawer-size)` from the
+     design system, so every bottom sheet in the product opened at exactly
+     420px whatever it held — half a phone screen, with the controls in the top
+     third and dead space under them. That is the "modals launch in half
+     screen" this fixes. The size now bounds the sheet rather than fixing it:
+     short content hugs, long content scrolls at the cap.
+
+     The rounded top corners and the safe-area padding come with it. A sheet
+     that meets the bottom edge of the screen with square corners reads as a
+     panel that failed to finish, and on a phone with a home indicator its last
+     row sits under the bar. */
+  .drawer.drawer-bottom {
+    height: auto;
+    max-height: min(var(--drawer-size, 420px), calc(100dvh - 3rem));
+    border-top-left-radius: var(--radius-2xl);
+    border-top-right-radius: var(--radius-2xl);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .drawer.drawer-top {
+    height: auto;
+    max-height: min(var(--drawer-size, 420px), calc(100dvh - 3rem));
+    border-bottom-left-radius: var(--radius-2xl);
+    border-bottom-right-radius: var(--radius-2xl);
+  }
+
+  /* The grabber. Not draggable — it is the standing convention for "this came
+     up from the bottom edge and goes back down", and a sheet without one reads
+     as a page that half-loaded. Drawn on the sheet rather than added to every
+     call site's markup. */
+  .drawer.drawer-bottom::before {
+    content: "";
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: block;
+    width: 2.25rem;
+    height: 0.25rem;
+    margin: 0.5rem auto 0.25rem;
+    flex: none;
+    border-radius: var(--radius-full);
+    background: var(--border-strong);
+  }
+
   body {
     position: relative;
     background-image: var(--app-canvas-wash);

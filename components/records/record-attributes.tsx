@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ResponsivePopover } from "@/components/ui/responsive-popover";
 import { Check, ChevronDown, ChevronRight, type LucideIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -74,12 +74,23 @@ function ChoiceValue({ attribute }: { attribute: RecordAttribute }) {
   const current = options.find((option) => option.value === (attribute.value ?? ""));
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    // A popover beside the value on a desktop; on a phone the same options
+    // come up from the bottom edge under the property's own name. The trigger
+    // sits in the right-hand column of a two-column list, so a panel anchored
+    // to it at 390px had nowhere to go but over the properties above it.
+    <ResponsivePopover
+      open={open}
+      onOpenChange={setOpen}
+      title={attribute.label}
+      align="start"
+      className="w-[min(15rem,calc(100vw-2rem))] p-1"
+      trigger={
         <button
           type="button"
           className={cn(
-            "-mx-1.5 flex w-full min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-left text-sm hover:bg-[var(--surface-subtle)]",
+            // `min-h-9` on a phone: this is the control you press to change
+            // the property, and a 20px line of text is not a touch target.
+            "-mx-1.5 flex min-h-9 w-full min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-left text-sm hover:bg-[var(--surface-subtle)] sm:min-h-0",
             !current && "text-[var(--text-muted)]",
           )}
         >
@@ -89,16 +100,9 @@ function ChoiceValue({ attribute }: { attribute: RecordAttribute }) {
             </span>
           )}
         </button>
-      </PopoverTrigger>
-      {/* The trigger sits in the right-hand column of the property list, so a
-          fixed 240px panel aligned to its start runs off a 390px screen.
-          Bounded by the viewport, and told to keep clear of the edges. */}
-      <PopoverContent
-        align="start"
-        collisionPadding={12}
-        className="w-[min(15rem,calc(100vw-2rem))] p-1"
-      >
-        <div className="max-h-72 overflow-y-auto">
+      }
+    >
+        <div className="overflow-y-auto sm:max-h-72">
           {options.map((option) => (
             <button
               key={option.value}
@@ -108,7 +112,7 @@ function ChoiceValue({ attribute }: { attribute: RecordAttribute }) {
                 setOpen(false);
               }}
               className={cn(
-                "flex min-h-9 w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 text-left text-sm hover:bg-[var(--surface-hover)]",
+                "flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 text-left text-sm hover:bg-[var(--surface-hover)] sm:min-h-9",
                 option.value === attribute.value && "font-medium",
               )}
             >
@@ -126,14 +130,13 @@ function ChoiceValue({ attribute }: { attribute: RecordAttribute }) {
                 attribute.onCommit?.("");
                 setOpen(false);
               }}
-              className="flex min-h-9 w-full items-center rounded-[var(--radius-sm)] px-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
+              className="flex min-h-11 w-full items-center rounded-[var(--radius-sm)] px-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)] sm:min-h-9"
             >
               {attribute.clearLabel}
             </button>
           ) : null}
         </div>
-      </PopoverContent>
-    </Popover>
+    </ResponsivePopover>
   );
 }
 
@@ -161,7 +164,7 @@ function EditableValue({ attribute }: { attribute: RecordAttribute }) {
         type="button"
         onClick={() => setDraft(attribute.value ?? "")}
         className={cn(
-          "-mx-1.5 w-full rounded-[var(--radius-sm)] px-1.5 py-0.5 text-left text-sm hover:bg-[var(--surface-subtle)]",
+          "-mx-1.5 flex min-h-9 w-full items-center rounded-[var(--radius-sm)] px-1.5 py-0.5 text-left text-sm hover:bg-[var(--surface-subtle)] sm:min-h-0",
           attribute.mono && "font-mono",
           !attribute.value && "text-[var(--text-muted)]",
         )}

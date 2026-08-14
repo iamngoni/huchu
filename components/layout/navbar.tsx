@@ -27,6 +27,7 @@ import { CrmMembers } from "@/components/crm/crm-members";
 import { NotificationCenter } from "@/components/notifications/notification-center";
 import { ArrowLeft, MoreHorizontal, type LucideIcon } from "@/lib/icons";
 import { navSections } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
 import { canAccessCapabilityWithToken } from "@/lib/platform/gating/token-check";
 
 /**
@@ -74,17 +75,22 @@ export function Navbar() {
   return (
     // Sticky, so it is genuinely floating over the scrolling content: a crisp
     // hairline plus a hard 1px shadow (no blur), not a soft glow.
-    <header className="sticky top-0 z-20 border-b border-[var(--chrome-edge)] bg-surface-base pt-[env(safe-area-inset-top)] shadow-[var(--chrome-shadow)]">
-      <div className="px-2 h-14 lg:pr-4">
+    <header className="sticky top-0 z-[var(--z-nav)] border-b border-[var(--chrome-edge)] bg-surface-base pt-[env(safe-area-inset-top)] shadow-[var(--chrome-shadow)]">
+      {/* The bar's own gutter is the content's, less the padding an icon
+          button carries inside itself — so the first glyph sits on the same
+          vertical line as the text below it rather than eight pixels inside
+          it. That misalignment is most of what read as "inconsistent
+          spacing": three different left edges down the top of every page. */}
+      <div className="h-14 px-[calc(var(--content-gutter-x)-0.5rem)] lg:pr-4">
         <>
-          <div className="flex h-14 items-center gap-1.5 md:hidden">
+          <div className="flex h-14 items-center gap-1 md:hidden">
             <SidebarTrigger />
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               {back ? (
                 <Link
                   href={back.href}
                   aria-label={`Back to ${back.label}`}
-                  className="-ml-1 flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+                  className="-ml-1 flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
                 >
                   <ArrowLeft className="size-4" />
                 </Link>
@@ -103,9 +109,16 @@ export function Navbar() {
                 : null}
               <h1 className="truncate text-sm font-semibold text-foreground">{title}</h1>
             </div>
-            <GlobalCommandBar />
-            {showNotificationCenter ? <NotificationCenter /> : null}
-            <MobileNavbarActions actions={actions} />
+
+            {/* Two clusters, not five loose controls. The quiet icons sit
+                tight together so they read as one group of tools, and the
+                page's own action is set apart from them by a wider gap —
+                which is the only spacing in the row that means anything. */}
+            <div className="flex shrink-0 items-center gap-0.5">
+              <GlobalCommandBar />
+              {showNotificationCenter ? <NotificationCenter /> : null}
+            </div>
+            <MobileNavbarActions actions={actions} className="ml-1.5" />
           </div>
 
           <div className="hidden h-14 items-center gap-3 md:flex justify-between">
@@ -146,7 +159,13 @@ export function Navbar() {
   );
 }
 
-function MobileNavbarActions({ actions }: { actions: ReactNode }) {
+function MobileNavbarActions({
+  actions,
+  className,
+}: {
+  actions: ReactNode;
+  className?: string;
+}) {
   const flattenedActions = flattenNavbarActions(actions);
 
   if (flattenedActions.length === 0) {
@@ -154,13 +173,13 @@ function MobileNavbarActions({ actions }: { actions: ReactNode }) {
   }
 
   if (flattenedActions.length === 1) {
-    return <div className="flex items-center">{flattenedActions[0]}</div>;
+    return <div className={cn("flex items-center", className)}>{flattenedActions[0]}</div>;
   }
 
   const [primaryAction, ...overflowActions] = flattenedActions;
 
   return (
-    <ButtonGroup className="shrink-0">
+    <ButtonGroup className={cn("shrink-0", className)}>
       {primaryAction}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
