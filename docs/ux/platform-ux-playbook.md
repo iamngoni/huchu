@@ -174,6 +174,30 @@ apply them to any module.
   a trailing caret at the right. Use `.stacked-controls`.
 - A destructive action at the right edge of a row is under the thumb of anyone
   scrolling. It confirms first.
+- The magnifier is an outline. Search is the quietest control in a toolbar.
+
+### Overlays
+- **One rung, `--z-overlay`, for every dismissable surface** — sheet, dialog,
+  popover, menu, select. Open order decides what is on top, which is the only
+  rule that survives nesting in both directions. Chrome sits below it
+  (`--z-sidebar`, `--z-nav`), toasts above (`--z-toast`). Never write a bare
+  `z-50` on an overlay.
+- **A picker is a sheet on a phone, a popover on a desktop.** Use
+  `ResponsivePopover`. A 358px panel anchored to a control near the bottom of a
+  form has nowhere to go but over the form.
+- **A bottom sheet is as tall as its content**, capped — never a fixed height.
+  Rounded top, grabber, safe-area padding.
+- **Dismissing a layer dismisses that layer only.** Escape in a picker must not
+  close the form behind it. Mixing overlay libraries makes this a live risk:
+  cover it with a test, not with hope.
+
+### Navigation
+- A section rail is a **scrolling strip** on a phone, never a stacked column.
+  Thirteen items in a column is five hundred pixels of navigation above the
+  page it navigates to.
+- **No chrome that a phone will never use, not even for one frame.** Anything
+  that picks a layout with `matchMedia` has no answer before hydration; give
+  the phone the right answer in CSS so the first paint is not the desktop.
 
 ## Compliance Checklist
 A screen is compliant only when:
