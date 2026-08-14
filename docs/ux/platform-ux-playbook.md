@@ -130,6 +130,51 @@ Use these labels exactly across tables, filters, legends, exports, and chips:
 - Must include selected count, allowed bulk actions, and a clear selection action.
 - Bulk actions must honor the same valid-action rule as row actions.
 
+## Phone Rules
+Written from a screenshot audit of every CRM screen at 390px. They generalise;
+apply them to any module.
+
+### The app bar
+- The page's name is the one thing the bar says that nothing else on screen
+  does. Nothing in the bar may crowd it out — search is an icon below `md`, and
+  the route icon gives way when a back arrow is present.
+- A record's name is too long for the bar at phone width. Repeat it on the page,
+  above the identity strip, whenever the bar is in its phone row.
+
+### Vertical budget
+- The first screen belongs to the records, not to the chrome above them.
+- Stat tiles are **two-up** on a phone (three only for a set of bare counts).
+  A column of full-width tiles spends a screen per number.
+- A dashboard widget narrower than half the grid is two-up on a phone.
+- Never state the same fact twice in the same band — a progress fraction and a
+  sentence saying the same thing, a section title in the shell and again in the
+  panel inside it.
+
+### Rails and strips
+- Anything that scrolls sideways — stage chips, section tabs — runs to the edges
+  of the screen and snaps. A strip cut short of the gutter reads as clipping;
+  cut by the screen edge it reads as "there is more".
+- A segment label never wraps. A strip that cannot fit scrolls rather than
+  squashing its labels.
+
+### Rows
+- Two lines per row, and one fact on the right — the value, the balance, the
+  figure the row is about. **Facts that need their label to make sense do not
+  appear on a phone**: an unlabelled "0" after somebody's name says nothing.
+- Sort before grouping. A letter heading over rows in `updatedAt` order is
+  worse than no heading.
+- Money carries its currency everywhere it appears, including inside an
+  editable property.
+
+### Controls
+- A search box's placeholder is written for the width it renders at. Clipped
+  hint text reads as a broken control; keep the long form as the accessible
+  name.
+- A column of controls in a sheet is a column of rows: labels at the left edge,
+  a trailing caret at the right. Use `.stacked-controls`.
+- A destructive action at the right edge of a row is under the thumb of anyone
+  scrolling. It confirms first.
+
 ## Compliance Checklist
 A screen is compliant only when:
 1. Warm paper tokens are applied with semantic variables.
@@ -140,3 +185,4 @@ A screen is compliant only when:
 6. Canonical statuses are used exactly, with `Ignored` chart-only.
 7. Charts use dashed grid, muted labels, status mapping, and hatch for ignored.
 8. List to detail navigation preserves context and bulk bar behavior follows this standard.
+9. It has been looked at on a 390px screen against the phone rules above.

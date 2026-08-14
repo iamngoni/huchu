@@ -648,6 +648,10 @@
   .segmented {
     grid-auto-columns: minmax(max-content, 1fr);
     overflow-x: auto;
+    /* Stated, not left to the spec's default: a single `overflow-x` makes the
+       other axis compute to `auto`, which is a vertical scrollbar waiting to
+       appear on a 34px-tall control. */
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
