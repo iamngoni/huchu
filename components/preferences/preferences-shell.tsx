@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { PageHeader } from "@corelithzw/react";
 
+import { NavRail } from "@/components/ui/nav-rail";
 import { NavGroup, NavItem } from "@/components/ui/settings-rail";
 
 import {
@@ -88,7 +89,13 @@ export function PreferencesShell({
 
   return (
     <div className="settings-layout container mx-auto w-full">
-      <aside className="settings-rail" aria-label="Preferences navigation">
+      {/* Same trade as the management shell: a rail beside the content on a
+          desktop, a scrolling strip above it on a phone. */}
+      <NavRail
+        className="settings-rail"
+        label="Preferences navigation"
+        orientation="responsive"
+      >
         <NavGroup label="Account">
           {renderNavItems(accountItems, pathname)}
         </NavGroup>
@@ -97,7 +104,7 @@ export function PreferencesShell({
             {renderNavItems(organizationItems, pathname)}
           </NavGroup>
         ) : null}
-      </aside>
+      </NavRail>
 
       <main className="settings-content">
         <PageHeader title={title} primaryAction={actions} />

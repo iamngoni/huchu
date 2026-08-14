@@ -261,6 +261,23 @@
     z-index: var(--z-toast);
   }
 
+  /* No desktop rail on a phone, not even for one frame.
+
+     The design system's `Sidebar` decides between a pinned `<aside>` and a
+     drawer with `useMediaQuery`, which cannot know the answer during server
+     rendering or before hydration — so the first paint of every cold load on a
+     phone was the desktop rail with the page squeezed into what was left
+     beside it. Caught on `/crm/clients`, which redirects and so paints that
+     frame for long enough to photograph.
+
+     The drawer keeps its copy: the same `<aside>` renders inside `.p-drawer`
+     when the sidebar is opened, and that one is the phone's sidebar. */
+  @media (max-width: 767.98px) {
+    .sidebar:not(.p-drawer .sidebar) {
+      display: none;
+    }
+  }
+
   /* ── Bottom sheets ───────────────────────────────────────────────────────
      A bottom sheet is as tall as what is in it.
 

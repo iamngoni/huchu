@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { PageHeader } from "@corelithzw/react";
 
+import { NavRail } from "@/components/ui/nav-rail";
 import { NavGroup, NavItem } from "@/components/ui/settings-rail";
 import {
   getAreaLabel,
@@ -67,7 +68,17 @@ export function ManagementShell({
 
   return (
     <div className="settings-layout container mx-auto w-full">
-      <aside className="settings-rail" aria-label="Management navigation">
+      {/* A rail on a desktop, a scrolling strip on a phone. Stacked, these
+          thirteen sections were five hundred pixels of navigation above the
+          page they navigate to — you scrolled past the whole of Settings to
+          reach Master Data's own content. `orientation="responsive"` is what
+          CRM settings already uses; this is the same rail, drawn the same
+          way. */}
+      <NavRail
+        className="settings-rail"
+        label="Management navigation"
+        orientation="responsive"
+      >
         <NavGroup label="Settings">
           {visibleModules.map((module) => {
             const ModuleIcon = module.icon;
@@ -99,7 +110,7 @@ export function ManagementShell({
             );
           })}
         </NavGroup>
-      </aside>
+      </NavRail>
 
       <section className="settings-content">
         {hideHeader ? null : (

@@ -50,6 +50,23 @@ const SCREENS: Screen[] = [
   { name: "crm-import", path: "/crm/import" },
   { name: "crm-settings", path: "/crm/settings" },
   { name: "crm-reps", path: "/crm/reps" },
+  { name: "crm-clients", path: "/crm/clients" },
+  { name: "crm-receipts", path: "/crm/receipts" },
+  { name: "crm-workflow-runs", path: "/crm/workflows/runs" },
+  { name: "crm-workflow-new", path: "/crm/workflows/new" },
+
+  // Management — the same vertical's back office, held to the same rules.
+  { name: "mgmt-master-data", path: "/management/master-data" },
+  { name: "mgmt-departments", path: "/management/master-data/hr/departments" },
+  { name: "mgmt-job-grades", path: "/management/master-data/hr/job-grades" },
+  { name: "mgmt-sites", path: "/management/master-data/operations/sites" },
+  { name: "mgmt-sections", path: "/management/master-data/operations/sections" },
+  { name: "mgmt-downtime-codes", path: "/management/master-data/operations/downtime-codes" },
+  { name: "mgmt-users", path: "/management/users" },
+  { name: "mgmt-users-create", path: "/management/users/create" },
+  { name: "mgmt-users-status", path: "/management/users/status" },
+  { name: "mgmt-users-role-change", path: "/management/users/role-change" },
+  { name: "mgmt-users-password-reset", path: "/management/users/password-reset" },
   // The create flow, which on a phone is a sheet over the list it was opened
   // from — worth photographing because it is where most typing happens.
   {
@@ -170,6 +187,13 @@ for (const [label, width, height] of VIEWPORTS) {
       await page.waitForTimeout(1000);
 
       for (const { name, path, prepare } of SELECTED) {
+        // Close whatever the last screen left open. A screen whose `prepare`
+        // opens a sheet or the sidebar used to leave it open across the next
+        // `goto`, which is how a picture of the clients list came back showing
+        // the sidebar over it.
+        await page.keyboard.press("Escape").catch(() => {});
+        await page.waitForTimeout(300);
+
         // One retry: an aborted navigation is a race, not a broken route.
         try {
           await page.goto(path);

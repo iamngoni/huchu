@@ -127,15 +127,21 @@ export function CrmFormsContent() {
             assigned and scored on the way in.
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          startIcon={<Plus className="size-4" />}
-          disabled={create.isPending}
-          onClick={() => create.mutate()}
-        >
-          New form
-        </Button>
+        {/* Hidden while there is nothing here: the empty state below carries
+            the same action in the same colour, and two brand-blue buttons
+            offering one thing is the "one primary action per surface" rule
+            broken on the screen where it matters most — the first one. */}
+        {rows.length > 0 ? (
+          <Button
+            variant="primary"
+            size="sm"
+            startIcon={<Plus className="size-4" />}
+            disabled={create.isPending}
+            onClick={() => create.mutate()}
+          >
+            New form
+          </Button>
+        ) : null}
       </div>
 
       {forms.isLoading ? (
