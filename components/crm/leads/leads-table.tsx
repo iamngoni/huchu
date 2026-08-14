@@ -318,7 +318,11 @@ export function LeadsTable({
               />
             ),
             facts: [
-              { value: formatLeadValue(row.estimatedValue, row.currency), mono: true },
+              {
+                value: formatLeadValue(row.estimatedValue, row.currency),
+                mono: true,
+                primary: true,
+              },
             ],
           }))}
         />

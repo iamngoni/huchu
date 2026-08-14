@@ -15,6 +15,7 @@ import type { CollabEntity } from "@/lib/crm/collaboration";
 import type { TaskQueue } from "@/lib/crm/tasks";
 import type { ImportEntity, ImportPlan } from "@/lib/crm/import";
 import type { FieldChoice, MergeFieldPlan } from "@/lib/crm/merge";
+import type { RecordSort } from "@/lib/crm/records";
 import type { LeadSort, LeadViewFilters } from "@/lib/crm/views";
 import type { SiteVisitItemInput, SiteVisitReportInput } from "@/lib/crm/site-visits";
 
@@ -648,7 +649,7 @@ export function recordFiltersToParams(
 }
 
 export function fetchCrmPeople(
-  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+  params: { filters?: Record<string, unknown>; sort?: RecordSort; page?: number; limit?: number } = {},
 ) {
   return fetchJson<ListResponse<CrmPersonRecord>>(
     `/api/v2/crm/people${qs({
@@ -662,7 +663,7 @@ export function fetchCrmPeople(
 }
 
 export function fetchCrmCompanies(
-  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+  params: { filters?: Record<string, unknown>; sort?: RecordSort; page?: number; limit?: number } = {},
 ) {
   return fetchJson<ListResponse<CrmCompanyRecord>>(
     `/api/v2/crm/companies${qs({
@@ -676,7 +677,7 @@ export function fetchCrmCompanies(
 }
 
 export function fetchCrmDeals(
-  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+  params: { filters?: Record<string, unknown>; sort?: RecordSort; page?: number; limit?: number } = {},
 ) {
   return fetchJson<ListResponse<CrmDealRecord>>(
     `/api/v2/crm/deals${qs({
@@ -690,7 +691,7 @@ export function fetchCrmDeals(
 }
 
 export function fetchCrmSites(
-  params: { filters?: Record<string, unknown>; sort?: LeadSort; page?: number; limit?: number } = {},
+  params: { filters?: Record<string, unknown>; sort?: RecordSort; page?: number; limit?: number } = {},
 ) {
   return fetchJson<ListResponse<CrmSiteRecord>>(
     `/api/v2/crm/sites${qs({

@@ -246,6 +246,54 @@
     }
   }
 
+  /* A stat tile is half a phone wide, and its number has to fit in it.
+
+     `.stat-tile .val` and `.b-sh-lead .v` ship at 32px and 40px with no media
+     query, which is right for a tile on a desk and wrong for one at 173px:
+     "USD 108,500" overflowed its own box, which is why every stat grid in this
+     repo used to stack one-per-row on a phone and spend three screens saying
+     six numbers. The tiles are two-up now, so the numerals come down to the
+     size that fits. Padding follows — 18px of it either side of a 137px
+     column is a quarter of the tile spent on air.
+
+     Nothing else about the tile changes: same label, same delta, same tone. */
+  @media (max-width: 639.98px) {
+    .stat-tile {
+      padding: 12px 14px;
+    }
+
+    .stat-tile .val {
+      font-size: 24px;
+    }
+
+    /* `StatHero` is drawn with inline styles rather than classes, so its 24px
+       padding and its change/subtitle row can only be reached from here — and
+       only with `!important`, which is what an inline style costs. The row
+       holds a delta and a sentence side by side with no wrap, which at 390px
+       becomes two ~170px columns of two-word lines. Wrapping puts the sentence
+       back on its own line. */
+    .b-stat-hero {
+      padding: 16px !important;
+    }
+
+    .b-stat-hero > div:last-child {
+      flex-wrap: wrap;
+    }
+
+    /* The same trade for the KPI cell, which is what a metric widget on the
+       CRM overview is made of. Two-up at 390px gives it ~165px; a display-sm
+       numeral needs more than that for anything with a thousands separator
+       in it. */
+    .kpi-cell {
+      padding: var(--space-3);
+      gap: var(--space-1);
+    }
+
+    .kpi-cell-val {
+      font: var(--type-section-title);
+    }
+  }
+
   /* --- Control geometry -------------------------------------------------
      Everything that reads as a button is built like one: same height, same
      gap, same radius. Three places where that had drifted.
@@ -548,6 +596,39 @@
   .nav-rail[data-orientation="responsive"] .rail-item-label { overflow: visible; }
   /* A group heading only reads as one once the rail is a column again. */
   .nav-rail[data-orientation="responsive"] > .group-label { display: none; }
+
+  /* On a phone the strip runs to the edges of the screen. Cut short of the
+     gutter, the last tab looked clipped by a bug; cut by the screen itself, a
+     half-visible tab is the platform's own way of saying "this scrolls". Snap
+     so a swipe lands on a tab rather than halfway through one. */
+  @media (max-width: 639.98px) {
+    .nav-rail[data-orientation="responsive"] {
+      margin-inline: calc(var(--content-gutter-x) * -1);
+      padding-inline: var(--content-gutter-x);
+      scroll-padding-inline: var(--content-gutter-x);
+      scroll-snap-type: x proximity;
+    }
+    .nav-rail[data-orientation="responsive"] .rail-item { scroll-snap-align: start; }
+  }
+
+  /* ── Segmented control ───────────────────────────────────────────────────
+     `.segmented` is an equal-columns grid at `width: 100%`, which is right
+     until the labels stop fitting: six segments on a 390px screen gave each
+     62px, and "On site" wrapped to two lines *inside its own pill* while the
+     strip still ran off the right of the page. Both halves of that are fixed
+     here — a label never wraps, and a strip that cannot fit scrolls instead of
+     squashing. `minmax(max-content, 1fr)` keeps the equal widths whenever
+     there is room for them, so nothing changes on a desktop. */
+  .segmented {
+    grid-auto-columns: minmax(max-content, 1fr);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .segmented::-webkit-scrollbar { display: none; }
+
+  .segmented-item { white-space: nowrap; }
 
   @media (min-width: 1024px) {
     .nav-rail[data-orientation="responsive"] {

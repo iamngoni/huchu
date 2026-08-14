@@ -325,7 +325,7 @@ export function DealsContent({
                   label={row.stage.name}
                 />
               ),
-              facts: [{ value: formatMoney(row.value, row.currency), mono: true }],
+              facts: [{ value: formatMoney(row.value, row.currency), mono: true, primary: true }],
             }))}
           />
         )}

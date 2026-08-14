@@ -12,7 +12,9 @@ import { Funnel, Plus } from "@/lib/icons";
 import { PageChrome } from "@/components/layout/page-chrome";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PipelineSwitcher } from "@/components/crm/records/pipeline-switcher";
+import { ListSearch } from "@/components/crm/records/list-search";
 import { ViewToolbar } from "@/components/crm/records/view-toolbar";
+import { useDebounced } from "@/hooks/use-debounced";
 import {
   bulkUpdateCrmLeads,
   fetchCrmLeads,
@@ -71,6 +73,10 @@ export function LeadsWorkspace({
   const tableColumns = useVisibleColumns("crm.leads.table", LEAD_TABLE_COLUMNS);
   const boardFields = useVisibleColumns("crm.leads.board", LEAD_CARD_FIELDS);
   const [filters, setFilters] = useState<LeadViewFilters>(initialFilters);
+  // Held apart from `filters` so typing does not re-key the board query on
+  // every keystroke, and debounced at the 300ms every other list here uses.
+  const [search, setSearch] = useState(initialFilters.q ?? "");
+  const debouncedSearch = useDebounced(search, 300);
   const [sort, setSort] = useState<LeadSort>(DEFAULT_LEAD_SORT);
   const [page, setPage] = useState(1);
   const [activeViewKey, setActiveViewKey] = useState<string>(
@@ -97,9 +103,20 @@ export function LeadsWorkspace({
     queryFn: () => fetchCrmSavedViews(),
   });
 
+  // The text box is a filter like any other by the time a query sees it — it
+  // is only held apart in state so that typing does not re-key the board on
+  // every keystroke. `q` is dropped rather than sent empty so a saved view
+  // that carries its own text is not silently overwritten by a blank box.
+  const activeFilters = useMemo<LeadViewFilters>(() => {
+    const trimmed = debouncedSearch.trim();
+    const rest = { ...filters };
+    delete rest.q;
+    return trimmed ? { ...rest, q: trimmed } : rest;
+  }, [filters, debouncedSearch]);
+
   const leadsQuery = useQuery({
-    queryKey: ["crm", "leads", filters, sort, page],
-    queryFn: () => fetchCrmLeads({ filters, sort, page, limit: PAGE_SIZE }),
+    queryKey: ["crm", "leads", activeFilters, sort, page],
+    queryFn: () => fetchCrmLeads({ filters: activeFilters, sort, page, limit: PAGE_SIZE }),
     enabled: viewType === "TABLE",
     placeholderData: (previous) => previous,
   });
@@ -130,6 +147,7 @@ export function LeadsWorkspace({
       setActiveViewKey(linked.key);
       setViewType(linked.layout);
       setFilters(linked.filters);
+      setSearch(linked.filters.q ?? "");
       setSort(linked.sort ?? DEFAULT_LEAD_SORT);
     }
   }
@@ -222,6 +240,7 @@ export function LeadsWorkspace({
                 setActiveViewKey(view.key);
                 setViewType(view.layout);
                 setFilters(view.filters);
+                setSearch(view.filters.q ?? "");
                 setSort(view.sort ?? DEFAULT_LEAD_SORT);
                 setPage(1);
               }}
@@ -254,6 +273,17 @@ export function LeadsWorkspace({
               />
             ) : null}
           </>
+        }
+        search={
+          <ListSearch
+            value={search}
+            onChange={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
+            placeholder="Search leads by title, number or contact"
+            noun="leads"
+          />
         }
         end={
           <>
@@ -302,7 +332,7 @@ export function LeadsWorkspace({
         />
       ) : (
         <BoardFieldsProvider hidden={boardFields.hidden}>
-          <LeadsBoard filters={filters} className="min-h-0 flex-1" />
+          <LeadsBoard filters={activeFilters} className="min-h-0 flex-1" />
         </BoardFieldsProvider>
       )}
 

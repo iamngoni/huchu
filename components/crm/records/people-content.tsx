@@ -60,7 +60,17 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
 
   const peopleQuery = useQuery({
     queryKey: ["crm", "people", debouncedSearch, page],
-    queryFn: () => fetchCrmPeople({ filters: { q: debouncedSearch }, page, limit: PAGE_SIZE }),
+    queryFn: () =>
+      fetchCrmPeople({
+        filters: { q: debouncedSearch },
+        // By name, because the page below groups by first letter. On the
+        // default `updatedAt` order the headings came out A, S, C, N, F — an
+        // alphabet applied to a list that was not in alphabetical order, which
+        // is worse than no headings at all. Sort first, then group.
+        sort: { field: "fullName", direction: "asc" },
+        page,
+        limit: PAGE_SIZE,
+      }),
     placeholderData: (previous) => previous,
   });
 
@@ -291,6 +301,7 @@ export function PeopleContent({ openCreate = false }: { openCreate?: boolean }) 
           columns={boardColumns}
           cards={boardCards}
           isLoading={peopleQuery.isLoading}
+          noun={{ one: "person", many: "people" }}
           emptyLabel="No one of this kind"
           onMove={(id, contactType) => moveContactType.mutate({ id, contactType })}
           className="min-h-[24rem]"

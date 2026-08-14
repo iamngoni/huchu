@@ -81,12 +81,21 @@ type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.
   size?: ResponsiveSurfaceSize
   tabletBehavior?: DialogTabletBehavior
   inset?: boolean
+  /**
+   * Off for a surface that draws its own close.
+   *
+   * The built-in one is absolutely positioned at the popup's top-right corner
+   * and knows nothing about what the caller put there. The employee wizard has
+   * a close in its own header bar, so both rendered — two X glyphs overlapping
+   * in one 32px circle, which is what a phone screenshot of the wizard showed.
+   */
+  showClose?: boolean
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Popup>,
   DialogContentProps
->(({ className, children, size = "md", tabletBehavior = "adaptive", inset = true, ...props }, ref) => (
+>(({ className, children, size = "md", tabletBehavior = "adaptive", inset = true, showClose = true, ...props }, ref) => (
   <DialogPortal>
     {/* `fixed inset-0` restates what `.modal-scrim` already does, so the
         backdrop does not depend on which of the package's two `.modal-scrim`
@@ -113,13 +122,15 @@ const DialogContent = React.forwardRef<
         {/* `.modal-card .x` styles this; it only binds because the button is
             inside the popup. Placement stays absolute — the DS puts its close
             in the header, which this compound API cannot guarantee exists. */}
-        <DialogClose
-          data-slot="dialog-close"
-          className="x absolute right-3 top-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-soft)] disabled:pointer-events-none"
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogClose>
+        {showClose ? (
+          <DialogClose
+            data-slot="dialog-close"
+            className="x absolute right-3 top-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-soft)] disabled:pointer-events-none"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+        ) : null}
       </DialogPrimitive.Popup>
     </DialogPrimitive.Viewport>
   </DialogPortal>

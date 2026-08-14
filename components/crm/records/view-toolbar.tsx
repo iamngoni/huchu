@@ -35,6 +35,11 @@ import { cn } from "@/lib/utils";
  * read six labels before they can look at anything. So below `sm` the whole
  * lot goes behind one button, and what stays on screen is what somebody came
  * for: the search box, and the records under it.
+ *
+ * Which means a phone toolbar with no `search` is one outline button on a band
+ * of its own — 60px of page spent on a control nobody came for. Every surface
+ * that uses this passes a search now; a caller that genuinely has nothing to
+ * search gets the button inline with whatever `end` holds rather than a band.
  */
 export function ViewToolbar({
   start,

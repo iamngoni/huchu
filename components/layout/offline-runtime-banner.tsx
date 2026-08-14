@@ -59,43 +59,43 @@ export function OfflineRuntimeBanner() {
   return (
     <div className="border-b border-[color-mix(in_srgb,var(--edge-subtle)_78%,transparent)] bg-[color-mix(in_srgb,var(--surface-base)_95%,white)] px-4 py-3 md:px-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        {/* The chip and the step label share a line rather than stacking. This
+            band sits above the app bar on every page in the product while a
+            background download runs, and stacked it was four blocks and ~130px
+            — a third of a phone's first screen spent on something nobody is
+            waiting for. */}
         <div className="min-w-0 flex-1">
-          <div
-            style={{ "--status-chip": `var(${bannerTone.colorVar})` } as CSSProperties}
-            className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--status-chip)_12%,transparent)] bg-[color-mix(in_srgb,var(--surface-muted)_82%,white)] px-3 py-1 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
-          >
-            <BannerIcon className={["size-3", bannerTone.iconClassName].join(" ")} />
-            {bannerTone.text}
-          </div>
-          <div className="mt-1 text-sm font-medium text-foreground">
-            {showUpdatePrompt
-              ? "A newer version is ready for this device."
-              : updateState === "activating"
-                ? "Applying the downloaded update."
-                : bootstrapProgress?.currentStepLabel ??
-                  "Preparing offline workspace."}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <div
+              style={{ "--status-chip": `var(${bannerTone.colorVar})` } as CSSProperties}
+              className="inline-flex flex-none items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--status-chip)_12%,transparent)] bg-[color-mix(in_srgb,var(--surface-muted)_82%,white)] px-3 py-1 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+            >
+              <BannerIcon className={["size-3", bannerTone.iconClassName].join(" ")} />
+              {bannerTone.text}
+            </div>
+            <div className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+              {showUpdatePrompt
+                ? "A newer version is ready for this device."
+                : updateState === "activating"
+                  ? "Applying the downloaded update."
+                  : bootstrapProgress?.currentStepLabel ??
+                    "Preparing offline workspace."}
+            </div>
           </div>
           {isPreparing ? (
-            <div className="mt-3 max-w-xl">
-              <div className="flex items-center gap-3">
-                <Progress
-                  value={progressValue}
-                  max={progressMax}
-                  className="h-2 flex-1 border-0 bg-[color-mix(in_srgb,var(--surface-muted)_78%,white)] shadow-none"
-                />
-                <span className="text-sm font-mono tabular-nums text-[var(--text-muted)]">
-                  {bootstrapProgress?.completedSteps ?? 0}/
-                  {bootstrapProgress?.totalSteps ?? 0}
-                </span>
-              </div>
-              <div className="mt-2 text-sm text-[var(--text-muted)]">
-                {(bootstrapProgress?.completedSteps ?? 0) ===
-                (bootstrapProgress?.totalSteps ?? 0)
-                  ? "Core offline setup is ready."
-                  : `${bootstrapProgress?.completedSteps ?? 0} of ${
-                      bootstrapProgress?.totalSteps ?? 0
-                    } setup steps ready.`}
-              </div>
+            // The fraction is the whole progress report. "12 of 45 setup steps
+            // ready" underneath it said the same thing again, in words, on a
+            // second line.
+            <div className="mt-2 flex max-w-xl items-center gap-3">
+              <Progress
+                value={progressValue}
+                max={progressMax}
+                className="h-2 flex-1 border-0 bg-[color-mix(in_srgb,var(--surface-muted)_78%,white)] shadow-none"
+              />
+              <span className="flex-none font-mono text-sm tabular-nums text-[var(--text-muted)]">
+                {bootstrapProgress?.completedSteps ?? 0}/
+                {bootstrapProgress?.totalSteps ?? 0}
+              </span>
             </div>
           ) : (
             <div className="mt-1 text-sm text-[var(--text-muted)]">

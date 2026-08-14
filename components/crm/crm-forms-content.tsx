@@ -104,7 +104,7 @@ export function CrmFormsContent() {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard label="Live forms" value={totals.live} footer={`${rows.length} in total`} />
         <StatCard label="Submissions" value={totals.submissions} footer="All time" />
         <StatCard

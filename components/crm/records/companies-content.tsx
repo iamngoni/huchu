@@ -72,7 +72,15 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
 
   const companiesQuery = useQuery({
     queryKey: ["crm", "companies", debouncedSearch, page],
-    queryFn: () => fetchCrmCompanies({ filters: { q: debouncedSearch }, page, limit: PAGE_SIZE }),
+    queryFn: () =>
+      fetchCrmCompanies({
+        filters: { q: debouncedSearch },
+        // By name: the list below groups by first letter, and grouping a list
+        // ordered by `updatedAt` produces headings in no order at all.
+        sort: { field: "name", direction: "asc" },
+        page,
+        limit: PAGE_SIZE,
+      }),
     placeholderData: (previous) => previous,
   });
 
@@ -207,10 +215,17 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
                 label={ACCOUNT_STATUS_LABELS[company.accountStatus] ?? company.accountStatus}
               />
             ) : null}
+            {/* Two chips beside a company name wrap onto a line of their own
+                at phone width, which turns a two-line row into a three-line
+                one and costs the list a third of its rows per screen. Account
+                standing is the one worth the space — "on hold" changes what
+                you do next; "Customer" is what nearly every row says. */}
             {fields.isVisible("type") ? (
-              <Badge tone="neutral" size="sm">
-                {COMPANY_TYPE_LABELS[company.companyType] ?? company.companyType}
-              </Badge>
+              <span className="hidden sm:contents">
+                <Badge tone="neutral" size="sm">
+                  {COMPANY_TYPE_LABELS[company.companyType] ?? company.companyType}
+                </Badge>
+              </span>
             ) : null}
           </>
         ),
@@ -280,6 +295,7 @@ export function CompaniesContent({ openCreate = false }: { openCreate?: boolean 
           columns={boardColumns}
           cards={boardCards}
           isLoading={companiesQuery.isLoading}
+          noun={{ one: "company", many: "companies" }}
           emptyLabel="None in this state"
           onMove={(id, accountStatus) => moveAccountStatus.mutate({ id, accountStatus })}
           className="min-h-[24rem]"

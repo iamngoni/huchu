@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, EmptyState, Stack } from "@corelithzw/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClientDate } from "@/components/ui/client-date";
+import { dsConfirm } from "@/components/ui/ds-confirm";
 import { useToast } from "@/components/ui/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { deleteCrmTask, updateCrmTask, type CrmTaskRecord } from "@/lib/crm/crm-v2";
@@ -178,13 +179,24 @@ export function TaskList({
                 ) : null}
               </div>
 
+              {/* Asked first. This is a one-tap delete at the right edge of
+                  every row, which on a phone is exactly where a thumb lands
+                  while scrolling, and a deleted task has no undo. */}
               {task.assignedToId === currentUserId || !task.assignedToId ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   aria-label={`Delete ${task.title}`}
-                  onClick={() => remove.mutate(task.id)}
+                  onClick={async () => {
+                    const confirmed = await dsConfirm({
+                      title: "Delete this task?",
+                      description: task.title,
+                      confirmLabel: "Delete",
+                      variant: "danger",
+                    });
+                    if (confirmed) remove.mutate(task.id);
+                  }}
                 >
                   <Trash2 className="size-4" />
                 </Button>
