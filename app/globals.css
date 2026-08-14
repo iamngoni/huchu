@@ -317,16 +317,42 @@
   /*    A button stretched to full width is a row, not a centred label: a
         sheet of stacked controls, a form field filling its column. The words
         start at the left edge and a trailing caret goes to the *right* edge,
-        which is where the eye looks for it and where a thumb reaches. Only a
-        trailing `svg` is pushed over — a button whose last child is text
-        keeps its label beside the rest of the label. */
+        which is where the eye looks for it and where a thumb reaches.
+
+        `:not(:only-child)` is doing real work. `:last-child` counts elements
+        only, so in `<span class="btn-label"><svg/>Filter</span>` — an icon
+        followed by a text node, which is how ~200 call sites pass an icon —
+        the icon is both the first and the last *element*, and the auto margin
+        shoved the icon and its label together against the right edge. A
+        genuine trailing caret has a sibling element before it. */
   .btn:where(.w-full) {
     justify-content: flex-start;
   }
   .btn:where(.w-full) > .btn-label {
     flex: 1 1 auto;
   }
-  .btn:where(.w-full) > .btn-label > svg:last-child {
+  .btn:where(.w-full) > .btn-label > svg:last-child:not(:only-child) {
+    margin-inline-start: auto;
+  }
+
+  /*    The same grammar for a column of controls a parent stretches, where
+        the class lands on nothing the parent owns. A sheet of filters is the
+        case: it stacks components it was handed, so it can set their width
+        but cannot put `w-full` on the button inside each one — which is why
+        that sheet rendered six centred labels where it meant to render six
+        rows. Named rather than repeated inline so the two stay in step. */
+  .stacked-controls > *,
+  .stacked-controls .btn,
+  .stacked-controls .segmented {
+    width: 100%;
+  }
+  .stacked-controls .btn {
+    justify-content: flex-start;
+  }
+  .stacked-controls .btn > .btn-label {
+    flex: 1 1 auto;
+  }
+  .stacked-controls .btn > .btn-label > svg:last-child:not(:only-child) {
     margin-inline-start: auto;
   }
 

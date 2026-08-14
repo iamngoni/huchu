@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 
-import { useIsBelow } from "@/hooks/use-mobile";
+import { useIsBelow, useIsMobile } from "@/hooks/use-mobile";
 import Link from "next/link";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger, Stack } from "@corelithzw/react";
@@ -104,6 +104,10 @@ export function RecordPageShell({
   // a summary to reach the thing you opened. So the summary becomes a tab, and
   // it is the one you land on: the same content, in a place with a name.
   const compact = useIsBelow(1024);
+  // The width at which the app bar switches to its phone row and stops having
+  // room for the record's name. Not the same question as `compact`, which is
+  // about whether a rail fits beside the content.
+  const narrow = useIsMobile();
 
   const visibleTabs = useMemo(() => {
     const real = tabs.filter((tab) => tab.content !== null && tab.content !== undefined);
@@ -173,6 +177,17 @@ export function RecordPageShell({
       <PageChrome title={title} icon={icon} backHref={backHref} backLabel={backLabel}>
         {barActions}
       </PageChrome>
+
+      {/* The record's name, on a phone.
+          ================================
+          It lives in the top app bar, which on a 390px screen is holding a
+          back arrow, a search icon, a bell and a primary action as well — so
+          the name truncated to "Tenant b…" and appeared nowhere else on the
+          page. The strip below carries the reference and the status; on a
+          phone it carries the name too, at the size a page title reads. */}
+      {narrow ? (
+        <h2 className="text-base font-semibold text-[var(--text-strong)]">{title}</h2>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {leading ? <span className="flex-none">{leading}</span> : null}

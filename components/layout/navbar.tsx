@@ -89,7 +89,13 @@ export function Navbar() {
                   <ArrowLeft className="size-4" />
                 </Link>
               ) : null}
-              {pageIcon
+              {/* The icon gives way to the back arrow on a phone. A record
+                  page carries both plus a primary action, and at 390px what
+                  gave way instead was the record's own name — "Tena…" where
+                  "Tenant billing portal" should be. The arrow says where you
+                  are; the icon only repeats the type the identity strip
+                  below already shows. */}
+              {pageIcon && !back
                 ? createElement(pageIcon, {
                     className: "h-4 w-4 shrink-0 text-[var(--text-muted)]",
                     "aria-hidden": true,

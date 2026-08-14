@@ -42,6 +42,12 @@ export type RecordAttribute = {
   display?: ReactNode;
   /** For a plain value somebody can retype in place. */
   value?: string | null;
+  /**
+   * What the closed row reads as, when the stored value is not what a reader
+   * wants to see: "USD 9,800" over a bare `9800`. Editing still opens on
+   * `value`, so what you type is what gets stored.
+   */
+  formatted?: string | null;
   onCommit?: (value: string) => void;
   /**
    * The row is a choice rather than free text: an owner, a status, a stage,
@@ -133,6 +139,7 @@ function ChoiceValue({ attribute }: { attribute: RecordAttribute }) {
 
 function EditableValue({ attribute }: { attribute: RecordAttribute }) {
   const [draft, setDraft] = useState<string | null>(null);
+  const shown = attribute.formatted ?? attribute.value;
 
   if (!attribute.onCommit) {
     return (
@@ -143,7 +150,7 @@ function EditableValue({ attribute }: { attribute: RecordAttribute }) {
           !attribute.value && "text-[var(--text-muted)]",
         )}
       >
-        {attribute.value || attribute.placeholder || "—"}
+        {shown || attribute.placeholder || "—"}
       </span>
     );
   }
@@ -159,7 +166,7 @@ function EditableValue({ attribute }: { attribute: RecordAttribute }) {
           !attribute.value && "text-[var(--text-muted)]",
         )}
       >
-        {attribute.value || attribute.placeholder || "Empty"}
+        {shown || attribute.placeholder || "Empty"}
       </button>
     );
   }

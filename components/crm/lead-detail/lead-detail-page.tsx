@@ -252,6 +252,12 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
               mono: true,
               placeholder: "Not sized",
               ...edit.numeric("estimatedValue", lead.estimatedValue),
+              // With its currency, through the same helper the board and the
+              // list use, so one lead's value never reads two ways.
+              formatted:
+                lead.estimatedValue == null
+                  ? null
+                  : formatLeadValue(lead.estimatedValue, lead.currency),
             },
             {
               id: "probability",

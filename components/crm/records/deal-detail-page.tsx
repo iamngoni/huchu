@@ -333,6 +333,11 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 placeholder: "Not sized",
                 mono: true,
                 ...edit.numeric("value", deal.value),
+                // A bare "9800" beside a deal in a workspace that bills in two
+                // currencies is a number you have to go and check. Editing
+                // still opens on the raw figure.
+                formatted:
+                  deal.value == null ? null : formatMoney(deal.value, deal.currency),
               },
               {
                 id: "stage",

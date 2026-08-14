@@ -50,6 +50,27 @@ const SCREENS: Screen[] = [
   { name: "crm-import", path: "/crm/import" },
   { name: "crm-settings", path: "/crm/settings" },
   { name: "crm-reps", path: "/crm/reps" },
+  // The create flow, which on a phone is a sheet over the list it was opened
+  // from — worth photographing because it is where most typing happens.
+  {
+    name: "crm-new-lead-sheet",
+    path: "/crm/leads",
+    prepare: async (page) => {
+      await page.getByRole("button", { name: /New lead/i }).first().click();
+      await page.waitForTimeout(1500);
+    },
+  },
+  {
+    name: "crm-view-sheet",
+    path: "/crm/leads",
+    prepare: async (page) => {
+      const trigger = page.getByRole("button", { name: /View and filters/i }).first();
+      if (!(await trigger.isVisible().catch(() => false))) return;
+      await trigger.click();
+      await page.waitForTimeout(1500);
+    },
+  },
+
   // Record pages, reached by opening the first row of their list — the ids are
   // uuids, so there is no path to hardcode, and naming a record by its title
   // fails the moment the board opens on a stage that record is not in.
@@ -69,9 +90,19 @@ function openFirstRecord(prefix: string) {
       console.error(`[shots] no record row to open under ${prefix}`);
       return;
     }
+    const href = await link.getAttribute("href");
     await link.click();
-    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
-    await page.waitForTimeout(4000);
+    // Wait on the URL, not on the network: the record route compiles on first
+    // hit against a dev server, and `networkidle` settles on the list long
+    // before the record has painted — which produced three pictures of the
+    // list with one row hovered.
+    if (href) {
+      await page.waitForURL(`**${href}`, { timeout: 30000 }).catch(() => {
+        console.error(`[shots] never landed on ${href}`);
+      });
+    }
+    await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(6000);
   };
 }
 
