@@ -393,8 +393,12 @@ export function CallList({
                 {call.actorName ?? "Someone"}
                 {call.missed ? " · no answer" : ""}
               </span>
+              {/* The day, not the second. This is a three-line "when did we
+                  last speak" summary in a narrow column, and a full
+                  "8/4/2026, 9:06:53 PM" both wraps and answers a question
+                  nobody asked. The exact time is on the timeline. */}
               <span className="shrink-0 text-sm text-[var(--text-muted)]">
-                <ClientDate value={call.at} />
+                <ClientDate value={call.at} mode="date" />
               </span>
             </span>
             {call.summary ? (

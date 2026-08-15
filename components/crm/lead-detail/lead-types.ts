@@ -10,6 +10,8 @@ export type LeadActivity = {
   body: string | null;
   metadata: unknown;
   occurredAt: string;
+  /** Who logged it. The API has always sent this; nothing used to ask. */
+  createdBy?: { id: string; name: string | null } | null;
 };
 
 export type LeadFollowUp = {

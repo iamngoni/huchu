@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -18,12 +18,15 @@ import {
 import { PageChrome } from "@/components/layout/page-chrome";
 import { IconButton } from "@/components/ui/icon-button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { DotsThree, type LucideIcon } from "@/lib/icons";
+import { ChevronLeftIcon, ChevronRight, DotsThree, type LucideIcon } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 import { cn } from "@/lib/utils";
 
 /** The query parameter that says which section of a record is open. */
 const SECTION_PARAM = "section";
+
+/** Where the standing column's open state is remembered. */
+const INFO_COLUMN_KEY = "record-info-column";
 
 export type RecordTab = {
   value: string;
@@ -130,6 +133,25 @@ export function RecordPageShell({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  /**
+   * Whether the standing column is open, remembered across records.
+   *
+   * Read in an effect rather than during render: `localStorage` does not exist
+   * on the server, and seeding state from it directly is a hydration mismatch.
+   * Open is the honest default — a reader who has never collapsed it should see
+   * what the record is.
+   */
+  const [infoOpen, setInfoOpen] = useState(true);
+  useEffect(() => {
+    setInfoOpen(window.localStorage.getItem(INFO_COLUMN_KEY) !== "closed");
+  }, []);
+  const toggleInfo = () => {
+    setInfoOpen((open) => {
+      window.localStorage.setItem(INFO_COLUMN_KEY, open ? "closed" : "open");
+      return !open;
+    });
+  };
   // The width at which the app bar switches to its phone row and stops having
   // room for the record's name. Only ever used for chrome the bar itself owns.
   const narrow = useIsMobile();
@@ -178,6 +200,16 @@ export function RecordPageShell({
     ? visibleTabs.find((tab) => tab.value === openSection)
     : landingTab;
 
+  // The URL is the source of truth, so a page holding its own `tab` state — the
+  // lead's billing panel jumps to Documents, the deal's stage bar reads which
+  // section is open — is told when it changes. The push effect above bails when
+  // the two already agree, so this cannot ping-pong with it.
+  const currentValue = currentTab?.value;
+  useEffect(() => {
+    if (currentValue && currentValue !== activeTab) onTabChange(currentValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentValue]);
+
   /**
    * The sections, as one vertical rail at every width.
    *
@@ -223,31 +255,76 @@ export function RecordPageShell({
     </NavRail>
   );
 
-  // The right column carries the properties and the summary, so it is worth a
-  // column whenever there is either.
-  const hasRightColumn = Boolean(rail || attributes);
-  const hasSectionRail = visibleTabs.length > 1;
+  /**
+   * Everything the record *is*, in one column.
+   *
+   * The mark, the name, the reference, the status, the one line that says what
+   * this is, the properties, and whatever summary the page supplies. All of it
+   * used to be a band stretched across the top of the page, between the app bar
+   * and the columns — which meant the identity of the record scrolled away the
+   * moment you started reading a section, and the widest thing on the page was
+   * a status chip with three centimetres of nothing beside it.
+   *
+   * Gathered into the standing column it is in view the whole time, and the
+   * band is gone, so a section starts where the page starts.
+   */
+  // Held lowercase and rendered through the binding, the way the sidebar does
+  // it: a capitalised name assigned from a prop reads to the lint rule as a
+  // component defined during render.
+  const RecordIcon = icon;
 
-  // One column on a phone; sections plus content from `md`; and the standing
-  // column from `lg`, which is where `.detail-grid` already stopped crushing
-  // the middle.
-  const sectionGrid = cn(
-    "min-w-0 md:grid md:gap-6",
-    hasSectionRail ? "md:grid-cols-[13rem_minmax(0,1fr)]" : "md:grid-cols-1",
-    hasRightColumn && hasSectionRail && "lg:grid-cols-[13rem_minmax(0,1fr)_20rem]",
-    hasRightColumn && !hasSectionRail && "lg:grid-cols-[minmax(0,1fr)_20rem]",
+  const infoColumn = (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <div className="flex items-start gap-2.5">
+          {leading ? (
+            <span className="flex-none">{leading}</span>
+          ) : RecordIcon ? (
+            <span className="mt-0.5 flex size-8 flex-none items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-muted)] text-[var(--text-muted)]">
+              <RecordIcon className="size-4" aria-hidden="true" />
+            </span>
+          ) : null}
+
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold leading-snug text-[var(--text-strong)]">
+              {title}
+            </h2>
+            {reference ? (
+              <p className="font-mono text-sm text-[var(--text-muted)]">{reference}</p>
+            ) : null}
+          </div>
+        </div>
+
+        {status ? <StatusChip status={status.status} label={status.label} /> : null}
+
+        {subtitle ? (
+          <p className="text-sm text-[var(--text-muted)]">{subtitle}</p>
+        ) : null}
+      </div>
+
+      {attributes ? (
+        <div className="border-t border-[var(--border-subtle)] pt-4">{attributes}</div>
+      ) : null}
+
+      {beforeTabs ? (
+        <div className="border-t border-[var(--border-subtle)] pt-4">{beforeTabs}</div>
+      ) : null}
+
+      {rail ? <div className="space-y-7 border-t border-[var(--border-subtle)] pt-4">{rail}</div> : null}
+    </div>
   );
 
-  // And the other direction: the URL is the source of truth, so a page holding
-  // its own `tab` state — the lead's billing panel jumps to Documents, the
-  // deal's stage bar reads which section is open — is told when it changes.
-  // The push effect above bails when the two already agree, so this cannot
-  // ping-pong with it.
-  const currentValue = currentTab?.value;
-  useEffect(() => {
-    if (currentValue && currentValue !== activeTab) onTabChange(currentValue);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentValue]);
+  const hasSectionRail = visibleTabs.length > 1;
+
+  // Columns, and the dividers between them. No gap: the rule *is* the gap, and
+  // the padding either side of it is what keeps the columns off it.
+  const sectionGrid = cn(
+    "min-w-0 md:grid",
+    hasSectionRail && !infoOpen && "md:grid-cols-[13rem_minmax(0,1fr)_auto]",
+    hasSectionRail && infoOpen && "md:grid-cols-[13rem_minmax(0,1fr)] lg:grid-cols-[13rem_minmax(0,1fr)_22rem]",
+    !hasSectionRail && !infoOpen && "md:grid-cols-[minmax(0,1fr)_auto]",
+    !hasSectionRail && infoOpen && "md:grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]",
+  );
 
   /**
    * The record's actions, in the top app bar.
@@ -319,74 +396,49 @@ export function RecordPageShell({
 
   return (
     <div className="space-y-4">
-      {/* Drilled into a section, "up" is the record — not the list it came
-          from. Getting that wrong is what makes a phone drilldown feel like a
-          trapdoor: you open Documents, press back, and you are in the leads
-          list with the record gone. */}
-      {/* The bar keeps saying which *record* you are in, at every depth —
-          losing that is how a drilldown stops feeling like part of the record
-          and starts feeling like a separate page. The section names itself on
-          the page below. */}
+      {/* Drilled into a section on a phone, "up" is the record — not the list
+          it came from. Getting that wrong is what makes a drilldown feel like
+          a trapdoor: you open Documents, press back, and you are in the leads
+          list with the record gone.
+
+          Only on a phone, though. A desktop never leaves the record — the
+          rail and the section sit side by side — so "up" stays the list, and
+          pointing it at the record would put the record's name in the bar
+          twice, once as the back link and once as the title. */}
       <PageChrome
         title={title}
         icon={icon}
-        backHref={openSection ? recordHref : backHref}
-        backLabel={openSection ? title : backLabel}
+        backHref={openSection && narrow ? recordHref : backHref}
+        backLabel={openSection && narrow ? title : backLabel}
       >
         {barActions}
       </PageChrome>
 
-      {/* The record's frame, at every depth.
-          =====================================
-          Opening a section used to replace the whole page — right for a phone,
-          where a drilldown *is* the page, and wrong for a desktop, which lost
-          its section rail and its properties the moment you clicked one of
-          them. The frame is always rendered now and the phone hides the parts
-          it does not want, in CSS, so the first paint is right at both widths.
-          Only the middle column changes. */}
-      <div className={openSection ? "hidden space-y-4 md:block" : "space-y-4"}>
-        {/* The record's name, on a phone.
-            ================================
-            It lives in the top app bar, which on a 390px screen is holding a
-            back arrow, a search icon, a bell and a primary action as well —
-            so the name truncated to "Tenant b…" and appeared nowhere else on
-            the page. The strip below carries the reference and the status;
-            on a phone it carries the name too, at the size a page title
-            reads. */}
-        {narrow ? (
-          <h2 className="text-base font-semibold text-[var(--text-strong)]">{title}</h2>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          {leading ? <span className="flex-none">{leading}</span> : null}
-
-          {reference ? (
-            <span className="font-mono text-sm text-[var(--text-muted)]">{reference}</span>
-          ) : null}
-          {status ? <StatusChip status={status.status} label={status.label} /> : null}
-          {subtitle ? (
-            <span className="min-w-0 truncate text-sm text-[var(--text-muted)]">{subtitle}</span>
-          ) : null}
-        </div>
-
-        {/* Properties are the right column's job from `lg` up, where they can
-            stay in view while you read a section. Below that there is no third
-            column, so they sit here, full width, the way Notion puts them at
-            the top of a page. */}
-        {attributes ? (
-          <div className="border-y border-[var(--border-subtle)] py-3 lg:hidden">{attributes}</div>
-        ) : null}
-
-        {beforeTabs}
-      </div>
-
+      {/* Everything about the record lives in the standing column now, so
+          there is no band between the app bar and the columns to render — a
+          section starts where the page starts. On a phone there is no third
+          column, so the same content leads the landing view. */}
       <div className={sectionGrid}>
-        {/* The sections, on the left, where the back office puts them. */}
-        {visibleTabs.length > 1 ? (
-          <aside className="hidden md:block">{sectionRail}</aside>
+        {/* The sections. Sticky, because a rail you have to scroll back up to
+            reach is a rail you stop using on a long timeline. */}
+        {hasSectionRail ? (
+          <aside className="hidden md:block">
+            <div className="sticky top-0 pr-5">{sectionRail}</div>
+          </aside>
         ) : null}
 
-        <div className="min-w-0 space-y-4">
+        <div
+          className={cn(
+            "min-w-0 space-y-4",
+            // The rule between columns, and the room either side of it.
+            hasSectionRail && "md:border-l md:border-[var(--border-subtle)] md:pl-5",
+            infoOpen && "lg:pr-5",
+          )}
+        >
+          {/* The record, at the head of the landing view, where a phone has no
+              column to stand it in. */}
+          {!openSection ? <div className="lg:hidden">{infoColumn}</div> : null}
+
           {/* Drilled in on a phone, the section names itself — the bar is
               still carrying the record's name. */}
           {openSection ? (
@@ -395,35 +447,42 @@ export function RecordPageShell({
             </h2>
           ) : null}
 
-          {/* The summary, above the story, in one view.
-              ==========================================
-              The rail used to become a tab of its own called "Overview",
-              which a phone landed on — so a record opened on a summary and
-              the thing that had actually happened to it was one tap away,
-              behind a word. They are one reading now: what this record is
-              worth and what is next, then what has happened. */}
-          {rail && !openSection ? <div className="space-y-7 lg:hidden">{rail}</div> : null}
-
           <div className="min-w-0">{currentTab?.content}</div>
 
           {/* The same rail, at the foot of the landing view, where a phone
               has no column to put it in. One component either way, so a
               section reads the same whichever width you meet it at. */}
-          {visibleTabs.length > 1 && !openSection ? (
+          {hasSectionRail && !openSection ? (
             <div className="border-t border-[var(--border-subtle)] pt-4 md:hidden">
               {sectionRail}
             </div>
           ) : null}
         </div>
 
-        {/* The column that never changes: what this record *is*, and what it
-            is worth, beside whichever section is being read. */}
-        {hasRightColumn ? (
-          <aside className="hidden space-y-7 lg:block">
-            {attributes ? <div>{attributes}</div> : null}
-            {rail}
+        {/* The standing column: what this record is, and what it is worth,
+            beside whichever section is being read. Collapsible, because a
+            reader working through a long document list wants the width — and
+            sticky, so it is still there when they scroll back to the top. */}
+        {infoOpen ? (
+          <aside className="hidden border-l border-[var(--border-subtle)] pl-5 lg:block">
+            <div className="sticky top-0 space-y-4">
+              <div className="flex justify-end">
+                <IconButton aria-label="Hide record details" onClick={toggleInfo}>
+                  <ChevronRight />
+                </IconButton>
+              </div>
+              {infoColumn}
+            </div>
           </aside>
-        ) : null}
+        ) : (
+          <aside className="hidden border-l border-[var(--border-subtle)] pl-2 lg:block">
+            <div className="sticky top-0">
+              <IconButton aria-label="Show record details" onClick={toggleInfo}>
+                <ChevronLeftIcon />
+              </IconButton>
+            </div>
+          </aside>
+        )}
       </div>
 
       {children}

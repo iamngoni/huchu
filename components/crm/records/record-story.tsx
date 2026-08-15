@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { Avatar } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
-import { ClientDate } from "@/components/ui/client-date";
 import {
   ArrowRight,
   Calendar,
@@ -23,6 +22,31 @@ import { RichTextRenderer } from "@/components/crm/collaboration/rich-text-rende
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
+
+/**
+ * The time of day, and nothing else.
+ *
+ * Same hydration contract as `ClientDate`: the first paint is a slice of the
+ * raw ISO string, so the server bytes and the first client render are
+ * identical, and only afterwards does the reader's locale come into it.
+ * `ClientDate` has no time-only mode, hence the dozen lines.
+ */
+const NO_RESUBSCRIBE = () => () => {};
+
+function ClientTime({ value }: { value: string }) {
+  // useSyncExternalStore rather than a mount effect: the server snapshot and
+  // the client's first snapshot are both `false`, so hydration matches without
+  // a render-triggering setState.
+  const hydrated = useSyncExternalStore(
+    NO_RESUBSCRIBE,
+    () => true,
+    () => false,
+  );
+
+  const date = new Date(value);
+  if (!hydrated || Number.isNaN(date.getTime())) return <>{value.slice(11, 16)}</>;
+  return <>{date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</>;
+}
 
 /**
  * One thing that happened, whatever kind of thing it was.
@@ -131,10 +155,10 @@ function StoryRow({ event }: { event: StoryEvent }) {
         ) : null}
         <span className={cn("text-sm", quiet && "text-[var(--text-muted)]")}>{event.title}</span>
         {/* The day is already the section heading, so the row only needs the
-            time — but ClientDate is what keeps the server and first client
-            render identical, so it stays rather than a bare toLocaleTimeString. */}
+            time of day — a full "8/4/2026, 9:06:53 PM" on every one of a
+            hundred rows repeats the heading and adds a second nobody reads. */}
         <span className="text-sm text-[var(--text-subtle)]">
-          <ClientDate value={event.occurredAt} mode="datetime" />
+          <ClientTime value={event.occurredAt} />
         </span>
       </div>
 

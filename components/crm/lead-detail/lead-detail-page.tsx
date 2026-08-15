@@ -259,6 +259,9 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
     .map((activity) => ({
       id: activity.id,
       at: activity.occurredAt,
+      // The API has always included who logged it; the panel just never asked,
+      // so every call in the summary was attributed to "Someone".
+      actorName: activity.createdBy?.name ?? null,
       summary: activity.body ?? activity.subject,
     }));
 
