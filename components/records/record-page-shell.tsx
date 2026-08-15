@@ -305,7 +305,7 @@ export function RecordPageShell({
               <DropdownMenuItem
                 key={action.label}
                 onClick={action.onSelect}
-                className={action.destructive ? "text-[var(--status-error-text)]" : undefined}
+                variant={action.destructive ? "destructive" : "default"}
               >
                 {action.icon}
                 {action.label}

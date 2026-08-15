@@ -267,6 +267,18 @@ rules bite hardest.
 - A number carries the colour of the thing it is judging, not just the word
   beside it.
 
+### Menus
+- **Every row carries a mark**, and the mark is sized, spaced and muted by the
+  primitive rather than by each call site — that is where `h-4 w-4` in one menu
+  and `size-4` in another came from.
+- **Tone is a prop, not a colour class.** `destructive` for what removes or
+  cannot be undone, `positive` for what completes something, `primary` for the
+  one thing the menu is mostly opened to do. A toned row tints its own mark to
+  match its label, which is what makes it read at a glance rather than after
+  reading the verb.
+- Group with separators and name the group when the menu acts on a specific
+  thing — a document number, a record's name.
+
 ### Action rows
 - A primary action and an overflow menu are **two controls side by side**, not
   a segmented group. `ButtonGroup` fences its children in one bordered box with

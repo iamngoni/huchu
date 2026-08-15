@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "@/lib/icons";
+import { Archive, ChevronDown, Funnel, UserRound } from "@/lib/icons";
 import type { CrmLeadListRecord } from "@/lib/crm/crm-v2";
 import type { LeadSort } from "@/lib/crm/views";
 import type { ColumnOption } from "@/lib/ui/visible-columns";
@@ -271,11 +271,13 @@ export function LeadsTable({
                       key={owner.id}
                       onClick={() => onBulkAssign(ids, owner.id, clearSelection)}
                     >
+                      <UserRound />
                       {owner.name ?? "Unnamed"}
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onBulkAssign(ids, null, clearSelection)}>
+                    <UserRound />
                     Leave unassigned
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -292,8 +294,12 @@ export function LeadsTable({
                   {CRM_LEAD_STAGES.map((stage: CrmLeadStage) => (
                     <DropdownMenuItem
                       key={stage}
+                      // Lost is the one stage move that is a claim about the
+                      // business rather than progress along it.
+                      variant={stage === "LOST" ? "destructive" : "default"}
                       onClick={() => onBulkStage(ids, stage, clearSelection)}
                     >
+                      <Funnel />
                       {CRM_STAGE_LABELS[stage]}
                     </DropdownMenuItem>
                   ))}
@@ -307,8 +313,10 @@ export function LeadsTable({
               <Button
                 size="sm"
                 variant="outline"
+                className="gap-1.5"
                 onClick={() => onBulkArchive(ids, !showingArchived, clearSelection)}
               >
+                <Archive className="size-4" />
                 {showingArchived ? "Restore" : "Archive"}
               </Button>
             </div>

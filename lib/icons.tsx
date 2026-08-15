@@ -448,3 +448,4 @@ export const Upload = createPhosphorIcon("UploadSimple", "Upload");
 export const Paperclip = createPhosphorIcon("Paperclip", "Paperclip");
 export const At = createPhosphorIcon("At", "At");
 export const FlowArrow = createPhosphorIcon("FlowArrow", "FlowArrow");
+export const Archive = createPhosphorIcon("Archive", "Archive");
