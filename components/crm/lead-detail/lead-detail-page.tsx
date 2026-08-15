@@ -16,7 +16,11 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
   ArrowRight,
   Building2,
+  CalendarCheck,
+  Clock,
+  FileText,
   Funnel,
+  History,
   Payments,
   TrendingUp,
   UserRound,
@@ -429,8 +433,12 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
       onTabChange={setTab}
       tabs={[
         {
+          // Named Overview, because on a phone the summary is rendered above
+          // it and the two read as one thing: what this lead is worth and what
+          // is next, then what has actually happened to it.
           value: "timeline",
-          label: "Timeline",
+          label: "Overview",
+          icon: Clock,
           content: (
             <div className="space-y-4">
               <ActivityComposer target={{ kind: "lead", id: leadId }} />
@@ -450,9 +458,13 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             </div>
           ),
         },
+        // Second, and deliberately: talking about the record is the thing
+        // people come back to a record to do, and it was seven tabs along.
+        commentsTab({ ref: { kind: "lead", id: leadId }, currentUserId }),
         {
           value: "documents",
           label: "Documents",
+          icon: FileText,
           count: lead.documents.length,
           content: (
             <DocumentList
@@ -470,7 +482,13 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
         {
           value: "visits",
           label: "Visits",
+          icon: CalendarCheck,
           count: lead.appointments.length,
+          // A visit that has happened and has not been written up is the thing
+          // on a lead most likely to be forgotten.
+          attention: lead.appointments.some(
+            (visit) => visit.status === "SCHEDULED" && new Date(visit.scheduledStart) < new Date(),
+          ),
           content: (
             <VisitsTab
               appointments={lead.appointments}
@@ -479,10 +497,15 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             />
           ),
         },
-        tasksTab({ ref: { kind: "lead", id: leadId }, currentUserId }),
-        commentsTab({ ref: { kind: "lead", id: leadId }, currentUserId }),
-        mentionsTab({ ref: { kind: "lead", id: leadId } }),
+        {
+          ...tasksTab({ ref: { kind: "lead", id: leadId }, currentUserId }),
+          count: lead.followUps.filter((task) => task.status === "PENDING").length,
+          attention: lead.followUps.some(
+            (task) => task.status === "PENDING" && new Date(task.dueAt) < new Date(),
+          ),
+        },
         filesTab({ ref: { kind: "lead", id: leadId } }),
+        mentionsTab({ ref: { kind: "lead", id: leadId } }),
         automationTab({ ref: { kind: "lead", id: leadId } }),
         {
           // Leads had neither history tab, while deals, companies, people and
@@ -490,11 +513,13 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
           // no answer to "who changed this".
           value: "history",
           label: "History",
+          icon: History,
           content: <RecordHistoryTab activities={lead.activities} />,
         },
         {
           value: "changes",
           label: "Field history",
+          icon: History,
           content: <FieldHistoryTab entity="LEAD" recordId={leadId} />,
         },
       ]}

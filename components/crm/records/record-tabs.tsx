@@ -1,7 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import { CommentThread } from "@/components/crm/collaboration/comment-thread";
 import { RecordTasksTab } from "@/components/crm/tasks/record-tasks-tab";
 import { ActivityComposer, type ActivityTarget } from "@/components/crm/lead-detail/activity-composer";
@@ -12,6 +10,15 @@ import { FilesTab } from "./files-tab";
 import type { FileOwnerKind } from "@/lib/crm/record-files";
 import type { CollabEntity } from "@/lib/crm/collaboration";
 import type { CrmTaskRecordRef } from "@/lib/crm/crm-v2";
+
+import {
+  At,
+  ChatCircle,
+  Checklist,
+  Clock,
+  FlowArrow,
+  Paperclip,
+} from "@/lib/icons";
 
 import type { RecordTab } from "@/components/records/record-page-shell";
 
@@ -89,7 +96,8 @@ export function timelineTab({
   const target = activityTarget(ref);
   return {
     value: "timeline",
-    label: "Timeline",
+    label: "Overview",
+    icon: Clock,
     content: (
       <div className="space-y-4">
         {target ? <ActivityComposer target={target} /> : null}
@@ -109,6 +117,7 @@ export function tasksTab({
   return {
     value: "tasks",
     label: "Tasks",
+    icon: Checklist,
     content: <RecordTasksTab record={taskRef(ref)} currentUserId={currentUserId} />,
   };
 }
@@ -123,6 +132,7 @@ export function commentsTab({
   return {
     value: "comments",
     label: "Comments",
+    icon: ChatCircle,
     content: (
       <CommentThread
         entity={COLLAB[ref.kind]}
@@ -142,6 +152,7 @@ export function mentionsTab({ ref }: { ref: RecordRef }): RecordTab {
   return {
     value: "mentions",
     label: "Mentions",
+    icon: At,
     content: <MentionsTab recordId={ref.id} />,
   };
 }
@@ -167,6 +178,7 @@ export function automationTab({ ref }: { ref: RecordRef }): RecordTab {
   return {
     value: "automation",
     label: "Workflows",
+    icon: FlowArrow,
     content: <AutomationTab entity={AUTOMATION_ENTITY[ref.kind]} recordId={ref.id} />,
   };
 }
@@ -183,6 +195,7 @@ export function filesTab({ ref }: { ref: RecordRef }): RecordTab {
   return {
     value: "files",
     label: "Files",
+    icon: Paperclip,
     content: <FilesTab owner={FILE_OWNER[ref.kind]} ownerId={ref.id} />,
   };
 }
@@ -197,11 +210,6 @@ const FILE_OWNER: Record<RecordKind, FileOwnerKind> = {
 };
 
 /** A tab a single record type adds to the shared set. */
-export function extraTab(tab: {
-  value: string;
-  label: string;
-  count?: number;
-  content: ReactNode;
-}): RecordTab {
+export function extraTab(tab: RecordTab): RecordTab {
   return tab;
 }

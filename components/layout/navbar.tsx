@@ -13,7 +13,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 import { getCurrentPageTitle } from "@/components/layout/breadcrumbs";
-import { ButtonGroup } from "@/components/ui/button-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -179,7 +178,18 @@ function MobileNavbarActions({
   const [primaryAction, ...overflowActions] = flattenedActions;
 
   return (
-    <ButtonGroup className={cn("shrink-0", className)}>
+    // Two controls side by side, not a segmented group.
+    // =================================================
+    // `ButtonGroup` fences its children in a bordered, clipped box with a
+    // divider between them — the right shape for a set of alternatives, and
+    // the wrong one for "do the thing" plus "everything else". It put a solid
+    // brand button and a bare icon button inside one outline, so the overflow
+    // appeared to have a second border of its own and the pair read as one
+    // control painted two colours.
+    //
+    // Loose, with the same gap the desktop bar uses, so the action row is one
+    // shape at every width.
+    <div className={cn("flex shrink-0 items-center gap-1.5", className)}>
       {primaryAction}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -200,7 +210,7 @@ function MobileNavbarActions({
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-    </ButtonGroup>
+    </div>
   );
 }
 

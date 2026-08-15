@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
-import { Building2, CalendarCheck, MapPin, UserRound } from "@/lib/icons";
+import { Building2, CalendarCheck, Funnel, History, MapPin, UserRound } from "@/lib/icons";
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
@@ -276,9 +276,16 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
       onTabChange={setTab}
       tabs={[
         {
+          // A site's own story is its visits — it has no activity feed of its
+          // own, so this is the record's overview.
           value: "visits",
           label: "Visits",
+          icon: CalendarCheck,
           count: site.appointments.length,
+          attention: site.appointments.some(
+            (visit) =>
+              visit.status === "SCHEDULED" && new Date(visit.scheduledStart) < new Date(),
+          ),
           content:
             site.appointments.length === 0 ? (
               <p className="py-6 text-center text-sm text-[var(--text-muted)]">
@@ -312,9 +319,11 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
               </Stack>
             ),
         },
+        commentsTab({ ref: { kind: "site", id: siteId }, currentUserId: session?.user?.id }),
         {
           value: "deals",
           label: "Deals",
+          icon: Funnel,
           count: site.deals.length,
           content: (
             <RelatedList
@@ -330,9 +339,8 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
           ),
         },
         tasksTab({ ref: { kind: "site", id: siteId }, currentUserId: session?.user?.id }),
-        commentsTab({ ref: { kind: "site", id: siteId }, currentUserId: session?.user?.id }),
-        mentionsTab({ ref: { kind: "site", id: siteId } }),
         filesTab({ ref: { kind: "site", id: siteId } }),
+        mentionsTab({ ref: { kind: "site", id: siteId } }),
         automationTab({ ref: { kind: "site", id: siteId } }),
         {
           // Was a History tab rendering an empty array, permanently: a site
@@ -342,6 +350,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
           // history a site genuinely has — its edits are recorded.
           value: "changes",
           label: "Field history",
+          icon: History,
           content: <FieldHistoryTab entity="SITE" recordId={siteId} />,
         },
       ]}

@@ -235,6 +235,43 @@ rules bite hardest.
   record that looks exactly like a working one is how somebody spends ten
   minutes on business nobody is pursuing.
 
+### Record sections
+- **Which section is open lives in the URL**, not in component state. That is
+  what makes the back arrow return to the record rather than to the list two
+  levels up, makes a link to a record's documents sendable, and makes the first
+  paint correct — `matchMedia` has no answer before hydration.
+- **A phone drills in; a desktop switches tabs.** Nine sections is not a strip
+  at 390px, it is a strip you scroll sideways hunting for a word. Below `md`
+  the sections are a list — mark, label, count, attention dot, chevron — and
+  opening one fills the page. Both shapes read the same URL, so neither is a
+  separate mode.
+- **The bar keeps naming the record at every depth.** Losing it is how a
+  drilldown stops feeling like part of the record. The section names itself on
+  the page below.
+- **A record's own tab strip is the platform's `SectionTabs`**, not a second
+  opinion about what a tab looks like: neutral active indicator, count pill,
+  icon slot. Brand colour is for primary actions.
+- **A zero is not a count.** Nine grey pills reading `0` say nothing; only a
+  section with something in it says how much.
+- Section order follows what a record is opened for: the summary and the story
+  first and in **one** view, then talking about it, then the records hanging
+  off it, and only then the audit tabs.
+
+### Scanning a summary
+- One figure leads. The rest is evidence and is **muted** — a summary drawn at
+  one weight throughout is a wall of numbers with nothing in front.
+- Colour marks what to stop on: lateness, a shortfall, a signal counting
+  against the record. Not every number.
+- A number carries the colour of the thing it is judging, not just the word
+  beside it.
+
+### Action rows
+- A primary action and an overflow menu are **two controls side by side**, not
+  a segmented group. `ButtonGroup` fences its children in one bordered box with
+  a divider — the right shape for a set of alternatives, and the wrong one for
+  "do the thing" plus "everything else". Grouped, a solid brand button and a
+  bare icon button read as one control painted two colours.
+
 ### Navigation
 - A section rail is a **scrolling strip** on a phone, never a stacked column.
   Thirteen items in a column is five hundred pixels of navigation above the

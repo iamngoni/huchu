@@ -14,13 +14,17 @@ import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
   Building2,
   Calendar,
+  CalendarCheck,
+  Clock,
   FileText,
   Funnel,
+  History,
   MapPin,
   Payments,
   Plus,
   TrendingUp,
   UserRound,
+  Users,
 } from "@/lib/icons";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
 import { isDealStale } from "@/lib/crm/pipelines";
@@ -437,8 +441,12 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
         onTabChange={setTab}
         tabs={[
           {
+            // Named Overview: on a phone the summary renders above it, and the
+            // two read as one thing — what this deal is worth and what is
+            // next, then what has actually happened to it.
             value: "timeline",
-            label: "Timeline",
+            label: "Overview",
+            icon: Clock,
             content: (
               <div className="space-y-4">
                 <ActivityComposer target={{ kind: "deal", id: dealId }} />
@@ -455,9 +463,13 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
               </div>
             ),
           },
+          // Second, and deliberately: talking about the record is what people
+          // come back to a record to do, and it was seven tabs along.
+          commentsTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
           {
             value: "documents",
             label: "Documents",
+            icon: FileText,
             count: deal.documents.length,
             content: (
               <DocumentList
@@ -471,9 +483,21 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             ),
           },
           {
+            value: "people",
+            label: "People",
+            icon: Users,
+            count: deal.contacts.length,
+            content: <DealContactsTab dealId={dealId} contacts={deal.contacts} />,
+          },
+          {
             value: "visits",
             label: "Visits",
+            icon: CalendarCheck,
             count: deal.appointments.length,
+            attention: deal.appointments.some(
+              (visit) =>
+                visit.status === "SCHEDULED" && new Date(visit.scheduledStart) < new Date(),
+            ),
             content: (
               <VisitsTab
                 appointments={deal.appointments}
@@ -482,25 +506,26 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
               />
             ),
           },
-          tasksTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
           {
-            value: "people",
-            label: "People",
-            count: deal.contacts.length,
-            content: <DealContactsTab dealId={dealId} contacts={deal.contacts} />,
+            ...tasksTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
+            count: deal.followUps.filter((task) => task.status === "PENDING").length,
+            attention: deal.followUps.some(
+              (task) => task.status === "PENDING" && new Date(task.dueAt) < new Date(),
+            ),
           },
-          commentsTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
-        mentionsTab({ ref: { kind: "deal", id: dealId } }),
-        filesTab({ ref: { kind: "deal", id: dealId } }),
-        automationTab({ ref: { kind: "deal", id: dealId } }),
+          filesTab({ ref: { kind: "deal", id: dealId } }),
+          mentionsTab({ ref: { kind: "deal", id: dealId } }),
+          automationTab({ ref: { kind: "deal", id: dealId } }),
           {
             value: "history",
             label: "History",
+            icon: History,
             content: <RecordHistoryTab activities={deal.activities} />,
           },
           {
             value: "changes",
             label: "Field history",
+            icon: History,
             content: <FieldHistoryTab entity="DEAL" recordId={dealId} />,
           },
         ]}

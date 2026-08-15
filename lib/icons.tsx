@@ -443,3 +443,8 @@ export const ChatCircle = createPhosphorIcon("ChatCircle", "ChatCircle");
 export const PushPin = createPhosphorIcon("PushPin", "PushPin");
 export const Repeat = createPhosphorIcon("Repeat", "Repeat");
 export const Upload = createPhosphorIcon("UploadSimple", "Upload");
+
+/** Marks for a record's sections — the tab strip and the phone's section list. */
+export const Paperclip = createPhosphorIcon("Paperclip", "Paperclip");
+export const At = createPhosphorIcon("At", "At");
+export const FlowArrow = createPhosphorIcon("FlowArrow", "FlowArrow");

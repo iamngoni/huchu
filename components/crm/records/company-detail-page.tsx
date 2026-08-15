@@ -10,7 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
-import { Building2, Globe, Mail, MapPin, Phone, Plus, UserRound } from "@/lib/icons";
+import {
+  Building2,
+  Clock,
+  Funnel,
+  Globe,
+  History,
+  Mail,
+  MapPin,
+  Phone,
+  Plus,
+  UserRound,
+  Users,
+} from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
@@ -98,7 +110,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
   const [mergeOpen, setMergeOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [dealOpen, setDealOpen] = useState(false);
-  const [tab, setTab] = useState("people");
+  const [tab, setTab] = useState("timeline");
 
   const companyQuery = useQuery({
     queryKey: ["crm", "company", companyId],
@@ -298,14 +310,34 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
       onTabChange={setTab}
       tabs={[
         {
+          value: "timeline",
+          label: "Overview",
+          icon: Clock,
+          content: (
+            <RecordStory
+              events={buildStory({
+                activities: company.activities,
+                createdLabel: "Company added",
+              })}
+            />
+          ),
+        },
+        commentsTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
+        // The company's own graph: who works there, what is being sold to
+        // them, and where. These sit directly after the summary because they
+        // are what an account page is *for* — a company is mostly a way in to
+        // the records hanging off it.
+        {
           value: "people",
           label: "People",
+          icon: Users,
           count: company.people.length,
           content: <CompanyPeopleTab companyId={companyId} people={company.people} />,
         },
         {
           value: "deals",
           label: "Deals",
+          icon: Funnel,
           count: company.deals.length,
           content: (
             <RelatedList
@@ -323,6 +355,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
         {
           value: "sites",
           label: "Sites",
+          icon: MapPin,
           count: company.sites.length,
           content: (
             <RelatedList
@@ -336,31 +369,20 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
             />
           ),
         },
-        {
-          value: "timeline",
-          label: "Timeline",
-          content: (
-            <RecordStory
-              events={buildStory({
-                activities: company.activities,
-                createdLabel: "Company added",
-              })}
-            />
-          ),
-        },
         tasksTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
-        commentsTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
-        mentionsTab({ ref: { kind: "company", id: companyId } }),
         filesTab({ ref: { kind: "company", id: companyId } }),
+        mentionsTab({ ref: { kind: "company", id: companyId } }),
         automationTab({ ref: { kind: "company", id: companyId } }),
         {
           value: "history",
           label: "History",
+          icon: History,
           content: <RecordHistoryTab activities={company.activities} />,
         },
         {
           value: "changes",
           label: "Field history",
+          icon: History,
           content: <FieldHistoryTab entity="CLIENT" recordId={companyId} />,
         },
       ]}

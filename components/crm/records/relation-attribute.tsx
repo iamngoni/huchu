@@ -7,6 +7,8 @@ import { ResponsivePopover } from "@/components/ui/responsive-popover";
 import { Pencil, X } from "@/lib/icons";
 
 import { EntityLink } from "@/components/records/entity-link";
+import { ATTRIBUTE_ROW } from "@/components/records/record-attributes";
+import { cn } from "@/lib/utils";
 import { RecordPicker, type PickableType, type PickedRecord } from "./record-picker";
 
 /**
@@ -110,7 +112,10 @@ export function RelationAttribute({
         ) : (
           <button
             type="button"
-            className="-mx-1.5 flex min-h-9 w-full min-w-0 items-center rounded-[var(--radius-sm)] px-1.5 py-0.5 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--surface-subtle)] sm:min-h-0"
+            className={cn(
+              "-mx-1.5 flex w-full min-w-0 items-center rounded-[var(--radius-sm)] px-1.5 text-left text-[var(--text-muted)] hover:bg-[var(--surface-subtle)]",
+              ATTRIBUTE_ROW,
+            )}
           >
             {placeholder}
           </button>
@@ -124,8 +129,10 @@ export function RelationAttribute({
   if (!value) return editor;
 
   return (
-    <span className="flex min-w-0 items-center gap-1">
-      <EntityLink href={href} className="min-w-0 truncate text-sm">
+    // The same line box the rest of the property list uses, so a linked value
+    // sits on the label's baseline rather than a few pixels above it.
+    <span className={cn("flex min-w-0 items-center gap-1", ATTRIBUTE_ROW)}>
+      <EntityLink href={href} className="min-w-0 truncate">
         {value}
       </EntityLink>
       {editor}

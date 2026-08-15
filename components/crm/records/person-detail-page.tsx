@@ -26,6 +26,9 @@ import { EntityLink } from "@/components/records/entity-link";
 import {
   AddressBook,
   Building2,
+  Clock,
+  Funnel,
+  History,
   Mail,
   Phone,
   Plus,
@@ -355,7 +358,8 @@ export function PersonDetailPage({ personId }: { personId: string }) {
       tabs={[
         {
           value: "timeline",
-          label: "Timeline",
+          label: "Overview",
+          icon: Clock,
           content: (
             <RecordStory
               events={buildStory({
@@ -365,9 +369,11 @@ export function PersonDetailPage({ personId }: { personId: string }) {
             />
           ),
         },
+        commentsTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
         {
           value: "deals",
           label: "Deals",
+          icon: Funnel,
           count: person.dealContacts.length,
           content: (
             <RelatedList
@@ -389,18 +395,19 @@ export function PersonDetailPage({ personId }: { personId: string }) {
           ),
         },
         tasksTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
-        commentsTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
-        mentionsTab({ ref: { kind: "person", id: personId } }),
         filesTab({ ref: { kind: "person", id: personId } }),
+        mentionsTab({ ref: { kind: "person", id: personId } }),
         automationTab({ ref: { kind: "person", id: personId } }),
         {
           value: "history",
           label: "History",
+          icon: History,
           content: <RecordHistoryTab activities={person.activities} />,
         },
         {
           value: "changes",
           label: "Field history",
+          icon: History,
           content: <FieldHistoryTab entity="PERSON" recordId={personId} />,
         },
       ]}

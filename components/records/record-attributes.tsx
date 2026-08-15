@@ -23,6 +23,23 @@ import { cn } from "@/lib/utils";
  * else either.
  */
 
+/**
+ * The line box every half of a property row sits in.
+ *
+ * The label carried `py-1`, the value control carried `py-1` *and* `min-h-9`,
+ * and the icon carried a `mt-0.5` picked to look right against neither. So the
+ * three parts of a row each started at a different height and the row read as
+ * crooked — most visible where a label wrapped to two lines and its value
+ * floated somewhere near the middle.
+ *
+ * One constant, used by the label, by all three value renderers and by
+ * `RelationAttribute` next door, so they cannot drift apart again. The padding
+ * is what makes the touch target on a phone (20px line + 16px = 36px); it is
+ * not a `min-height`, because a min-height centres text in a box the label does
+ * not share and puts the two sides back out of line.
+ */
+export const ATTRIBUTE_ROW = "py-2 text-sm leading-5 sm:py-1";
+
 export type RecordAttributeOption = {
   value: string;
   label: string;
@@ -88,9 +105,8 @@ function ChoiceValue({ attribute }: { attribute: RecordAttribute }) {
         <button
           type="button"
           className={cn(
-            // `min-h-9` on a phone: this is the control you press to change
-            // the property, and a 20px line of text is not a touch target.
-            "-mx-1.5 flex min-h-9 w-full min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-left text-sm hover:bg-[var(--surface-subtle)] sm:min-h-0",
+            "-mx-1.5 flex w-full min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 text-left hover:bg-[var(--surface-subtle)]",
+            ATTRIBUTE_ROW,
             !current && "text-[var(--text-muted)]",
           )}
         >
@@ -148,7 +164,8 @@ function EditableValue({ attribute }: { attribute: RecordAttribute }) {
     return (
       <span
         className={cn(
-          "text-sm",
+          "block break-words",
+          ATTRIBUTE_ROW,
           attribute.mono && "font-mono",
           !attribute.value && "text-[var(--text-muted)]",
         )}
@@ -170,7 +187,8 @@ function EditableValue({ attribute }: { attribute: RecordAttribute }) {
           // screen with no ellipsis and no way to read the rest of it. A
           // property that cannot be read is worse than one that takes two
           // lines.
-          "-mx-1.5 block min-h-9 w-full rounded-[var(--radius-sm)] px-1.5 py-1 text-left text-sm break-words hover:bg-[var(--surface-subtle)] sm:min-h-0",
+          "-mx-1.5 block w-full rounded-[var(--radius-sm)] px-1.5 text-left break-words hover:bg-[var(--surface-subtle)]",
+          ATTRIBUTE_ROW,
           attribute.mono && "font-mono",
           !attribute.value && "text-[var(--text-muted)]",
         )}
@@ -231,13 +249,21 @@ export function RecordAttributes({
             // `items-start`, not `items-center`: a value that wraps to two
             // lines should hang off its label, not push the label into the
             // middle of it.
-            <div key={attribute.id} className="flex items-start gap-3 py-0.5">
+            <div key={attribute.id} className="flex items-start gap-3">
               {/* Narrower on a phone. A 144px label column out of the ~358px a
                   390px screen has left barely 200px for the value, which is
                   what pushed emails, company names and the pickers beside them
                   off the right edge. */}
-              <dt className="flex w-28 shrink-0 items-start gap-1.5 py-1 text-sm text-[var(--text-muted)] sm:w-36">
-                {Icon ? <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> : null}
+              <dt
+                className={cn(
+                  "flex w-28 shrink-0 items-start gap-2 text-[var(--text-muted)] sm:w-36",
+                  ATTRIBUTE_ROW,
+                )}
+              >
+                {/* `mt-px` against a 20px line box, which is where the optical
+                    centre of a 16px glyph actually falls — the old `mt-0.5`
+                    was tuned against a line box the value no longer uses. */}
+                {Icon ? <Icon className="mt-px size-4 shrink-0" aria-hidden="true" /> : null}
                 {/* Wraps rather than truncates. In a 112px column "Primary
                     contact" became "Primary cont…", which is a label somebody
                     has to guess at — and a label is the half of the row that
