@@ -240,19 +240,21 @@ rules bite hardest.
   what makes the back arrow return to the record rather than to the list two
   levels up, makes a link to a record's documents sendable, and makes the first
   paint correct — `matchMedia` has no answer before hydration.
-- **A phone drills in; a desktop switches tabs.** Nine sections is not a strip
-  at 390px, it is a strip you scroll sideways hunting for a word. Below `md`
-  the sections are a list — mark, label, count, attention dot, chevron — and
-  opening one fills the page. Both shapes read the same URL, so neither is a
-  separate mode.
+- **A record's sections are a vertical rail, not a horizontal strip.** Thirteen
+  of them wrapped onto two rows at 1440px and had to be scrolled sideways at
+  390px. Use `NavRail` — the one the back office already uses — beside the
+  section on a desktop, and the same rail at the foot of the landing view on a
+  phone, where tapping a row opens that section full-width. One component, one
+  grammar, two placements.
+- **A segmented control is for three or four peers, not for sections.** Its
+  columns are equal-width by construction, so it is right for Note / Call /
+  Email in the activity composer and cannot hold a record's section set. Reach
+  for it when the choices are few and of one kind.
 - **The bar keeps naming the record at every depth.** Losing it is how a
   drilldown stops feeling like part of the record. The section names itself on
   the page below.
-- **A record's own tab strip is the platform's `SectionTabs`**, not a second
-  opinion about what a tab looks like: neutral active indicator, count pill,
-  icon slot. Brand colour is for primary actions.
-- **A zero is not a count.** Nine grey pills reading `0` say nothing; only a
-  section with something in it says how much.
+- **A zero is not a count.** A column of grey `0`s says nothing; only a section
+  with something in it says how much.
 - Section order follows what a record is opened for: the summary and the story
   first and in **one** view, then talking about it, then the records hanging
   off it, and only then the audit tabs.

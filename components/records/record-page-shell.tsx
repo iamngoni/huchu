@@ -7,7 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 import { Stack } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
-import { SectionTab, SectionTabs } from "@/components/ui/section-tabs";
+import { NavRail, NavRailItem } from "@/components/ui/nav-rail";
 import { StatusChip } from "@/components/ui/status-chip";
 import {
   DropdownMenu,
@@ -18,7 +18,7 @@ import {
 import { PageChrome } from "@/components/layout/page-chrome";
 import { IconButton } from "@/components/ui/icon-button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ChevronRight, DotsThree, type LucideIcon } from "@/lib/icons";
+import { DotsThree, type LucideIcon } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +29,7 @@ export type RecordTab = {
   value: string;
   label: string;
   count?: number;
-  /** The section's mark, shown in the strip and in the phone's section list. */
+  /** The section's mark, shown in the rail at every width. */
   icon?: LucideIcon;
   /**
    * Something in here wants looking at — an unread comment, an overdue task,
@@ -69,13 +69,13 @@ export type RecordAction = {
  * paint is correct — the alternative is `matchMedia`, which has no answer
  * before hydration and paints the desktop shape on a phone for a frame.
  *
- * ## A phone drills in; a desktop switches tabs
+ * ## The sections are a rail, and a phone drills into one
  *
- * Nine sections is not a tab strip at 390px; it is a strip you scroll sideways
- * hunting for a word. So the phone gets what the sections actually are — a
- * list, with the mark, the count and whether anything needs attention — and
- * opening one fills the page. The strip is still a strip where there is room
- * for it. Both read the same URL, so neither is a separate mode.
+ * Thirteen sections is not a tab strip: it wrapped onto two rows at 1440px and
+ * had to be scrolled sideways at 390px. They are a vertical rail — the one the
+ * back office already uses — beside the section on a desktop, and the same rail
+ * at the foot of the landing view on a phone, where tapping a row opens that
+ * section full-width. Both read the same URL, so neither is a separate mode.
  */
 export function RecordPageShell({
   backHref,
@@ -177,6 +177,61 @@ export function RecordPageShell({
   const currentTab = openSection
     ? visibleTabs.find((tab) => tab.value === openSection)
     : landingTab;
+
+  /**
+   * The sections, as one vertical rail at every width.
+   *
+   * They were a horizontal strip, which is the wrong shape for this many:
+   * thirteen sections wrapped onto two rows on a 1440px desktop and had to be
+   * scrolled sideways on a phone. A segmented control — the grammar the
+   * activity composer uses for Note / Call / Email — is right for three or
+   * four peers in a fixed track and cannot hold thirteen; its columns are
+   * equal-width by construction.
+   *
+   * So the rail the back office already uses for exactly this problem: a
+   * column of 36px rows with the mark, the name and the count. On a desktop it
+   * sits to the left of the section. On a phone it is the same rail at the
+   * foot of the landing view, and tapping a row opens that section full-width.
+   * One component, one grammar, two placements.
+   */
+  const sectionRail = (
+    <NavRail label={`${title} sections`}>
+      {visibleTabs.map((tab) => {
+        const Icon = tab.icon;
+        return (
+          <NavRailItem
+            key={tab.value}
+            to={tab.value === landingTab?.value ? recordHref : sectionHref(tab.value)}
+            active={tab.value === currentTab?.value}
+            icon={Icon ? <Icon className="size-4" aria-hidden="true" /> : undefined}
+            // A zero is not a count — it is a column of grey noise. Only a
+            // section with something in it says how much.
+            count={tab.count && tab.count > 0 ? tab.count : undefined}
+            trailing={
+              tab.attention ? (
+                <span
+                  aria-label="Needs attention"
+                  className="size-1.5 rounded-full bg-[var(--action-primary-bg)]"
+                />
+              ) : undefined
+            }
+          >
+            {tab.label}
+          </NavRailItem>
+        );
+      })}
+    </NavRail>
+  );
+
+  // One column on a phone; rail plus section from `md`; and the summary takes
+  // a third from `lg`, which is where `.detail-grid` already stopped crushing
+  // the content column.
+  const sectionGrid = cn(
+    "min-w-0 md:grid md:gap-6",
+    visibleTabs.length > 1 ? "md:grid-cols-[13rem_minmax(0,1fr)]" : "md:grid-cols-1",
+    rail && visibleTabs.length > 1 && "lg:grid-cols-[13rem_minmax(0,1fr)_20rem]",
+    rail && visibleTabs.length <= 1 && "lg:grid-cols-[minmax(0,1fr)_20rem]",
+  );
 
   // And the other direction: the URL is the source of truth, so a page holding
   // its own `tab` state — the lead's billing panel jumps to Documents, the
@@ -315,42 +370,13 @@ export function RecordPageShell({
 
           {beforeTabs}
 
-          <div className={rail ? "detail-grid" : "min-w-0"}>
-            <div className="min-w-0 space-y-4">
-              {/* The strip, where there is room for one. Below `md` the same
-                  sections are a list further down the page, so this is hidden
-                  in CSS rather than by a media query hook — a hook has no
-                  answer before hydration and would paint a nine-item strip on
-                  a phone for a frame. */}
-              {visibleTabs.length > 1 ? (
-                // `.section-tabs` scrolls sideways on its own; wrapping it in
-                // another scroller made it wrap onto a second row instead.
-                <div className="hidden max-w-full md:block">
-                  <SectionTabs label={`${title} sections`}>
-                    {visibleTabs.map((tab) => (
-                      <SectionTab
-                        key={tab.value}
-                        to={tab.value === landingTab?.value ? recordHref : sectionHref(tab.value)}
-                        active={tab.value === currentTab?.value}
-                        icon={tab.icon ? <tab.icon aria-hidden="true" /> : undefined}
-                        // A zero is not a count, it is nine grey pills saying
-                        // nothing. Only a section with something in it says
-                        // how much.
-                        count={tab.count && tab.count > 0 ? tab.count : undefined}
-                      >
-                        {tab.label}
-                        {tab.attention ? (
-                          <span
-                            aria-label="Needs attention"
-                            className="ml-1 inline-block size-1.5 rounded-full bg-[var(--action-primary-bg)] align-middle"
-                          />
-                        ) : null}
-                      </SectionTab>
-                    ))}
-                  </SectionTabs>
-                </div>
-              ) : null}
+          <div className={sectionGrid}>
+            {/* The sections, on the left, where the back office puts them. */}
+            {visibleTabs.length > 1 ? (
+              <aside className="hidden md:block">{sectionRail}</aside>
+            ) : null}
 
+            <div className="min-w-0 space-y-4">
               {/* The summary, above the story, in one view.
                   ==========================================
                   The rail used to become a tab of its own called "Overview",
@@ -362,48 +388,13 @@ export function RecordPageShell({
 
               <div className="min-w-0">{landingTab?.content}</div>
 
-              {/* Every other section, as a list. */}
+              {/* The same rail, at the foot of the landing view, where a phone
+                  has no column to put it in. One component either way, so a
+                  section reads the same whichever width you meet it at. */}
               {visibleTabs.length > 1 ? (
-                <nav aria-label="Record sections" className="md:hidden">
-                  <ul className="divide-y divide-[var(--border-subtle)] border-y border-[var(--border-subtle)]">
-                    {visibleTabs.slice(1).map((tab) => {
-                      const Icon = tab.icon;
-                      return (
-                        <li key={tab.value}>
-                          <Link
-                            href={sectionHref(tab.value)}
-                            className="flex min-h-12 items-center gap-3 py-2.5 text-sm hover:bg-[var(--surface-hover)]"
-                          >
-                            {Icon ? (
-                              <Icon
-                                className="size-4 shrink-0 text-[var(--text-subtle)]"
-                                aria-hidden="true"
-                              />
-                            ) : null}
-                            <span className="min-w-0 flex-1 truncate text-[var(--text-strong)]">
-                              {tab.label}
-                            </span>
-                            {tab.attention ? (
-                              <span
-                                aria-label="Needs attention"
-                                className="size-1.5 shrink-0 rounded-full bg-[var(--action-primary-bg)]"
-                              />
-                            ) : null}
-                            {tab.count && tab.count > 0 ? (
-                              <span className="shrink-0 font-mono text-sm text-[var(--text-muted)]">
-                                {tab.count}
-                              </span>
-                            ) : null}
-                            <ChevronRight
-                              className="size-4 shrink-0 text-[var(--text-subtle)]"
-                              aria-hidden="true"
-                            />
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </nav>
+                <div className="border-t border-[var(--border-subtle)] pt-4 md:hidden">
+                  {sectionRail}
+                </div>
               ) : null}
             </div>
 
