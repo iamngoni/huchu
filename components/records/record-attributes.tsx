@@ -164,7 +164,13 @@ function EditableValue({ attribute }: { attribute: RecordAttribute }) {
         type="button"
         onClick={() => setDraft(attribute.value ?? "")}
         className={cn(
-          "-mx-1.5 flex min-h-9 w-full items-center rounded-[var(--radius-sm)] px-1.5 py-0.5 text-left text-sm hover:bg-[var(--surface-subtle)] sm:min-h-0",
+          // `block` and `break-words`, not `flex items-center`. A flex child
+          // will not wrap, so an email address longer than the value column —
+          // which at 390px is about 200px — ran off the right edge of the
+          // screen with no ellipsis and no way to read the rest of it. A
+          // property that cannot be read is worse than one that takes two
+          // lines.
+          "-mx-1.5 block min-h-9 w-full rounded-[var(--radius-sm)] px-1.5 py-1 text-left text-sm break-words hover:bg-[var(--surface-subtle)] sm:min-h-0",
           attribute.mono && "font-mono",
           !attribute.value && "text-[var(--text-muted)]",
         )}
@@ -179,7 +185,10 @@ function EditableValue({ attribute }: { attribute: RecordAttribute }) {
       autoFocus
       value={draft}
       aria-label={attribute.label}
-      className="h-7"
+      // Full width of the value column and no wider: the input inherited a
+      // default width that overflowed the row on a phone, so the field you
+      // were typing into was cut off by the edge of the screen.
+      className="h-8 w-full"
       onChange={(event) => setDraft(event.target.value)}
       onBlur={() => {
         if (draft !== (attribute.value ?? "")) attribute.onCommit?.(draft);
@@ -219,10 +228,21 @@ export function RecordAttributes({
         {shown.map((attribute) => {
           const Icon = attribute.icon;
           return (
-            <div key={attribute.id} className="flex items-center gap-3 py-0.5">
-              <dt className="flex w-36 shrink-0 items-center gap-1.5 text-sm text-[var(--text-muted)]">
-                {Icon ? <Icon className="size-4" aria-hidden="true" /> : null}
-                <span className="truncate">{attribute.label}</span>
+            // `items-start`, not `items-center`: a value that wraps to two
+            // lines should hang off its label, not push the label into the
+            // middle of it.
+            <div key={attribute.id} className="flex items-start gap-3 py-0.5">
+              {/* Narrower on a phone. A 144px label column out of the ~358px a
+                  390px screen has left barely 200px for the value, which is
+                  what pushed emails, company names and the pickers beside them
+                  off the right edge. */}
+              <dt className="flex w-28 shrink-0 items-start gap-1.5 py-1 text-sm text-[var(--text-muted)] sm:w-36">
+                {Icon ? <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> : null}
+                {/* Wraps rather than truncates. In a 112px column "Primary
+                    contact" became "Primary cont…", which is a label somebody
+                    has to guess at — and a label is the half of the row that
+                    has to be readable for the other half to mean anything. */}
+                <span className="min-w-0">{attribute.label}</span>
               </dt>
               <dd className="min-w-0 flex-1">
                 {/* Which editor a row gets is decided here, from the shape of

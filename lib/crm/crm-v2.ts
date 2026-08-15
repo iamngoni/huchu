@@ -219,6 +219,7 @@ export function leadFiltersToParams(
     createdFrom: filters.createdFrom,
     createdTo: filters.createdTo,
     overdueOnly: filters.overdueOnly ? "1" : undefined,
+    archived: filters.archived ? "1" : undefined,
   };
 }
 
@@ -345,7 +346,8 @@ export function createCrmList(body: {
 
 export type CrmBulkLeadAction =
   | { action: "assign"; ids: string[]; assignedToId: string | null }
-  | { action: "stage"; ids: string[]; stage: CrmLeadStage; lostReason?: string };
+  | { action: "stage"; ids: string[]; stage: CrmLeadStage; lostReason?: string }
+  | { action: "archive"; ids: string[]; archived: boolean };
 
 export function bulkUpdateCrmLeads(body: CrmBulkLeadAction) {
   return fetchJson<

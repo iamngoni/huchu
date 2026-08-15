@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { PageHeader } from "@corelithzw/react";
 
+import { PageChrome } from "@/components/layout/page-chrome";
 import { NavRail } from "@/components/ui/nav-rail";
 import { NavGroup, NavItem } from "@/components/ui/settings-rail";
 import {
@@ -23,9 +23,9 @@ type ManagementShellProps = {
   description?: string;
   actions?: React.ReactNode;
   /**
-   * Skip the shell's own PageHeader. For content that draws its own — the DS
-   * `MasterData` assembly composes one — where two headers would say the same
-   * thing twice.
+   * Skip the in-page description block. For content that draws its own header —
+   * the DS `MasterData` assembly composes one — where two would say the same
+   * thing twice. The app bar still gets the title and the actions either way.
    */
   hideHeader?: boolean;
   children: React.ReactNode;
@@ -112,14 +112,24 @@ export function ManagementShell({
         </NavGroup>
       </NavRail>
 
+      {/* The back office's actions belong in the app bar, the same as every
+          other module's.
+          ==================================================================
+          This shell drew its own `PageHeader` inside the page instead, which
+          on a 390px screen put "New department" about four hundred pixels
+          down — under a title the bar was already showing, under the
+          description, and under the whole search-and-pagination row — while
+          the bar itself sat empty next to the bell. The one verb on the page
+          was the last thing you could reach.
+
+          The title goes to the bar too, so it is stated once. What stays on
+          the page is the description, which is the only part of the old
+          header that said something the bar cannot. */}
+      <PageChrome title={title || modulePresentation.title}>{actions}</PageChrome>
+
       <section className="settings-content">
-        {hideHeader ? null : (
-          <>
-            <PageHeader title={title || modulePresentation.title} primaryAction={actions} />
-            {description ? (
-              <p className="t-body t-muted max-w-[var(--content-max)]">{description}</p>
-            ) : null}
-          </>
+        {hideHeader || !description ? null : (
+          <p className="t-body t-muted max-w-[var(--content-max)]">{description}</p>
         )}
         <div className="w-full max-w-[96rem] space-y-6">{children}</div>
       </section>

@@ -202,6 +202,13 @@ export function LeadsWorkspace({
     [bulk],
   );
 
+  const handleBulkArchive = useCallback(
+    (ids: string[], archived: boolean, done: () => void) => {
+      bulk.mutate({ action: "archive", ids, archived }, { onSuccess: done });
+    },
+    [bulk],
+  );
+
   const leads = leadsQuery.data?.data ?? [];
   const total = leadsQuery.data?.pagination?.total ?? leads.length;
 
@@ -328,6 +335,8 @@ export function LeadsWorkspace({
           }}
           onBulkAssign={handleBulkAssign}
           onBulkStage={handleBulkStage}
+          onBulkArchive={handleBulkArchive}
+          showingArchived={Boolean(activeFilters.archived)}
           hiddenColumns={tableColumns.hidden}
         />
       ) : (

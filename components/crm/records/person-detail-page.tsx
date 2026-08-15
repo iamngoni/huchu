@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
@@ -27,11 +28,13 @@ import {
   Building2,
   Mail,
   Phone,
+  Plus,
   UserRound,
   Users,
 } from "@/lib/icons";
 
 import { RailSection, RecordPageShell, RelatedList } from "@/components/records/record-page-shell";
+import { DealFormSheet } from "./deal-form-sheet";
 import { PersonFormSheet } from "./person-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
@@ -112,7 +115,11 @@ export function PersonDetailPage({ personId }: { personId: string }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [mergeOpen, setMergeOpen] = useState(false);
+  // `editOpen` had no way of ever becoming true: the sheet was mounted and the
+  // state was declared, but no action set it, so a person's edit form was
+  // unreachable. It is in the overflow menu now, beside Merge.
   const [editOpen, setEditOpen] = useState(false);
+  const [dealOpen, setDealOpen] = useState(false);
   const [tab, setTab] = useState("timeline");
 
   const personQuery = useQuery({
@@ -199,13 +206,57 @@ export function PersonDetailPage({ personId }: { personId: string }) {
     </>
   );
 
+  /**
+   * The rail, or nothing at all.
+   *
+   * Both its sections are conditional — a second company, and the
+   * administrator's own fields — and most people have neither. Passed as an
+   * always-present fragment, that produced an "Overview" tab on a phone with
+   * four hundred pixels of blank under it, landed on by default: you opened a
+   * person and were shown an empty screen. `undefined` is how the shell is
+   * told there is no summary to offer, and it opens on the timeline instead.
+   */
+  const railSections = [
+    person.companyLinks.length > 1 ? (
+      <RailSection key="companies" title="Companies">
+        <Stack as="ul" gap="xs">
+          {person.companyLinks.map((link) => (
+            <li key={link.id} className="text-sm">
+              <EntityLink href={`/crm/companies/${link.client.id}`}>{link.client.name}</EntityLink>
+              {link.jobTitle ? (
+                <span className="text-sm text-[var(--text-muted)]"> · {link.jobTitle}</span>
+              ) : null}
+            </li>
+          ))}
+        </Stack>
+      </RailSection>
+    ) : null,
+    definitions.length > 0 ? (
+      <CustomFieldDisplay key="custom" definitions={definitions} values={person.customFields} />
+    ) : null,
+  ].filter(Boolean);
+
+  const rail = railSections.length > 0 ? <>{railSections}</> : undefined;
+
   return (
     <>
     <RecordPageShell
       icon={Users}
       backHref="/crm/people"
       backLabel="All people"
-      actions={[{ label: "Merge a duplicate", onSelect: () => setMergeOpen(true) }]}
+      primaryAction={
+        // The same verb as a company, because a person is who you sell
+        // through — and the deal opens already attached to whichever company
+        // they belong to, which is the whole reason to start it from here.
+        <Button size="sm" className="gap-1.5" onClick={() => setDealOpen(true)}>
+          <Plus className="h-3.5 w-3.5" />
+          New deal
+        </Button>
+      }
+      actions={[
+        { label: "Edit", onSelect: () => setEditOpen(true) },
+        { label: "Merge a duplicate", onSelect: () => setMergeOpen(true) },
+      ]}
       leading={
         <RecordMark
           kind="person"
@@ -353,28 +404,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
           content: <FieldHistoryTab entity="PERSON" recordId={personId} />,
         },
       ]}
-      rail={
-        <>
-          {person.companyLinks.length > 1 ? (
-            <RailSection title="Companies">
-              <Stack as="ul" gap="xs">
-                {person.companyLinks.map((link) => (
-                  <li key={link.id} className="text-sm">
-                    <EntityLink href={`/crm/companies/${link.client.id}`}>
-                      {link.client.name}
-                    </EntityLink>
-                    {link.jobTitle ? (
-                      <span className="text-sm text-[var(--text-muted)]"> · {link.jobTitle}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </Stack>
-            </RailSection>
-          ) : null}
-
-          <CustomFieldDisplay definitions={definitions} values={person.customFields} />
-        </>
-      }
+      rail={rail}
     />
 
     <PersonFormSheet
@@ -405,6 +435,13 @@ export function PersonDetailPage({ personId }: { personId: string }) {
       survivorLabel={person.fullName}
       open={mergeOpen}
       onOpenChange={setMergeOpen}
+    />
+
+    <DealFormSheet
+      open={dealOpen}
+      onOpenChange={setDealOpen}
+      defaultClientId={person.client?.id}
+      onCreated={() => personQuery.refetch()}
     />
     </>
   );

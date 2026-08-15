@@ -6,10 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
-import { Building2, Globe, Mail, MapPin, Phone, UserRound } from "@/lib/icons";
+import { Building2, Globe, Mail, MapPin, Phone, Plus, UserRound } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
@@ -27,6 +28,7 @@ import { useAttributeEditor } from "@/components/records/use-attribute-editor";
 import { EntityLink } from "@/components/records/entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "@/components/records/record-page-shell";
 import { CompanyFormSheet } from "./company-form-sheet";
+import { DealFormSheet } from "./deal-form-sheet";
 import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
 import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
@@ -95,6 +97,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
   const { data: session } = useSession();
   const [mergeOpen, setMergeOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [dealOpen, setDealOpen] = useState(false);
   const [tab, setTab] = useState("people");
 
   const companyQuery = useQuery({
@@ -190,6 +193,16 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
       icon={Building2}
       backHref="/crm/companies"
       backLabel="All companies"
+      primaryAction={
+        // A company is an account you sell to. The record had no primary
+        // action at all, so the bar on a phone was a back arrow, a search
+        // icon, a bell and an overflow menu — nothing to do, on the page
+        // where the next piece of business gets started.
+        <Button size="sm" className="gap-1.5" onClick={() => setDealOpen(true)}>
+          <Plus className="h-3.5 w-3.5" />
+          New deal
+        </Button>
+      }
       actions={[
         { label: "Edit", onSelect: () => setEditOpen(true) },
         { label: "Merge a duplicate", onSelect: () => setMergeOpen(true) },
@@ -435,6 +448,13 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
       survivorLabel={company.name}
       open={mergeOpen}
       onOpenChange={setMergeOpen}
+    />
+
+    <DealFormSheet
+      open={dealOpen}
+      onOpenChange={setDealOpen}
+      defaultClientId={companyId}
+      onCreated={() => companyQuery.refetch()}
     />
     </>
   );

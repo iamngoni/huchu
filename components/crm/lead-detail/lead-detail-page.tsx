@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import type { CrmLeadStage } from "@prisma/client";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { dsConfirm } from "@/components/ui/ds-confirm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
@@ -87,6 +90,7 @@ function draftsToLines(drafts: MeasurementDraft[]): CrmDocumentLineInput[] {
 
 export function LeadDetailPage({ leadId }: { leadId: string }) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { toast } = useToast();
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
@@ -121,6 +125,61 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
   const owners = useMemo(() => teamQuery.data?.data ?? [], [teamQuery.data]);
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
   const lead = leadQuery.data;
+
+  const archive = useMutation({
+    mutationFn: (archived: boolean) =>
+      fetchJson(`/api/v2/crm/leads/${leadId}/archive`, {
+        method: "POST",
+        body: JSON.stringify({ archived }),
+      }),
+    onSuccess: (_result, archived) => {
+      queryClient.invalidateQueries({ queryKey: ["crm-lead", leadId] });
+      queryClient.invalidateQueries({ queryKey: ["crm", "leads"] });
+      queryClient.invalidateQueries({ queryKey: ["crm", "board"] });
+      toast({
+        title: archived ? "Archived" : "Back in the pipeline",
+        description: archived
+          ? "It is out of the lists and the board. Restore it from this menu."
+          : undefined,
+      });
+    },
+    onError: (error) =>
+      toast({
+        title: "Could not archive that lead",
+        description: getApiErrorMessage(error),
+        variant: "destructive",
+      }),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => fetchJson(`/api/v2/crm/leads/${leadId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm", "leads"] });
+      queryClient.invalidateQueries({ queryKey: ["crm", "board"] });
+      toast({ title: "Deleted" });
+      // Nothing left to look at — the record this page is about is gone.
+      router.push("/crm/leads");
+    },
+    onError: (error) =>
+      toast({
+        title: "Could not delete that lead",
+        description: getApiErrorMessage(error),
+        variant: "destructive",
+      }),
+  });
+
+  const setArchived = (archived: boolean) => archive.mutate(archived);
+
+  const confirmDelete = async () => {
+    const confirmed = await dsConfirm({
+      title: "Delete this lead for good?",
+      description:
+        "Its calls, notes, visits, tasks and files go with it, and none of it comes back. Archiving keeps the record and takes it out of the pipeline.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (confirmed) remove.mutate();
+  };
 
   const changeStage = useMutation({
     mutationFn: ({ stage, lostReason }: { stage: CrmLeadStage; lostReason?: string }) =>
@@ -217,7 +276,14 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
       backLabel="All leads"
       title={lead.title ?? lead.leadNo}
       reference={lead.leadNo}
-      status={{ status: CRM_STAGE_STATUS[lead.stage], label: CRM_STAGE_LABELS[lead.stage] }}
+      // An archived lead that looks exactly like a live one is how somebody
+      // spends ten minutes working a record that is not in anybody's pipeline.
+      // The chip is the first thing read on the page, so it says so there.
+      status={
+        lead.archivedAt
+          ? { status: "inactive", label: lead.convertedAt ? "Converted" : "Archived" }
+          : { status: CRM_STAGE_STATUS[lead.stage], label: CRM_STAGE_LABELS[lead.stage] }
+      }
       subtitle={
         <>
           <EntityLink href={lead.clientId ? `/crm/companies/${lead.clientId}` : null} muted>
@@ -230,15 +296,39 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
         </>
       }
       primaryAction={
-        // Converting is the one thing a qualified lead exists to do.
-        <Button size="sm" className="gap-1.5" onClick={() => setConvertOpen(true)}>
-          <ArrowRight className="h-3.5 w-3.5" />
-          Convert to deal
-        </Button>
+        // Converting is the one thing a qualified lead exists to do — until it
+        // has done it. A converted lead is history, and the useful move from
+        // here is following the business to where it went, so the bar offers
+        // that instead of a verb that would now fail.
+        lead.convertedDealId ? (
+          <Button asChild size="sm" variant="secondary" className="gap-1.5">
+            <Link href={`/crm/deals/${lead.convertedDealId}`}>
+              Open the deal
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        ) : (
+          <Button size="sm" className="gap-1.5" onClick={() => setConvertOpen(true)}>
+            <ArrowRight className="h-3.5 w-3.5" />
+            Convert to deal
+          </Button>
+        )
       }
       actions={[
         { label: "Edit", onSelect: () => setEditOpen(true) },
         { label: "Schedule a visit", onSelect: () => setScheduleOpen(true) },
+        // A lead had no ending short of dragging it to Lost, which is a claim
+        // about the business. A duplicate or a wrong number is not lost, it is
+        // just not wanted — so archiving is offered first, and deleting sits
+        // under it for the row that should never have existed.
+        lead.archivedAt
+          ? { label: "Restore from archive", onSelect: () => setArchived(false) }
+          : { label: "Archive", onSelect: () => setArchived(true) },
+        {
+          label: "Delete",
+          destructive: true,
+          onSelect: () => confirmDelete(),
+        },
       ]}
       attributes={
         // A lead had no property list at all, which is why nothing on it
@@ -264,8 +354,12 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
               label: "Likelihood",
               icon: TrendingUp,
               mono: true,
-              placeholder: "0",
+              placeholder: "Not scored",
               ...edit.numeric("probability", lead.probability),
+              // A bare "0" beside the word Likelihood is not a percentage,
+              // it is a number nobody can act on — the same rule that makes
+              // money carry its currency. Editing still opens on the number.
+              formatted: lead.probability == null ? null : `${lead.probability}%`,
             },
             {
               id: "company",
@@ -418,8 +512,13 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             <p className="mt-1 font-mono text-3xl leading-none tracking-tight text-[var(--text-strong)]">
               {formatLeadValue(lead.estimatedValue, lead.currency)}
             </p>
+            {/* A lead with no likelihood on it is not 0% likely — nobody has
+                said. The property list above reads "Not scored", and this line
+                used to sit two hundred pixels below it saying "0% likely"
+                about the same field. */}
             <p className="mt-2 text-sm text-[var(--text-muted)]">
-              {lead.probability ?? 0}% likely · {CRM_STAGE_LABELS[lead.stage]}
+              {lead.probability == null ? "Not scored" : `${lead.probability}% likely`} ·{" "}
+              {CRM_STAGE_LABELS[lead.stage]}
             </p>
 
             {lead.scoreBreakdown ? (

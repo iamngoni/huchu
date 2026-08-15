@@ -3,8 +3,7 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { PageHeader } from "@corelithzw/react";
-
+import { PageChrome } from "@/components/layout/page-chrome";
 import { NavRail } from "@/components/ui/nav-rail";
 import { NavGroup, NavItem } from "@/components/ui/settings-rail";
 
@@ -106,8 +105,13 @@ export function PreferencesShell({
         ) : null}
       </NavRail>
 
+      {/* Title and actions to the app bar, the same as the management shell
+          and every module beside it. Drawn in the page, the title was the
+          second copy of a word the bar was already showing, and it cost about
+          a hundred and ten pixels of a 844px screen to say it again. */}
+      <PageChrome title={title}>{actions}</PageChrome>
+
       <main className="settings-content">
-        <PageHeader title={title} primaryAction={actions} />
         {description ? (
           <p className="t-body t-muted max-w-[var(--content-max)]">
             {description}

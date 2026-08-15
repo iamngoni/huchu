@@ -66,6 +66,18 @@ When any UX guidance conflicts with other docs, this playbook wins.
 
 ## Shell Patterns
 
+### Where the title and the primary action go
+- **The top app bar, always.** A shell that draws its own `PageHeader` in the
+  page states the title twice — the bar is already showing it — and spends
+  about 110px of an 844px screen doing it, while the bar sits empty beside the
+  bell. Register both with `PageChrome`.
+- A page's primary action belongs in the bar even when the page's table has a
+  controls row of its own: parked there it lands under the title, the
+  description and the search box, which on a phone is four hundred pixels down.
+- A shell that offers module-wide verbs (Issue, Receive) offers them only on
+  the views they are the verb for. On the others the bar carries the page's
+  own action instead.
+
 ### List Shell
 - Header row with title and primary action.
 - Optional context tabs/segments directly above the DataTable.
@@ -190,6 +202,38 @@ apply them to any module.
 - **Dismissing a layer dismisses that layer only.** Escape in a picker must not
   close the form behind it. Mixing overlay libraries makes this a live risk:
   cover it with a test, not with hope.
+
+### Record pages
+Written from a screenshot audit of every CRM record at 390px. A record page
+carries more per screen than anything else in the product, so it is where these
+rules bite hardest.
+
+- **Properties live at the top of the page, and they have to be readable
+  there.** The label column is narrow on a phone (`w-28`), labels wrap rather
+  than truncate — "Primary cont…" is a label somebody has to guess at — and a
+  value that will not fit on one line wraps too. Nothing about a property may
+  run off the right edge of the screen.
+- **A property's editor is opened by pressing the value**, not by a verb parked
+  beside it. Where the value is a link worth following, the affordance is an
+  icon at the end of the row, not a word: "Change" spelled out costs about a
+  quarter of the value column at phone width.
+- **A rail section that repeats a property is deleted, not moved.** Once
+  properties are at the top, an Overview tab that restates the address and the
+  primary contact is a screen spent on what you just scrolled past.
+- **A summary with nothing in it is not a tab.** Pass no rail rather than an
+  empty one; the record then opens on its first real tab instead of on a blank
+  screen with a name.
+- **The record's actions are flat on a phone.** The app bar does its own
+  collecting — first action shown, rest behind one `···`. Hand it a menu and
+  the phone nests a menu inside a menu, with two controls on screen both
+  called "More actions".
+- Every record type has **one primary action**, and it is the thing that record
+  exists for: convert a lead, schedule a visit on a site, start a deal on a
+  company or a person. A record page whose bar holds only a back arrow and an
+  overflow menu has not been designed, it has been rendered.
+- A record that is no longer live **says so in its status chip**. An archived
+  record that looks exactly like a working one is how somebody spends ten
+  minutes on business nobody is pursuing.
 
 ### Navigation
 - A section rail is a **scrolling strip** on a phone, never a stacked column.

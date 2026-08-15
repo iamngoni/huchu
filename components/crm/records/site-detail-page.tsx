@@ -5,12 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { ClientDate } from "@/components/ui/client-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
-import { Building2, MapPin, UserRound } from "@/lib/icons";
+import { Building2, CalendarCheck, MapPin, UserRound } from "@/lib/icons";
+import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
+import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
 import { formatMoney } from "@/components/crm/documents/document-types";
@@ -73,6 +76,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
   const { data: session } = useSession();
   const [tab, setTab] = useState("visits");
   const [editOpen, setEditOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const siteQuery = useQuery({
     queryKey: ["crm", "site", siteId],
@@ -86,7 +90,14 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
     queryKey: ["crm", "field-definitions", "SITE"],
     queryFn: () => fetchCrmFieldDefinitions("SITE"),
   });
+  // Who a visit can be given to. Shared cache key with the rest of the module,
+  // so opening the sheet costs nothing the page has not already paid.
+  const teamQuery = useQuery({
+    queryKey: ["crm", "team"],
+    queryFn: () => fetchJson<{ data: LeadFilterOwner[] }>("/api/v2/crm/team"),
+  });
 
+  const owners = teamQuery.data?.data ?? [];
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
   const site = siteQuery.data;
 
@@ -129,11 +140,51 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
       ? `https://www.google.com/maps?q=${site.latitude},${site.longitude}`
       : null;
 
+  /**
+   * What the rail has left to say once the properties are at the top.
+   *
+   * It used to open with Address, Access and Primary contact — all three of
+   * which are property rows a few centimetres above it. On a phone that is
+   * the whole Overview tab spent repeating the screen you scrolled down from.
+   * What is genuinely not a property is kept: the map link, which comes out of
+   * the coordinates rather than being them, the site's own conditions, and the
+   * administrator's fields.
+   */
+  const railSections = [
+    mapsHref ? (
+      <RailSection key="directions" title="Getting there">
+        <a href={mapsHref} target="_blank" rel="noreferrer" className="text-sm hover:underline">
+          Open in maps
+        </a>
+      </RailSection>
+    ) : null,
+    site.siteConditions ? (
+      <RailSection key="conditions" title="Conditions">
+        <p className="whitespace-pre-wrap text-sm">{site.siteConditions}</p>
+      </RailSection>
+    ) : null,
+    definitions.length > 0 ? (
+      <CustomFieldDisplay key="custom" definitions={definitions} values={site.customFields} />
+    ) : null,
+  ].filter(Boolean);
+
+  const rail = railSections.length > 0 ? <>{railSections}</> : undefined;
+
   return (
     <>
       <RecordPageShell
       icon={MapPin}
       backHref="/crm/sites"
+      primaryAction={
+        // A site is a place somebody has to go to. Every other verb on this
+        // record — edit the address, repoint the company — is maintenance;
+        // arranging the visit is the work, which is why Visits is also the
+        // tab this page opens on.
+        <Button size="sm" className="gap-1.5" onClick={() => setScheduleOpen(true)}>
+          <CalendarCheck className="h-3.5 w-3.5" />
+          Schedule a visit
+        </Button>
+      }
       actions={[{ label: "Edit", onSelect: () => setEditOpen(true) }]}
       backLabel="All sites"
       leading={
@@ -294,55 +345,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
           content: <FieldHistoryTab entity="SITE" recordId={siteId} />,
         },
       ]}
-      rail={
-        <>
-          <RailSection title="Address">
-            {site.addressLine ? <p className="text-sm">{site.addressLine}</p> : null}
-            <p className="text-sm text-[var(--text-muted)]">
-              {[site.city, site.country].filter(Boolean).join(", ") || "No address recorded"}
-            </p>
-            {mapsHref ? (
-              <a
-                href={mapsHref}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-block text-sm hover:underline"
-              >
-                Open in maps
-              </a>
-            ) : null}
-          </RailSection>
-
-          <RailSection title="Access">
-            {site.accessInstructions ? (
-              <p className="whitespace-pre-wrap text-sm">{site.accessInstructions}</p>
-            ) : (
-              <p className="text-sm text-[var(--text-muted)]">No access notes yet.</p>
-            )}
-          </RailSection>
-
-          {site.siteConditions ? (
-            <RailSection title="Conditions">
-              <p className="whitespace-pre-wrap text-sm">{site.siteConditions}</p>
-            </RailSection>
-          ) : null}
-
-          <RailSection title="Primary contact">
-            {site.primaryContact ? (
-              <>
-                <p className="text-sm">{site.primaryContact.fullName}</p>
-                {site.primaryContact.phone ? (
-                  <p className="text-sm text-[var(--text-muted)]">{site.primaryContact.phone}</p>
-                ) : null}
-              </>
-            ) : (
-              <p className="text-sm text-[var(--text-muted)]">Nobody named yet.</p>
-            )}
-          </RailSection>
-
-          <CustomFieldDisplay definitions={definitions} values={site.customFields} />
-        </>
-      }
+      rail={rail}
       />
 
       <SiteFormSheet
@@ -366,6 +369,18 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
           siteConditions: site.siteConditions ?? "",
         }}
         onSaved={() => siteQuery.refetch()}
+      />
+
+      <VisitScheduleSheet
+        open={scheduleOpen}
+        onOpenChange={setScheduleOpen}
+        subject={{ siteId, clientId: site.client?.id ?? null }}
+        defaultLocation={
+          [site.addressLine, site.city].filter(Boolean).join(", ") || null
+        }
+        owners={owners}
+        currentUserId={session?.user?.id}
+        onScheduled={() => siteQuery.refetch()}
       />
     </>
   );

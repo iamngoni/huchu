@@ -6,6 +6,7 @@ import { useIsBelow, useIsMobile } from "@/hooks/use-mobile";
 import Link from "next/link";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger, Stack } from "@corelithzw/react";
+import { Button } from "@/components/ui/button";
 import { StatusChip } from "@/components/ui/status-chip";
 import {
   DropdownMenu,
@@ -17,6 +18,7 @@ import { PageChrome } from "@/components/layout/page-chrome";
 import { IconButton } from "@/components/ui/icon-button";
 import { DotsThree, type LucideIcon } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
+import { cn } from "@/lib/utils";
 
 /** The synthetic tab the rail becomes when there is no room beside the content. */
 const OVERVIEW_TAB = "overview";
@@ -142,35 +144,73 @@ export function RecordPageShell({
     if (value !== OVERVIEW_TAB) onTabChange(value);
   };
 
-  const barActions = useMemo(
-    () => (
+  /**
+   * The record's actions, in the top app bar.
+   *
+   * Two shapes, because the bar has two.
+   *
+   * On a desktop the bar renders whatever it is given, side by side, so the
+   * secondary actions are collected into a menu here — a row of five buttons
+   * beside the record's name is not a bar, it is a toolbar.
+   *
+   * On a phone the bar does its own collecting: it shows the first action and
+   * folds the rest behind a "More actions" button of its own. Handing it a
+   * menu, as this used to, meant the phone put a menu inside a menu — you
+   * pressed `···` and got a panel containing a single unlabelled `···` to
+   * press again, with two controls on screen both called "More actions". So
+   * the phone gets the actions flat and the bar folds them once.
+   */
+  const barActions = useMemo(() => {
+    if (!actions || actions.length === 0) return primaryAction;
+
+    if (narrow) {
+      return (
+        <>
+          {primaryAction}
+          {actions.map((action) => (
+            <Button
+              key={action.label}
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "justify-start gap-2",
+                action.destructive && "text-[var(--status-error-text)]",
+              )}
+              onClick={action.onSelect}
+            >
+              {action.icon}
+              {action.label}
+            </Button>
+          ))}
+        </>
+      );
+    }
+
+    return (
       <>
         {primaryAction}
-        {actions && actions.length > 0 ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <IconButton aria-label="More actions">
-                <DotsThree />
-              </IconButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {actions.map((action) => (
-                <DropdownMenuItem
-                  key={action.label}
-                  onClick={action.onSelect}
-                  className={action.destructive ? "text-[var(--status-error-text)]" : undefined}
-                >
-                  {action.icon}
-                  {action.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <IconButton aria-label="More actions">
+              <DotsThree />
+            </IconButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {actions.map((action) => (
+              <DropdownMenuItem
+                key={action.label}
+                onClick={action.onSelect}
+                className={action.destructive ? "text-[var(--status-error-text)]" : undefined}
+              >
+                {action.icon}
+                {action.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </>
-    ),
-    [actions, primaryAction],
-  );
+    );
+  }, [actions, narrow, primaryAction]);
 
   return (
     <div className="space-y-4">

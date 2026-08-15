@@ -98,6 +98,8 @@ export function LeadsTable({
   onSortChange,
   onBulkAssign,
   onBulkStage,
+  onBulkArchive,
+  showingArchived = false,
   hiddenColumns,
 }: {
   leads: CrmLeadListRecord[];
@@ -111,6 +113,9 @@ export function LeadsTable({
   onSortChange: (sort: LeadSort) => void;
   onBulkAssign: (ids: string[], assignedToId: string | null, done: () => void) => void;
   onBulkStage: (ids: string[], stage: CrmLeadStage, done: () => void) => void;
+  onBulkArchive: (ids: string[], archived: boolean, done: () => void) => void;
+  /** Whether these rows are the archive, which flips Archive into Restore. */
+  showingArchived?: boolean;
   /** Column ids the reader has switched off. */
   hiddenColumns?: string[];
 }) {
@@ -294,6 +299,18 @@ export function LeadsTable({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* Tidying up is a bulk job by nature — an import that ran
+                  twice, a morning of spam through the web form. Restoring is
+                  the same control read the other way round, so the archived
+                  view has a way back. */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onBulkArchive(ids, !showingArchived, clearSelection)}
+              >
+                {showingArchived ? "Restore" : "Archive"}
+              </Button>
             </div>
           );
         },

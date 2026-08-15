@@ -67,6 +67,11 @@ export type LeadDetail = {
   firstContactAt: string | null;
   wonAt: string | null;
   lostAt: string | null;
+  /** Out of the working set. Set by archiving, and by conversion. */
+  archivedAt: string | null;
+  /** When this lead became a deal, and which deal it became. */
+  convertedAt: string | null;
+  convertedDealId: string | null;
   createdAt: string;
   updatedAt: string;
   clientId: string | null;
