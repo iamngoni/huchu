@@ -241,8 +241,12 @@ export function RecordAttributes({
   const hidden = attributes.length - shown.length;
 
   return (
-    <div className={cn("space-y-0.5", className)}>
-      <dl className="grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
+    // Sized to the column it is in, not to the window. This list renders full
+    // width under the identity strip on a phone and inside a 320px standing
+    // column on a desktop; keyed to the viewport, the desktop case put two
+    // columns inside 320px and "USD 9,100.00" came out one character per line.
+    <div className={cn("@container space-y-0.5", className)}>
+      <dl className="grid gap-x-6 gap-y-0.5 @md:grid-cols-2">
         {shown.map((attribute) => {
           const Icon = attribute.icon;
           return (
@@ -256,7 +260,7 @@ export function RecordAttributes({
                   off the right edge. */}
               <dt
                 className={cn(
-                  "flex w-28 shrink-0 items-start gap-2 text-[var(--text-muted)] sm:w-36",
+                  "flex w-28 shrink-0 items-start gap-2 text-[var(--text-muted)] @md:w-36",
                   ATTRIBUTE_ROW,
                 )}
               >

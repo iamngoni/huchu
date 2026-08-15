@@ -19,7 +19,13 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 import { customFieldAttributes } from "@/components/records/custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "@/components/records/record-mark";
-import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
+import {
+  automationTab,
+  historyTab,
+  paperworkTab,
+  tasksTab,
+  useRecordComments,
+} from "./record-tabs";
 import { RecordAttributes } from "@/components/records/record-attributes";
 import { useAttributeEditor } from "@/components/records/use-attribute-editor";
 import { EntityLink } from "@/components/records/entity-link";
@@ -28,7 +34,6 @@ import {
   Building2,
   Clock,
   Funnel,
-  History,
   Mail,
   Phone,
   Plus,
@@ -37,11 +42,10 @@ import {
 } from "@/lib/icons";
 
 import { RailSection, RecordPageShell, RelatedList } from "@/components/records/record-page-shell";
+import { ConversationComposer } from "@/components/crm/collaboration/conversation-composer";
 import { DealFormSheet } from "./deal-form-sheet";
 import { PersonFormSheet } from "./person-form-sheet";
-import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
-import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
 import { Stack } from "@corelithzw/react";
 
@@ -149,6 +153,7 @@ export function PersonDetailPage({ personId }: { personId: string }) {
   });
 
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
+  const comments = useRecordComments({ kind: "person", id: personId });
   const person = personQuery.data;
 
   if (personQuery.isLoading) {
@@ -358,18 +363,21 @@ export function PersonDetailPage({ personId }: { personId: string }) {
       tabs={[
         {
           value: "timeline",
-          label: "Overview",
+          label: "Conversation",
           icon: Clock,
           content: (
-            <RecordStory
-              events={buildStory({
-                activities: person.activities,
-                createdLabel: "Person added",
-              })}
-            />
+            <div className="space-y-4">
+              <ConversationComposer target={{ kind: "person", id: personId }} />
+              <RecordStory
+                events={buildStory({
+                  activities: person.activities,
+                  comments,
+                  createdLabel: "Person added",
+                })}
+              />
+            </div>
           ),
         },
-        commentsTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
         {
           value: "deals",
           label: "Deals",
@@ -395,21 +403,13 @@ export function PersonDetailPage({ personId }: { personId: string }) {
           ),
         },
         tasksTab({ ref: { kind: "person", id: personId }, currentUserId: session?.user?.id }),
-        filesTab({ ref: { kind: "person", id: personId } }),
-        mentionsTab({ ref: { kind: "person", id: personId } }),
+        paperworkTab({ ref: { kind: "person", id: personId } }),
         automationTab({ ref: { kind: "person", id: personId } }),
-        {
-          value: "history",
-          label: "History",
-          icon: History,
-          content: <RecordHistoryTab activities={person.activities} />,
-        },
-        {
-          value: "changes",
-          label: "Field history",
-          icon: History,
-          content: <FieldHistoryTab entity="PERSON" recordId={personId} />,
-        },
+        historyTab({
+          ref: { kind: "person", id: personId },
+          entity: "PERSON",
+          activities: person.activities,
+        }),
       ]}
       rail={rail}
     />

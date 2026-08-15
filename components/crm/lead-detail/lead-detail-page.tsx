@@ -18,9 +18,7 @@ import {
   Building2,
   CalendarCheck,
   Clock,
-  FileText,
   Funnel,
-  History,
   Payments,
   TrendingUp,
   UserRound,
@@ -44,14 +42,18 @@ import {
   CRM_STAGE_STATUS,
   formatLeadValue,
 } from "@/components/crm/leads/stage-config";
+import { ConversationComposer } from "@/components/crm/collaboration/conversation-composer";
 import { ConvertLeadSheet } from "@/components/crm/leads/convert-lead-sheet";
 import { VisitReportSheet, type MeasurementDraft } from "@/components/crm/visits/visit-report-sheet";
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 
-import { ActivityComposer } from "./activity-composer";
-import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "@/components/crm/records/record-tabs";
-import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
-import { RecordHistoryTab } from "@/components/crm/records/record-history-tab";
+import {
+  automationTab,
+  historyTab,
+  paperworkTab,
+  tasksTab,
+  useRecordComments,
+} from "@/components/crm/records/record-tabs";
 import {
   ActivityStrip,
   CallList,
@@ -127,6 +129,8 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
   });
 
   const owners = useMemo(() => teamQuery.data?.data ?? [], [teamQuery.data]);
+  // Comments join the story rather than sitting in a section of their own.
+  const comments = useRecordComments({ kind: "lead", id: leadId });
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
   const lead = leadQuery.data;
 
@@ -437,11 +441,11 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
           // it and the two read as one thing: what this lead is worth and what
           // is next, then what has actually happened to it.
           value: "timeline",
-          label: "Overview",
+          label: "Conversation",
           icon: Clock,
           content: (
             <div className="space-y-4">
-              <ActivityComposer target={{ kind: "lead", id: leadId }} />
+              <ConversationComposer target={{ kind: "lead", id: leadId }} />
               {/* The whole story, not just the activity table: visits, tasks,
                   documents and the day it arrived, in one order. */}
               <RecordStory
@@ -450,6 +454,9 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
                   tasks: lead.followUps,
                   visits: lead.appointments,
                   documents: lead.documents,
+                  // What people said belongs in the same order as what
+                  // happened. `buildStory` has always taken comments.
+                  comments,
                   createdAt: lead.createdAt,
                   createdLabel: `Lead ${lead.leadNo} came in`,
                 })}
@@ -458,15 +465,10 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             </div>
           ),
         },
-        // Second, and deliberately: talking about the record is the thing
-        // people come back to a record to do, and it was seven tabs along.
-        commentsTab({ ref: { kind: "lead", id: leadId }, currentUserId }),
-        {
-          value: "documents",
-          label: "Documents",
-          icon: FileText,
-          count: lead.documents.length,
-          content: (
+        paperworkTab({
+          ref: { kind: "lead", id: leadId },
+          documentCount: lead.documents.length,
+          documents: (
             <DocumentList
               basePath={`/api/v2/crm/leads/${leadId}`}
               currency={lead.currency}
@@ -478,7 +480,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
               onPrefillConsumed={() => setQuotationPrefill(undefined)}
             />
           ),
-        },
+        }),
         {
           value: "visits",
           label: "Visits",
@@ -504,24 +506,12 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
             (task) => task.status === "PENDING" && new Date(task.dueAt) < new Date(),
           ),
         },
-        filesTab({ ref: { kind: "lead", id: leadId } }),
-        mentionsTab({ ref: { kind: "lead", id: leadId } }),
         automationTab({ ref: { kind: "lead", id: leadId } }),
-        {
-          // Leads had neither history tab, while deals, companies, people and
-          // sites had both. The record type people open most was the one with
-          // no answer to "who changed this".
-          value: "history",
-          label: "History",
-          icon: History,
-          content: <RecordHistoryTab activities={lead.activities} />,
-        },
-        {
-          value: "changes",
-          label: "Field history",
-          icon: History,
-          content: <FieldHistoryTab entity="LEAD" recordId={leadId} />,
-        },
+        historyTab({
+          ref: { kind: "lead", id: leadId },
+          entity: "LEAD",
+          activities: lead.activities,
+        }),
       ]}
       rail={
         <>

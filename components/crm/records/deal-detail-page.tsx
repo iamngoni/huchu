@@ -18,7 +18,6 @@ import {
   Clock,
   FileText,
   Funnel,
-  History,
   MapPin,
   Payments,
   Plus,
@@ -32,11 +31,17 @@ import { visitItemsToQuotationLines } from "@/lib/crm/site-visits";
 import type { CrmDocumentLineInput } from "@/lib/crm/accounting-bridge";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 
+import { ConversationComposer } from "@/components/crm/collaboration/conversation-composer";
 import { DocumentList } from "@/components/crm/documents/document-list";
 import { formatMoney, invoiceOutstanding } from "@/components/crm/documents/document-types";
 import type { LeadDocument } from "@/components/crm/documents/document-types";
-import { ActivityComposer } from "@/components/crm/lead-detail/activity-composer";
-import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
+import {
+  automationTab,
+  historyTab,
+  paperworkTab,
+  tasksTab,
+  useRecordComments,
+} from "./record-tabs";
 import {
   ActivityStrip,
   CallList,
@@ -64,8 +69,6 @@ import { useAttributeEditor } from "@/components/records/use-attribute-editor";
 import { EntityLink } from "@/components/records/entity-link";
 import { DealStageBar } from "./deal-stage-bar";
 import { RailSection, RecordPageShell } from "@/components/records/record-page-shell";
-import { RecordHistoryTab } from "./record-history-tab";
-import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
 import { Stack } from "@corelithzw/react";
 
@@ -172,6 +175,8 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
   });
 
   const owners = useMemo(() => teamQuery.data?.data ?? [], [teamQuery.data]);
+  // Comments join the story rather than sitting in a section of their own.
+  const comments = useRecordComments({ kind: "deal", id: dealId });
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
   const deal = dealQuery.data;
 
@@ -445,17 +450,18 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             // two read as one thing — what this deal is worth and what is
             // next, then what has actually happened to it.
             value: "timeline",
-            label: "Overview",
+            label: "Conversation",
             icon: Clock,
             content: (
               <div className="space-y-4">
-                <ActivityComposer target={{ kind: "deal", id: dealId }} />
+                <ConversationComposer target={{ kind: "deal", id: dealId }} />
                 <RecordStory
                   events={buildStory({
                     activities: deal.activities,
                     tasks: deal.followUps,
                     visits: deal.appointments,
                     documents: deal.documents,
+                    comments,
                     createdLabel: `Deal ${deal.dealNo} opened`,
                   })}
                   emptyMessage="Nothing has happened on this deal yet."
@@ -463,15 +469,10 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
               </div>
             ),
           },
-          // Second, and deliberately: talking about the record is what people
-          // come back to a record to do, and it was seven tabs along.
-          commentsTab({ ref: { kind: "deal", id: dealId }, currentUserId }),
-          {
-            value: "documents",
-            label: "Documents",
-            icon: FileText,
-            count: deal.documents.length,
-            content: (
+          paperworkTab({
+            ref: { kind: "deal", id: dealId },
+            documentCount: deal.documents.length,
+            documents: (
               <DocumentList
                 basePath={`/api/v2/crm/deals/${dealId}`}
                 currency={deal.currency}
@@ -481,7 +482,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 onPrefillConsumed={() => setQuotationPrefill(undefined)}
               />
             ),
-          },
+          }),
           {
             value: "people",
             label: "People",
@@ -513,21 +514,12 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
               (task) => task.status === "PENDING" && new Date(task.dueAt) < new Date(),
             ),
           },
-          filesTab({ ref: { kind: "deal", id: dealId } }),
-          mentionsTab({ ref: { kind: "deal", id: dealId } }),
           automationTab({ ref: { kind: "deal", id: dealId } }),
-          {
-            value: "history",
-            label: "History",
-            icon: History,
-            content: <RecordHistoryTab activities={deal.activities} />,
-          },
-          {
-            value: "changes",
-            label: "Field history",
-            icon: History,
-            content: <FieldHistoryTab entity="DEAL" recordId={dealId} />,
-          },
+          historyTab({
+            ref: { kind: "deal", id: dealId },
+            entity: "DEAL",
+            activities: deal.activities,
+          }),
         ]}
         rail={
           <>

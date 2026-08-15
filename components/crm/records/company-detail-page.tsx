@@ -15,7 +15,6 @@ import {
   Clock,
   Funnel,
   Globe,
-  History,
   Mail,
   MapPin,
   Phone,
@@ -33,17 +32,22 @@ import type { LeadActivity } from "@/components/crm/lead-detail/lead-types";
 import { customFieldAttributes } from "@/components/records/custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "@/components/records/record-mark";
+import { ConversationComposer } from "@/components/crm/collaboration/conversation-composer";
 import { CompanyPeopleTab } from "./company-people-tab";
-import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
+import {
+  automationTab,
+  historyTab,
+  paperworkTab,
+  tasksTab,
+  useRecordComments,
+} from "./record-tabs";
 import { RecordAttributes } from "@/components/records/record-attributes";
 import { useAttributeEditor } from "@/components/records/use-attribute-editor";
 import { EntityLink } from "@/components/records/entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "@/components/records/record-page-shell";
 import { CompanyFormSheet } from "./company-form-sheet";
 import { DealFormSheet } from "./deal-form-sheet";
-import { RecordHistoryTab } from "./record-history-tab";
 import { MergeDialog } from "./merge-dialog";
-import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 
 const ACCOUNT_STATUS_PRESENTATION: Record<string, { label: string; status: CanonicalUiStatus }> = {
   ACTIVE: { label: "Active", status: "passing" },
@@ -136,6 +140,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
   });
 
   const definitions: CrmFieldDefinitionRecord[] = fieldsQuery.data?.data ?? [];
+  const comments = useRecordComments({ kind: "company", id: companyId });
   const company = companyQuery.data;
 
   if (companyQuery.isLoading) {
@@ -311,18 +316,21 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
       tabs={[
         {
           value: "timeline",
-          label: "Overview",
+          label: "Conversation",
           icon: Clock,
           content: (
-            <RecordStory
-              events={buildStory({
-                activities: company.activities,
-                createdLabel: "Company added",
-              })}
-            />
+            <div className="space-y-4">
+              <ConversationComposer target={{ kind: "company", id: companyId }} />
+              <RecordStory
+                events={buildStory({
+                  activities: company.activities,
+                  comments,
+                  createdLabel: "Company added",
+                })}
+              />
+            </div>
           ),
         },
-        commentsTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
         // The company's own graph: who works there, what is being sold to
         // them, and where. These sit directly after the summary because they
         // are what an account page is *for* — a company is mostly a way in to
@@ -370,21 +378,13 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
           ),
         },
         tasksTab({ ref: { kind: "company", id: companyId }, currentUserId: session?.user?.id }),
-        filesTab({ ref: { kind: "company", id: companyId } }),
-        mentionsTab({ ref: { kind: "company", id: companyId } }),
+        paperworkTab({ ref: { kind: "company", id: companyId } }),
         automationTab({ ref: { kind: "company", id: companyId } }),
-        {
-          value: "history",
-          label: "History",
-          icon: History,
-          content: <RecordHistoryTab activities={company.activities} />,
-        },
-        {
-          value: "changes",
-          label: "Field history",
-          icon: History,
-          content: <FieldHistoryTab entity="CLIENT" recordId={companyId} />,
-        },
+        historyTab({
+          ref: { kind: "company", id: companyId },
+          entity: "CLIENT",
+          activities: company.activities,
+        }),
       ]}
       rail={
         <>

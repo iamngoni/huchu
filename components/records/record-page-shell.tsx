@@ -223,14 +223,19 @@ export function RecordPageShell({
     </NavRail>
   );
 
-  // One column on a phone; rail plus section from `md`; and the summary takes
-  // a third from `lg`, which is where `.detail-grid` already stopped crushing
-  // the content column.
+  // The right column carries the properties and the summary, so it is worth a
+  // column whenever there is either.
+  const hasRightColumn = Boolean(rail || attributes);
+  const hasSectionRail = visibleTabs.length > 1;
+
+  // One column on a phone; sections plus content from `md`; and the standing
+  // column from `lg`, which is where `.detail-grid` already stopped crushing
+  // the middle.
   const sectionGrid = cn(
     "min-w-0 md:grid md:gap-6",
-    visibleTabs.length > 1 ? "md:grid-cols-[13rem_minmax(0,1fr)]" : "md:grid-cols-1",
-    rail && visibleTabs.length > 1 && "lg:grid-cols-[13rem_minmax(0,1fr)_20rem]",
-    rail && visibleTabs.length <= 1 && "lg:grid-cols-[minmax(0,1fr)_20rem]",
+    hasSectionRail ? "md:grid-cols-[13rem_minmax(0,1fr)]" : "md:grid-cols-1",
+    hasRightColumn && hasSectionRail && "lg:grid-cols-[13rem_minmax(0,1fr)_20rem]",
+    hasRightColumn && !hasSectionRail && "lg:grid-cols-[minmax(0,1fr)_20rem]",
   );
 
   // And the other direction: the URL is the source of truth, so a page holding
@@ -331,77 +336,95 @@ export function RecordPageShell({
         {barActions}
       </PageChrome>
 
-      {openSection ? (
-        <>
-          <h2 className="text-base font-semibold text-[var(--text-strong)]">
-            {currentTab?.label}
-          </h2>
+      {/* The record's frame, at every depth.
+          =====================================
+          Opening a section used to replace the whole page — right for a phone,
+          where a drilldown *is* the page, and wrong for a desktop, which lost
+          its section rail and its properties the moment you clicked one of
+          them. The frame is always rendered now and the phone hides the parts
+          it does not want, in CSS, so the first paint is right at both widths.
+          Only the middle column changes. */}
+      <div className={openSection ? "hidden space-y-4 md:block" : "space-y-4"}>
+        {/* The record's name, on a phone.
+            ================================
+            It lives in the top app bar, which on a 390px screen is holding a
+            back arrow, a search icon, a bell and a primary action as well —
+            so the name truncated to "Tenant b…" and appeared nowhere else on
+            the page. The strip below carries the reference and the status;
+            on a phone it carries the name too, at the size a page title
+            reads. */}
+        {narrow ? (
+          <h2 className="text-base font-semibold text-[var(--text-strong)]">{title}</h2>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {leading ? <span className="flex-none">{leading}</span> : null}
+
+          {reference ? (
+            <span className="font-mono text-sm text-[var(--text-muted)]">{reference}</span>
+          ) : null}
+          {status ? <StatusChip status={status.status} label={status.label} /> : null}
+          {subtitle ? (
+            <span className="min-w-0 truncate text-sm text-[var(--text-muted)]">{subtitle}</span>
+          ) : null}
+        </div>
+
+        {/* Properties are the right column's job from `lg` up, where they can
+            stay in view while you read a section. Below that there is no third
+            column, so they sit here, full width, the way Notion puts them at
+            the top of a page. */}
+        {attributes ? (
+          <div className="border-y border-[var(--border-subtle)] py-3 lg:hidden">{attributes}</div>
+        ) : null}
+
+        {beforeTabs}
+      </div>
+
+      <div className={sectionGrid}>
+        {/* The sections, on the left, where the back office puts them. */}
+        {visibleTabs.length > 1 ? (
+          <aside className="hidden md:block">{sectionRail}</aside>
+        ) : null}
+
+        <div className="min-w-0 space-y-4">
+          {/* Drilled in on a phone, the section names itself — the bar is
+              still carrying the record's name. */}
+          {openSection ? (
+            <h2 className="text-base font-semibold text-[var(--text-strong)] md:hidden">
+              {currentTab?.label}
+            </h2>
+          ) : null}
+
+          {/* The summary, above the story, in one view.
+              ==========================================
+              The rail used to become a tab of its own called "Overview",
+              which a phone landed on — so a record opened on a summary and
+              the thing that had actually happened to it was one tap away,
+              behind a word. They are one reading now: what this record is
+              worth and what is next, then what has happened. */}
+          {rail && !openSection ? <div className="space-y-7 lg:hidden">{rail}</div> : null}
+
           <div className="min-w-0">{currentTab?.content}</div>
-        </>
-      ) : (
-        <>
-          {/* The record's name, on a phone.
-              ================================
-              It lives in the top app bar, which on a 390px screen is holding a
-              back arrow, a search icon, a bell and a primary action as well —
-              so the name truncated to "Tenant b…" and appeared nowhere else on
-              the page. The strip below carries the reference and the status;
-              on a phone it carries the name too, at the size a page title
-              reads. */}
-          {narrow ? (
-            <h2 className="text-base font-semibold text-[var(--text-strong)]">{title}</h2>
-          ) : null}
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            {leading ? <span className="flex-none">{leading}</span> : null}
-
-            {reference ? (
-              <span className="font-mono text-sm text-[var(--text-muted)]">{reference}</span>
-            ) : null}
-            {status ? <StatusChip status={status.status} label={status.label} /> : null}
-            {subtitle ? (
-              <span className="min-w-0 truncate text-sm text-[var(--text-muted)]">{subtitle}</span>
-            ) : null}
-          </div>
-
-          {attributes ? (
-            <div className="border-y border-[var(--border-subtle)] py-3">{attributes}</div>
-          ) : null}
-
-          {beforeTabs}
-
-          <div className={sectionGrid}>
-            {/* The sections, on the left, where the back office puts them. */}
-            {visibleTabs.length > 1 ? (
-              <aside className="hidden md:block">{sectionRail}</aside>
-            ) : null}
-
-            <div className="min-w-0 space-y-4">
-              {/* The summary, above the story, in one view.
-                  ==========================================
-                  The rail used to become a tab of its own called "Overview",
-                  which a phone landed on — so a record opened on a summary and
-                  the thing that had actually happened to it was one tap away,
-                  behind a word. They are one reading now: what this record is
-                  worth and what is next, then what has happened. */}
-              {rail ? <div className="space-y-7 lg:hidden">{rail}</div> : null}
-
-              <div className="min-w-0">{landingTab?.content}</div>
-
-              {/* The same rail, at the foot of the landing view, where a phone
-                  has no column to put it in. One component either way, so a
-                  section reads the same whichever width you meet it at. */}
-              {visibleTabs.length > 1 ? (
-                <div className="border-t border-[var(--border-subtle)] pt-4 md:hidden">
-                  {sectionRail}
-                </div>
-              ) : null}
+          {/* The same rail, at the foot of the landing view, where a phone
+              has no column to put it in. One component either way, so a
+              section reads the same whichever width you meet it at. */}
+          {visibleTabs.length > 1 && !openSection ? (
+            <div className="border-t border-[var(--border-subtle)] pt-4 md:hidden">
+              {sectionRail}
             </div>
+          ) : null}
+        </div>
 
-            {rail ? <aside className="hidden space-y-7 lg:block">{rail}</aside> : null}
-          </div>
-        </>
-      )}
+        {/* The column that never changes: what this record *is*, and what it
+            is worth, beside whichever section is being read. */}
+        {hasRightColumn ? (
+          <aside className="hidden space-y-7 lg:block">
+            {attributes ? <div>{attributes}</div> : null}
+            {rail}
+          </aside>
+        ) : null}
+      </div>
 
       {children}
     </div>

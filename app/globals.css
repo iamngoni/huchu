@@ -661,17 +661,40 @@
       color var(--motion-duration-fast, 120ms) var(--motion-ease-standard, ease);
   }
 
+  /* Hover and active must not be the same paint.
+
+     Both were `--surface-muted`, so pointing at a rail put a second row in
+     exactly the selected state — two items that look chosen, and no way to
+     tell which one you are actually on. Hover is now the lighter tint, and
+     selection is carried by a sunken ground plus a brand bar down the leading
+     edge, which is a mark hovering never produces. */
   .settings-rail .rail-item:hover,
   .nav-rail .rail-item:hover {
-    background: var(--surface-muted);
+    background: var(--surface-subtle, var(--surface-muted));
     color: var(--text-strong);
   }
 
   .settings-rail .rail-item.active,
-  .nav-rail .rail-item.active {
+  .nav-rail .rail-item.active,
+  .settings-rail .rail-item[aria-current="page"],
+  .nav-rail .rail-item[aria-current="page"] {
+    position: relative;
     background: var(--surface-muted);
     color: var(--text-strong);
     font-weight: 600;
+  }
+
+  .settings-rail .rail-item.active::before,
+  .nav-rail .rail-item.active::before,
+  .settings-rail .rail-item[aria-current="page"]::before,
+  .nav-rail .rail-item[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    inset-block: 6px;
+    inset-inline-start: 0;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--action-primary-bg, var(--brand));
   }
 
   .settings-rail .rail-item:disabled,

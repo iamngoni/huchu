@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import { fetchCrmFieldDefinitions, type CrmFieldDefinitionRecord } from "@/lib/crm/crm-v2";
-import { Building2, CalendarCheck, Funnel, History, MapPin, UserRound } from "@/lib/icons";
+import { Building2, CalendarCheck, Clock, Funnel, MapPin, UserRound } from "@/lib/icons";
 import type { LeadFilterOwner } from "@/components/crm/leads/leads-filters";
 import { VisitScheduleSheet } from "@/components/crm/visits/visit-schedule-sheet";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
@@ -21,13 +21,18 @@ import { formatMoney } from "@/components/crm/documents/document-types";
 import { customFieldAttributes } from "@/components/records/custom-field-attributes";
 import { CustomFieldDisplay } from "./custom-field-display";
 import { RecordMark } from "@/components/records/record-mark";
-import { automationTab, commentsTab, filesTab, mentionsTab, tasksTab } from "./record-tabs";
+import {
+  automationTab,
+  historyTab,
+  paperworkTab,
+  tasksTab,
+} from "./record-tabs";
 import { RecordAttributes } from "@/components/records/record-attributes";
 import { RelationAttribute } from "./relation-attribute";
 import { useAttributeEditor } from "@/components/records/use-attribute-editor";
 import { EntityLink } from "@/components/records/entity-link";
-import { FieldHistoryTab } from "@/components/crm/records/field-history-tab";
 import { RailSection, RecordPageShell, RelatedList } from "@/components/records/record-page-shell";
+import { ConversationComposer } from "@/components/crm/collaboration/conversation-composer";
 import { SiteFormSheet } from "./site-form-sheet";
 
 import { Stack } from "@corelithzw/react";
@@ -319,7 +324,12 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
               </Stack>
             ),
         },
-        commentsTab({ ref: { kind: "site", id: siteId }, currentUserId: session?.user?.id }),
+        {
+          value: "conversation",
+          label: "Conversation",
+          icon: Clock,
+          content: <ConversationComposer target={{ kind: "site", id: siteId }} />,
+        },
         {
           value: "deals",
           label: "Deals",
@@ -339,20 +349,11 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
           ),
         },
         tasksTab({ ref: { kind: "site", id: siteId }, currentUserId: session?.user?.id }),
-        filesTab({ ref: { kind: "site", id: siteId } }),
-        mentionsTab({ ref: { kind: "site", id: siteId } }),
+        paperworkTab({ ref: { kind: "site", id: siteId } }),
         automationTab({ ref: { kind: "site", id: siteId } }),
-        {
-          // Was a History tab rendering an empty array, permanently: a site
-          // has no activity foreign key, so nothing could ever appear in it.
-          // A tab kept "for consistency" that can never answer its own
-          // question is worse than one that is absent. Field history is the
-          // history a site genuinely has — its edits are recorded.
-          value: "changes",
-          label: "Field history",
-          icon: History,
-          content: <FieldHistoryTab entity="SITE" recordId={siteId} />,
-        },
+        // No activity list: a site has no activity foreign key, so its history
+        // is the edits made to it and the places it gets referred to.
+        historyTab({ ref: { kind: "site", id: siteId }, entity: "SITE" }),
       ]}
       rail={rail}
       />
