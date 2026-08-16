@@ -121,7 +121,8 @@ export type PanelAttachment = {
  *
  * The coloured mark is doing real work: a rail of eleven attachments is
  * searched for "the PDF" or "the photo", and colour answers that without
- * reading a single filename.
+ * reading a single filename. Solid, like every other mark in a record — a
+ * tint reads as a disabled or draft state next to a column of filled discs.
  */
 export function AttachmentsPanel({
   attachments,
@@ -150,7 +151,7 @@ export function AttachmentsPanel({
               <span
                 data-accent={mark.accent}
                 aria-hidden="true"
-                className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--accent-bg)] font-mono text-sm font-medium text-[var(--accent-fg)]"
+                className="solid-mark flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] font-mono text-sm font-semibold"
               >
                 {mark.label}
               </span>
