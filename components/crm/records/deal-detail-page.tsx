@@ -43,7 +43,6 @@ import {
   useRecordComments,
 } from "./record-tabs";
 import {
-  ActivityStrip,
   ContactList,
   EmailPreview,
   MeetingCard,
@@ -224,29 +223,12 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
     );
   })();
 
-  // Kinds, not just labels: the strip takes its glyph and colour from the same
-  // table the timeline does, so "4 emails" up here and an email down there are
-  // visibly the same fact.
-  const activityCounts = (
-    [
-      { label: "calls", type: "CALL", kind: "call" },
-      { label: "emails", type: "EMAIL", kind: "email" },
-      { label: "notes", type: "NOTE", kind: "note" },
-      { label: "meetings", type: "MEETING", kind: "meeting" },
-      { label: "messages", type: "WHATSAPP", kind: "whatsapp" },
-    ] as const
-  ).map((entry) => ({
-    label: entry.label,
-    kind: entry.kind,
-    count: deal.activities.filter((a) => a.type === entry.type).length,
-  }));
-
   // Every kind of contact, newest first — not calls only. The panel is titled
   // "contact so far", and showing three calls under a strip that counts five
   // kinds made a record whose last month was all email read as silent.
   const recentContact = deal.activities
     .filter((activity) => activity.type in CONTACT_ACTIVITY_KIND)
-    .slice(0, 4)
+    .slice(0, 6)
     .map((activity) => ({
       id: activity.id,
       at: activity.occurredAt,
@@ -583,12 +565,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
             ) : null}
 
             <RailSection title="Contact so far">
-              <ActivityStrip counts={activityCounts} />
-              {recentContact.length > 0 ? (
-                <div className="mt-3">
-                  <ContactList contacts={recentContact} />
-                </div>
-              ) : null}
+              <ContactList contacts={recentContact} />
             </RailSection>
 
             <RailSection title="Last email">

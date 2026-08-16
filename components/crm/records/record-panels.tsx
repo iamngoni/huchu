@@ -108,63 +108,6 @@ export function MeetingCard({
   );
 }
 
-export type ActivityCount = {
-  label: string;
-  count: number;
-  /** Which kind of event this counts, so it takes that kind's colour. */
-  kind?: EventKind;
-  icon?: ReactNode;
-};
-
-/**
- * How much has been going on, at a glance.
- *
- * A strip rather than a chart: the question is "has anybody spoken to these
- * people" and the answer is a handful of small numbers, which a chart would
- * spend two hundred pixels failing to say more clearly.
- */
-export function ActivityStrip({ counts }: { counts: ActivityCount[] }) {
-  const total = counts.reduce((sum, entry) => sum + entry.count, 0);
-
-  if (total === 0) {
-    return <p className="text-sm text-[var(--text-muted)]">Nothing logged yet.</p>;
-  }
-
-  // Figures, not chips. A chip draws a bordered box around each number, so
-  // four kinds of contact became four boxes inside a fifth — five frames to
-  // say "three calls". The numbers are the content; they only need to be
-  // bigger than their labels to read as figures.
-  //
-  // What each figure does carry is its kind's glyph, in its kind's colour —
-  // the same two the timeline below uses. Without it the strip and the feed
-  // were two unrelated readings of one set of facts.
-  return (
-    <dl className="flex flex-wrap gap-x-4 gap-y-1.5">
-      {counts
-        .filter((entry) => entry.count > 0)
-        .map((entry) => {
-          const { icon: KindIcon, accent } = eventKindStyle(entry.kind);
-          return (
-            <div key={entry.label} className="flex items-center gap-1.5">
-              <dt className="sr-only">{entry.label}</dt>
-              {entry.kind ? (
-                <span data-accent={accent} className="text-[var(--accent-fg)]">
-                  <KindIcon className="size-3.5" aria-hidden="true" />
-                </span>
-              ) : null}
-              <dd className="font-mono text-base tabular-nums text-[var(--text-strong)]">
-                {entry.count}
-              </dd>
-              <span aria-hidden="true" className="text-sm text-[var(--text-muted)]">
-                {entry.label}
-              </span>
-            </div>
-          );
-        })}
-    </dl>
-  );
-}
-
 export type PanelAttachment = {
   id: string;
   name: string;
@@ -390,6 +333,12 @@ export type PanelContact = {
  * whose last three contacts were emails read as "nobody has logged a call"
  * beside a figure saying four emails. Every kind of contact belongs here; the
  * glyph and its colour, shared with the timeline, are what keep them apart.
+ *
+ * And it is the list alone. The counts that sat above it — "2 calls · 4 emails
+ * · 2 notes" — were a second, coarser answer to the question the list below
+ * them was already answering better: five rows say how much has been going on
+ * *and* what was said, in the order it happened. Two readings of one set of
+ * facts, stacked, is how a narrow column runs out of room.
  */
 export function ContactList({
   contacts,
@@ -403,21 +352,24 @@ export function ContactList({
   }
 
   return (
-    <Stack as="ul" gap="xs">
+    // Each row is two lines of its own, so the gap between rows has to beat the
+    // gap inside one or the list reads as one paragraph with coloured dots in
+    // it. `xs` was tuned for single-line rows and did not.
+    <ul className="flex flex-col gap-3">
       {contacts.map((contact) => {
         const { icon: KindIcon, accent, label } = eventKindStyle(contact.kind);
         return (
-          <li key={contact.id} className="flex items-start gap-2">
+          <li key={contact.id} className="flex items-start gap-2.5">
             <span
               data-accent={contact.missed ? "red" : accent}
               title={label}
-              className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent-fg)]"
+              className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent-fg)]"
             >
               <KindIcon className="size-3" aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-sm text-[var(--text-strong)]">
+                <span className="truncate text-sm font-medium text-[var(--text-strong)]">
                   {contact.actorName ?? "Someone"}
                   {contact.missed ? " · no answer" : ""}
                 </span>
@@ -430,7 +382,7 @@ export function ContactList({
                 </span>
               </span>
               {contact.summary ? (
-                <span className="block truncate text-sm text-[var(--text-muted)]">
+                <span className="mt-0.5 block truncate text-sm text-[var(--text-muted)]">
                   {richTextToPlain(contact.summary, 120)}
                 </span>
               ) : null}
@@ -438,6 +390,6 @@ export function ContactList({
           </li>
         );
       })}
-    </Stack>
+    </ul>
   );
 }
