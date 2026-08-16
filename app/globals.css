@@ -599,6 +599,28 @@
     --shell-max: 1536px;
   }
 
+  /* ── Avatars get their colour back ──────────────────────────────────────
+     The package hashes a name onto one of thirteen hues, stamps it on the
+     element as `data-accent`, and paints it with `.avatar-accent`. It then
+     emits its plain `.avatar` rule — `background: var(--surface-sunken)` —
+     twenty thousand characters *later* in the same bundle. Two single-class
+     selectors of equal specificity in one layer: the last one wins, so every
+     avatar in the product came out the same grey, and a timeline or a comment
+     thread showed four colleagues as four identical discs.
+
+     `@layer app` outranks `corelith` whatever the order inside it, and the
+     two-class selector keeps this above the package's own rule if the bundle
+     is ever fixed. `data-accent` sits on the avatar itself, so the hue is its
+     own and not inherited from a tinted ancestor. */
+  .avatar.avatar-accent {
+    background: var(--accent-bg);
+    color: var(--accent-fg);
+  }
+  .avatar.avatar-accent.avatar-accent-solid {
+    background: var(--accent-solid);
+    color: var(--accent-on);
+  }
+
   .settings-layout {
     display: grid;
     grid-template-columns: var(--rail-w, 220px) minmax(0, 1fr);

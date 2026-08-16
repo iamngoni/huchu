@@ -7,6 +7,7 @@ import { Badge, Stack } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
 import { ClientDate } from "@/components/ui/client-date";
 import { EntityLink } from "@/components/records/entity-link";
+import { eventKindStyle, type EventKind } from "@/components/crm/records/event-kind";
 import { richTextToPlain } from "@/lib/crm/rich-text";
 import { fileMark, formatFileSize, meetingPlace, timeToStart } from "@/lib/crm/panels";
 import {
@@ -14,7 +15,6 @@ import {
   Download,
   Mail,
   MapPin,
-  Phone,
   Video,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
@@ -108,7 +108,13 @@ export function MeetingCard({
   );
 }
 
-export type ActivityCount = { label: string; count: number; icon?: ReactNode };
+export type ActivityCount = {
+  label: string;
+  count: number;
+  /** Which kind of event this counts, so it takes that kind's colour. */
+  kind?: EventKind;
+  icon?: ReactNode;
+};
 
 /**
  * How much has been going on, at a glance.
@@ -128,21 +134,33 @@ export function ActivityStrip({ counts }: { counts: ActivityCount[] }) {
   // four kinds of contact became four boxes inside a fifth — five frames to
   // say "three calls". The numbers are the content; they only need to be
   // bigger than their labels to read as figures.
+  //
+  // What each figure does carry is its kind's glyph, in its kind's colour —
+  // the same two the timeline below uses. Without it the strip and the feed
+  // were two unrelated readings of one set of facts.
   return (
-    <dl className="flex flex-wrap gap-x-5 gap-y-1">
+    <dl className="flex flex-wrap gap-x-4 gap-y-1.5">
       {counts
         .filter((entry) => entry.count > 0)
-        .map((entry) => (
-          <div key={entry.label} className="flex items-baseline gap-1.5">
-            <dt className="sr-only">{entry.label}</dt>
-            <dd className="font-mono text-base tabular-nums text-[var(--text-strong)]">
-              {entry.count}
-            </dd>
-            <span aria-hidden="true" className="text-sm text-[var(--text-muted)]">
-              {entry.label}
-            </span>
-          </div>
-        ))}
+        .map((entry) => {
+          const { icon: KindIcon, accent } = eventKindStyle(entry.kind);
+          return (
+            <div key={entry.label} className="flex items-center gap-1.5">
+              <dt className="sr-only">{entry.label}</dt>
+              {entry.kind ? (
+                <span data-accent={accent} className="text-[var(--accent-fg)]">
+                  <KindIcon className="size-3.5" aria-hidden="true" />
+                </span>
+              ) : null}
+              <dd className="font-mono text-base tabular-nums text-[var(--text-strong)]">
+                {entry.count}
+              </dd>
+              <span aria-hidden="true" className="text-sm text-[var(--text-muted)]">
+                {entry.label}
+              </span>
+            </div>
+          );
+        })}
     </dl>
   );
 }
@@ -349,9 +367,11 @@ export function EmailPreview({
   );
 }
 
-export type PanelCall = {
+export type PanelContact = {
   id: string;
   at: string;
+  /** Call, email, meeting — what actually happened. */
+  kind: EventKind;
   actorName?: string | null;
   summary?: string | null;
   /** Somebody rang and nobody answered — worth showing differently. */
@@ -359,56 +379,65 @@ export type PanelCall = {
 };
 
 /**
- * Who has rung, and when.
+ * The last few times anybody dealt with these people, and how.
  *
  * Separated from the timeline because "when did we last actually speak to
  * them" is the question that decides whether to ring now, and answering it
- * from a mixed feed means scrolling past every note and stage change.
+ * from a mixed feed means scrolling past every stage change and raised
+ * document.
+ *
+ * It used to be calls only, under a strip counting four kinds — so a record
+ * whose last three contacts were emails read as "nobody has logged a call"
+ * beside a figure saying four emails. Every kind of contact belongs here; the
+ * glyph and its colour, shared with the timeline, are what keep them apart.
  */
-export function CallList({
-  calls,
-  emptyMessage = "Nobody has logged a call.",
+export function ContactList({
+  contacts,
+  emptyMessage = "Nobody has logged any contact.",
 }: {
-  calls: PanelCall[];
+  contacts: PanelContact[];
   emptyMessage?: string;
 }) {
-  if (calls.length === 0) {
+  if (contacts.length === 0) {
     return <p className="text-sm text-[var(--text-muted)]">{emptyMessage}</p>;
   }
 
   return (
     <Stack as="ul" gap="xs">
-      {calls.map((call) => (
-        <li key={call.id} className="flex items-start gap-2">
-          <Phone
-            className={cn(
-              "mt-0.5 size-4 shrink-0",
-              call.missed ? "text-[var(--status-error-text)]" : "text-[var(--text-subtle)]",
-            )}
-            aria-hidden="true"
-          />
-          <span className="min-w-0 flex-1">
-            <span className="flex items-baseline justify-between gap-2">
-              <span className="truncate text-sm text-[var(--text-strong)]">
-                {call.actorName ?? "Someone"}
-                {call.missed ? " · no answer" : ""}
-              </span>
-              {/* The day, not the second. This is a three-line "when did we
-                  last speak" summary in a narrow column, and a full
-                  "8/4/2026, 9:06:53 PM" both wraps and answers a question
-                  nobody asked. The exact time is on the timeline. */}
-              <span className="shrink-0 text-sm text-[var(--text-muted)]">
-                <ClientDate value={call.at} mode="date" />
-              </span>
+      {contacts.map((contact) => {
+        const { icon: KindIcon, accent, label } = eventKindStyle(contact.kind);
+        return (
+          <li key={contact.id} className="flex items-start gap-2">
+            <span
+              data-accent={contact.missed ? "red" : accent}
+              title={label}
+              className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent-fg)]"
+            >
+              <KindIcon className="size-3" aria-hidden="true" />
             </span>
-            {call.summary ? (
-              <span className="block truncate text-sm text-[var(--text-muted)]">
-                {richTextToPlain(call.summary, 120)}
+            <span className="min-w-0 flex-1">
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="truncate text-sm text-[var(--text-strong)]">
+                  {contact.actorName ?? "Someone"}
+                  {contact.missed ? " · no answer" : ""}
+                </span>
+                {/* The day, not the second. This is a three-line "when did we
+                    last speak" summary in a narrow column, and a full
+                    "8/4/2026, 9:06:53 PM" both wraps and answers a question
+                    nobody asked. The exact time is on the timeline. */}
+                <span className="shrink-0 text-sm tabular-nums text-[var(--text-muted)]">
+                  <ClientDate value={contact.at} mode="date" />
+                </span>
               </span>
-            ) : null}
-          </span>
-        </li>
-      ))}
+              {contact.summary ? (
+                <span className="block truncate text-sm text-[var(--text-muted)]">
+                  {richTextToPlain(contact.summary, 120)}
+                </span>
+              ) : null}
+            </span>
+          </li>
+        );
+      })}
     </Stack>
   );
 }

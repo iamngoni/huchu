@@ -44,12 +44,13 @@ import {
 } from "./record-tabs";
 import {
   ActivityStrip,
-  CallList,
+  ContactList,
   EmailPreview,
   MeetingCard,
   NextInteractionCard,
   type NextInteraction,
 } from "./record-panels";
+import { CONTACT_ACTIVITY_KIND } from "@/components/crm/records/event-kind";
 import { RecordStory } from "@/components/crm/records/record-story";
 import { buildStory } from "@/lib/crm/story";
 import { VisitsTab } from "@/components/crm/lead-detail/visits-tab";
@@ -223,21 +224,35 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
     );
   })();
 
-  const activityCounts = [
-    { label: "calls", count: deal.activities.filter((a) => a.type === "CALL").length },
-    { label: "emails", count: deal.activities.filter((a) => a.type === "EMAIL").length },
-    { label: "notes", count: deal.activities.filter((a) => a.type === "NOTE").length },
-    { label: "meetings", count: deal.activities.filter((a) => a.type === "MEETING").length },
-  ];
+  // Kinds, not just labels: the strip takes its glyph and colour from the same
+  // table the timeline does, so "4 emails" up here and an email down there are
+  // visibly the same fact.
+  const activityCounts = (
+    [
+      { label: "calls", type: "CALL", kind: "call" },
+      { label: "emails", type: "EMAIL", kind: "email" },
+      { label: "notes", type: "NOTE", kind: "note" },
+      { label: "meetings", type: "MEETING", kind: "meeting" },
+      { label: "messages", type: "WHATSAPP", kind: "whatsapp" },
+    ] as const
+  ).map((entry) => ({
+    label: entry.label,
+    kind: entry.kind,
+    count: deal.activities.filter((a) => a.type === entry.type).length,
+  }));
 
-  const recentCalls = deal.activities
-    .filter((activity) => activity.type === "CALL")
-    .slice(0, 3)
+  // Every kind of contact, newest first — not calls only. The panel is titled
+  // "contact so far", and showing three calls under a strip that counts five
+  // kinds made a record whose last month was all email read as silent.
+  const recentContact = deal.activities
+    .filter((activity) => activity.type in CONTACT_ACTIVITY_KIND)
+    .slice(0, 4)
     .map((activity) => ({
       id: activity.id,
       at: activity.occurredAt,
+      kind: CONTACT_ACTIVITY_KIND[activity.type],
       // The API has always included who logged it; the panel just never asked,
-      // so every call in the summary was attributed to "Someone".
+      // so every row in the summary was attributed to "Someone".
       actorName: activity.createdBy?.name ?? null,
       summary: activity.body ?? activity.subject,
     }));
@@ -569,9 +584,9 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
 
             <RailSection title="Contact so far">
               <ActivityStrip counts={activityCounts} />
-              {recentCalls.length > 0 ? (
+              {recentContact.length > 0 ? (
                 <div className="mt-3">
-                  <CallList calls={recentCalls} />
+                  <ContactList contacts={recentContact} />
                 </div>
               ) : null}
             </RailSection>

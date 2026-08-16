@@ -4,20 +4,13 @@ import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { Avatar } from "@corelithzw/react";
 import { Button } from "@/components/ui/button";
+import { FileText } from "@/lib/icons";
 import {
-  ArrowRight,
-  Calendar,
-  Checklist,
-  ChatCircle,
-  FileText,
-  Mail,
-  MapPin,
-  NoteAdd,
-  Payments,
-  Phone,
-  Send,
-  User,
-} from "@/lib/icons";
+  EVENT_KIND,
+  QUIET_KINDS,
+  type EventKind,
+  eventKindStyle,
+} from "@/components/crm/records/event-kind";
 import { RichTextRenderer } from "@/components/crm/collaboration/rich-text-renderer";
 import { cn } from "@/lib/utils";
 
@@ -58,20 +51,7 @@ function ClientTime({ value }: { value: string }) {
  */
 export type StoryEvent = {
   id: string;
-  kind:
-    | "note"
-    | "call"
-    | "email"
-    | "whatsapp"
-    | "meeting"
-    | "stage"
-    | "document"
-    | "payment"
-    | "task"
-    | "visit"
-    | "comment"
-    | "intake"
-    | "system";
+  kind: EventKind;
   /** The sentence: "Nicolas Sharp created a task". */
   title: string;
   /** What was said, if anything was. */
@@ -87,38 +67,8 @@ export type StoryEvent = {
   href?: string;
 };
 
-const KIND_ICON: Record<StoryEvent["kind"], typeof NoteAdd> = {
-  note: NoteAdd,
-  call: Phone,
-  email: Mail,
-  whatsapp: Send,
-  meeting: Calendar,
-  stage: ArrowRight,
-  document: FileText,
-  payment: Payments,
-  task: Checklist,
-  visit: MapPin,
-  comment: ChatCircle,
-  intake: User,
-  system: ArrowRight,
-};
-
-/**
- * Which events are context and which are news.
- *
- * A stage change is worth knowing and worth passing over quickly; a note
- * somebody wrote is the thing you came to read. The quiet ones keep their
- * place in the order but not the reader's attention.
- */
-const QUIET: ReadonlySet<StoryEvent["kind"]> = new Set([
-  "stage",
-  "system",
-  "document",
-  "payment",
-]);
-
 /** Events that carry a body worth boxing rather than running as one line. */
-const BOXED: ReadonlySet<StoryEvent["kind"]> = new Set([
+const BOXED: ReadonlySet<EventKind> = new Set([
   "email",
   "note",
   "comment",
@@ -143,21 +93,32 @@ function dayLabel(iso: string, now: Date): string {
 }
 
 function StoryRow({ event }: { event: StoryEvent }) {
-  const Icon = KIND_ICON[event.kind];
-  const quiet = QUIET.has(event.kind);
+  const { icon: Icon, accent } = eventKindStyle(event.kind);
+  const quiet = QUIET_KINDS.has(event.kind);
   const boxed = BOXED.has(event.kind) && Boolean(event.body);
 
   const content = (
     <>
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         {event.actorName ? (
-          <Avatar size="sm" name={event.actorName} className="translate-y-1" />
+          // Tinted by who wrote it, not by what kind of event it is — that
+          // second channel is the chip on the rail. The design system hashes
+          // the name for us, so two colleagues in one day's worth of rows come
+          // out as two colours rather than two identical discs.
+          <Avatar size="sm" name={event.actorName} />
         ) : null}
-        <span className={cn("text-sm", quiet && "text-[var(--text-muted)]")}>{event.title}</span>
+        <span
+          className={cn(
+            "text-sm",
+            quiet ? "text-[var(--text-muted)]" : "font-medium text-[var(--text-strong)]",
+          )}
+        >
+          {event.title}
+        </span>
         {/* The day is already the section heading, so the row only needs the
             time of day — a full "8/4/2026, 9:06:53 PM" on every one of a
             hundred rows repeats the heading and adds a second nobody reads. */}
-        <span className="text-sm text-[var(--text-subtle)]">
+        <span className="text-sm tabular-nums text-[var(--text-subtle)]">
           <ClientTime value={event.occurredAt} />
         </span>
       </div>
@@ -211,20 +172,27 @@ function StoryRow({ event }: { event: StoryEvent }) {
         className="absolute bottom-0 left-[11px] top-6 w-px bg-[var(--border-subtle)] last:hidden"
       />
 
+      {/* The kind, as a colour and a glyph. `data-accent` is how the design
+          system swaps a hue — it rebinds `--accent-*` on this element, so the
+          classes below stay static and only the attribute changes. */}
       <span
-        className={cn(
-          "relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full",
-          quiet
-            ? "bg-[var(--surface-muted)] text-[var(--text-muted)]"
-            : "bg-[var(--surface-subtle)] text-[var(--text)]",
-        )}
+        data-accent={accent}
+        title={EVENT_KIND[event.kind]?.label}
+        className="relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent-fg)] ring-1 ring-inset ring-[var(--accent-bd)]"
       >
         <Icon className="size-3.5" />
       </span>
 
       <div className="min-w-0 flex-1">
         {boxed ? (
-          <div className="rounded-[var(--card-radius)] border border-[var(--border)] p-3">
+          // What somebody actually wrote gets a box, and the box takes the
+          // event's colour on its leading edge — so a scrolled feed shows at a
+          // glance which paragraphs are the client's and which are ours,
+          // without reading a word of any of them.
+          <div
+            data-accent={accent}
+            className="rounded-[var(--card-radius)] border border-[var(--border)] border-l-2 border-l-[var(--accent-bd)] p-3"
+          >
             {content}
           </div>
         ) : (
