@@ -318,8 +318,16 @@ export function RecordPageShell({
 
   // Columns, and the dividers between them. No gap: the rule *is* the gap, and
   // the padding either side of it is what keeps the columns off it.
+  //
+  // `min-h` because grid tracks are only as tall as their tallest child, and
+  // the rules are drawn on the columns. A section with little in it — an empty
+  // Documents list, a record with four tasks — left two vertical lines that
+  // stopped a third of the way down the screen and a page that looked cropped.
+  // The columns fill whatever the viewport has left after the app bar and
+  // `main`'s padding, which is what `--content-viewport` is; longer content
+  // still grows past it, since this is a floor and not a height.
   const sectionGrid = cn(
-    "min-w-0 md:grid",
+    "min-w-0 md:grid md:min-h-[var(--content-viewport)]",
     hasSectionRail && !infoOpen && "md:grid-cols-[13rem_minmax(0,1fr)_auto]",
     hasSectionRail && infoOpen && "md:grid-cols-[13rem_minmax(0,1fr)] lg:grid-cols-[13rem_minmax(0,1fr)_22rem]",
     !hasSectionRail && !infoOpen && "md:grid-cols-[minmax(0,1fr)_auto]",

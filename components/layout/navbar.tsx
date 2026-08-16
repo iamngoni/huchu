@@ -80,9 +80,9 @@ export function Navbar() {
           vertical line as the text below it rather than eight pixels inside
           it. That misalignment is most of what read as "inconsistent
           spacing": three different left edges down the top of every page. */}
-      <div className="h-14 px-[calc(var(--content-gutter-x)-0.5rem)] lg:pr-4">
+      <div className="h-[var(--app-bar-h)] px-[calc(var(--content-gutter-x)-0.5rem)] lg:pr-4">
         <>
-          <div className="flex h-14 items-center gap-1 md:hidden">
+          <div className="flex h-[var(--app-bar-h)] items-center gap-1 md:hidden">
             <SidebarTrigger />
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               {back ? (
@@ -120,7 +120,7 @@ export function Navbar() {
             <MobileNavbarActions actions={actions} className="ml-1.5" />
           </div>
 
-          <div className="hidden h-14 items-center gap-3 md:flex justify-between">
+          <div className="hidden h-[var(--app-bar-h)] items-center gap-3 md:flex justify-between">
             <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger />
               {back ? (
