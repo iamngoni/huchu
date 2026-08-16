@@ -294,6 +294,28 @@ rules bite hardest.
   that picks a layout with `matchMedia` has no answer before hydration; give
   the phone the right answer in CSS so the first paint is not the desktop.
 
+### Moving through the graph
+Records point at records — a deal names a company, a site, the people on it —
+and the way people work is a path through those edges, not a series of visits
+to lists.
+
+- **A plain click on a reference peeks; it does not travel.** Half of them are
+  answering *which company is this*, and a journey is the wrong price for a
+  glance. `EntityLink` opens `RecordPeek` beside the page, the page underneath
+  does not move, and the URL does not change.
+- **The peek shows and hands over. It never edits.** A preview that can change
+  six kinds of record is a second record page with a worse layout, and two
+  places to edit one thing is how they drift.
+- **Modifier clicks are never intercepted.** ⌘/ctrl-click, shift-click and
+  middle-click are how people already say "properly, in a new tab".
+- **Back means where you came from.** Three hops in, the list a record belongs
+  to is not up, it is sideways. `RecordTrail` records the path; the app bar's
+  arrow names the last record on it and falls back to the list only when there
+  is no path.
+- **The trail is not in the URL.** A link somebody pastes into WhatsApp must
+  not carry a stranger's browsing history, and two ways of reaching one record
+  have to be the same page.
+
 ## Compliance Checklist
 A screen is compliant only when:
 1. Warm paper tokens are applied with semantic variables.
