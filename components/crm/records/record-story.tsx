@@ -180,13 +180,13 @@ function StoryRow({ event }: { event: StoryEvent }) {
           Solid, not a tint inside a ring. A 24px disc has room for one thing,
           and a pale wash behind a pale glyph inside a pale outline spends all
           three on the same weak signal — at arm's length the whole rail read as
-          one grey column again. `--accent-on` is the hue's own guaranteed
-          contrast against `--accent-solid`, so it is white where white works
-          and near-black on amber and yellow where it does not. */}
+          one grey column again. `.solid-mark` owns the fill-and-glyph pairing
+          for every mark in the product; see `globals.css` for why three of the
+          thirteen hues are darkened rather than reversed. */}
       <span
         data-accent={accent}
         title={EVENT_KIND[event.kind]?.label}
-        className="relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-solid)] text-[var(--accent-on)]"
+        className="solid-mark relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full"
       >
         <Icon className="size-3.5" />
       </span>

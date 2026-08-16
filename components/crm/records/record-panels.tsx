@@ -362,11 +362,11 @@ export function ContactList({
           <li key={contact.id} className="flex items-start gap-2.5">
             {/* Solid, like the chip on the timeline: this is the same coding
                 doing the same job, and at 20px a tint has nothing left to
-                spend. `--accent-on` carries the hue's own contrast. */}
+                spend. `.solid-mark` carries the fill-and-glyph pairing. */}
             <span
               data-accent={contact.missed ? "red" : accent}
               title={label}
-              className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-solid)] text-[var(--accent-on)]"
+              className="solid-mark mt-px flex size-5 shrink-0 items-center justify-center rounded-full"
             >
               <KindIcon className="size-3" aria-hidden="true" />
             </span>

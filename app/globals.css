@@ -616,9 +616,37 @@
     background: var(--accent-bg);
     color: var(--accent-fg);
   }
+
+  /* ── Solid marks ────────────────────────────────────────────────────────
+     The filled discs that carry a colour code: a record's timeline chips, the
+     mark beside each row of "contact so far", and any avatar filled solid.
+
+     `--accent-solid` reverses white on ten of the thirteen hues. On orange,
+     amber and yellow it does not — white lands at 3.4, 2.9 and 2.5 to one —
+     which is why the package pairs those three with a near-black `--accent-on`
+     instead. That pairing passes as a *number* and fails as a *mark*: a 14px
+     stroked glyph in #3D2800 on #D08A05 is mud, and two initials in it are
+     worse, because thin strokes need far more separation than the body text
+     those ratios were derived for.
+
+     So those three take `--accent-fg` — the same hue, darkened to the value the
+     package already uses for text — and reverse white out of it at 5.5 to one,
+     better than the teal and red solids already in service. Every mark in the
+     product is now a white glyph on a solid fill, and no hue is dropped to get
+     there. */
+  .solid-mark,
   .avatar.avatar-accent.avatar-accent-solid {
     background: var(--accent-solid);
     color: var(--accent-on);
+  }
+  [data-accent="orange"].solid-mark,
+  [data-accent="amber"].solid-mark,
+  [data-accent="yellow"].solid-mark,
+  .avatar[data-accent="orange"].avatar-accent-solid,
+  .avatar[data-accent="amber"].avatar-accent-solid,
+  .avatar[data-accent="yellow"].avatar-accent-solid {
+    background: var(--accent-fg);
+    color: #fff;
   }
 
   .settings-layout {
