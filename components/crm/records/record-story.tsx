@@ -101,11 +101,12 @@ function StoryRow({ event }: { event: StoryEvent }) {
     <>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         {event.actorName ? (
-          // Tinted by who wrote it, not by what kind of event it is — that
+          // Coloured by who wrote it, not by what kind of event it is — that
           // second channel is the chip on the rail. The design system hashes
           // the name for us, so two colleagues in one day's worth of rows come
-          // out as two colours rather than two identical discs.
-          <Avatar size="sm" name={event.actorName} />
+          // out as two colours rather than two identical discs. Solid, to match
+          // the chip beside it.
+          <Avatar size="sm" name={event.actorName} solid />
         ) : null}
         <span
           className={cn(
@@ -174,11 +175,18 @@ function StoryRow({ event }: { event: StoryEvent }) {
 
       {/* The kind, as a colour and a glyph. `data-accent` is how the design
           system swaps a hue — it rebinds `--accent-*` on this element, so the
-          classes below stay static and only the attribute changes. */}
+          classes below stay static and only the attribute changes.
+
+          Solid, not a tint inside a ring. A 24px disc has room for one thing,
+          and a pale wash behind a pale glyph inside a pale outline spends all
+          three on the same weak signal — at arm's length the whole rail read as
+          one grey column again. `--accent-on` is the hue's own guaranteed
+          contrast against `--accent-solid`, so it is white where white works
+          and near-black on amber and yellow where it does not. */}
       <span
         data-accent={accent}
         title={EVENT_KIND[event.kind]?.label}
-        className="relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[var(--accent-fg)] ring-1 ring-inset ring-[var(--accent-bd)]"
+        className="relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-solid)] text-[var(--accent-on)]"
       >
         <Icon className="size-3.5" />
       </span>
@@ -191,7 +199,7 @@ function StoryRow({ event }: { event: StoryEvent }) {
           // without reading a word of any of them.
           <div
             data-accent={accent}
-            className="rounded-[var(--card-radius)] border border-[var(--border)] border-l-2 border-l-[var(--accent-bd)] p-3"
+            className="rounded-[var(--card-radius)] border border-[var(--border)] border-l-2 border-l-[var(--accent-solid)] p-3"
           >
             {content}
           </div>
