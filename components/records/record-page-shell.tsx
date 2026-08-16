@@ -18,6 +18,7 @@ import {
 import { PageChrome } from "@/components/layout/page-chrome";
 import { IconButton } from "@/components/ui/icon-button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRecordTrail } from "@/components/records/record-trail";
 import { ChevronLeftIcon, ChevronRight, DotsThree, type LucideIcon } from "@/lib/icons";
 import type { CanonicalUiStatus } from "@/lib/ui/status-map";
 import { cn } from "@/lib/utils";
@@ -180,6 +181,16 @@ export function RecordPageShell({
     const query = next.toString();
     return query ? `${pathname}?${query}` : pathname;
   })();
+
+  // The trail is what makes "back" mean the record you came from rather than
+  // the list you have not seen for three hops. Registering also pops the trail
+  // when this record is already on it, which is how the bar's arrow and the
+  // browser's own back button end up agreeing.
+  const { register, back: trailBack } = useRecordTrail();
+  useEffect(() => {
+    register({ href: pathname, label: title });
+    return () => register(null);
+  }, [register, pathname, title]);
 
   // The parent still owns `activeTab`, because buttons inside the page jump
   // sections — "add a task" from an empty Up next, "open documents" from the
@@ -412,12 +423,22 @@ export function RecordPageShell({
           Only on a phone, though. A desktop never leaves the record — the
           rail and the section sit side by side — so "up" stays the list, and
           pointing it at the record would put the record's name in the bar
-          twice, once as the back link and once as the title. */}
+          twice, once as the back link and once as the title.
+
+          Otherwise "up" is wherever the reader actually came from. Three hops
+          into a graph — a deal, its company, another deal there — the list
+          this record belongs to is not up, it is sideways, and an arrow
+          pointing at it throws away the path. The trail knows the path; the
+          list is what it falls back to when there isn't one. */}
       <PageChrome
         title={title}
         icon={icon}
-        backHref={openSection && narrow ? recordHref : backHref}
-        backLabel={openSection && narrow ? title : backLabel}
+        backHref={
+          openSection && narrow ? recordHref : (trailBack?.href ?? backHref)
+        }
+        backLabel={
+          openSection && narrow ? title : (trailBack?.label ?? backLabel)
+        }
       >
         {barActions}
       </PageChrome>
