@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "@/lib/icons";
+import { Archive, ChevronDown, Funnel, UserRound } from "@/lib/icons";
 import type { CrmLeadListRecord } from "@/lib/crm/crm-v2";
 import type { LeadSort } from "@/lib/crm/views";
 import type { ColumnOption } from "@/lib/ui/visible-columns";
@@ -98,6 +98,8 @@ export function LeadsTable({
   onSortChange,
   onBulkAssign,
   onBulkStage,
+  onBulkArchive,
+  showingArchived = false,
   hiddenColumns,
 }: {
   leads: CrmLeadListRecord[];
@@ -111,6 +113,9 @@ export function LeadsTable({
   onSortChange: (sort: LeadSort) => void;
   onBulkAssign: (ids: string[], assignedToId: string | null, done: () => void) => void;
   onBulkStage: (ids: string[], stage: CrmLeadStage, done: () => void) => void;
+  onBulkArchive: (ids: string[], archived: boolean, done: () => void) => void;
+  /** Whether these rows are the archive, which flips Archive into Restore. */
+  showingArchived?: boolean;
   /** Column ids the reader has switched off. */
   hiddenColumns?: string[];
 }) {
@@ -266,11 +271,13 @@ export function LeadsTable({
                       key={owner.id}
                       onClick={() => onBulkAssign(ids, owner.id, clearSelection)}
                     >
+                      <UserRound />
                       {owner.name ?? "Unnamed"}
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onBulkAssign(ids, null, clearSelection)}>
+                    <UserRound />
                     Leave unassigned
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -287,13 +294,31 @@ export function LeadsTable({
                   {CRM_LEAD_STAGES.map((stage: CrmLeadStage) => (
                     <DropdownMenuItem
                       key={stage}
+                      // Lost is the one stage move that is a claim about the
+                      // business rather than progress along it.
+                      variant={stage === "LOST" ? "destructive" : "default"}
                       onClick={() => onBulkStage(ids, stage, clearSelection)}
                     >
+                      <Funnel />
                       {CRM_STAGE_LABELS[stage]}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* Tidying up is a bulk job by nature — an import that ran
+                  twice, a morning of spam through the web form. Restoring is
+                  the same control read the other way round, so the archived
+                  view has a way back. */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => onBulkArchive(ids, !showingArchived, clearSelection)}
+              >
+                <Archive className="size-4" />
+                {showingArchived ? "Restore" : "Archive"}
+              </Button>
             </div>
           );
         },
@@ -318,7 +343,11 @@ export function LeadsTable({
               />
             ),
             facts: [
-              { value: formatLeadValue(row.estimatedValue, row.currency), mono: true },
+              {
+                value: formatLeadValue(row.estimatedValue, row.currency),
+                mono: true,
+                primary: true,
+              },
             ],
           }))}
         />

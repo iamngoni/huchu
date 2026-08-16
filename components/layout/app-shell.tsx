@@ -69,8 +69,8 @@ export function AppShell({
               isCctvRoute
                 ? "min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] py-0"
                 : isScrapRoute
-                  ? "content-shell min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:py-6"
-                  : "content-shell min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:py-6"
+                  ? "content-shell min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] pt-[var(--content-gutter-y)] pb-[max(1rem,env(safe-area-inset-bottom))] md:py-[var(--content-gutter-y)]"
+                  : "content-shell min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [touch-action:pan-y] pt-[var(--content-gutter-y)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:py-[var(--content-gutter-y)]"
             }
           >
             <OnboardingProvider>{children}</OnboardingProvider>

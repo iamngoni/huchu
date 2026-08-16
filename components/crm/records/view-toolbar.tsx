@@ -35,6 +35,11 @@ import { cn } from "@/lib/utils";
  * read six labels before they can look at anything. So below `sm` the whole
  * lot goes behind one button, and what stays on screen is what somebody came
  * for: the search box, and the records under it.
+ *
+ * Which means a phone toolbar with no `search` is one outline button on a band
+ * of its own — 60px of page spent on a control nobody came for. Every surface
+ * that uses this passes a search now; a caller that genuinely has nothing to
+ * search gets the button inline with whatever `end` holds rather than a band.
  */
 export function ViewToolbar({
   start,
@@ -87,11 +92,13 @@ export function ViewToolbar({
             {/* Stacked and full width — each control gets a line, which is
                 the only way a nine-option filter reads on a phone. Labels go
                 to the left edge: a button centres its label, which is right
-                for a button you press and wrong for a row you read down. */}
-            {/* `w-full` on each control is what tells the button it is a row:
-                the left-aligned label and far-right caret come from that, in
-                globals.css, rather than from a rule written here. */}
-            <div className="flex flex-col items-stretch gap-2 [&>*]:w-full [&_.btn]:w-full">
+                for a button you press and wrong for a row you read down.
+                `.stacked-controls` in globals.css is what says so; setting
+                the width from here only stretched the buttons and left every
+                label centred, because the rule that turns a stretched button
+                into a row keys off a class this sheet cannot put on controls
+                it was handed. */}
+            <div className="stacked-controls flex flex-col items-stretch gap-2">
               {start}
               {end}
             </div>

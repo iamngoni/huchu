@@ -19,7 +19,9 @@
       "Bash(git *)",
       "Bash(DATABASE_URL=\"postgresql://huchu:huchu_dev@localhost:5432/huchu_test\" npx prisma *)",
       "Bash(npx vitest *)",
-      "Bash(pnpm install *)"
+      "Bash(pnpm install *)",
+      "mcp__Claude_Code_Remote__send_later",
+      "mcp__Claude_Code_Remote__list_triggers"
     ]
   }
 }
