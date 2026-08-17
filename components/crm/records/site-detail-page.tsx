@@ -29,6 +29,7 @@ import {
 } from "./record-tabs";
 import { RecordAttributes } from "@/components/records/record-attributes";
 import { RelationAttribute } from "./relation-attribute";
+import { useToast } from "@/components/ui/use-toast";
 import { useAttributeEditor } from "@/components/records/use-attribute-editor";
 import { EntityLink } from "@/components/records/entity-link";
 import { RailSection, RecordPageShell, RelatedList } from "@/components/records/record-page-shell";
@@ -87,6 +88,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
     queryKey: ["crm", "site", siteId],
     queryFn: () => fetchJson<SiteDetail>(`/api/v2/crm/sites/${siteId}`),
   });
+  const { toast } = useToast();
   const edit = useAttributeEditor({
     path: `/api/v2/crm/sites/${siteId}`,
     invalidate: [["crm", "site", siteId], ["crm", "sites"]],
@@ -202,6 +204,7 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
         />
       }
       title={site.name}
+      onTitleCommit={(next) => edit.save.mutate({ name: next })}
       reference={site.siteNo}
       subtitle={subtitle}
       activeTab={tab}
@@ -247,27 +250,61 @@ export function SiteDetailPage({ siteId }: { siteId: string }) {
               placeholder: "Not recorded",
               ...edit.text("addressLine", site.addressLine),
             },
+            // City and country were one read-only row reading "Chiredzi,
+            // Zimbabwe". They are two columns, so they are two rows: joined,
+            // there was no way to say which half you were correcting.
             {
-              id: "location",
+              id: "city",
               label: "City",
-              value: [site.city, site.country].filter(Boolean).join(", ") || null,
               placeholder: "Not recorded",
+              ...edit.text("city", site.city),
+            },
+            {
+              id: "country",
+              label: "Country",
+              placeholder: "Not recorded",
+              ...edit.text("country", site.country),
             },
             {
               id: "coordinates",
               label: "Coordinates",
+              placeholder: "Not pinned",
+              mono: true,
+              // One row, because a pin is one fact and nobody holds a latitude
+              // in their head without the longitude next to it. Typed as the
+              // pair it is copied as — out of Maps, off a handset — and split
+              // here rather than made into two boxes.
               value:
+                site.latitude !== null && site.longitude !== null
+                  ? `${site.latitude}, ${site.longitude}`
+                  : null,
+              formatted:
                 site.latitude !== null && site.longitude !== null
                   ? `${site.latitude.toFixed(5)}, ${site.longitude.toFixed(5)}`
                   : null,
-              placeholder: "Not pinned",
-              mono: true,
+              onCommit: (next) => {
+                const trimmed = next.trim();
+                if (trimmed === "") {
+                  edit.save.mutate({ latitude: null, longitude: null });
+                  return;
+                }
+                const [lat, lng] = trimmed.split(/[,\s]+/).map(Number);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                  toast({
+                    title: "That is not a pin",
+                    description: "Two numbers, latitude first — for example -20.19, 30.93.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                edit.save.mutate({ latitude: lat, longitude: lng });
+              },
             },
             {
               id: "access",
               label: "Access",
-              value: site.accessInstructions,
               placeholder: "No instructions",
+              ...edit.text("accessInstructions", site.accessInstructions),
             },
             ...customFieldAttributes({
               definitions,

@@ -27,6 +27,7 @@ import {
   useRecordComments,
 } from "./record-tabs";
 import { RecordAttributes } from "@/components/records/record-attributes";
+import { RelationAttribute } from "@/components/crm/records/relation-attribute";
 import { useAttributeEditor } from "@/components/records/use-attribute-editor";
 import { EntityLink } from "@/components/records/entity-link";
 import {
@@ -275,6 +276,17 @@ export function PersonDetailPage({ personId }: { personId: string }) {
         />
       }
       title={person.fullName}
+      // `fullName` is derived; the columns are first and last. A typed name
+      // splits on the final space, so "Tendai" sets a first name and clears
+      // nothing, and "Tendai N Mhlanga" keeps the middle with the first.
+      onTitleCommit={(next) => {
+        const cut = next.trim().lastIndexOf(" ");
+        edit.save.mutate(
+          cut === -1
+            ? { firstName: next.trim(), lastName: "" }
+            : { firstName: next.trim().slice(0, cut), lastName: next.trim().slice(cut + 1) },
+        );
+      }}
       reference={person.personNo}
       subtitle={subtitle}
       activeTab={tab}
@@ -300,16 +312,17 @@ export function PersonDetailPage({ personId }: { personId: string }) {
               id: "company",
               label: "Company",
               icon: Building2,
-              display: person.client ? (
-                <EntityLink
-                  href={`/crm/companies/${person.client.id}`}
-                  className="text-sm"
-                >
-                  {person.client.name}
-                </EntityLink>
-              ) : undefined,
-              value: null,
-              placeholder: "No company",
+              display: (
+                <RelationAttribute
+                  value={person.client?.name ?? null}
+                  href={person.client ? `/crm/companies/${person.client.id}` : null}
+                  types={["COMPANY"]}
+                  placeholder="No company"
+                  searchPlaceholder="Search companies"
+                  onPick={(record) => edit.save.mutate({ clientId: record.id })}
+                  onClear={() => edit.save.mutate({ clientId: null })}
+                />
+              ),
             },
             {
               id: "owner",
@@ -329,7 +342,13 @@ export function PersonDetailPage({ personId }: { personId: string }) {
               id: "contactType",
               label: "Contact type",
               icon: AddressBook,
-              value: CONTACT_TYPE_LABELS[person.contactType] ?? person.contactType,
+              // Straight off the enum, so a type added to the schema shows up
+              // here without a second list to remember to update.
+              ...edit.choice(
+                "contactType",
+                person.contactType,
+                Object.entries(CONTACT_TYPE_LABELS).map(([value, label]) => ({ value, label })),
+              ),
             },
             {
               id: "role",
@@ -340,10 +359,13 @@ export function PersonDetailPage({ personId }: { personId: string }) {
             {
               id: "prefers",
               label: "Prefers",
-              value: person.preferredChannel
-                ? CHANNEL_LABELS[person.preferredChannel] ?? person.preferredChannel
-                : null,
               placeholder: "No preference",
+              ...edit.choice(
+                "preferredChannel",
+                person.preferredChannel,
+                Object.entries(CHANNEL_LABELS).map(([value, label]) => ({ value, label })),
+                "No preference",
+              ),
             },
             {
               id: "city",
