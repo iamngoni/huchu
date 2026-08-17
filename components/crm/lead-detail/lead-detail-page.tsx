@@ -283,6 +283,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
       backHref="/crm/leads"
       backLabel="All leads"
       title={lead.title ?? lead.leadNo}
+      onTitleCommit={(next) => edit.save.mutate({ title: next })}
       reference={lead.leadNo}
       // An archived lead that looks exactly like a live one is how somebody
       // spends ten minutes working a record that is not in anybody's pipeline.

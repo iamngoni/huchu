@@ -76,6 +76,13 @@ export type RecordAttribute = {
   clearLabel?: string;
   placeholder?: string;
   mono?: boolean;
+  /**
+   * What sort of value this is, where a plain text box is the wrong tool.
+   * `date` opens a date field and commits `YYYY-MM-DD`; the closed row still
+   * shows whatever `formatted` says, so a reader sees "8/11/2026" and an
+   * editor gets a picker rather than a string to retype in the right order.
+   */
+  kind?: "text" | "date";
 };
 
 /**
@@ -201,6 +208,7 @@ function EditableValue({ attribute }: { attribute: RecordAttribute }) {
   return (
     <Input
       autoFocus
+      type={attribute.kind === "date" ? "date" : "text"}
       value={draft}
       aria-label={attribute.label}
       // Full width of the value column and no wider: the input inherited a

@@ -234,6 +234,7 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
         />
       }
       title={company.name}
+      onTitleCommit={(next) => edit.save.mutate({ name: next })}
       reference={company.clientNo}
       status={ACCOUNT_STATUS_PRESENTATION[company.accountStatus] ?? null}
       subtitle={subtitle}
@@ -276,12 +277,27 @@ export function CompanyDetailPage({ companyId }: { companyId: string }) {
               placeholder: "Not recorded",
               ...edit.text("website", company.website),
             },
+            // Was one read-only "Location" reading "Healthcare · Chiredzi".
+            // Three columns behind it, so three rows: joined, there was no way
+            // to say which part of an address you were correcting.
             {
-              id: "location",
-              label: "Location",
+              id: "address",
+              label: "Address",
               icon: MapPin,
-              value: [company.city, company.country].filter(Boolean).join(", ") || null,
               placeholder: "Not recorded",
+              ...edit.text("addressLine", company.addressLine),
+            },
+            {
+              id: "city",
+              label: "City",
+              placeholder: "Not recorded",
+              ...edit.text("city", company.city),
+            },
+            {
+              id: "country",
+              label: "Country",
+              placeholder: "Not recorded",
+              ...edit.text("country", company.country),
             },
             {
               id: "industry",

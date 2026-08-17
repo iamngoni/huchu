@@ -86,6 +86,7 @@ export function RecordPageShell({
   backLabel,
   icon,
   title,
+  onTitleCommit,
   reference,
   status,
   subtitle,
@@ -105,6 +106,13 @@ export function RecordPageShell({
   /** The entity's mark, shown beside the record name in the top bar. */
   icon?: LucideIcon;
   title: string;
+  /**
+   * Commit a new name for the record. Given one, the title in the standing
+   * column becomes an editor; without one it stays a heading, which is right
+   * for the records that have no name of their own — a rep is a colleague,
+   * and their name lives in the directory rather than here.
+   */
+  onTitleCommit?: (value: string) => void;
   reference?: string | null;
   status?: { label: string; status: CanonicalUiStatus } | null;
   subtitle?: ReactNode;
@@ -297,9 +305,18 @@ export function RecordPageShell({
           ) : null}
 
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold leading-snug text-[var(--text-strong)]">
-              {title}
-            </h2>
+            {/* The name, editable in place like every other property. It was
+                the one fact on a record with no way to correct it: a lead
+                typed in wrong stayed wrong, and "rename" existed nowhere in
+                the module. Same grammar as the property list — press the thing
+                you are looking at, Enter or blur commits, Escape abandons. */}
+            {onTitleCommit ? (
+              <RecordTitleEditor title={title} onCommit={onTitleCommit} />
+            ) : (
+              <h2 className="text-base font-semibold leading-snug text-[var(--text-strong)]">
+                {title}
+              </h2>
+            )}
             {reference ? (
               <p className="font-mono text-sm text-[var(--text-muted)]">{reference}</p>
             ) : null}
@@ -516,6 +533,64 @@ export function RecordPageShell({
 
       {children}
     </div>
+  );
+}
+
+
+/**
+ * The record's name, edited where it is read.
+ *
+ * A textarea rather than an input: a deal is called "Plumtree Freight
+ * second-site rollout" and a single-line field in a 22rem column shows about
+ * a third of that, scrolling the rest out of sight while you try to fix a typo
+ * in the middle of it. It grows to the text and commits on Enter, so it still
+ * behaves like a name and not like a note.
+ */
+function RecordTitleEditor({
+  title,
+  onCommit,
+}: {
+  title: string;
+  onCommit: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+
+  if (draft === null) {
+    return (
+      <button
+        type="button"
+        onClick={() => setDraft(title)}
+        title="Rename"
+        className="-mx-1.5 block w-full rounded-[var(--radius-sm)] px-1.5 text-left text-base font-semibold leading-snug text-[var(--text-strong)] hover:bg-[var(--surface-subtle)]"
+      >
+        {title}
+      </button>
+    );
+  }
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== title) onCommit(trimmed);
+    setDraft(null);
+  };
+
+  return (
+    <textarea
+      autoFocus
+      rows={Math.min(4, Math.max(1, Math.ceil(draft.length / 28)))}
+      value={draft}
+      aria-label="Record name"
+      className="-mx-1.5 block w-full resize-none rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-base)] px-1.5 py-0.5 text-base font-semibold leading-snug text-[var(--text-strong)] outline-none focus:border-[var(--action-primary-bg)]"
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          commit();
+        }
+        if (event.key === "Escape") setDraft(null);
+      }}
+    />
   );
 }
 

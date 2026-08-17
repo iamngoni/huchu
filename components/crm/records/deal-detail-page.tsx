@@ -8,7 +8,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ClientDate } from "@/components/ui/client-date";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchJson, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -302,6 +301,7 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
           />
         }
         title={deal.title}
+      onTitleCommit={(next) => edit.save.mutate({ title: next })}
         reference={deal.dealNo}
         status={{
           label: deal.stage.name,
@@ -348,20 +348,12 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 formatted:
                   deal.value == null ? null : formatMoney(deal.value, deal.currency),
               },
-              {
-                id: "stage",
-                label: "Stage",
-                icon: Funnel,
-                display: (
-                  <span className="text-sm">
-                    {deal.stage.name}
-                    <span className="text-[var(--text-muted)]">
-                      {" · "}
-                      {deal.pipeline.name}
-                    </span>
-                  </span>
-                ),
-              },
+              // Stage is deliberately not a property row. `DealStageBar` in
+              // the rail below is the control for it, and it is the richer one
+              // — it gates on the stage's checklist and asks for a reason on
+              // the way to Lost. A second, plainer editor up here would route
+              // around both, and two ways to move a deal is how a pipeline
+              // stops meaning anything.
               {
                 id: "owner",
                 label: "Owner",
@@ -399,13 +391,17 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
                 id: "close",
                 label: "Expected close",
                 icon: Calendar,
-                display: deal.expectedCloseDate ? (
-                  <span className="text-sm">
-                    <ClientDate value={deal.expectedCloseDate} mode="date" />
-                  </span>
-                ) : undefined,
-                value: null,
+                kind: "date" as const,
                 placeholder: "No date set",
+                // The stored value is an ISO instant and the editor wants a
+                // calendar day, so the row opens on the day and reads back as
+                // the reader's own format.
+                value: deal.expectedCloseDate ? deal.expectedCloseDate.slice(0, 10) : null,
+                formatted: deal.expectedCloseDate
+                  ? new Date(deal.expectedCloseDate).toLocaleDateString()
+                  : null,
+                onCommit: (next: string) =>
+                  edit.save.mutate({ expectedCloseDate: next.trim() === "" ? null : next }),
               },
               {
                 id: "probability",
@@ -418,22 +414,29 @@ export function DealDetailPage({ dealId }: { dealId: string }) {
               {
                 id: "forecast",
                 label: "Forecast",
-                value: deal.forecastCategory.toLowerCase().replace("_", " "),
+                ...edit.choice("forecastCategory", deal.forecastCategory, [
+                  { value: "PIPELINE", label: "Pipeline" },
+                  { value: "BEST_CASE", label: "Best case" },
+                  { value: "COMMIT", label: "Commit" },
+                  { value: "CLOSED", label: "Closed" },
+                ]),
               },
-              ...(deal.site
-                ? [
-                    {
-                      id: "site",
-                      label: "Site",
-                      icon: MapPin,
-                      display: (
-                        <EntityLink href={`/crm/sites/${deal.site.id}`} className="text-sm">
-                          {deal.site.name}
-                        </EntityLink>
-                      ),
-                    },
-                  ]
-                : []),
+              {
+                id: "site",
+                label: "Site",
+                icon: MapPin,
+                display: (
+                  <RelationAttribute
+                    value={deal.site?.name ?? null}
+                    href={deal.site ? `/crm/sites/${deal.site.id}` : null}
+                    types={["SITE"]}
+                    placeholder="No site"
+                    searchPlaceholder="Search sites"
+                    onPick={(record) => edit.save.mutate({ siteId: record.id })}
+                    onClear={() => edit.save.mutate({ siteId: null })}
+                  />
+                ),
+              },
               ...customFieldAttributes({
                 definitions,
                 values: deal.customFields,
