@@ -443,6 +443,14 @@
   --table-row-min-h:  calc(var(--h-control-md) + var(--space-3));    /* 48 */
   --table-head-min-h: calc(var(--h-control-md) + var(--space-1));    /* 40 */
 
+  /* The options row on a record list — the band holding the layout switch, the
+     filters and the search. Named for the same reason the app bar is: it pins
+     to the top of the scrollport, and every sticky table header in the module
+     has to pin *below* it. A literal here and a literal in `RecordTable` is
+     how a header ends up half-hidden behind a toolbar the next time the row
+     gains a control. */
+  --list-toolbar-h:   3.25rem;
+
   /* ══════════════════════════════════════════════════════════════════════
      TYPOGRAPHY
      The package owns `--font-sans` / `--font-mono` / `--font-display` /

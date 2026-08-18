@@ -14,27 +14,39 @@ import { SlidersHorizontal } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 /**
- * The one toolbar every list and board sits under.
+ * The options row — the band between the app bar and the records.
  *
  * Leads had its own header row, deals another, and people, companies and
  * sites a third — same intent, three orderings, three control heights. The
  * user's words: "the top bar area and header for kanban and lists should be
- * the same." So there is one row now, with one grammar:
+ * the same." So there is one row now, with one grammar, read left to right:
  *
- *   what you are looking at (view / layout / pipeline) → how it is narrowed
- *   (filters) → …spacer… → how you find one (search) → what is shown
- *   (columns / card fields).
+ *   what you are looking at (the layout) │ how it is narrowed (filters)
+ *   → …spacer… → how you find one (search) → what is shown (columns)
  *
- * Switching between table and board must not move this row — that is the
+ * The rule after the layout switch is doing real work: it splits the row into
+ * "which arrangement" and "which records", which are different questions that
+ * used to sit in one undifferentiated run of six buttons.
+ *
+ * Switching between table, list and board must not move this row — that is the
  * whole point of it. Anything that only makes sense in one layout (a sort
  * button on a board, say) disappears from its slot rather than reshaping the
  * row.
  *
- * On a phone the row is not a row. Six controls at 36px wrap onto three
- * lines and push the records themselves below the fold, and the reader has to
- * read six labels before they can look at anything. So below `sm` the whole
- * lot goes behind one button, and what stays on screen is what somebody came
- * for: the search box, and the records under it.
+ * ## It is a bar, not a gap with controls in it
+ *
+ * A fixed height and a hairline that runs the full width, pinned to the top of
+ * the scrollport. That is what makes the table header below it able to pin too:
+ * `--list-toolbar-h` is the offset every sticky thead in the module measures
+ * from, and it only means anything if this row is actually that tall.
+ *
+ * ## On a phone the row is not a row
+ *
+ * Six controls at 36px wrap onto three lines and push the records themselves
+ * below the fold, and the reader has to read six labels before they can look at
+ * anything. So below `sm` the whole lot goes behind one button, and what stays
+ * on screen is what somebody came for: the search box, and the records under
+ * it.
  *
  * Which means a phone toolbar with no `search` is one outline button on a band
  * of its own — 60px of page spent on a control nobody came for. Every surface
@@ -42,12 +54,18 @@ import { cn } from "@/lib/utils";
  * search gets the button inline with whatever `end` holds rather than a band.
  */
 export function ViewToolbar({
+  layout,
   start,
   search,
   end,
   className,
 }: {
-  /** What you are looking at, and how it is narrowed. */
+  /**
+   * The layout switch. Kept out of `start` so it is always first and always
+   * has the rule after it, whatever else the page passes.
+   */
+  layout?: ReactNode;
+  /** How the records are narrowed: status, pipeline, owner. */
   start?: ReactNode;
   /** The search control, right-aligned with the display controls. */
   search?: ReactNode;
@@ -56,7 +74,7 @@ export function ViewToolbar({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const hasControls = Boolean(start || end);
+  const hasControls = Boolean(layout || start || end);
 
   return (
     <div
@@ -65,7 +83,26 @@ export function ViewToolbar({
         // content" — the same seam the sidebar draws against the main pane.
         // Sticky: the row is the page's header, and a header that scrolls
         // away takes the filters and the search with it.
-        "sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] bg-surface-base pb-3 pt-1",
+        //
+        // A sticky element pins to the scrollport's *padding* edge, and `main`
+        // keeps a gutter of top padding — so the bar comes to rest a gutter's
+        // worth below the app bar, and the rows scrolling past show through
+        // the strip between them. The `::before` paints that strip in the
+        // bar's own background, which is the one fix that does not involve
+        // arguing with where sticky decides to stop.
+        //
+        // Not a negative top margin. Tailwind's leading-minus shorthand cannot
+        // negate a bare custom property — it emits a rule containing a literal
+        // ellipsis, which is not CSS, and Turbopack then fails the whole
+        // stylesheet, so *every* page 500s rather than this one looking wrong.
+        // The horizontal bleed below is written as an explicit `calc()` for
+        // the same reason.
+        "sticky top-0 z-10 flex h-[var(--list-toolbar-h)] items-center gap-2 border-b border-[var(--border-subtle)] bg-surface-base",
+        "before:absolute before:inset-x-0 before:bottom-full before:h-[var(--content-gutter-y)] before:bg-surface-base before:content-['']",
+        // The bleed is what makes the hairline a seam across the page rather
+        // than a rule floating inside the gutter — the same edge the app bar
+        // above it draws.
+        "mx-[calc(-1*var(--content-gutter-x))] px-[var(--content-gutter-x)]",
         className,
       )}
     >
@@ -73,7 +110,7 @@ export function ViewToolbar({
       {hasControls ? (
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="sm:hidden" aria-label="View and filters">
+            <Button variant="outline" size="sm" className="sm:hidden" aria-label="View and filters">
               <SlidersHorizontal className="size-4" aria-hidden="true" />
               View
             </Button>
@@ -99,11 +136,24 @@ export function ViewToolbar({
                 into a row keys off a class this sheet cannot put on controls
                 it was handed. */}
             <div className="stacked-controls flex flex-col items-stretch gap-2">
+              {layout}
               {start}
               {end}
             </div>
           </SheetContent>
         </Sheet>
+      ) : null}
+
+      {layout ? <div className="hidden items-center sm:flex">{layout}</div> : null}
+
+      {/* The seam between "which arrangement" and "which records". Only drawn
+          when there is something on both sides of it — a rule with nothing to
+          separate is a tally mark. */}
+      {layout && start ? (
+        <span
+          aria-hidden="true"
+          className="hidden h-5 w-px shrink-0 bg-[var(--border-subtle)] sm:block"
+        />
       ) : null}
 
       <div className="hidden flex-wrap items-center gap-2 sm:flex">{start}</div>
