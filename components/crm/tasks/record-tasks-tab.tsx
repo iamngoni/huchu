@@ -67,7 +67,9 @@ export function RecordTasksTab({
       </div>
 
       <SplitView
-        detailTitle={selected?.title}
+        // No `detailTitle`: the panel opens with the task's name as an editable
+        // heading, and the drilled-in header would have printed it again
+        // directly above it.
         onClose={() => setSelectedId(null)}
         placeholder="Pick a task to see and change it here."
         list={

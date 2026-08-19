@@ -129,6 +129,7 @@ export function TaskDetail({
 
       <RecordAttributes
         visibleCount={6}
+        columns={1}
         attributes={[
           {
             id: "due",
