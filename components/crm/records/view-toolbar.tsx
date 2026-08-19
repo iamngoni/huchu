@@ -144,31 +144,43 @@ export function ViewToolbar({
         </Sheet>
       ) : null}
 
-      {layout ? <div className="hidden items-center sm:flex">{layout}</div> : null}
+      {/* The left half scrolls sideways rather than wrapping.
+          ────────────────────────────────────────────────────────────────────
+          Leads carries seven controls here — saved view, filters, stage,
+          pipeline, sort — and at 1440px with a sidebar they do not fit. Wrapped
+          onto three lines inside a bar with a fixed height they simply drew
+          outside it, over the app bar above and the table header below.
+          The height cannot become a floor instead: `--list-toolbar-h` is the
+          offset every sticky table header in the module pins to, and a bar that
+          is sometimes 52px and sometimes 150px puts those headers in the wrong
+          place on exactly the pages with the most controls.
+          So the controls scroll and the two things somebody came for — search,
+          and what is shown — stay outside the scroller, pinned right. */}
+      {/* The fade is the only cue that there is more to the right — a
+          scrollbar is hidden here, and a control clipped mid-word reads as a
+          bug rather than as an edge. It costs nothing when the row fits, since
+          a short row has nothing at its right edge to fade. */}
+      <div className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto pr-1 sm:flex [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [mask-image:linear-gradient(to_right,black_calc(100%-1.25rem),transparent)]">
+        {layout ? <div className="flex shrink-0 items-center">{layout}</div> : null}
 
-      {/* The seam between "which arrangement" and "which records". Only drawn
-          when there is something on both sides of it — a rule with nothing to
-          separate is a tally mark. */}
-      {layout && start ? (
-        <span
-          aria-hidden="true"
-          className="hidden h-5 w-px shrink-0 bg-[var(--border-subtle)] sm:block"
-        />
-      ) : null}
+        {/* The seam between "which arrangement" and "which records". Only drawn
+            when there is something on both sides of it — a rule with nothing to
+            separate is a tally mark. */}
+        {layout && start ? (
+          <span
+            aria-hidden="true"
+            className="h-5 w-px shrink-0 bg-[var(--border-subtle)]"
+          />
+        ) : null}
 
-      <div className="hidden flex-wrap items-center gap-2 sm:flex">{start}</div>
-
-      {/* The spacer pushes search and display controls to the right of a
-          single row. Once the row wraps — which it always does on a phone —
-          a flex-1 spacer becomes a whole blank line between the filters and
-          the search, so it only exists at widths where the row fits. */}
-      <span className="hidden min-w-2 flex-1 sm:block" aria-hidden="true" />
+        <div className="flex shrink-0 items-center gap-2">{start}</div>
+      </div>
 
       {/* Search stays out of the sheet: it is how you find one record, which
           is the most common reason to touch this row at all. */}
-      <div className="min-w-0 flex-1 sm:flex-none">{search}</div>
+      <div className="min-w-0 flex-1 sm:flex-none sm:shrink-0">{search}</div>
 
-      <div className="hidden flex-wrap items-center gap-2 sm:flex">{end}</div>
+      <div className="hidden shrink-0 items-center gap-2 sm:flex">{end}</div>
     </div>
   );
 }
