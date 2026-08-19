@@ -235,10 +235,21 @@ export function RecordAttributes({
   attributes,
   /** How many to show before the list collapses. */
   visibleCount = 5,
+  columns = "auto",
   className,
 }: {
   attributes: RecordAttribute[];
   visibleCount?: number;
+  /**
+   * `auto` pairs the rows up once there is room for two columns, which is what
+   * a record's standing column and its landing view both want.
+   *
+   * `1` keeps them stacked however wide the container gets. A detail panel
+   * beside a list is the case: it is wide enough to trip the two-column rule
+   * and narrow enough that doing so leaves each value about eight characters,
+   * so "Aug 8, 2026" comes out on two lines beside a label on one.
+   */
+  columns?: 1 | "auto";
   className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -254,7 +265,12 @@ export function RecordAttributes({
     // column on a desktop; keyed to the viewport, the desktop case put two
     // columns inside 320px and "USD 9,100.00" came out one character per line.
     <div className={cn("@container space-y-0.5", className)}>
-      <dl className="grid gap-x-6 gap-y-0.5 @md:grid-cols-2">
+      <dl
+        className={cn(
+          "grid gap-x-6 gap-y-0.5",
+          columns === "auto" && "@md:grid-cols-2",
+        )}
+      >
         {shown.map((attribute) => {
           const Icon = attribute.icon;
           return (

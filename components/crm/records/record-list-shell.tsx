@@ -28,6 +28,7 @@ export function RecordListShell({
   onSearchChange,
   searchPlaceholder,
   searchNoun,
+  layout,
   filters,
   display,
   createLabel,
@@ -46,6 +47,12 @@ export function RecordListShell({
    * where the title is not what the rows are ("Collections" holding invoices).
    */
   searchNoun?: string;
+  /**
+   * The layout switch — `LayoutSwitch`, on every list that has more than one
+   * arrangement. Separate from `filters` so the toolbar can put the rule in the
+   * right place without a page having to remember to.
+   */
+  layout?: ReactNode;
   filters?: ReactNode;
   /** Display controls — column picker, card fields — right-aligned with search. */
   display?: ReactNode;
@@ -81,6 +88,7 @@ export function RecordListShell({
       <PageChrome title={title}>{actions}</PageChrome>
 
       <ViewToolbar
+        layout={layout}
         start={filters}
         search={
           <ListSearch

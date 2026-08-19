@@ -186,7 +186,10 @@ export function commentEvents(comments: CommentLike[]): StoryEvent[] {
     id: comment.id,
     kind: "comment" as const,
     // The body carries any @mentions as written; the renderer resolves them.
-    title: `${comment.author?.name ?? "Someone"} commented`,
+    // The kind, not a sentence: the feed's header line already prints the
+    // author beside their avatar, so "Sarah commented" next to "Sarah" was the
+    // name twice and the useful word — which of the five kinds this is — never.
+    title: "Comment",
     body: comment.body,
     occurredAt: comment.createdAt,
     actorName: comment.author?.name ?? null,
